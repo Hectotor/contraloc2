@@ -1,9 +1,8 @@
-import 'package:ContraLoc/widget/navigation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'dart:async';
-import 'login.dart'; // Import de l'écran de connexion
-import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
+import 'package:firebase_auth/firebase_auth.dart';
+import 'login.dart';
+import '../widget/navigation.dart';
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -14,8 +13,15 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(Duration(seconds: 2), () async {
-      User? user = FirebaseAuth.instance.currentUser;
+    _checkUser();
+  }
+
+  Future<void> _checkUser() async {
+    try {
+      await Future.delayed(Duration(seconds: 2)); // Splash duration
+      if (!mounted) return; // Vérifie si le widget est monté
+      User? user =
+          FirebaseAuth.instance.currentUser; // Vérifie l'utilisateur connecté
       if (user == null) {
         Navigator.pushReplacement(
           context,
@@ -27,13 +33,19 @@ class _SplashScreenState extends State<SplashScreen> {
           MaterialPageRoute(builder: (context) => NavigationPage()),
         );
       }
-    });
+    } catch (e) {
+      print('Erreur FirebaseAuth: $e');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF08004D), // Background color
+      backgroundColor: const Color(0xFF08004D),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -50,10 +62,7 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const SpinKitThreeBounce(
-              color: Colors.white,
-              size: 30.0,
-            ),
+            const CircularProgressIndicator(color: Colors.white),
           ],
         ),
       ),
