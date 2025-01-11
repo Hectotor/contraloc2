@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login.dart';
 import '../widget/navigation.dart';
@@ -13,67 +12,52 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkUser();
+    _navigateToNextPage();
   }
 
-  Future<void> _checkUser() async {
-    try {
-      await Future.delayed(Duration(seconds: 2)); // Splash duration
-      if (!mounted) return; // Vérifie si le widget est monté
-      User? user =
-          FirebaseAuth.instance.currentUser; // Vérifie l'utilisateur connecté
-      if (user == null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => LoginPage()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => NavigationPage()),
-        );
-      }
-    } catch (e) {
-      print('Erreur FirebaseAuth: $e');
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginPage()),
-      );
-    }
+  Future<void> _navigateToNextPage() async {
+    // Attente de 1.5 secondes
+    await Future.delayed(const Duration(milliseconds: 3000));
+
+    // Vérification de l'utilisateur Firebase
+    User? user = FirebaseAuth.instance.currentUser;
+
+    // Navigation vers la page appropriée
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => user != null ? NavigationPage() : LoginPage(),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF08004D),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          color: const Color(0xFF08004D),
-        ),
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 250, // Réduit la taille
-              height: 250, // Réduit la taille
-              child: Image.asset(
-                'assets/icon/LogoContraLoc.png',
-                fit: BoxFit.contain, // Assure que l'image s'adapte correctement
-              ),
+            Image.asset(
+              'assets/icon/logoCon.png',
+              width: 300,
+              height: 300,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 5),
             const Text(
-              'ContraLoc',
+              'Contraloc',
               style: TextStyle(
-                fontSize: 40, // Réduit légèrement la taille du texte
+                fontSize: 35,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 20),
-            const CircularProgressIndicator(color: Colors.white),
+            const SizedBox(height: 40),
+            const CircularProgressIndicator(
+              color: Colors.white,
+            ),
           ],
         ),
       ),

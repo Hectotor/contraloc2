@@ -1,3 +1,4 @@
+import 'package:ContraLoc/firebase_options.dart';
 import 'package:flutter/material.dart';
 // ignore: depend_on_referenced_packages
 import 'package:flutter_localizations/flutter_localizations.dart'; // Import localization delegates
@@ -5,8 +6,16 @@ import 'package:firebase_core/firebase_core.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Nécessaire pour Firebase
-  await Firebase.initializeApp(); // Initialise Firebase
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Optimisation des images
+  ImageCache().maximumSize = 1024;
+  ImageCache().maximumSizeBytes = 50 * 1024 * 1024; // 50MB
+
+  // Configuration Firebase avec options personnalisées
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   runApp(const MyApp());
 }
@@ -37,11 +46,16 @@ class MyApp extends StatelessWidget {
               home: SplashScreen(), // Appel du SplashScreen au démarrage
               debugShowCheckedModeBanner: false, // Retire le badge "debug"
               builder: (context, child) {
-                return MediaQuery(
-                  data: MediaQuery.of(context).copyWith(
-                    textScaleFactor: constraints.maxWidth > 600 ? 1.2 : 1.0,
+                return ScrollConfiguration(
+                  behavior: ScrollBehavior().copyWith(
+                    physics: const BouncingScrollPhysics(),
                   ),
-                  child: child!,
+                  child: MediaQuery(
+                    data: MediaQuery.of(context).copyWith(
+                      textScaleFactor: 1.0, // Force une échelle de texte fixe
+                    ),
+                    child: child!,
+                  ),
                 );
               },
             );

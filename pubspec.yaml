@@ -71,6 +71,7 @@ flutter:
     - assets/icon/LogoContraLoc.png
     - assets/icon/IconContraLoc.png
     - assets/icon/whatsapp_icon.png
+    - assets/icon/logoCon.png
 
 flutter_launcher_icons:
   android: "launcher_icon"

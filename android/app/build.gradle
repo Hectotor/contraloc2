@@ -1,9 +1,9 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
-    id 'kotlin-parcelize' // Ajout de kotlin-parcelize
-    id 'com.google.gms.google-services'
-    id "dev.flutter.flutter-gradle-plugin" // Flutter Plugin
+    id 'kotlin-parcelize' // Nécessaire pour les objets Parcelable en Kotlin
+    id 'com.google.gms.google-services' // Intégration Firebase
+    id "dev.flutter.flutter-gradle-plugin" // Plugin Flutter
 }
 
 def keystoreProperties = new Properties()
@@ -13,14 +13,22 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    // Ajoutez les options de compilation pour ignorer les avertissements
+    // Désactiver certains avertissements
     lintOptions {
-            disable 'Deprecation'
-            disable 'Unchecked'
+        disable 'Deprecation'
+        disable 'Unchecked'
     }
-    namespace = "com.contratloc.app"
-    compileSdk = 35
-    ndkVersion = "27.0.12077973"
+    namespace = "com.contraloc.app"
+    compileSdk = 35 // Cible la dernière version du SDK Android
+    ndkVersion = "27.0.12077973" // Version NDK utilisée pour les bibliothèques natives
+
+    defaultConfig {
+        applicationId = "com.contraloc.app"
+        minSdkVersion 23 // Minimum Android 6.0
+        targetSdkVersion flutter.targetSdkVersion // Aligné avec Flutter
+        versionCode 15 // Version du code, doit être incrémenté à chaque mise à jour
+        versionName "1.0" // Version utilisateur
+    }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -28,19 +36,11 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
-    }
-
-    defaultConfig {
-        applicationId = "com.contratloc.app"
-        minSdkVersion 23 // Mise à jour de minSdkVersion
-        targetSdkVersion flutter.targetSdkVersion
-        versionCode 15 // Augmentez le versionCode
-        versionName "1.0"
+        jvmTarget = JavaVersion.VERSION_1_8.toString()
     }
 
     buildFeatures {
-        viewBinding true // Activation de viewBinding
+        viewBinding true // Active le ViewBinding
     }
 
     signingConfigs {
@@ -55,12 +55,15 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.release
-            minifyEnabled true // Active la réduction du code
-            shrinkResources true // Active la suppression des ressources inutilisées
+            minifyEnabled true // Active l'optimisation du code
+            shrinkResources true // Supprime les ressources inutilisées
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             ndk {
-                debugSymbolLevel 'FULL' // Ajoute les symboles pour le débogage natif
+                debugSymbolLevel 'FULL' // Ajoute des symboles pour le débogage natif
             }
+        }
+        debug {
+            signingConfig = signingConfigs.release
         }
     }
 }
@@ -70,6 +73,5 @@ flutter {
 }
 
 dependencies {
-    // implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation 'com.android.billingclient:billing:5.0.0' // Google Play Billing
+    implementation 'com.android.billingclient:billing:5.0.0' // Google Play Billing pour achats in-app
 }
