@@ -171,6 +171,7 @@ class _QuestionUserState extends State<QuestionUser> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50], // Ajout du background color
       appBar: AppBar(
         title: const Text(
           "Poser une Question",
@@ -330,7 +331,7 @@ class _QuestionUserState extends State<QuestionUser> {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      "Depuis 2020 - ContraLoc",
+                      "Depuis 2020 - contraloc.fr",
                       style: TextStyle(fontSize: 16, color: Color(0xFF0F056B)),
                       textAlign: TextAlign.center,
                     ),

@@ -129,7 +129,7 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
           icon: const Icon(Icons.add_a_photo, color: Colors.white),
           label: const Text(
             "Ajouter des photos",
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.white, fontSize: 18),
           ),
         ),
         const SizedBox(height: 10),

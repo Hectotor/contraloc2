@@ -188,6 +188,8 @@ class _ClientPageState extends State<ClientPage> {
     }
   }
 
+  bool _showPermisFields = false; // Ajouter cette variable d'état
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -229,23 +231,45 @@ class _ClientPageState extends State<ClientPage> {
                 keyboardType: TextInputType.emailAddress),
             _buildTextField("N° Permis", _numeroPermisController),
             const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildImageUploader(
-                    "Permis Recto", _permisRecto, () => _pickImage(true)),
-                _buildImageUploader(
-                    "Permis Verso", _permisVerso, () => _pickImage(false)),
-              ],
+            ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _showPermisFields = !_showPermisFields;
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.add_a_photo, color: Colors.white),
+              label: const Text(
+                "Ajouter photo permis",
+                style: TextStyle(color: Colors.white, fontSize: 18),
+              ),
             ),
-            const SizedBox(height: 40), // Augmentation de l'espacement
+            if (_showPermisFields) ...[
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildImageUploader(
+                      "Permis Recto", _permisRecto, () => _pickImage(true)),
+                  _buildImageUploader(
+                      "Permis Verso", _permisVerso, () => _pickImage(false)),
+                ],
+              ),
+            ],
+            const SizedBox(height: 80), // Augmentation de l'espacement
             ElevatedButton(
               onPressed: _saveClientInfo,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF08004D),
                 minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(30),
                 ),
               ),
               child: const Text(

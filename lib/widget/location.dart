@@ -512,7 +512,9 @@ class _LocationPageState extends State<LocationPage> {
                           : "Sauvegarder le contrat",
                       style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 20), // Augmenter la taille de la police
+                          fontSize: 20,
+                          fontWeight: FontWeight
+                              .normal), // Augmenter la taille de la police
                     ),
                   ),
                 ),
