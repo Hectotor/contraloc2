@@ -35,7 +35,7 @@ android {
         applicationId = "com.contratloc.app"
         minSdkVersion 23 // Mise à jour de minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
-        versionCode 14 // Augmentez le versionCode
+        versionCode 15 // Augmentez le versionCode
         versionName "1.0"
     }
 

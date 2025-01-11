@@ -13,4 +13,5 @@
     <color name="colorSurface">#FFFFFF</color>
     <color name="colorOnSurface">#000000</color>
     <color name="notification_color">#FF0000</color> <!-- Replace with your desired color -->
+	<color name="ic_launcher_background">#ffffff</color>
 </resources>

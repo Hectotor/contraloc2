@@ -367,15 +367,24 @@ class _ClientPageState extends State<ClientPage> {
                           fit: BoxFit.cover,
                         ),
                       )
-                    : Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            label,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.grey),
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.add_photo_alternate,
+                            size: 40,
+                            color: Color(0xFF08004D),
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              label,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        ],
                       ),
               ),
               if (imageFile != null)

@@ -73,8 +73,10 @@ flutter:
     - assets/icon/whatsapp_icon.png
 
 flutter_launcher_icons:
-  android: true
+  android: "launcher_icon"
   ios: true
   image_path: "assets/icon/IconContraLoc.png"
+  adaptive_icon_background: "#ffffff" # Couleur de fond pour Android
+  adaptive_icon_foreground: "assets/icon/IconContraLoc.png" # Image de premier plan pour Android
   remove_alpha_ios: true
   min_sdk_android: 21

@@ -46,17 +46,28 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF08004D),
-      body: Center(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xFF08004D),
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset('assets/icon/LogoContraLoc.png',
-                width: 350, height: 350),
+            Container(
+              width: 250, // Réduit la taille
+              height: 250, // Réduit la taille
+              child: Image.asset(
+                'assets/icon/LogoContraLoc.png',
+                fit: BoxFit.contain, // Assure que l'image s'adapte correctement
+              ),
+            ),
             const SizedBox(height: 20),
             const Text(
               'ContraLoc',
               style: TextStyle(
-                fontSize: 50,
+                fontSize: 40, // Réduit légèrement la taille du texte
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
