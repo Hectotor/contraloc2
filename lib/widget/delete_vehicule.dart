@@ -51,6 +51,7 @@ class DeleteVehicule {
     showDialog(
       context: context,
       builder: (context) => Dialog(
+        backgroundColor: Colors.white, // Ajout ici
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
@@ -119,6 +120,7 @@ class DeleteVehicule {
     showDialog(
       context: context,
       builder: (context) => Dialog(
+        backgroundColor: Colors.white, // Ajout ici
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),

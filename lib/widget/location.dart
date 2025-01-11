@@ -391,6 +391,7 @@ class _LocationPageState extends State<LocationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50], // Ajout ici
       appBar: AppBar(
         title: const Text(
           "Détails de la Location",

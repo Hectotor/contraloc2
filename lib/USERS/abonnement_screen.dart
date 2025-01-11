@@ -478,9 +478,68 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     }
   }
 
+  Future<void> _showUnsubscribeConfirmationDialog() async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white, // Ajout ici
+        title: const Text(
+          "Confirmation de désabonnement",
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF08004D),
+          ),
+        ),
+        content: const Text(
+          "Êtes-vous sûr de vouloir vous désabonner ?",
+          style: TextStyle(
+            fontSize: 18,
+            color: Colors.black87,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              "Annuler",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF08004D),
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _cancelSubscription();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              "Se désabonner",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50], // Ajout ici
       appBar: AppBar(
         title: const Text(
           "Mon abonnement",
@@ -503,30 +562,13 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (isSubscriptionActive) ...[
-                Card(
-                  color: Colors.blue[50],
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      "Pour changer d'offre, veuillez d'abord vous désabonner de votre abonnement actuel.",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.blue[900],
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
               // Offre de base
               Card(
                 elevation: 5,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
+                color: Colors.white, // Modification ici
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -562,6 +604,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
+                color: Colors.white, // Modification ici
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -598,6 +641,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
+                color: Colors.white, // Modification ici
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -706,33 +750,35 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
                 ),
               ),
               const SizedBox(height: 50),
-              ElevatedButton(
-                onPressed: numberOfCars <= 1
-                    ? null
-                    : _handlePayment, // Désactiver le bouton pour 1 voiture
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
+              if (!isSubscriptionActive) ...[
+                ElevatedButton(
+                  onPressed: numberOfCars <= 1
+                      ? null
+                      : _handlePayment, // Désactiver le bouton pour 1 voiture
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    backgroundColor: const Color(0xFF08004D),
+                    elevation: 5,
+                    // Ajout de la couleur désactivée
+                    disabledBackgroundColor: Colors.grey,
                   ),
-                  backgroundColor: const Color(0xFF08004D),
-                  elevation: 5,
-                  // Ajout de la couleur désactivée
-                  disabledBackgroundColor: Colors.grey,
-                ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : Text(
-                        numberOfCars <= 1
-                            ? "Version gratuite active"
-                            : "Valider mon abonnement",
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          numberOfCars <= 1
+                              ? "Version gratuite active"
+                              : "Valider mon abonnement",
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-              ),
+                ),
+              ],
               if (isSubscriptionActive) ...[
                 const SizedBox(height: 20),
                 FutureBuilder<DocumentSnapshot>(
@@ -760,7 +806,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: _cancelSubscription,
+                  onPressed: _showUnsubscribeConfirmationDialog,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     shape: RoundedRectangleBorder(
@@ -779,7 +825,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
                   ),
                 ),
               ],
-              const SizedBox(height: 20),
+              const SizedBox(height: 40),
             ],
           ),
         ),

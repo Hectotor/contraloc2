@@ -328,6 +328,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50], // Ajout ici
       appBar: AppBar(
         title: Text(
           widget.data['status'] == 'restitue' ? "Restitués" : "En cours",

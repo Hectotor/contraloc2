@@ -73,6 +73,7 @@ class ContratEnCours extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                color: Colors.white, // Ajout de la couleur blanche
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(

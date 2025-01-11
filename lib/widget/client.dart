@@ -191,6 +191,7 @@ class _ClientPageState extends State<ClientPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50], // Ajout ici
       appBar: AppBar(
         title: const Text(
           "Informations du Client",
@@ -267,7 +268,14 @@ class _ClientPageState extends State<ClientPage> {
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
-        inputFormatters: inputFormatters,
+        inputFormatters: [
+          if (label == "N° Permis") UpperCaseTextFormatter(),
+          ...?inputFormatters,
+        ],
+        textCapitalization:
+            (label == "Prénom" || label == "Nom" || label == "Adresse")
+                ? TextCapitalization.words
+                : TextCapitalization.none, // Ajout de la capitalisation
         onChanged: (value) {
           if (label == "Email") {
             setState(
@@ -295,6 +303,8 @@ class _ClientPageState extends State<ClientPage> {
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextField(
         controller: _adresseController,
+        textCapitalization:
+            TextCapitalization.words, // Ajout de la capitalisation
         decoration: InputDecoration(
           labelText: "Adresse",
           border: OutlineInputBorder(
