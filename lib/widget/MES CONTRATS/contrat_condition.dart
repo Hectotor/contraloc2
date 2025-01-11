@@ -1,0 +1,256 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+class ContratModifier extends StatefulWidget {
+  // Rendre defaultContract accessible
+  static const String defaultContract = '''
+
+Article 1 : Obligations du Bailleur
+Le Bailleur s’engage à :
+Fournir un véhicule en bon état de fonctionnement
+Le véhicule doit être en parfait état de marche, propre, et entretenu conformément aux normes du constructeur.
+Les équipements de sécurité (freins, pneus, éclairage, etc.) doivent être en bon état et conformes à la réglementation en vigueur.
+Assurer la conformité des documents légaux
+Le Bailleur doit fournir les documents nécessaires à l’utilisation légale du véhicule :
+- Carte grise valide ;
+- Attestation d’assurance mentionnant que le véhicule est couvert pour la location ;
+- Rapport de contrôle technique en cours de validité.
+Garantir la disponibilité du véhicule à la date prévue
+Le véhicule doit être disponible à l’heure et au lieu convenus dans le contrat, sans retard ni empêchement non justifié.
+Effectuer un état des lieux contradictoire
+Un état des lieux détaillé, accompagné de photographies, doit être réalisé avant la remise du véhicule et signé par les deux parties.
+
+Article 2 : Obligations du Locataire
+Le Locataire s’engage à :
+Utiliser le véhicule avec soin et responsabilité
+Le Locataire doit conduire de manière prudente et respecter les lois et règlements en vigueur (notamment le Code de la route).
+Toute utilisation abusive ou détournée du véhicule est interdite.
+Ne pas sous-louer ou prêter le véhicule
+Le Locataire ne peut en aucun cas sous-louer ou prêter le véhicule à un tiers, sauf accord exprès du Bailleur.
+Assumer les frais liés à l’utilisation
+Le carburant, les péages, les parkings, et autres frais d’utilisation sont à la charge exclusive du Locataire.
+Restituer le véhicule dans l’état initial
+Le Locataire doit restituer le véhicule propre et dans le même état que lors de la prise en charge, hormis l’usure normale liée à son utilisation.
+Informer immédiatement en cas d’incident
+En cas de panne, accident, ou autre incident, le Locataire doit informer le Bailleur dans les plus brefs délais et suivre les instructions données.
+
+Article 3 : Assurances et responsabilités
+Couverture d’assurance
+Le véhicule est couvert par une assurance responsabilité civile souscrite par le Bailleur. Cette assurance couvre les dommages causés à des tiers pendant la durée de la location.
+Responsabilité du Locataire
+Le Locataire est responsable des dommages causés au véhicule dans la limite de la franchise prévue.
+Le Locataire est également responsable des amendes, infractions, et contraventions commises pendant la période de location.
+Sinistres et réparations
+En cas de sinistre, le Locataire doit remplir un constat amiable et le transmettre au Bailleur.
+Les frais de réparation non couverts par l’assurance restent à la charge du Locataire.
+
+Article 4 : Restitution du véhicule
+Lieu et heure de restitution
+Le véhicule doit être restitué à la date, à l’heure, et au lieu convenus dans le contrat.
+Frais de retard
+Toute restitution tardive entraînera des frais supplémentaires calculés au prorata des heures de retard.
+Inspection à la restitution
+Le véhicule sera inspecté en présence des deux parties. Toute détérioration non liée à l’usure normale (rayures, chocs, etc.) sera facturée au Locataire.
+
+Article 5 : Résiliation
+Résiliation par le Bailleur
+Le Bailleur peut résilier le contrat en cas de non-respect des obligations par le Locataire, notamment en cas d'utilisation abusive ou non autorisée du véhicule.
+Résiliation par le Locataire
+Le Locataire peut résilier le contrat en cas de non-conformité du véhicule ou d’indisponibilité injustifiée.
+Conséquences de la résiliation
+En cas de résiliation anticipée, le dépôt de garantie pourra être conservé, en tout ou partie, pour couvrir les frais engagés par la partie lésée.
+
+Article 6 : Litiges
+Règlement amiable
+Les parties s’engagent à résoudre tout différend lié au contrat par voie amiable, en privilégiant le dialogue et la médiation.
+Compétence juridictionnelle
+En cas d’échec de la résolution amiable, les litiges seront soumis aux tribunaux compétents du lieu de résidence du Bailleur.
+''';
+
+  @override
+  _ContratModifierState createState() => _ContratModifierState();
+}
+
+class _ContratModifierState extends State<ContratModifier> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContract();
+  }
+
+  Future<void> _loadContract() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('contrats')
+            .doc(user.uid)
+            .get();
+
+        // Safely access the data
+        final data = doc.data();
+        setState(() {
+          _controller.text = data?['texte'] ?? ContratModifier.defaultContract;
+        });
+      } else {
+        setState(() {
+          _controller.text = ContratModifier.defaultContract;
+        });
+      }
+    } catch (e) {
+      print('Error loading contract: $e');
+      setState(() {
+        _controller.text = ContratModifier.defaultContract;
+      });
+    }
+  }
+
+  Future<void> _saveContract() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('contrats')
+          .doc(user.uid)
+          .set({
+        'texte': _controller.text,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Contrat enregistré avec succès.'),
+          backgroundColor: Colors.blueAccent,
+        ),
+      );
+    }
+  }
+
+  void _resetContract() {
+    setState(() {
+      _controller.text = ContratModifier.defaultContract;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 2,
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF08004D),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.description, color: Colors.white),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'Modifier le contrat',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.keyboard_hide,
+                                color: Colors.white),
+                            onPressed: () {
+                              FocusScope.of(context).unfocus();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: TextFormField(
+                          controller: _controller,
+                          maxLines: null,
+                          style: const TextStyle(
+                            fontFamily: 'Roboto', // Change font to Roboto
+                            fontSize: 16,
+                            height: 1.6,
+                            color: Color(0xFF2C3E50),
+                          ),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            hintText: 'Le contenu du contrat...',
+                            hintStyle: TextStyle(color: Colors.grey.shade400),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Garder les boutons existants
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _resetContract,
+                      icon: const Icon(Icons.refresh, color: Colors.white),
+                      label: const Text('Réinitialiser',
+                          style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _saveContract,
+                      icon: const Icon(Icons.save, color: Colors.white),
+                      label: const Text('Enregistrer',
+                          style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF08004D),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

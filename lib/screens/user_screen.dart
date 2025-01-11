@@ -1,0 +1,437 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart'; // Import Firebase Storage
+import '../screens/login.dart'; // Import de l'écran de connexion si l'utilisateur se déconnecte
+import '../USERS/tampon.dart';
+import '../USERS/logo.dart';
+import '../USERS/question_user.dart'; // Import the question user screen
+//import '../USERS/abonnement.dart'; // Import the new abonnement screen
+import '../USERS/abonnement_screen.dart'; // Add this import
+import '../USERS/supprimer_compte.dart'; // Import du fichier supprimer_compte.dart
+
+class UserScreen extends StatefulWidget {
+  const UserScreen({Key? key}) : super(key: key);
+
+  @override
+  State<UserScreen> createState() => _UserScreenState();
+}
+
+class _UserScreenState extends State<UserScreen> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  final _formKey = GlobalKey<FormState>();
+
+  // Contrôleurs pour les champs
+  final TextEditingController _nomController = TextEditingController();
+  final TextEditingController _prenomController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _telephoneController = TextEditingController();
+  final TextEditingController _nomEntrepriseController =
+      TextEditingController();
+  final TextEditingController _adresseController = TextEditingController();
+  final TextEditingController _siretController = TextEditingController();
+  XFile? _logo;
+  String? _logoUrl; // Add a variable to store the logo URL
+
+  User? currentUser;
+  bool _isLoading = false; // Add loading state
+
+  @override
+  void initState() {
+    super.initState();
+    currentUser = _auth.currentUser;
+    if (currentUser != null) {
+      _loadUserData();
+    } else {
+      // Identifiant de test
+      _nomEntrepriseController.text = "Entreprise Test";
+      _nomController.text = "Test";
+      _prenomController.text = "Utilisateur";
+      _emailController.text = "test@example.com";
+      _telephoneController.text = "1234567890";
+      _adresseController.text = "123 Rue de Test";
+      _siretController.text = "12345678901234";
+    }
+  }
+
+  // Charger les données utilisateur depuis Firestore
+  Future<void> _loadUserData() async {
+    try {
+      final doc =
+          await _firestore.collection('users').doc(currentUser!.uid).get();
+      if (!doc.exists) {
+        await _firestore.collection('users').doc(currentUser!.uid).set({
+          'numberOfCars': 1,
+          // ...autres champs par défaut si nécessaire...
+        });
+      }
+      if (doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          _nomEntrepriseController.text = data['nomEntreprise'] ?? '';
+          _nomController.text = data['nom'] ?? '';
+          _prenomController.text = data['prenom'] ?? '';
+          _emailController.text = currentUser?.email ?? '';
+          _telephoneController.text = data['telephone'] ?? '';
+          _adresseController.text = data['adresse'] ?? '';
+          _siretController.text = data['siret'] ?? '';
+          _logoUrl = data['logoUrl'] as String?;
+          // Modification ici
+        });
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur lors du chargement des données : $e")),
+        );
+      }
+    }
+  }
+
+  // Méthode pour mettre à jour les coordonnées utilisateur
+  Future<void> _updateUserData() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    String? logoUrl = _logoUrl; // Initialisation avec l'URL existante
+    try {
+      if (_logo != null) {
+        // Ne télécharge que si une nouvelle image est sélectionnée
+        logoUrl = await _uploadLogoToStorage(File(_logo!.path));
+      }
+
+      final Map<String, dynamic> userData = {
+        'nomEntreprise': _nomEntrepriseController.text.trim(),
+        'nom': _nomController.text.trim(),
+        'prenom': _prenomController.text.trim(),
+        'telephone': _telephoneController.text.trim(),
+        'adresse': _adresseController.text.trim(),
+        'siret': _siretController.text.trim(),
+      };
+
+      // N'ajoute logoUrl que s'il n'est pas null
+      if (logoUrl != null) {
+        userData['logoUrl'] = logoUrl;
+      }
+
+      // Ajoute les données du tampon seulement si nous avons un logo
+      if (logoUrl != null) {
+        userData['tampon'] = {
+          'logoPath': logoUrl,
+          'nomEntreprise': _nomEntrepriseController.text.trim(),
+          'adresse': _adresseController.text.trim(),
+          'telephone': _telephoneController.text.trim(),
+          'siret': _siretController.text.trim(),
+        };
+      }
+
+      await _firestore
+          .collection('users')
+          .doc(currentUser!.uid)
+          .update(userData);
+
+      setState(() {
+        _logoUrl = logoUrl; // Met à jour l'URL du logo dans l'état
+        _isLoading = false;
+      });
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Coordonnées mises à jour avec succès !"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur lors de la mise à jour : $e")),
+        );
+      }
+    }
+  }
+
+  // Méthode pour envoyer un email de réinitialisation du mot de passe
+  Future<void> _resetPassword() async {
+    try {
+      await _auth.sendPasswordResetEmail(email: currentUser!.email!);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                "Un email de réinitialisation a été envoyé à votre adresse.")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur : $e")),
+      );
+    }
+  }
+
+  // Méthode pour déconnecter l'utilisateur
+  Future<void> _logout() async {
+    try {
+      await _auth.signOut();
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+        (route) => false,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur : $e")),
+      );
+    }
+  }
+
+  // Méthode pour choisir une image de logo
+
+  // Méthode pour uploader le logo sur Firebase Storage
+  Future<String?> _uploadLogoToStorage(File imageFile) async {
+    if (currentUser == null) {
+      print('Erreur: utilisateur non connecté');
+      return null;
+    }
+
+    try {
+      final fileName = '${currentUser!.uid}.jpg';
+      final Reference storageRef =
+          FirebaseStorage.instance.ref().child('logos/$fileName');
+
+      await storageRef.putFile(imageFile);
+      final downloadUrl = await storageRef.getDownloadURL();
+      print("Logo uploadé avec succès : $downloadUrl");
+      return downloadUrl;
+    } catch (e) {
+      print('Erreur upload logo: $e');
+      return null;
+    }
+  }
+
+  // Méthode pour supprimer le logo
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white, // Ajout ici
+      appBar: AppBar(
+        title: const Text(
+          "Mon Profil",
+          style: TextStyle(
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.bold), // Couleur du titre en blanc
+        ),
+        backgroundColor: const Color(0xFF08004D), // Bleu nuit
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.help_outline, color: Colors.white),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const QuestionUser()),
+            );
+          },
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: _logout,
+          ),
+        ],
+      ),
+      body: Container(
+        color: Colors.white, // Ajout ici
+        child: Stack(
+          children: [
+            if (currentUser != null)
+              SingleChildScrollView(
+                physics:
+                    const BouncingScrollPhysics(), // Ajout de l'effet de défilement
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 24.0, // Augmentation du padding vertical
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      LogoWidget(
+                        initialLogoUrl: _logoUrl,
+                        onLogoChanged: (String? newLogoUrl) async {
+                          setState(() {
+                            _logoUrl = newLogoUrl;
+                          });
+                          if (newLogoUrl != null) {
+                            await _firestore
+                                .collection('users')
+                                .doc(currentUser!.uid)
+                                .update({
+                              'logoUrl': newLogoUrl,
+                            });
+                          }
+                        },
+                        currentUser: currentUser,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildTextField("Nom de l'entreprise",
+                          _nomEntrepriseController, true),
+                      _buildTextField("Nom", _nomController, true),
+                      _buildTextField("Prénom", _prenomController, true),
+                      _buildTextField("Email", _emailController, false,
+                          isReadOnly: true),
+                      _buildTextField("Téléphone", _telephoneController, true),
+                      _buildTextField("Adresse", _adresseController, true),
+                      _buildTextField("Numéro SIRET", _siretController, true),
+                      const SizedBox(height: 20),
+                      const SizedBox(height: 10),
+                      Tampon(
+                        logoPath: _logo?.path ?? _logoUrl ?? '',
+                        nomEntreprise: _nomEntrepriseController.text,
+                        adresse: _adresseController.text,
+                        telephone: _telephoneController.text,
+                        siret: _siretController.text,
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: _updateUserData,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F056B), // Bleu nuit
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Mettre à jour",
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: _resetPassword,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange, // Couleur différente
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Modifier mon mot de passe",
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AbonnementScreen(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Gérer mon Abonnement",
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return const SupprimerCompte();
+                            },
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Supprimer mon compte",
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
+                      ),
+                      const SizedBox(
+                          height: 100), // Augmentation de la marge en bas
+                      const Text(
+                        "Depuis 2020 - Contraloc.fr",
+                        style:
+                            TextStyle(fontSize: 16, color: Color(0xFF0F056B)),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(
+                          height: 5), // Marge supplémentaire tout en bas
+                    ],
+                  ),
+                ),
+              )
+            else
+              const Center(child: CircularProgressIndicator()),
+            if (_isLoading)
+              Container(
+                color: Colors.black.withOpacity(0.5),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+      String label, TextEditingController controller, bool isEditable,
+      {bool isReadOnly = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: TextFormField(
+        controller: controller,
+        readOnly: isReadOnly,
+        validator: isEditable
+            ? (value) =>
+                (value == null || value.isEmpty) ? "Ce champ est requis" : null
+            : null,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: Color(0xFF0F056B)),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF0F056B)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF0F056B)),
+          ),
+        ),
+      ),
+    );
+  }
+}

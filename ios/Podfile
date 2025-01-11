@@ -1,0 +1,56 @@
+# Définir la plateforme minimale pour iOS
+platform :ios, '13.0'  # ou version plus récente si nécessaire
+
+# Désactiver les statistiques de CocoaPods pour accélérer les builds
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+# Configuration du projet Runner
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+# Fonction pour récupérer FLUTTER_ROOT
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT\=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
+end
+
+# Importer les configurations de Flutter
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+# Configuration des pods Flutter
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  # Activer les frameworks pour le support Flutter et les achats intégrés
+  use_frameworks!
+  use_modular_headers!
+
+  # Exemple de dépendances à supprimer ou commenter
+  # pod 'Firebase/Messaging'
+  # pod 'Firebase/Analytics'
+
+  # Installer tous les pods nécessaires
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
+  target 'RunnerTests' do
+    inherit! :search_paths
+  end
+end
+
+# Ajouter des configurations supplémentaires après l'installation des pods
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+  end
+end

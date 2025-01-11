@@ -1,0 +1,75 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'kotlin-parcelize' // Ajout de kotlin-parcelize
+    id 'com.google.gms.google-services'
+    id "dev.flutter.flutter-gradle-plugin" // Flutter Plugin
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    // Ajoutez les options de compilation pour ignorer les avertissements
+    lintOptions {
+            disable 'Deprecation'
+            disable 'Unchecked'
+    }
+    namespace = "com.contratloc.app"
+    compileSdk = 35
+    ndkVersion = "27.0.12077973"
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        applicationId = "com.contratloc.app"
+        minSdkVersion 23 // Mise à jour de minSdkVersion
+        targetSdkVersion flutter.targetSdkVersion
+        versionCode 14 // Augmentez le versionCode
+        versionName "1.0"
+    }
+
+    buildFeatures {
+        viewBinding true // Activation de viewBinding
+    }
+
+    signingConfigs {
+        release {
+            keyAlias = keystoreProperties['keyAlias']
+            keyPassword = keystoreProperties['keyPassword']
+            storeFile = keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+            storePassword = keystoreProperties['storePassword']
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.release
+            minifyEnabled true // Active la réduction du code
+            shrinkResources true // Active la suppression des ressources inutilisées
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            ndk {
+                debugSymbolLevel 'FULL' // Ajoute les symboles pour le débogage natif
+            }
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+dependencies {
+    // implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation 'com.android.billingclient:billing:5.0.0' // Google Play Billing
+}
