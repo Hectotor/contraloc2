@@ -107,6 +107,91 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<bool> _checkMonthlyContractLimit() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Récupérer la limite de contrats de l'utilisateur
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final limiteContrat = userDoc.data()?['limiteContrat'] ?? 4;
+
+      // Calculer le début et la fin du mois en cours
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      final endOfMonth = DateTime(now.year, now.month + 1, 0);
+
+      // Compter les contrats créés ce mois-ci en utilisant la collection 'location'
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('locations')
+          .where('userId', isEqualTo: user.uid)
+          .where('dateCreation', isGreaterThanOrEqualTo: startOfMonth)
+          .where('dateCreation', isLessThanOrEqualTo: endOfMonth)
+          .get();
+
+      final nombreContratsMois = querySnapshot.docs.length;
+      print(
+          'Nombre de contrats ce mois: $nombreContratsMois sur $limiteContrat autorisés');
+
+      return nombreContratsMois < limiteContrat;
+    }
+    return false;
+  }
+
+  void _showLimitReachedDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: const Text(
+            "Limite mensuelle atteinte",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF08004D),
+            ),
+          ),
+          content: const Text(
+            "Vous avez atteint votre limite de contrats pour ce mois. Passez à un abonnement supérieur pour créer plus de contrats.",
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                "Plus tard",
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AbonnementScreen(),
+                  ),
+                );
+              },
+              child: const Text(
+                "Voir les abonnements",
+                style: TextStyle(
+                  color: Color(0xFF08004D),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     super.dispose();
@@ -230,6 +315,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     return GestureDetector(
                       onTap: () async {
+                        final canCreateContract =
+                            await _checkMonthlyContractLimit();
+
+                        if (!canCreateContract) {
+                          _showLimitReachedDialog();
+                          return;
+                        }
+
                         final subscriptionLimit =
                             await _getUserSubscriptionLimit();
                         final vehicleCount = await _getUserVehicleCount();

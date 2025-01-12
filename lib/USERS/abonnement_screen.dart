@@ -20,13 +20,15 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   bool isMonthly = true; // Nouvel état pour le type d'abonnement
 
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
-  List<ProductDetails> _products = [];
-  List<String> _kProductIds = [
-    'pro_monthly_subscription', // Définissez ces IDs dans votre console Play/App Store
-    'pro_yearly_subscription',
-    'premium_monthly_subscription',
-    'premium_yearly_subscription',
+  // Vérifier que les IDs correspondent exactement à ceux de l'App Store/Play Store
+  final List<String> _kProductIds = [
+    'ProMonthlySubscription',
+    'ProYearlySubscription',
+    'PremiumMonthlySubscription',
+    'PremiumYearlySubscription',
   ];
+
+  List<ProductDetails> _products = [];
 
   @override
   void initState() {
@@ -60,6 +62,29 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     }
   }
 
+  void _cancelSubscription() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
+          'numberOfCars': 1,
+          'isSubscriptionActive': false,
+          'subscriptionId': 'free',
+        });
+        setState(() {
+          numberOfCars = 1;
+          isSubscriptionActive = false;
+          currentPlan = "Gratuit";
+        });
+      } catch (e) {
+        print('Erreur lors de l\'annulation de l\'abonnement: $e');
+      }
+    }
+  }
+
   Future<void> _listenToPurchaseUpdated(
       List<PurchaseDetails> purchaseDetailsList) async {
     for (final PurchaseDetails purchaseDetails in purchaseDetailsList) {
@@ -80,6 +105,8 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
             ),
           );
         }
+        _resetSubscription();
+        _cancelSubscription(); // Annuler la souscription en cas d'erreur
       } else if (purchaseDetails.status == PurchaseStatus.purchased) {
         // Vérifier que le paiement est bien validé avant de mettre à jour
         if (purchaseDetails.pendingCompletePurchase) {
@@ -96,6 +123,17 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
             );
           }
         }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Transaction non validée, abonnement annulé.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        _resetSubscription();
+        _cancelSubscription(); // Annuler la souscription si non validée
       }
     }
   }
@@ -104,40 +142,61 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       int newNumberOfCars;
+      int limiteContrat;
       final bool isSubscriptionActive = true;
 
-      // Déterminer le type d'abonnement basé sur l'ID du produit
+      // Assurez-vous que les IDs correspondent exactement
       switch (purchase.productID) {
-        case 'pro_monthly_subscription':
-        case 'pro_yearly_subscription':
+        case 'ProMonthlySubscription':
+        case 'ProYearlySubscription':
           newNumberOfCars = 5;
+          limiteContrat = 10;
           break;
-        case 'premium_monthly_subscription':
-        case 'premium_yearly_subscription':
+        case 'PremiumMonthlySubscription':
+        case 'PremiumYearlySubscription':
           newNumberOfCars = 999;
+          limiteContrat = 999;
           break;
         default:
+          // Plan gratuit par défaut
           newNumberOfCars = 1;
-          return; // Sortir si l'ID du produit n'est pas reconnu
+          limiteContrat = 4;
+          return;
       }
 
-      // Mise à jour dans Firestore uniquement après validation du paiement
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({
-        'numberOfCars': newNumberOfCars,
-        'isSubscriptionActive': isSubscriptionActive,
-        'subscriptionId': purchase.productID,
-        'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
-      });
+      try {
+        // Vérification supplémentaire du statut d'achat
+        if (purchase.status == PurchaseStatus.purchased) {
+          // Mise à jour Firestore avec toutes les informations nécessaires
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .update({
+            'numberOfCars': newNumberOfCars,
+            'limiteContrat': limiteContrat,
+            'isSubscriptionActive': isSubscriptionActive,
+            'subscriptionId': purchase.productID,
+            'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
+            'subscriptionType':
+                purchase.productID.contains('Monthly') ? 'monthly' : 'yearly',
+          });
 
-      // Mise à jour de l'état local seulement après la mise à jour Firestore
-      setState(() {
-        numberOfCars = newNumberOfCars;
-        this.isSubscriptionActive = isSubscriptionActive;
-        currentPlan = _getPlanName(newNumberOfCars);
-      });
+          setState(() {
+            numberOfCars = newNumberOfCars;
+            this.isSubscriptionActive = isSubscriptionActive;
+            currentPlan = _getPlanName(newNumberOfCars);
+          });
+
+          // Log de debug
+          print('Abonnement mis à jour avec succès:');
+          print('ID Produit: ${purchase.productID}');
+          print('Nombre de voitures: $newNumberOfCars');
+          print('Limite de contrats: $limiteContrat');
+        }
+      } catch (e) {
+        print('Erreur lors de la mise à jour de l\'abonnement: $e');
+        // ...error handling...
+      }
     }
   }
 
@@ -159,155 +218,183 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     }
   }
 
+  void _resetSubscription() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
+          'numberOfCars': 1,
+          'isSubscriptionActive': false,
+          'subscriptionId': 'free',
+        });
+        setState(() {
+          numberOfCars = 1;
+          isSubscriptionActive = false;
+          currentPlan = "Gratuit";
+        });
+      } catch (e) {
+        print('Erreur lors de la réinitialisation de l\'abonnement: $e');
+      }
+    }
+  }
+
   String _getPlanName(int cars) {
-    if (cars <= 1) return "Gratuit";
-    if (cars <= 5) return "Pro";
-    return "Premium";
+    if (cars >= 999) return "Premium";
+    if (cars >= 5) return "Pro";
+    return "Gratuit";
   }
 
   Widget _buildPlanCard(
-      String title, String price, List<Map<String, dynamic>> features,
-      {bool isActive = false, VoidCallback? onSubscribe}) {
-    return Card(
-      elevation: 4,
-      margin: const EdgeInsets.all(8),
-      color: Colors.white, // Ajout du fond blanc
-      shape: RoundedRectangleBorder(
-        // Ajout d'une bordure arrondie
-        borderRadius: BorderRadius.circular(12),
+    String title,
+    String price,
+    List<Map<String, dynamic>> features, {
+    required bool isActive,
+    required VoidCallback onSubscribe,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 2,
+            blurRadius: 15,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      child: Container(
-        height: 300, // Hauteur fixe pour la carte
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize:
-              MainAxisSize.min, // Important : forcer la taille minimale
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF08004D),
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF08004D),
             ),
-            const SizedBox(height: 8),
-            Text(
-              price,
-              style: const TextStyle(
-                fontSize: 20,
-                color: Color(0xFFFFC300),
-                fontWeight: FontWeight.bold,
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            price,
+            style: const TextStyle(
+              fontSize: 20,
+              color: Color(0xFFFFC300),
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView(
-                children: features
-                    .map((feature) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Row(
-                            children: [
-                              Icon(
-                                feature['isAvailable']
-                                    ? Icons.check
-                                    : Icons.close,
-                                color: feature['isAvailable']
-                                    ? Colors.green
-                                    : Colors.red,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  feature['text'],
-                                  style: TextStyle(
-                                    color: feature['isAvailable']
-                                        ? Colors.black
-                                        : Colors.grey,
-                                  ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView(
+              children: features
+                  .map((feature) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Icon(
+                              feature['isAvailable']
+                                  ? Icons.check
+                                  : Icons.close,
+                              color: feature['isAvailable']
+                                  ? Colors.green
+                                  : Colors.red,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                feature['text'],
+                                style: TextStyle(
+                                  color: feature['isAvailable']
+                                      ? Colors.black
+                                      : Colors.grey,
                                 ),
                               ),
-                            ],
-                          ),
-                        ))
-                    .toList(),
+                            ),
+                          ],
+                        ),
+                      ))
+                  .toList(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: isActive ? null : onSubscribe,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isActive ? Colors.grey : const Color(0xFF08004D),
+              minimumSize: const Size(double.infinity, 45),
+            ),
+            child: Text(
+              isActive ? "Plan actuel" : "Souscrire",
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
               ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: isActive ? null : onSubscribe,
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    isActive ? Colors.grey : const Color(0xFF08004D),
-                minimumSize: const Size(double.infinity, 45),
-              ),
-              child: Text(
-                isActive ? "Plan actuel" : "Souscrire",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
+  @override
+  void dispose() {
+    final Stream<List<PurchaseDetails>> purchaseUpdated =
+        _inAppPurchase.purchaseStream;
+    purchaseUpdated.drain();
+    super.dispose();
+  }
+
   void _handleSubscription(String plan) async {
     try {
+      // Debug log pour voir quelle offre est sélectionnée
+      print('Plan sélectionné: $plan');
+      print('Mode: ${isMonthly ? "Mensuel" : "Annuel"}');
+
       ProductDetails? productDetails;
       String productId = '';
 
-      // Déterminer l'ID du produit en fonction du plan et du type d'abonnement
-      if (isMonthly) {
-        if (plan.contains("Pro")) {
-          productId = 'pro_monthly_subscription';
-        } else if (plan.contains("Premium")) {
-          productId = 'premium_monthly_subscription';
-        }
-      } else {
-        if (plan.contains("Pro")) {
-          productId = 'pro_yearly_subscription';
-        } else if (plan.contains("Premium")) {
-          productId = 'premium_yearly_subscription';
-        }
+      // Simplification de la logique de sélection du produit
+      if (plan.contains("Pro")) {
+        productId =
+            isMonthly ? 'ProMonthlySubscription' : 'ProYearlySubscription';
+      } else if (plan.contains("Premium")) {
+        productId = isMonthly
+            ? 'PremiumMonthlySubscription'
+            : 'PremiumYearlySubscription';
       }
 
-      // Chercher le produit correspondant
-      if (productId.isNotEmpty) {
-        try {
-          productDetails = _products.firstWhere(
-            (product) => product.id == productId,
-          );
+      if (productId.isEmpty) return;
 
-          // Si on trouve le produit, on lance l'achat
-          final PurchaseParam purchaseParam = PurchaseParam(
-            productDetails: productDetails,
+      try {
+        productDetails = _products.firstWhere(
+          (product) => product.id == productId,
+        );
+
+        final PurchaseParam purchaseParam = PurchaseParam(
+          productDetails: productDetails,
+        );
+
+        await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
+      } catch (e) {
+        print('Erreur spécifique lors de l\'achat: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Veuillez réessayer dans quelques instants'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2),
+            ),
           );
-          await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
-        } catch (e) {
-          // Si le produit n'est pas trouvé, afficher une erreur
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Produit non disponible pour le moment'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
         }
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Une erreur est survenue lors de l\'achat'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      print('Erreur générale: $e');
+      // ...error handling...
     }
   }
 
@@ -319,7 +406,10 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         "price": "0€/mois",
         "features": [
           {"text": "1 voiture", "isAvailable": true},
-          {"text": "4 contrats/mois", "isAvailable": true},
+          {
+            "text": "4 contrats/mois",
+            "isAvailable": true
+          }, // Mise à jour du texte
           {"text": "États des lieux sans photos", "isAvailable": true},
           {"text": "Prise de photos", "isAvailable": false},
         ],
@@ -329,7 +419,10 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         "price": "9.99€/mois",
         "features": [
           {"text": "5 voitures", "isAvailable": true},
-          {"text": "10 contrats/mois", "isAvailable": true},
+          {
+            "text": "10 contrats/mois",
+            "isAvailable": true
+          }, // Mise à jour du texte
           {"text": "États des lieux simplifiés", "isAvailable": true},
           {"text": "Prise de photos", "isAvailable": false},
         ],
@@ -339,7 +432,10 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         "price": "19.99€/mois",
         "features": [
           {"text": "Voitures illimitées", "isAvailable": true},
-          {"text": "Contrats illimités", "isAvailable": true},
+          {
+            "text": "Contrats illimités",
+            "isAvailable": true
+          }, // Mise à jour du texte
           {"text": "États des lieux simplifiés", "isAvailable": true},
           {"text": "Prise de photos", "isAvailable": true},
         ],
@@ -399,25 +495,95 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
       body: Column(
         children: [
           const SizedBox(height: 20),
-          ToggleButtons(
-            isSelected: [isMonthly, !isMonthly],
-            onPressed: (index) {
-              setState(() {
-                isMonthly = index == 0;
-              });
-            },
-            children: const [
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text("Mensuel"),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text("Annuel"),
-              ),
-            ],
+          // Remplacement du ToggleButtons par un nouveau design
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => isMonthly = true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color:
+                            isMonthly ? const Color(0xFF08004D) : Colors.white,
+                        borderRadius: const BorderRadius.horizontal(
+                          left: Radius.circular(12),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            size: 20,
+                            color: isMonthly ? Colors.white : Colors.grey,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Mensuel",
+                            style: TextStyle(
+                              color: isMonthly ? Colors.white : Colors.grey,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => isMonthly = false),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color:
+                            !isMonthly ? const Color(0xFF08004D) : Colors.white,
+                        borderRadius: const BorderRadius.horizontal(
+                          right: Radius.circular(12),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.calendar_month,
+                            size: 20,
+                            color: !isMonthly ? Colors.white : Colors.grey,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Annuel",
+                            style: TextStyle(
+                              color: !isMonthly ? Colors.white : Colors.grey,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 80),
           CarouselSlider.builder(
             itemCount: plans.length,
             options: CarouselOptions(

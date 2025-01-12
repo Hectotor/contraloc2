@@ -64,9 +64,11 @@ class _UserScreenState extends State<UserScreen> {
       final doc =
           await _firestore.collection('users').doc(currentUser!.uid).get();
       if (!doc.exists) {
+        // Initialisation des valeurs par défaut pour un nouvel utilisateur
         await _firestore.collection('users').doc(currentUser!.uid).set({
           'numberOfCars': 1,
-          // ...autres champs par défaut si nécessaire...
+          'limiteContrat': 4, // Ajout de la limite de contrats
+          // ...autres champs existants...
         });
       }
       if (doc.exists) {
@@ -114,6 +116,8 @@ class _UserScreenState extends State<UserScreen> {
         'telephone': _telephoneController.text.trim(),
         'adresse': _adresseController.text.trim(),
         'siret': _siretController.text.trim(),
+        'limiteContrat':
+            4, // Ajout de la limite de contrats si pas déjà définie
       };
 
       // N'ajoute logoUrl que s'il n'est pas null

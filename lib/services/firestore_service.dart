@@ -55,4 +55,33 @@ class FirestoreService {
         .where('userId', isEqualTo: userId)
         .get();
   }
+
+  static Future<QuerySnapshot> getMonthlyContrats() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      return FirebaseFirestore.instance.collection('locations').limit(1).get();
+    }
+
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final endOfMonth = DateTime(now.year, now.month + 1, 0);
+
+    return FirebaseFirestore.instance
+        .collection('locations')
+        .where('userId', isEqualTo: userId)
+        .where('dateCreation', isGreaterThanOrEqualTo: startOfMonth)
+        .where('dateCreation', isLessThanOrEqualTo: endOfMonth)
+        .orderBy('dateCreation', descending: true)
+        .get();
+  }
+
+  static Future<int> getMonthlyContratsCount() async {
+    try {
+      final snapshot = await getMonthlyContrats();
+      return snapshot.docs.length;
+    } catch (e) {
+      print('Erreur lors du comptage des contrats mensuels: $e');
+      return 0;
+    }
+  }
 }
