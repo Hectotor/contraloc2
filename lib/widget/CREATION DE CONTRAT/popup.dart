@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 class Popup {
-  static Future<void> showSuccess(BuildContext context) {
+  static Future<void> showSuccess(BuildContext context, {String? email}) {
     return showDialog(
       context: context,
       builder: (BuildContext context) {
         return Dialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -31,6 +32,18 @@ class Popup {
                   ),
                   textAlign: TextAlign.center,
                 ),
+                if (email != null && email.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    "Un exemplaire a été envoyé au client",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.green,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,

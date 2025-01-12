@@ -20,7 +20,7 @@ import 'CREATION DE CONTRAT/signature.dart';
 import '../widget/CREATION DE CONTRAT/MAIL.DART';
 import 'CREATION DE CONTRAT/voiture_selectionne.dart'; // Import the new voiture_selectionne.dart file
 import 'CREATION DE CONTRAT/create_contrat.dart'; // Import the new create_contrat.dart file
-import '../widget/popup.dart'; // Import the new popup.dart file
+import 'CREATION DE CONTRAT/popup.dart'; // Import the new popup.dart file
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 class LocationPage extends StatefulWidget {
@@ -107,11 +107,39 @@ class _LocationPageState extends State<LocationPage> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
       locale: const Locale('fr', 'FR'), // Set locale to French
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF08004D), // Couleur de sélection
+              onPrimary: Colors.white, // Couleur du texte sélectionné
+              surface: Colors.white, // Couleur de fond du calendrier
+              onSurface: Color(0xFF08004D), // Couleur du texte
+            ),
+            dialogBackgroundColor: Colors.white,
+          ),
+          child: child!,
+        );
+      },
     );
     if (pickedDate != null) {
       final pickedTime = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.now(),
+        builder: (context, child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: Color(0xFF08004D), // Couleur des boutons et sélection
+                onPrimary: Colors.white, // Couleur du texte sélectionné
+                surface: Colors.white, // Couleur de fond
+                onSurface: Color(0xFF08004D), // Couleur du texte
+              ),
+              dialogBackgroundColor: Colors.white,
+            ),
+            child: child!,
+          );
+        },
       );
       if (pickedTime != null) {
         final dateTime = DateTime(

@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async'; // Import Timer
 import '../widget/delete_vehicule.dart';
-import '../widget/client.dart';
+import '../widget/CREATION DE CONTRAT/client.dart';
 import '../utils/animation.dart';
 
 class HomeScreen extends StatefulWidget {

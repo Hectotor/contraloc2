@@ -171,202 +171,270 @@ class _QuestionUserState extends State<QuestionUser> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Ajout du background color
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: const Text(
-          "Poser une Question",
+          "Nous Contacter",
           style: TextStyle(
             color: Colors.white,
-            fontSize: 26,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: const Color(0xFF08004D),
+        elevation: 0,
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth: constraints.maxWidth,
-                minHeight: constraints.maxHeight,
-              ),
-              child: IntrinsicHeight(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(
-                        height:
-                            30), // Augmente la marge au-dessus du bouton WhatsApp
-                    ElevatedButton(
-                      onPressed: _launchWhatsApp,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(top: 20, bottom: 30),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      ElevatedButton(
+                        onPressed: _launchWhatsApp,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF25D366),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          minimumSize: const Size(double.infinity, 55),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.asset(
+                              'assets/icon/whatsapp_icon.png',
+                              height: 28,
+                              width: 28,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              "Contactez-nous sur WhatsApp",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/icon/whatsapp_icon.png', // Assurez-vous que cette image existe
-                            height: 24,
-                            width: 24,
-                          ),
-                          const SizedBox(width: 10),
-                          const Text(
-                            "Contactez-nous sur WhatsApp",
-                            style: TextStyle(color: Colors.white, fontSize: 18),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Center(
-                      child: Text(
-                        "Réponse rapide",
+                      const SizedBox(height: 8),
+                      const Text(
+                        "Réponse rapide garantie",
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
+                          fontSize: 14,
+                          color: Color(0xFF25D366),
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Center(
-                      child: Text(
-                        "Ou envoyez-nous un message",
+                    ],
+                  ),
+                ),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Envoyez-nous un message",
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF0F056B),
                         ),
-                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    TextField(
-                      controller: _messageController,
-                      maxLines: 8,
-                      decoration: InputDecoration(
-                        hintText: "Tapez votre message ici...",
-                        hintStyle: TextStyle(color: Colors.grey[600]),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                              const BorderSide(color: Color(0xFF0F056B)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                              const BorderSide(color: Color(0xFF0F056B)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: _isSending
-                          ? null
-                          : () async {
-                              await _sendEmail(_messageController.text);
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0F056B),
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: _messageController,
+                        maxLines: 6,
+                        decoration: InputDecoration(
+                          hintText: "Comment pouvons-nous vous aider ?",
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[200]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                const BorderSide(color: Color(0xFF0F056B)),
+                          ),
                         ),
                       ),
-                      child: _isSending
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              "Envoyer",
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 18),
-                            ),
-                    ),
-                    const SizedBox(height: 60),
-                    GestureDetector(
-                      onTap: _launchWhatsApp,
-                      child: ClipRRect(
-                        borderRadius:
-                            BorderRadius.circular(30), // Arrondir les coins
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: _isSending
+                            ? null
+                            : () => _sendEmail(_messageController.text),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F056B),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          minimumSize: const Size(double.infinity, 55),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: _isSending
+                            ? const SizedBox(
+                                height: 25,
+                                width: 25,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                "Envoyer",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
                         child: Image.asset(
                           'assets/icon/IconContraLoc.png',
-                          height: 100,
-                          width: 100,
+                          height: 80,
+                          width: 80,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "Contactez-nous",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F056B),
+                      const SizedBox(height: 15),
+                      const Text(
+                        "ContraLoc",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F056B),
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "Téléphone: 06 17 03 88 90",
-                      style: TextStyle(fontSize: 16, color: Color(0xFF0F056B)),
-                      textAlign: TextAlign.center,
-                    ),
-                    const Text(
-                      "Email: contact@contraloc.fr",
-                      style: TextStyle(fontSize: 16, color: Color(0xFF0F056B)),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "Depuis 2020 - contraloc.fr",
-                      style: TextStyle(fontSize: 16, color: Color(0xFF0F056B)),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 20.0, // Add spacing between buttons
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const TermsOfService()),
-                            );
-                          },
-                          child: const Text("Conditions d'utilisation",
-                              style: TextStyle(color: Color(0x800F056B))),
+                      const SizedBox(height: 10),
+                      const Text(
+                        "06 17 03 88 90",
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Color(0xFF0F056B),
                         ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const PrivacyPolicy()),
-                            );
-                          },
-                          child: const Text("Politique de confidentialité",
-                              style: TextStyle(color: Color(0x800F056B))),
+                      ),
+                      const Text(
+                        "contact@contraloc.fr",
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Color(0xFF0F056B),
                         ),
-                      ],
+                      ),
+                      const SizedBox(height: 15),
+                      const Text(
+                        "Depuis 2020 - contraloc.fr",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0x800F056B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 20.0,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TermsOfService(),
+                        ),
+                      ),
+                      child: const Text(
+                        "Conditions d'utilisation",
+                        style: TextStyle(color: Color(0x800F056B)),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PrivacyPolicy(),
+                        ),
+                      ),
+                      child: const Text(
+                        "Politique de confidentialité",
+                        style: TextStyle(color: Color(0x800F056B)),
+                      ),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 20),
+              ],
             ),
           );
         },

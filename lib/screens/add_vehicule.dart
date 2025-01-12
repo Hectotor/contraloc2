@@ -1,6 +1,6 @@
 import 'package:ContraLoc/USERS/abonnement_screen.dart';
 
-import '../widget/client.dart';
+import '../widget/CREATION DE CONTRAT/client.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';

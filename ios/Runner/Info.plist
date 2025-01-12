@@ -62,6 +62,10 @@
         <string>remote-notification</string>
     </array>
     <key>aps-environment</key>
-    <string>production</string> <!-- Change to 'production' for production builds -->
+    <string>production</string>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>armv7</string>
+    </array>
 </dict>
 </plist>

@@ -28,7 +28,52 @@ class RetourLoc extends StatelessWidget {
         TextFormField(
           controller: dateFinEffectifController,
           readOnly: true,
-          onTap: () => selectDateTime(dateFinEffectifController),
+          onTap: () async {
+            final pickedDate = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime(2000),
+              lastDate: DateTime(2100),
+              locale: const Locale('fr', 'FR'),
+              builder: (context, child) {
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: const ColorScheme.light(
+                      primary: Color(0xFF08004D), // Couleur de sélection
+                      onPrimary: Colors.white, // Couleur du texte sélectionné
+                      surface: Colors.white, // Couleur de fond du calendrier
+                      onSurface: Color(0xFF08004D), // Couleur du texte
+                    ),
+                    dialogBackgroundColor: Colors.white,
+                  ),
+                  child: child!,
+                );
+              },
+            );
+            if (pickedDate != null) {
+              final pickedTime = await showTimePicker(
+                context: context,
+                initialTime: TimeOfDay.now(),
+                builder: (context, child) {
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      colorScheme: const ColorScheme.light(
+                        primary: Color(0xFF08004D),
+                        onPrimary: Colors.white,
+                        surface: Colors.white,
+                        onSurface: Color(0xFF08004D),
+                      ),
+                      dialogBackgroundColor: Colors.white,
+                    ),
+                    child: child!,
+                  );
+                },
+              );
+              if (pickedTime != null) {
+                selectDateTime(dateFinEffectifController);
+              }
+            }
+          },
           decoration: InputDecoration(
             labelText: "Date de fin",
             border: OutlineInputBorder(
