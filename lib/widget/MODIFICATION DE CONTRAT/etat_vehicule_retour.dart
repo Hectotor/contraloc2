@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:ContraLoc/USERS/abonnement_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EtatVehiculeRetour extends StatefulWidget {
   final List<File> photos;
@@ -19,6 +22,81 @@ class EtatVehiculeRetour extends StatefulWidget {
 }
 
 class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
+  bool isPremiumUser = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPremiumStatus();
+  }
+
+  Future<void> _checkPremiumStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      setState(() {
+        isPremiumUser = (doc.data()?['numberOfCars'] ?? 1) >= 999;
+      });
+    }
+  }
+
+  void _showPremiumDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: const Text(
+            "Fonctionnalité Premium",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF08004D),
+            ),
+          ),
+          content: const Text(
+            "La prise de photos de l'état du véhicule au retour est disponible uniquement avec l'abonnement Premium. Souhaitez-vous découvrir nos offres ?",
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                "Plus tard",
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AbonnementScreen(),
+                  ),
+                );
+              },
+              child: const Text(
+                "Voir les offres",
+                style: TextStyle(
+                  color: Color(0xFF08004D),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _pickImage() async {
     if (widget.photos.length >= 10) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -118,7 +196,7 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
         ),
         const SizedBox(height: 10),
         ElevatedButton.icon(
-          onPressed: _pickImage,
+          onPressed: isPremiumUser ? _pickImage : _showPremiumDialog,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
             minimumSize: const Size(double.infinity, 50),
@@ -126,14 +204,17 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-          icon: const Icon(Icons.add_a_photo, color: Colors.white),
-          label: const Text(
-            "Ajouter des photos",
-            style: TextStyle(color: Colors.white, fontSize: 18),
+          icon: Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock,
+              color: Colors.white),
+          label: Text(
+            isPremiumUser
+                ? "Ajouter des photos"
+                : "Ajouter des photos (Premium)",
+            style: const TextStyle(color: Colors.white, fontSize: 18),
           ),
         ),
         const SizedBox(height: 10),
-        if (widget.photos.isNotEmpty) _buildPhotoScroll(),
+        if (widget.photos.isNotEmpty && isPremiumUser) _buildPhotoScroll(),
       ],
     );
   }

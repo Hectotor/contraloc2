@@ -4,6 +4,9 @@ import 'package:image_picker/image_picker.dart';
 import '../location.dart'; // Import de la page location
 import 'package:flutter/services.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:ContraLoc/USERS/abonnement_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
@@ -43,6 +46,80 @@ class _ClientPageState extends State<ClientPage> {
 
   File? _permisRecto;
   File? _permisVerso;
+  bool isPremiumUser = false; // Nouvelle propriété
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPremiumStatus();
+  }
+
+  Future<void> _checkPremiumStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      setState(() {
+        isPremiumUser = (doc.data()?['numberOfCars'] ?? 1) >= 999;
+      });
+    }
+  }
+
+  void _showPremiumDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white, // Ajout du fond blanc
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: const Text(
+            "Fonctionnalité Premium",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF08004D),
+            ),
+          ),
+          content: const Text(
+            "La prise de photos du permis est disponible uniquement avec l'abonnement Premium. Souhaitez-vous découvrir nos offres ?",
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                "Plus tard",
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AbonnementScreen(),
+                  ),
+                );
+              },
+              child: const Text(
+                "Voir les offres",
+                style: TextStyle(
+                  color: Color(0xFF08004D),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   Future<void> _pickImage(bool isRecto) async {
     final picker = ImagePicker();
@@ -190,6 +267,33 @@ class _ClientPageState extends State<ClientPage> {
 
   bool _showPermisFields = false; // Ajouter cette variable d'état
 
+  ElevatedButton buildPhotoButton() {
+    return ElevatedButton.icon(
+      onPressed: isPremiumUser
+          ? () {
+              setState(() {
+                _showPermisFields = !_showPermisFields;
+              });
+            }
+          : _showPremiumDialog,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green, // Remis en vert pour tous les cas
+        minimumSize: const Size(double.infinity, 50),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      icon: Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock,
+          color: Colors.white),
+      label: Text(
+        isPremiumUser
+            ? "Ajouter photo permis"
+            : "Ajouter photo permis (Premium)",
+        style: const TextStyle(color: Colors.white, fontSize: 18),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -231,26 +335,8 @@ class _ClientPageState extends State<ClientPage> {
                 keyboardType: TextInputType.emailAddress),
             _buildTextField("N° Permis", _numeroPermisController),
             const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: () {
-                setState(() {
-                  _showPermisFields = !_showPermisFields;
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              icon: const Icon(Icons.add_a_photo, color: Colors.white),
-              label: const Text(
-                "Ajouter photo permis",
-                style: TextStyle(color: Colors.white, fontSize: 18),
-              ),
-            ),
-            if (_showPermisFields) ...[
+            buildPhotoButton(),
+            if (_showPermisFields && isPremiumUser) ...[
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
