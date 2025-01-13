@@ -27,14 +27,6 @@ class Tampon extends StatelessWidget {
           color: Colors.white,
           border: Border.all(color: Colors.black, width: 2),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              spreadRadius: 5,
-              offset: const Offset(0, 5),
-            ),
-          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

@@ -84,18 +84,16 @@ class PlanDisplay extends StatelessWidget {
   final bool isMonthly;
   final String currentPlan;
   final Function(String) onSubscribe;
-  final bool isTransactionPending;
   final ValueChanged<int>? onPageChanged;
-  final int currentIndex; // Add this line
+  final int currentIndex;
 
   const PlanDisplay({
     Key? key,
     required this.isMonthly,
     required this.currentPlan,
     required this.onSubscribe,
-    required this.isTransactionPending,
     this.onPageChanged,
-    required this.currentIndex, // Add this line
+    required this.currentIndex,
   }) : super(key: key);
 
   Widget _buildFeatureRow(Map<String, dynamic> feature) {

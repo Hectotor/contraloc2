@@ -18,7 +18,6 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   String currentPlan = "Gratuit";
   int _currentIndex = 0;
   bool isMonthly = true; // Nouvel état pour le type d'abonnement
-  bool _isTransactionPending = false; // New state to track pending transactions
 
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
   // Vérifier que les IDs correspondent exactement à ceux de l'App Store/Play Store
@@ -34,7 +33,6 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   @override
   void initState() {
     super.initState();
-    _cancelAllPendingTransactions(); // Nettoie les transactions en attente
     _loadUserSubscription();
     _initInAppPurchase();
   }
@@ -64,92 +62,59 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     }
   }
 
-  void _resetSubscription() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .update({
-          'numberOfCars': 1,
-          'isSubscriptionActive': false,
-          'subscriptionId': 'free',
-        });
-        setState(() {
-          numberOfCars = 1;
-          isSubscriptionActive = false;
-          currentPlan = "Gratuit";
-        });
-      } catch (e) {
-        print('Erreur lors de la réinitialisation de l\'abonnement: $e');
-      }
-    }
-  }
-
   Future<void> _listenToPurchaseUpdated(
       List<PurchaseDetails> purchaseDetailsList) async {
     for (final PurchaseDetails purchaseDetails in purchaseDetailsList) {
-      if (purchaseDetails.status == PurchaseStatus.pending) {
-        // Afficher un indicateur de chargement
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Traitement du paiement en cours...')),
-          );
-        }
-      } else if (purchaseDetails.status == PurchaseStatus.error) {
-        // Afficher l'erreur et réinitialiser l'abonnement
-        print('Erreur lors de l\'achat : ${purchaseDetails.error}');
-        await _cancelAllPendingTransactions(); // Annule toutes les transactions en attente
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Erreur lors de l\'achat. Transaction annulée.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        _resetSubscription();
-      } else if (purchaseDetails.status == PurchaseStatus.canceled) {
-        // Annuler la transaction si l'utilisateur l'a annulée
-        print('Achat annulé par l\'utilisateur.');
-        await _cancelAllPendingTransactions(); // Annule toutes les transactions en attente
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Achat annulé. Aucune transaction en cours.'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        _resetSubscription();
-      } else if (purchaseDetails.status == PurchaseStatus.purchased) {
-        // Vérifier que le paiement est bien validé avant de mettre à jour
-        if (purchaseDetails.pendingCompletePurchase) {
-          await _inAppPurchase.completePurchase(purchaseDetails);
-          // Une fois le paiement complété, mettre à jour l'abonnement
-          await _handleSuccessfulPurchase(purchaseDetails);
-
+      try {
+        if (purchaseDetails.status == PurchaseStatus.canceled) {
+          // Gestion spécifique de l'annulation
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Abonnement mis à jour avec succès !'),
-                backgroundColor: Colors.green,
+                content: Text('Transaction annulé'),
+                backgroundColor: Colors.orange,
               ),
             );
           }
+        } else if (purchaseDetails.status == PurchaseStatus.error) {
+          // Gestion améliorée des erreurs
+          String errorMessage = 'Une erreur est survenue';
+
+          if (purchaseDetails.error != null) {
+            // Extraction du message d'erreur détaillé
+            errorMessage = purchaseDetails.error!.message;
+            // Nettoyage du message d'erreur pour éviter "Instance of 'SKError'"
+            if (errorMessage.contains('Instance of')) {
+              errorMessage = 'Transaction annulée';
+            }
+          }
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(errorMessage),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        } else if (purchaseDetails.status == PurchaseStatus.purchased) {
+          await _handleSuccessfulPurchase(purchaseDetails);
         }
-      } else {
-        // Réinitialiser l'abonnement si la transaction n'est pas validée
+
+        // Compléter la transaction dans tous les cas
+        if (purchaseDetails.pendingCompletePurchase) {
+          await _inAppPurchase.completePurchase(purchaseDetails);
+        }
+      } catch (e) {
+        print('Erreur lors du traitement de l\'achat: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Transaction non validée, abonnement annulé.'),
+              content: Text('Erreur lors du traitement de la transaction'),
               backgroundColor: Colors.red,
             ),
           );
         }
-        _resetSubscription();
       }
     }
   }
@@ -255,99 +220,36 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     super.dispose();
   }
 
-  void _handleSubscription(String plan) async {
-    if (_isTransactionPending) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('Une transaction est déjà en cours. Veuillez patienter.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    // Ajout de la confirmation pour passer à un plan inférieur
-    if (plan == "Offre Gratuite" ||
-        (currentPlan == "Offre Premium" && plan == "Offre Pro")) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 10,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Confirmation',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Êtes-vous sûr de vouloir passer à ${plan} ?\n\nCela réduira les fonctionnalités disponibles.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text(
-                          'Annuler',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _switchToLowerPlan(plan);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                        ),
-                        child: const Text('Confirmer'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-      return;
-    }
-
-    // Continuer avec la logique existante pour les upgrades
-    try {
-      setState(() {
-        _isTransactionPending = true;
+  Future<void> _switchToLowerPlan(String plan) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
+        'numberOfCars': 1,
+        'limiteContrat': 4,
+        'isSubscriptionActive': false,
+        'subscriptionId': 'free',
+        'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
+        'subscriptionType': 'free',
       });
 
-      print('Plan sélectionné: $plan');
-      print('Mode: ${isMonthly ? "Mensuel" : "Annuel"}');
+      setState(() {
+        numberOfCars = 1;
+        isSubscriptionActive = false;
+        currentPlan = "Offre Gratuite";
+      });
+    }
+  }
+
+  Future<void> _handleSubscription(String plan) async {
+    try {
+      // Vérifier si c'est un plan gratuit
+      if (plan == "Offre Gratuite") {
+        await _switchToLowerPlan(plan);
+        return;
+      }
 
       String productId = '';
       if (plan.contains("Pro")) {
@@ -361,7 +263,6 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
       if (productId.isEmpty) return;
 
-      // Vérifier si le produit existe dans la liste
       final productDetails = _products.firstWhere(
         (product) => product.id == productId,
         orElse: () => throw Exception('Produit non trouvé'),
@@ -371,127 +272,19 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         productDetails: productDetails,
       );
 
-      final bool pending = await _inAppPurchase.buyNonConsumable(
+      await _inAppPurchase.buyNonConsumable(
         purchaseParam: purchaseParam,
       );
-
-      if (!pending && mounted) {
-        // Si la transaction n'a pas démarré, on peut réessayer
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Erreur de transaction'),
-              content: const Text(
-                  'La transaction n\'a pas pu démarrer. Voulez-vous réessayer?'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Annuler'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    _handleSubscription(plan); // Réessayer la transaction
-                  },
-                  child: const Text('Réessayer'),
-                ),
-              ],
-            );
-          },
-        );
-      }
     } catch (e) {
       print('Erreur lors de l\'achat: $e');
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Erreur'),
-              content: Text('Une erreur est survenue: $e'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('OK'),
-                ),
-              ],
-            );
-          },
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Impossible de démarrer l\'achat. Veuillez réessayer.'),
+            backgroundColor: Colors.red,
+          ),
         );
-      }
-    } finally {
-      setState(() {
-        _isTransactionPending = false;
-      });
-    }
-  }
-
-  Future<void> _switchToLowerPlan(String newPlan) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      try {
-        int newNumberOfCars = newPlan == "Offre Pro" ? 5 : 1;
-        int newLimiteContrat = newPlan == "Offre Pro" ? 10 : 4;
-
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .update({
-          'numberOfCars': newNumberOfCars,
-          'limiteContrat': newLimiteContrat,
-          'isSubscriptionActive': true,
-          'subscriptionId': 'free',
-          'subscriptionType': 'monthly',
-          'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
-        });
-
-        setState(() {
-          numberOfCars = newNumberOfCars;
-          isSubscriptionActive = true;
-          currentPlan = newPlan;
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Votre abonnement a été mis à jour'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erreur lors du changement de plan : $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  Future<void> _cancelAllPendingTransactions() async {
-    final Stream<List<PurchaseDetails>> purchaseUpdated =
-        _inAppPurchase.purchaseStream;
-
-    await for (final purchaseDetailsList in purchaseUpdated) {
-      for (final purchase in purchaseDetailsList) {
-        if (purchase.pendingCompletePurchase) {
-          try {
-            await _inAppPurchase.completePurchase(purchase);
-            print(
-                'Transaction en attente annulée pour : ${purchase.productID}');
-          } catch (e) {
-            print('Erreur lors de l\'annulation de la transaction : $e');
-          }
-        }
       }
     }
   }
@@ -543,7 +336,6 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
               isMonthly: isMonthly,
               currentPlan: currentPlan,
               onSubscribe: _handleSubscription,
-              isTransactionPending: _isTransactionPending,
               onPageChanged: (index) => setState(() => _currentIndex = index),
               currentIndex: _currentIndex, // Add this line
             ),
