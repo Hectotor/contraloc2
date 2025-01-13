@@ -73,7 +73,7 @@ class _UserScreenState extends State<UserScreen> {
           'adresse': '',
           'siret': '',
           'numberOfCars': 1,
-          'limiteContrat': 4, // Ajout de la limite de contrats
+          'limiteContrat': 10, // Ajout de la limite de contrats
           'isSubscriptionActive':
               true, // Activer l'abonnement gratuit par défaut
           'subscriptionId': 'free', // ID de l'abonnement gratuit
@@ -86,7 +86,7 @@ class _UserScreenState extends State<UserScreen> {
         // Vérifier et ajouter les valeurs par défaut si elles sont manquantes
         final Map<String, dynamic> defaultValues = {
           'numberOfCars': 1,
-          'limiteContrat': 4,
+          'limiteContrat': 10,
           'isSubscriptionActive': true,
           'subscriptionId': 'free',
           'subscriptionType': 'monthly',
@@ -151,7 +151,7 @@ class _UserScreenState extends State<UserScreen> {
         'adresse': _adresseController.text.trim(),
         'siret': _siretController.text.trim(),
         'limiteContrat':
-            4, // Ajout de la limite de contrats si pas déjà définie
+            10, // Ajout de la limite de contrats si pas déjà définie
       };
 
       // N'ajoute logoUrl que s'il n'est pas null
@@ -389,7 +389,6 @@ class _UserScreenState extends State<UserScreen> {
                       _buildTextField("Téléphone", _telephoneController, true),
                       _buildTextField("Adresse", _adresseController, true),
                       _buildTextField("Numéro SIRET", _siretController, true),
-                      const SizedBox(height: 20),
                       const SizedBox(height: 10),
                       Tampon(
                         logoPath: _logo?.path ?? _logoUrl ?? '',

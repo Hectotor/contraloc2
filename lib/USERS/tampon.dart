@@ -25,8 +25,8 @@ class Tampon extends StatelessWidget {
         margin: const EdgeInsets.all(20.0),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: Colors.black, width: 2),
-          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.black, width: 1),
+          borderRadius: BorderRadius.circular(5),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

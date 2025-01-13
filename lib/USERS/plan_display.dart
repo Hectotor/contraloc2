@@ -18,7 +18,7 @@ class PlanData {
       price: "0€/mois",
       features: [
         {"text": "1 voiture", "isAvailable": true},
-        {"text": "4 contrats/mois", "isAvailable": true},
+        {"text": "10 contrats/mois", "isAvailable": true},
         {"text": "États des lieux sans photos", "isAvailable": true},
         {"text": "Prise de photos", "isAvailable": false},
       ],
@@ -52,7 +52,7 @@ class PlanData {
       price: "0€/an",
       features: [
         {"text": "1 voiture", "isAvailable": true},
-        {"text": "4 contrats/mois", "isAvailable": true},
+        {"text": "10 contrats/mois", "isAvailable": true},
         {"text": "États des lieux simplifiés", "isAvailable": true},
         {"text": "Prise de photos", "isAvailable": false},
       ],
@@ -127,7 +127,7 @@ class PlanDisplay extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.black.withOpacity(0.1),
             spreadRadius: 2,
             blurRadius: 15,
             offset: const Offset(0, 3),
@@ -135,23 +135,37 @@ class PlanDisplay extends StatelessWidget {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            plan.title,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF08004D),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white, // Changé en blanc
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            plan.price,
-            style: const TextStyle(
-              fontSize: 20,
-              color: Color(0xFFFFC300),
-              fontWeight: FontWeight.bold,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  plan.title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF08004D),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  plan.price,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFFFC300),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -169,7 +183,10 @@ class PlanDisplay extends StatelessWidget {
                 : () => onSubscribe(plan.title),
             style: ElevatedButton.styleFrom(
               backgroundColor: isActive ? Colors.grey : const Color(0xFF08004D),
-              minimumSize: const Size(double.infinity, 45),
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: Text(
               isActive ||
@@ -177,7 +194,12 @@ class PlanDisplay extends StatelessWidget {
                           currentPlan == "Offre Gratuite")
                   ? "Plan actuel"
                   : "Souscrire",
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ],

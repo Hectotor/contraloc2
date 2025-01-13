@@ -66,58 +66,88 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
       List<PurchaseDetails> purchaseDetailsList) async {
     for (final PurchaseDetails purchaseDetails in purchaseDetailsList) {
       try {
-        if (purchaseDetails.status == PurchaseStatus.canceled) {
-          // Gestion spécifique de l'annulation
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Transaction annulé'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
-        } else if (purchaseDetails.status == PurchaseStatus.error) {
-          // Gestion améliorée des erreurs
-          String errorMessage = 'Une erreur est survenue';
+        switch (purchaseDetails.status) {
+          case PurchaseStatus.pending:
+            _showMessage('Transaction en cours...', Colors.orange);
+            break;
 
-          if (purchaseDetails.error != null) {
-            // Extraction du message d'erreur détaillé
-            errorMessage = purchaseDetails.error!.message;
-            // Nettoyage du message d'erreur pour éviter "Instance of 'SKError'"
-            if (errorMessage.contains('Instance of')) {
-              errorMessage = 'Transaction annulée';
-            }
-          }
+          case PurchaseStatus.canceled:
+            await _handleCancelledPurchase();
+            break;
 
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(errorMessage),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        } else if (purchaseDetails.status == PurchaseStatus.purchased) {
-          await _handleSuccessfulPurchase(purchaseDetails);
+          case PurchaseStatus.error:
+            await _handlePurchaseError(purchaseDetails.error);
+            break;
+
+          case PurchaseStatus.purchased:
+            await _handleSuccessfulPurchase(purchaseDetails);
+            _showMessage('Abonnement activé avec succès !', Colors.green);
+            break;
+
+          default:
+            break;
         }
 
-        // Compléter la transaction dans tous les cas
         if (purchaseDetails.pendingCompletePurchase) {
           await _inAppPurchase.completePurchase(purchaseDetails);
         }
       } catch (e) {
-        print('Erreur lors du traitement de l\'achat: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Erreur lors du traitement de la transaction'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        _showMessage('Une erreur inattendue est survenue', Colors.red);
+        print('Erreur de transaction: $e');
       }
     }
   }
+
+  Future<void> _handleCancelledPurchase() async {
+    _showMessage('Transaction annulée', Colors.orange);
+    // Réinitialiser l'état si nécessaire
+    setState(() {
+      // Garder l'état actuel de l'abonnement
+    });
+  }
+
+  Future<void> _handlePurchaseError(IAPError? error) async {
+    String message = 'Erreur lors de la transaction';
+
+    if (error != null) {
+      switch (error.code) {
+        case 'payment-cancelled':
+          message = 'Paiement annulé';
+          break;
+        case 'store-problem':
+          message = 'Problème avec le store. Veuillez réessayer.';
+          break;
+        case 'purchase-not-allowed':
+          message = 'Achat non autorisé';
+          break;
+        default:
+          message = 'Erreur lors de l\'achat. Veuillez réessayer.';
+      }
+    }
+
+    _showMessage(message, Colors.red);
+  }
+
+  void _showMessage(String message, Color color) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        duration: const Duration(seconds: 3),
+        action: message.contains('Erreur')
+            ? SnackBarAction(
+                label: 'Réessayer',
+                textColor: Colors.white,
+                onPressed: () => _retryLastPurchase(),
+              )
+            : null,
+      ),
+    );
+  }
+
+  String? _lastAttemptedPurchase;
 
   Future<void> _handleSuccessfulPurchase(PurchaseDetails purchase) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -141,7 +171,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         default:
           // Plan gratuit par défaut
           newNumberOfCars = 1;
-          limiteContrat = 4;
+          limiteContrat = 10;
           return;
       }
 
@@ -228,7 +258,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
           .doc(user.uid)
           .update({
         'numberOfCars': 1,
-        'limiteContrat': 4,
+        'limiteContrat': 10,
         'isSubscriptionActive': false,
         'subscriptionId': 'free',
         'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
@@ -245,7 +275,8 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
   Future<void> _handleSubscription(String plan) async {
     try {
-      // Vérifier si c'est un plan gratuit
+      _lastAttemptedPurchase = plan; // Sauvegarder le plan tenté
+
       if (plan == "Offre Gratuite") {
         await _switchToLowerPlan(plan);
         return;
@@ -268,6 +299,8 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         orElse: () => throw Exception('Produit non trouvé'),
       );
 
+      _showMessage('Démarrage de la transaction...', Colors.blue);
+
       final PurchaseParam purchaseParam = PurchaseParam(
         productDetails: productDetails,
       );
@@ -276,16 +309,14 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         purchaseParam: purchaseParam,
       );
     } catch (e) {
-      print('Erreur lors de l\'achat: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content:
-                Text('Impossible de démarrer l\'achat. Veuillez réessayer.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      _showMessage('Erreur de démarrage de la transaction', Colors.red);
+      print('Erreur: $e');
+    }
+  }
+
+  Future<void> _retryLastPurchase() async {
+    if (_lastAttemptedPurchase != null) {
+      await _handleSubscription(_lastAttemptedPurchase!);
     }
   }
 
