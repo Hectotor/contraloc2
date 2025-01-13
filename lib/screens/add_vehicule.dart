@@ -191,41 +191,57 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
           showDialog(
             context: context,
             builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text(
-                  "Limite d'abonnement atteinte",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF08004D),
-                  ),
+              return Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                content: const Text(
-                  "Votre abonnement ne permet pas d'accéder à plus de véhicules. Vous pouvez soit mettre à jour votre abonnement, soit supprimer des véhicules.",
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.black87,
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (context) => const AbonnementScreen()),
-                      );
-                    },
-                    child: const Text(
-                      "Mettre à jour l'abonnement",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF08004D),
+                elevation: 0,
+                backgroundColor: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "Limite d'abonnement atteinte",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF08004D),
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        "Votre abonnement ne permet pas d'accéder à plus de véhicules. Vous pouvez soit mettre à jour votre abonnement, soit supprimer des véhicules.",
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.black87,
+                        ),
+                        //textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (context) => const AbonnementScreen()),
+                          );
+                        },
+                        child: const Text(
+                          "Mettre à jour l'abonnement",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF08004D),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               );
             },
           );

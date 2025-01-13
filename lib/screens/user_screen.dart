@@ -66,13 +66,48 @@ class _UserScreenState extends State<UserScreen> {
       if (!doc.exists) {
         // Initialisation des valeurs par défaut pour un nouvel utilisateur
         await _firestore.collection('users').doc(currentUser!.uid).set({
+          'nomEntreprise': '',
+          'nom': '',
+          'prenom': '',
+          'telephone': '',
+          'adresse': '',
+          'siret': '',
           'numberOfCars': 1,
           'limiteContrat': 4, // Ajout de la limite de contrats
-          // ...autres champs existants...
+          'isSubscriptionActive':
+              true, // Activer l'abonnement gratuit par défaut
+          'subscriptionId': 'free', // ID de l'abonnement gratuit
+          'subscriptionType': 'monthly', // Type d'abonnement par défaut
+          'subscriptionPurchaseDate':
+              DateTime.now().toIso8601String(), // Date d'activation
         });
-      }
-      if (doc.exists) {
+      } else {
         final data = doc.data()!;
+        // Vérifier et ajouter les valeurs par défaut si elles sont manquantes
+        final Map<String, dynamic> defaultValues = {
+          'numberOfCars': 1,
+          'limiteContrat': 4,
+          'isSubscriptionActive': true,
+          'subscriptionId': 'free',
+          'subscriptionType': 'monthly',
+          'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
+        };
+
+        bool needsUpdate = false;
+        defaultValues.forEach((key, value) {
+          if (!data.containsKey(key)) {
+            data[key] = value;
+            needsUpdate = true;
+          }
+        });
+
+        if (needsUpdate) {
+          await _firestore
+              .collection('users')
+              .doc(currentUser!.uid)
+              .update(data);
+        }
+
         setState(() {
           _nomEntrepriseController.text = data['nomEntreprise'] ?? '';
           _nomController.text = data['nom'] ?? '';
@@ -82,7 +117,6 @@ class _UserScreenState extends State<UserScreen> {
           _adresseController.text = data['adresse'] ?? '';
           _siretController.text = data['siret'] ?? '';
           _logoUrl = data['logoUrl'] as String?;
-          // Modification ici
         });
       }
     } catch (e) {

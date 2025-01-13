@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:carousel_slider/carousel_slider.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:ContraLoc/USERS/question_user.dart';
+import 'package:ContraLoc/USERS/plan_display.dart'; // Nouvel import
 
 class AbonnementScreen extends StatefulWidget {
   const AbonnementScreen({Key? key}) : super(key: key);
@@ -18,6 +18,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   String currentPlan = "Gratuit";
   int _currentIndex = 0;
   bool isMonthly = true; // Nouvel état pour le type d'abonnement
+  bool _isTransactionPending = false; // New state to track pending transactions
 
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
   // Vérifier que les IDs correspondent exactement à ceux de l'App Store/Play Store
@@ -33,6 +34,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   @override
   void initState() {
     super.initState();
+    _cancelAllPendingTransactions(); // Nettoie les transactions en attente
     _loadUserSubscription();
     _initInAppPurchase();
   }
@@ -62,7 +64,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     }
   }
 
-  void _cancelSubscription() async {
+  void _resetSubscription() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
@@ -80,7 +82,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
           currentPlan = "Gratuit";
         });
       } catch (e) {
-        print('Erreur lors de l\'annulation de l\'abonnement: $e');
+        print('Erreur lors de la réinitialisation de l\'abonnement: $e');
       }
     }
   }
@@ -96,17 +98,31 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
           );
         }
       } else if (purchaseDetails.status == PurchaseStatus.error) {
-        // Afficher l'erreur
+        // Afficher l'erreur et réinitialiser l'abonnement
+        print('Erreur lors de l\'achat : ${purchaseDetails.error}');
+        await _cancelAllPendingTransactions(); // Annule toutes les transactions en attente
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Erreur lors du paiement'),
+              content: Text('Erreur lors de l\'achat. Transaction annulée.'),
               backgroundColor: Colors.red,
             ),
           );
         }
         _resetSubscription();
-        _cancelSubscription(); // Annuler la souscription en cas d'erreur
+      } else if (purchaseDetails.status == PurchaseStatus.canceled) {
+        // Annuler la transaction si l'utilisateur l'a annulée
+        print('Achat annulé par l\'utilisateur.');
+        await _cancelAllPendingTransactions(); // Annule toutes les transactions en attente
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Achat annulé. Aucune transaction en cours.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        _resetSubscription();
       } else if (purchaseDetails.status == PurchaseStatus.purchased) {
         // Vérifier que le paiement est bien validé avant de mettre à jour
         if (purchaseDetails.pendingCompletePurchase) {
@@ -124,6 +140,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
           }
         }
       } else {
+        // Réinitialiser l'abonnement si la transaction n'est pas validée
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -133,7 +150,6 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
           );
         }
         _resetSubscription();
-        _cancelSubscription(); // Annuler la souscription si non validée
       }
     }
   }
@@ -214,131 +230,21 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
           isSubscriptionActive = doc.data()?['isSubscriptionActive'] ?? false;
           currentPlan = _getPlanName(numberOfCars);
         });
-      }
-    }
-  }
-
-  void _resetSubscription() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .update({
-          'numberOfCars': 1,
-          'isSubscriptionActive': false,
-          'subscriptionId': 'free',
-        });
+      } else {
+        // Si l'utilisateur est nouveau, définir l'offre gratuite comme plan actuel
         setState(() {
           numberOfCars = 1;
-          isSubscriptionActive = false;
-          currentPlan = "Gratuit";
+          isSubscriptionActive = true;
+          currentPlan = "Offre Gratuite";
         });
-      } catch (e) {
-        print('Erreur lors de la réinitialisation de l\'abonnement: $e');
       }
     }
   }
 
   String _getPlanName(int cars) {
-    if (cars >= 999) return "Premium";
-    if (cars >= 5) return "Pro";
-    return "Gratuit";
-  }
-
-  Widget _buildPlanCard(
-    String title,
-    String price,
-    List<Map<String, dynamic>> features, {
-    required bool isActive,
-    required VoidCallback onSubscribe,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 2,
-            blurRadius: 15,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF08004D),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            price,
-            style: const TextStyle(
-              fontSize: 20,
-              color: Color(0xFFFFC300),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: ListView(
-              children: features
-                  .map((feature) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          children: [
-                            Icon(
-                              feature['isAvailable']
-                                  ? Icons.check
-                                  : Icons.close,
-                              color: feature['isAvailable']
-                                  ? Colors.green
-                                  : Colors.red,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                feature['text'],
-                                style: TextStyle(
-                                  color: feature['isAvailable']
-                                      ? Colors.black
-                                      : Colors.grey,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ))
-                  .toList(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: isActive ? null : onSubscribe,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isActive ? Colors.grey : const Color(0xFF08004D),
-              minimumSize: const Size(double.infinity, 45),
-            ),
-            child: Text(
-              isActive ? "Plan actuel" : "Souscrire",
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    if (cars >= 999) return "Offre Premium";
+    if (cars >= 5) return "Offre Pro";
+    return "Offre Gratuite"; // Modification ici pour correspondre au titre exact dans PlanData
   }
 
   @override
@@ -350,15 +256,100 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   }
 
   void _handleSubscription(String plan) async {
+    if (_isTransactionPending) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Une transaction est déjà en cours. Veuillez patienter.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Ajout de la confirmation pour passer à un plan inférieur
+    if (plan == "Offre Gratuite" ||
+        (currentPlan == "Offre Premium" && plan == "Offre Pro")) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Confirmation',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Êtes-vous sûr de vouloir passer à ${plan} ?\n\nCela réduira les fonctionnalités disponibles.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text(
+                          'Annuler',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _switchToLowerPlan(plan);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                        ),
+                        child: const Text('Confirmer'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+      return;
+    }
+
+    // Continuer avec la logique existante pour les upgrades
     try {
-      // Debug log pour voir quelle offre est sélectionnée
+      setState(() {
+        _isTransactionPending = true;
+      });
+
       print('Plan sélectionné: $plan');
       print('Mode: ${isMonthly ? "Mensuel" : "Annuel"}');
 
-      ProductDetails? productDetails;
       String productId = '';
-
-      // Simplification de la logique de sélection du produit
       if (plan.contains("Pro")) {
         productId =
             isMonthly ? 'ProMonthlySubscription' : 'ProYearlySubscription';
@@ -370,113 +361,143 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
       if (productId.isEmpty) return;
 
+      // Vérifier si le produit existe dans la liste
+      final productDetails = _products.firstWhere(
+        (product) => product.id == productId,
+        orElse: () => throw Exception('Produit non trouvé'),
+      );
+
+      final PurchaseParam purchaseParam = PurchaseParam(
+        productDetails: productDetails,
+      );
+
+      final bool pending = await _inAppPurchase.buyNonConsumable(
+        purchaseParam: purchaseParam,
+      );
+
+      if (!pending && mounted) {
+        // Si la transaction n'a pas démarré, on peut réessayer
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Erreur de transaction'),
+              content: const Text(
+                  'La transaction n\'a pas pu démarrer. Voulez-vous réessayer?'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Annuler'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    _handleSubscription(plan); // Réessayer la transaction
+                  },
+                  child: const Text('Réessayer'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (e) {
+      print('Erreur lors de l\'achat: $e');
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Erreur'),
+              content: Text('Une erreur est survenue: $e'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } finally {
+      setState(() {
+        _isTransactionPending = false;
+      });
+    }
+  }
+
+  Future<void> _switchToLowerPlan(String newPlan) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
       try {
-        productDetails = _products.firstWhere(
-          (product) => product.id == productId,
-        );
+        int newNumberOfCars = newPlan == "Offre Pro" ? 5 : 1;
+        int newLimiteContrat = newPlan == "Offre Pro" ? 10 : 4;
 
-        final PurchaseParam purchaseParam = PurchaseParam(
-          productDetails: productDetails,
-        );
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
+          'numberOfCars': newNumberOfCars,
+          'limiteContrat': newLimiteContrat,
+          'isSubscriptionActive': true,
+          'subscriptionId': 'free',
+          'subscriptionType': 'monthly',
+          'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
+        });
 
-        await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
-      } catch (e) {
-        print('Erreur spécifique lors de l\'achat: $e');
+        setState(() {
+          numberOfCars = newNumberOfCars;
+          isSubscriptionActive = true;
+          currentPlan = newPlan;
+        });
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Veuillez réessayer dans quelques instants'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 2),
+              content: Text('Votre abonnement a été mis à jour'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur lors du changement de plan : $e'),
+              backgroundColor: Colors.red,
             ),
           );
         }
       }
-    } catch (e) {
-      print('Erreur générale: $e');
-      // ...error handling...
+    }
+  }
+
+  Future<void> _cancelAllPendingTransactions() async {
+    final Stream<List<PurchaseDetails>> purchaseUpdated =
+        _inAppPurchase.purchaseStream;
+
+    await for (final purchaseDetailsList in purchaseUpdated) {
+      for (final purchase in purchaseDetailsList) {
+        if (purchase.pendingCompletePurchase) {
+          try {
+            await _inAppPurchase.completePurchase(purchase);
+            print(
+                'Transaction en attente annulée pour : ${purchase.productID}');
+          } catch (e) {
+            print('Erreur lors de l\'annulation de la transaction : $e');
+          }
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final monthlyPlans = [
-      {
-        "title": "Offre Gratuite",
-        "price": "0€/mois",
-        "features": [
-          {"text": "1 voiture", "isAvailable": true},
-          {
-            "text": "4 contrats/mois",
-            "isAvailable": true
-          }, // Mise à jour du texte
-          {"text": "États des lieux sans photos", "isAvailable": true},
-          {"text": "Prise de photos", "isAvailable": false},
-        ],
-      },
-      {
-        "title": "Offre Pro",
-        "price": "9.99€/mois",
-        "features": [
-          {"text": "5 voitures", "isAvailable": true},
-          {
-            "text": "10 contrats/mois",
-            "isAvailable": true
-          }, // Mise à jour du texte
-          {"text": "États des lieux simplifiés", "isAvailable": true},
-          {"text": "Prise de photos", "isAvailable": false},
-        ],
-      },
-      {
-        "title": "Offre Premium",
-        "price": "19.99€/mois",
-        "features": [
-          {"text": "Voitures illimitées", "isAvailable": true},
-          {
-            "text": "Contrats illimités",
-            "isAvailable": true
-          }, // Mise à jour du texte
-          {"text": "États des lieux simplifiés", "isAvailable": true},
-          {"text": "Prise de photos", "isAvailable": true},
-        ],
-      },
-    ];
-
-    final yearlyPlans = [
-      {
-        "title": "Offre Gratuite",
-        "price": "0€/an",
-        "features": [
-          {"text": "1 voiture", "isAvailable": true},
-          {"text": "4 contrats/mois", "isAvailable": true},
-          {"text": "États des lieux simplifiés", "isAvailable": true},
-          {"text": "Prise de photos", "isAvailable": false},
-        ],
-      },
-      {
-        "title": "Offre Pro",
-        "price": "119.99€/an",
-        "features": [
-          {"text": "5 voitures", "isAvailable": true},
-          {"text": "10 contrats/mois", "isAvailable": true},
-          {"text": "États des lieux simplifiés", "isAvailable": true},
-          {"text": "Prise de photos", "isAvailable": false},
-        ],
-      },
-      {
-        "title": "Offre Premium",
-        "price": "239.99€/an",
-        "features": [
-          {"text": "Voitures illimitées", "isAvailable": true},
-          {"text": "Contrats illimités", "isAvailable": true},
-          {"text": "États des lieux simplifiés", "isAvailable": true},
-          {"text": "Prise de photos", "isAvailable": true},
-        ],
-      },
-    ];
-
-    final plans = isMonthly ? monthlyPlans : yearlyPlans;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -487,15 +508,14 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
             fontSize: 24,
           ),
         ),
-        iconTheme:
-            const IconThemeData(color: Colors.white), // Bouton retour en blanc
+        iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: const Color(0xFF08004D),
       ),
-      backgroundColor: Colors.grey[50], // Ajout de la couleur de fond
+      backgroundColor: Colors.grey[50],
       body: Column(
         children: [
-          const SizedBox(height: 20),
-          // Remplacement du ToggleButtons par un nouveau design
+          const SizedBox(height: 40),
+          // Toggle Mensuel/Annuel
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 20),
             decoration: BoxDecoration(
@@ -512,178 +532,112 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
             ),
             child: Row(
               children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => isMonthly = true),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color:
-                            isMonthly ? const Color(0xFF08004D) : Colors.white,
-                        borderRadius: const BorderRadius.horizontal(
-                          left: Radius.circular(12),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 20,
-                            color: isMonthly ? Colors.white : Colors.grey,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Mensuel",
-                            style: TextStyle(
-                              color: isMonthly ? Colors.white : Colors.grey,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => isMonthly = false),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color:
-                            !isMonthly ? const Color(0xFF08004D) : Colors.white,
-                        borderRadius: const BorderRadius.horizontal(
-                          right: Radius.circular(12),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.calendar_month,
-                            size: 20,
-                            color: !isMonthly ? Colors.white : Colors.grey,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Annuel",
-                            style: TextStyle(
-                              color: !isMonthly ? Colors.white : Colors.grey,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                _buildToggleButton(true, "Mensuel", Icons.calendar_today),
+                _buildToggleButton(false, "Annuel", Icons.calendar_month),
               ],
             ),
           ),
-          const SizedBox(height: 80),
-          CarouselSlider.builder(
-            itemCount: plans.length,
-            options: CarouselOptions(
-              height: 400,
-              enlargeCenterPage: true,
-              onPageChanged: (index, reason) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
-            ),
-            itemBuilder: (context, index, realIndex) {
-              final plan = plans[index];
-              return _buildPlanCard(
-                plan["title"] as String,
-                plan["price"] as String,
-                plan["features"] as List<Map<String, dynamic>>,
-                isActive: currentPlan ==
-                    _getPlanName(index == 0
-                        ? 1
-                        : index == 1
-                            ? 5
-                            : 9999),
-                onSubscribe: () => _handleSubscription(plan["title"] as String),
-              );
-            },
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: plans.asMap().entries.map((entry) {
-              return Container(
-                width: 12,
-                height: 12,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _currentIndex == entry.key
-                      ? const Color(0xFF08004D)
-                      : Colors.grey.shade300,
-                ),
-              );
-            }).toList(),
-          ),
-          const Spacer(),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const QuestionUser(),
-                    ),
-                  );
-                },
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.help_outline,
-                        color: Color(0xFF08004D),
-                        size: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        "Des questions ? Contactez-nous",
-                        style: TextStyle(
-                          color: const Color(0xFF08004D),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+          // Nouveau widget PlanDisplay
+          Expanded(
+            child: PlanDisplay(
+              isMonthly: isMonthly,
+              currentPlan: currentPlan,
+              onSubscribe: _handleSubscription,
+              isTransactionPending: _isTransactionPending,
+              onPageChanged: (index) => setState(() => _currentIndex = index),
+              currentIndex: _currentIndex, // Add this line
             ),
           ),
+          // Bouton Contact
+          _buildContactButton(),
           const SizedBox(height: 10),
         ],
+      ),
+    );
+  }
+
+  Widget _buildToggleButton(bool isMonthlyButton, String text, IconData icon) {
+    final bool isSelected = isMonthly == isMonthlyButton;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => isMonthly = isMonthlyButton),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF08004D) : Colors.white,
+            borderRadius: BorderRadius.horizontal(
+              left: Radius.circular(isMonthlyButton ? 12 : 0),
+              right: Radius.circular(!isMonthlyButton ? 12 : 0),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  size: 20, color: isSelected ? Colors.white : Colors.grey),
+              const SizedBox(width: 8),
+              Text(
+                text,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.grey,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContactButton() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const QuestionUser()),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(
+                  Icons.help_outline,
+                  color: Color(0xFF08004D),
+                  size: 24,
+                ),
+                SizedBox(width: 12),
+                Text(
+                  "Des questions ? Contactez-nous",
+                  style: TextStyle(
+                    color: Color(0xFF08004D),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
