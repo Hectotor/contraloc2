@@ -75,7 +75,7 @@ class _UserScreenState extends State<UserScreen> {
           'numberOfCars': 1,
           'limiteContrat': 10, // Ajout de la limite de contrats
           'isSubscriptionActive':
-              true, // Activer l'abonnement gratuit par défaut
+              false, // Changer ici : mettre false par défaut
           'subscriptionId': 'free', // ID de l'abonnement gratuit
           'subscriptionType': 'monthly', // Type d'abonnement par défaut
           'subscriptionPurchaseDate':
@@ -380,15 +380,21 @@ class _UserScreenState extends State<UserScreen> {
                         currentUser: currentUser,
                       ),
                       const SizedBox(height: 20),
-                      _buildTextField("Nom de l'entreprise",
-                          _nomEntrepriseController, true),
-                      _buildTextField("Nom", _nomController, true),
-                      _buildTextField("Prénom", _prenomController, true),
+                      _buildTextField(
+                          "Nom de l'entreprise", _nomEntrepriseController, true,
+                          icon: Icons.business),
+                      _buildTextField("Nom", _nomController, true,
+                          icon: Icons.person),
+                      _buildTextField("Prénom", _prenomController, true,
+                          icon: Icons.person_outline),
                       _buildTextField("Email", _emailController, false,
-                          isReadOnly: true),
-                      _buildTextField("Téléphone", _telephoneController, true),
-                      _buildTextField("Adresse", _adresseController, true),
-                      _buildTextField("Numéro SIRET", _siretController, true),
+                          isReadOnly: true, icon: Icons.email),
+                      _buildTextField("Téléphone", _telephoneController, true,
+                          icon: Icons.phone),
+                      _buildTextField("Adresse", _adresseController, true,
+                          icon: Icons.location_on),
+                      _buildTextField("Numéro SIRET", _siretController, true,
+                          icon: Icons.business_center),
                       const SizedBox(height: 10),
                       Tampon(
                         logoPath: _logo?.path ?? _logoUrl ?? '',
@@ -504,7 +510,7 @@ class _UserScreenState extends State<UserScreen> {
 
   Widget _buildTextField(
       String label, TextEditingController controller, bool isEditable,
-      {bool isReadOnly = false}) {
+      {bool isReadOnly = false, IconData? icon}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextFormField(
@@ -517,6 +523,8 @@ class _UserScreenState extends State<UserScreen> {
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(color: Color(0xFF0F056B)),
+          prefixIcon:
+              icon != null ? Icon(icon, color: Color(0xFF0F056B)) : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Color(0xFF0F056B)),

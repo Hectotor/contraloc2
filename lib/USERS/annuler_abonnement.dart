@@ -16,17 +16,22 @@ class AnnulerAbonnement extends StatelessWidget {
   }) : super(key: key);
 
   Future<void> _cancelSubscription(BuildContext context) async {
-    print('Début de _cancelSubscription');
-    print('currentSubscriptionId: $currentSubscriptionId');
-
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        print('Erreur: Utilisateur non connecté');
-        return;
+      // Finalize all pending transactions
+      await for (final purchases in inAppPurchase.purchaseStream.timeout(
+        const Duration(seconds: 2),
+        onTimeout: (sink) => sink.close(),
+      )) {
+        for (var purchase in purchases) {
+          if (purchase.pendingCompletePurchase) {
+            await inAppPurchase.completePurchase(purchase);
+          }
+        }
+        break;
       }
 
-      print('Utilisateur trouvé: ${user.uid}');
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
 
       bool? shouldCancel = await showDialog<bool>(
         context: context,
@@ -53,38 +58,27 @@ class AnnulerAbonnement extends StatelessWidget {
         ),
       );
 
-      print('Réponse dialog: $shouldCancel');
       if (shouldCancel != true) return;
 
-      print('Début mise à jour Firestore');
-      // Mettre à jour Firestore d'abord
+      // Mise à jour dans Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .update({
+        'isSubscriptionActive': false,
+        'subscriptionId': 'free',
         'numberOfCars': 1,
         'limiteContrat': 10,
-        'isSubscriptionActive': false, // Maintenant correctement mis à false
-        'subscriptionId': 'free',
+        'subscriptionType': 'monthly',
         'subscriptionCancellationDate': DateTime.now().toIso8601String(),
-        // Supprimé subscriptionType car redondant
       });
-      print('Fin mise à jour Firestore');
 
-      // Appeler onCancelSuccess avant la restauration des achats
+      // Appeler le callback immédiatement après la mise à jour Firestore
       onCancelSuccess();
-      print('onCancelSuccess appelé');
 
-      // Ensuite, tenter de restaurer/annuler l'achat
-      print('Tentative de restauration des achats');
-      try {
-        await inAppPurchase.restorePurchases();
-      } catch (e) {
-        print('Erreur lors de la restauration des achats: $e');
-        // Continue même si la restauration échoue
-      }
-
+      // Montrer le message de succès après que tout est terminé
       if (context.mounted) {
+        Navigator.pop(context); // Retourner à l'écran précédent
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Abonnement annulé avec succès'),
@@ -107,18 +101,11 @@ class AnnulerAbonnement extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('Debug AnnulerAbonnement:');
-    print('currentSubscriptionId: $currentSubscriptionId');
-    print('Bouton activé: ${currentSubscriptionId != 'free'}');
-
+    // Supprimons la condition sur le bouton pour qu'il soit toujours visible
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: ElevatedButton(
-        // Modifier la condition ici
-        onPressed:
-            (currentSubscriptionId == 'free' || currentSubscriptionId.isEmpty)
-                ? null
-                : () => _cancelSubscription(context),
+        onPressed: () => _cancelSubscription(context),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.red,
           foregroundColor: Colors.white,

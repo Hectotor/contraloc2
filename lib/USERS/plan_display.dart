@@ -80,10 +80,10 @@ class PlanData {
   ];
 }
 
-class PlanDisplay extends StatelessWidget {
+// Remplacer "class PlanDisplay extends StatelessWidget" par:
+class PlanDisplay extends StatefulWidget {
   final bool isMonthly;
-  final String
-      currentSubscriptionName; // Renommer currentPlan en currentSubscriptionName pour plus de clarté
+  final String currentSubscriptionName;
   final Function(String) onSubscribe;
   final ValueChanged<int>? onPageChanged;
   final int currentIndex;
@@ -91,17 +91,24 @@ class PlanDisplay extends StatelessWidget {
   const PlanDisplay({
     Key? key,
     required this.isMonthly,
-    required this.currentSubscriptionName, // Mis à jour ici
+    required this.currentSubscriptionName,
     required this.onSubscribe,
     this.onPageChanged,
     required this.currentIndex,
   }) : super(key: key);
 
-  // Ajouter cette méthode pour vérifier si un abonnement premium est actif
+  @override
+  State<PlanDisplay> createState() => _PlanDisplayState();
+}
+
+class _PlanDisplayState extends State<PlanDisplay> {
   bool _hasActiveSubscription() {
-    return currentSubscriptionName == "Offre Pro" ||
-        currentSubscriptionName == "Offre Premium";
+    return widget.currentSubscriptionName == "Offre Pro" ||
+        widget.currentSubscriptionName == "Offre Premium";
   }
+
+  // Déplacer les autres méthodes ici, en remplaçant les références directes aux propriétés
+  // par widget.propriété (ex: widget.currentSubscriptionName)
 
   Widget _buildFeatureRow(Map<String, dynamic> feature) {
     return Padding(
@@ -127,8 +134,17 @@ class PlanDisplay extends StatelessWidget {
   }
 
   Widget _buildPlanCard(PlanData plan, bool isActive) {
-    // Vérifier si on doit masquer le bouton souscrire
-    bool hideSubscribeButton = _hasActiveSubscription() && !isActive;
+    // Corrigeons la logique pour déterminer si c'est le plan actif
+    bool isActivePlan = widget.currentSubscriptionName == plan.title;
+
+    // Si c'est l'offre gratuite, elle n'est active que si currentSubscriptionName est "Offre Gratuite"
+    if (plan.title == "Offre Gratuite") {
+      isActivePlan = widget.currentSubscriptionName == "Offre Gratuite";
+    }
+
+    bool hideSubscribeButton = _hasActiveSubscription() &&
+        !isActivePlan &&
+        plan.title != widget.currentSubscriptionName;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -187,11 +203,14 @@ class PlanDisplay extends StatelessWidget {
           const SizedBox(height: 16),
           if (!hideSubscribeButton) // Condition pour afficher ou masquer le bouton
             ElevatedButton(
-              onPressed: isActive ||
-                      (plan.title == "Offre Gratuite" &&
-                          currentSubscriptionName == "Offre Gratuite")
+              onPressed: isActive
                   ? null
-                  : () => onSubscribe(plan.title),
+                  : () {
+                      // Ne pas mettre à jour l'état ici
+                      // La mise à jour doit se faire uniquement après confirmation du paiement
+                      widget.onSubscribe(plan.title);
+                      // Supprimer le setState ici car il sera géré par le callback après validation du paiement
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor:
                     isActive ? Colors.grey : const Color(0xFF08004D),
@@ -201,11 +220,7 @@ class PlanDisplay extends StatelessWidget {
                 ),
               ),
               child: Text(
-                isActive ||
-                        (plan.title == "Offre Gratuite" &&
-                            currentSubscriptionName == "Offre Gratuite")
-                    ? "Plan actuel"
-                    : "Souscrire",
+                isActive ? "Plan actuel" : "Souscrire",
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -234,7 +249,8 @@ class PlanDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final plans = isMonthly ? PlanData.monthlyPlans : PlanData.yearlyPlans;
+    final plans =
+        widget.isMonthly ? PlanData.monthlyPlans : PlanData.yearlyPlans;
 
     return CarouselSlider.builder(
       itemCount: plans.length,
@@ -242,14 +258,14 @@ class PlanDisplay extends StatelessWidget {
         height: 400,
         enlargeCenterPage: true,
         onPageChanged: (index, reason) {
-          if (onPageChanged != null) {
-            onPageChanged!(index);
+          if (widget.onPageChanged != null) {
+            widget.onPageChanged!(index);
           }
         },
       ),
       itemBuilder: (context, index, realIndex) {
         final plan = plans[index];
-        final isActive = currentSubscriptionName == plan.title;
+        final isActive = widget.currentSubscriptionName == plan.title;
         return _buildPlanCard(plan, isActive);
       },
     );

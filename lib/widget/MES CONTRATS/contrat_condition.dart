@@ -85,7 +85,6 @@ class _ContratModifierState extends State<ContratModifier> {
     _loadContract();
   }
 
-  // Ajouter cette méthode
   Future<void> _checkPremiumStatus() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -97,7 +96,8 @@ class _ContratModifierState extends State<ContratModifier> {
 
         setState(() {
           final subscriptionId = doc.data()?['subscriptionId'] ?? 'free';
-          isPremiumUser = subscriptionId.contains('Premium');
+          isPremiumUser = subscriptionId == 'PremiumMonthlySubscription' ||
+              subscriptionId == 'PremiumYearlySubscription';
         });
       }
     } catch (e) {

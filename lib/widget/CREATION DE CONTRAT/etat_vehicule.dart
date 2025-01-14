@@ -39,7 +39,9 @@ class _EtatVehiculeState extends State<EtatVehicule> {
           .get();
 
       setState(() {
-        isPremiumUser = (doc.data()?['numberOfCars'] ?? 1) >= 999;
+        final subscriptionId = doc.data()?['subscriptionId'] ?? 'free';
+        isPremiumUser = subscriptionId == 'PremiumMonthlySubscription' ||
+            subscriptionId == 'PremiumYearlySubscription';
       });
     }
   }
