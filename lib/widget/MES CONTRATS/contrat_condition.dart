@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../USERS/abonnement_screen.dart';
+
 class ContratModifier extends StatefulWidget {
   // Rendre defaultContract accessible
   static const String defaultContract = '''
@@ -74,11 +76,33 @@ En cas d’échec de la résolution amiable, les litiges seront soumis aux tribu
 
 class _ContratModifierState extends State<ContratModifier> {
   final TextEditingController _controller = TextEditingController();
+  bool isPremiumUser = false; // Ajouter cette variable
 
   @override
   void initState() {
     super.initState();
+    _checkPremiumStatus();
     _loadContract();
+  }
+
+  // Ajouter cette méthode
+  Future<void> _checkPremiumStatus() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        setState(() {
+          final subscriptionId = doc.data()?['subscriptionId'] ?? 'free';
+          isPremiumUser = subscriptionId.contains('Premium');
+        });
+      }
+    } catch (e) {
+      print('Erreur lors de la vérification du statut Premium: $e');
+    }
   }
 
   Future<void> _loadContract() async {
@@ -108,7 +132,13 @@ class _ContratModifierState extends State<ContratModifier> {
     }
   }
 
+  // Modifier la méthode _saveContract
   Future<void> _saveContract() async {
+    if (!isPremiumUser) {
+      _showPremiumDialog();
+      return;
+    }
+
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       await FirebaseFirestore.instance
@@ -127,10 +157,73 @@ class _ContratModifierState extends State<ContratModifier> {
     }
   }
 
+  // Ajouter cette méthode
+  void _showPremiumDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: const Text(
+            "Fonctionnalité Premium",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF08004D),
+            ),
+          ),
+          content: const Text(
+            "La modification du contrat est disponible uniquement avec l'abonnement Premium. Souhaitez-vous découvrir nos offres ?",
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                "Plus tard",
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AbonnementScreen(),
+                  ),
+                );
+              },
+              child: const Text(
+                "Voir les offres",
+                style: TextStyle(
+                  color: Color(0xFF08004D),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _resetContract() {
     setState(() {
       _controller.text = ContratModifier.defaultContract;
     });
+  }
+
+  // Ajouter cette méthode
+  void _onTextFieldTap() {
+    if (!isPremiumUser) {
+      _showPremiumDialog();
+      // Masquer le clavier s'il est ouvert
+      FocusScope.of(context).unfocus();
+    }
   }
 
   @override
@@ -194,19 +287,27 @@ class _ContratModifierState extends State<ContratModifier> {
                     Expanded(
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.all(20),
-                        child: TextFormField(
-                          controller: _controller,
-                          maxLines: null,
-                          style: const TextStyle(
-                            fontFamily: 'Roboto', // Change font to Roboto
-                            fontSize: 16,
-                            height: 1.6,
-                            color: Color(0xFF2C3E50),
-                          ),
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            hintText: 'Le contenu du contrat...',
-                            hintStyle: TextStyle(color: Colors.grey.shade400),
+                        child: GestureDetector(
+                          onTap:
+                              _onTextFieldTap, // Ajouter le gestionnaire de tap
+                          child: TextFormField(
+                            controller: _controller,
+                            maxLines: null,
+                            enabled: isPremiumUser,
+                            readOnly: !isPremiumUser, // Ajouter cette ligne
+                            style: const TextStyle(
+                              fontFamily: 'Roboto', // Change font to Roboto
+                              fontSize: 16,
+                              height: 1.6,
+                              color: Color(0xFF2C3E50),
+                            ),
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: isPremiumUser
+                                  ? 'Le contenu du contrat...'
+                                  : 'Abonnement Premium requis pour modifier le contrat',
+                              hintStyle: TextStyle(color: Colors.grey.shade400),
+                            ),
                           ),
                         ),
                       ),
@@ -222,7 +323,7 @@ class _ContratModifierState extends State<ContratModifier> {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: _resetContract,
+                      onPressed: isPremiumUser ? _resetContract : null,
                       icon: const Icon(Icons.refresh, color: Colors.white),
                       label: const Text('Réinitialiser',
                           style: TextStyle(color: Colors.white)),
@@ -235,7 +336,8 @@ class _ContratModifierState extends State<ContratModifier> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: _saveContract,
+                      onPressed:
+                          isPremiumUser ? _saveContract : _showPremiumDialog,
                       icon: const Icon(Icons.save, color: Colors.white),
                       label: const Text('Enregistrer',
                           style: TextStyle(color: Colors.white)),

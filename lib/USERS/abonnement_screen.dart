@@ -28,8 +28,9 @@ String _getProductId(String plan, bool isMonthly) {
 
 class _AbonnementScreenState extends State<AbonnementScreen> {
   int numberOfCars = 1;
+  int limiteContrat = 10; // Ajout de cette ligne
   bool isSubscriptionActive = false;
-  String currentPlan = "Gratuit";
+  String subscriptionId = 'free'; // Remplacer currentPlan par subscriptionId
   int _currentIndex = 0;
   bool isMonthly = true; // Nouvel état pour le type d'abonnement
 
@@ -152,13 +153,30 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   String? _lastAttemptedPurchase;
 
   Future<void> _handleSuccessfulPurchase(PurchaseDetails purchase) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
+    try {
+      print('Début _handleSuccessfulPurchase');
+      print('ProductID: ${purchase.productID}');
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('Erreur: Utilisateur non connecté');
+        _showMessage('Erreur: Utilisateur non connecté', Colors.red);
+        return;
+      }
+
+      // Vérification du statut d'achat
+      if (purchase.status != PurchaseStatus.purchased) {
+        print('Erreur: Statut d\'achat invalide - ${purchase.status}');
+        _showMessage('Erreur: Statut d\'achat invalide', Colors.red);
+        return;
+      }
+
       int newNumberOfCars;
       int limiteContrat;
-      final bool isSubscriptionActive = true;
 
-      // Assurez-vous que les IDs correspondent exactement
+      // Log des détails de l'achat
+      print('Traitement de l\'achat: ${purchase.productID}');
+
       switch (purchase.productID) {
         case 'ProMonthlySubscription':
         case 'ProYearlySubscription':
@@ -171,77 +189,93 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
           limiteContrat = 999;
           break;
         default:
-          // Plan gratuit par défaut
-          newNumberOfCars = 1;
-          limiteContrat = 10;
+          print('Erreur: ID de produit invalide - ${purchase.productID}');
+          _showMessage('Erreur: Produit non reconnu', Colors.red);
           return;
       }
 
-      try {
-        // Vérification supplémentaire du statut d'achat
-        if (purchase.status == PurchaseStatus.purchased) {
-          // Mise à jour Firestore avec toutes les informations nécessaires
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .update({
-            'numberOfCars': newNumberOfCars,
-            'limiteContrat': limiteContrat,
-            'isSubscriptionActive': isSubscriptionActive,
-            'subscriptionId': purchase.productID,
-            'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
-            'subscriptionType':
-                purchase.productID.contains('Monthly') ? 'monthly' : 'yearly',
-          });
+      // Préparation des données à mettre à jour
+      final updateData = {
+        'numberOfCars': newNumberOfCars,
+        'limiteContrat': limiteContrat,
+        'isSubscriptionActive': true,
+        'subscriptionId': purchase.productID,
+        'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
+      };
 
-          setState(() {
-            numberOfCars = newNumberOfCars;
-            this.isSubscriptionActive = isSubscriptionActive;
-            currentPlan = _getPlanName(newNumberOfCars);
-          });
+      print('Mise à jour Firestore avec: $updateData');
 
-          // Log de debug
-          print('Abonnement mis à jour avec succès:');
-          print('ID Produit: ${purchase.productID}');
-          print('Nombre de voitures: $newNumberOfCars');
-          print('Limite de contrats: $limiteContrat');
-        }
-      } catch (e) {
-        print('Erreur lors de la mise à jour de l\'abonnement: $e');
-        // ...error handling...
-      }
+      // Mise à jour Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update(updateData);
+
+      print('Mise à jour Firestore réussie');
+
+      // Mise à jour de l'état local
+      setState(() {
+        numberOfCars = newNumberOfCars;
+        isSubscriptionActive = true;
+        subscriptionId = purchase.productID;
+      });
+
+      _showMessage('Abonnement activé avec succès!', Colors.green);
+    } catch (e) {
+      print('Erreur dans _handleSuccessfulPurchase: $e');
+      _showMessage(
+          'Erreur lors de la mise à jour de l\'abonnement: $e', Colors.red);
     }
   }
 
   Future<void> _loadUserSubscription() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
 
-      if (doc.exists) {
-        setState(() {
-          numberOfCars = doc.data()?['numberOfCars'] ?? 1;
-          isSubscriptionActive = doc.data()?['isSubscriptionActive'] ?? false;
-          currentPlan = _getPlanName(numberOfCars);
-        });
-      } else {
-        // Si l'utilisateur est nouveau, définir l'offre gratuite comme plan actuel
-        setState(() {
-          numberOfCars = 1;
-          isSubscriptionActive = true;
-          currentPlan = "Offre Gratuite";
-        });
+        if (doc.exists) {
+          final data = doc.data();
+          final storedSubscriptionId = data?['subscriptionId'] ?? 'free';
+          final storedNumberOfCars = data?['numberOfCars'] ?? 1;
+
+          print('Données brutes Firebase:');
+          print('subscriptionId: $storedSubscriptionId');
+          print('numberOfCars: $storedNumberOfCars');
+
+          // Met à jour l'état local
+          setState(() {
+            numberOfCars = storedNumberOfCars;
+            isSubscriptionActive = storedSubscriptionId != 'free';
+            subscriptionId =
+                storedSubscriptionId; // Correction ici : utiliser l'ID stocké directement
+          });
+
+          print('État final après chargement:');
+          print('subscriptionId: $subscriptionId');
+          print('isSubscriptionActive: $isSubscriptionActive');
+          print('numberOfCars: $numberOfCars');
+        } else {
+          setState(() {
+            numberOfCars = 1;
+            isSubscriptionActive = false;
+            subscriptionId = 'free';
+          });
+        }
+      } catch (e) {
+        print('Erreur chargement: $e');
+        _showMessage('Erreur de chargement des données', Colors.red);
       }
     }
   }
 
-  String _getPlanName(int cars) {
-    if (cars >= 999) return "Offre Premium";
-    if (cars >= 5) return "Offre Pro";
-    return "Offre Gratuite"; // Modification ici pour correspondre au titre exact dans PlanData
+  String _getPlanDisplayName(String subscriptionId) {
+    if (subscriptionId.contains('Premium')) return "Offre Premium";
+    if (subscriptionId.contains('Pro')) return "Offre Pro";
+    return "Offre Gratuite";
   }
 
   @override
@@ -254,6 +288,9 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
   Future<void> _handleSubscription(String plan) async {
     try {
+      print('Début _handleSubscription pour le plan: $plan');
+
+      // Vérifications préalables
       if (plan == "Offre Gratuite") {
         _showMessage(
           'Utilisez le bouton "Annuler mon abonnement" en bas de l\'écran',
@@ -262,7 +299,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         return;
       }
 
-      if (isSubscriptionActive && currentPlan != "Offre Gratuite") {
+      if (isSubscriptionActive && subscriptionId != "Offre Gratuite") {
         _showMessage(
           'Veuillez d\'abord annuler votre abonnement actuel',
           Colors.orange,
@@ -271,23 +308,39 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
       }
 
       String productId = _getProductId(plan, isMonthly);
+      print('ProductID généré: $productId');
+
       if (productId.isEmpty) {
         _showMessage('Erreur: Produit non trouvé', Colors.red);
         return;
       }
 
+      // Recherche du produit
       final productDetails = _products.firstWhere(
         (product) => product.id == productId,
-        orElse: () => throw Exception('Produit non trouvé'),
+        orElse: () {
+          print('Produit non trouvé dans _products');
+          throw Exception('Produit non trouvé');
+        },
       );
 
-      await _inAppPurchase.buyNonConsumable(
-        purchaseParam: PurchaseParam(
-          productDetails: productDetails,
-        ),
+      print('Produit trouvé: ${productDetails.id}');
+
+      // Lancement de l'achat
+      final PurchaseParam purchaseParam = PurchaseParam(
+        productDetails: productDetails,
       );
+
+      _lastAttemptedPurchase = plan;
+
+      await _inAppPurchase.buyNonConsumable(
+        purchaseParam: purchaseParam,
+      );
+
+      print('Requête d\'achat envoyée');
     } catch (e) {
-      _showMessage('Erreur lors de l\'achat', Colors.red);
+      print('Erreur dans _handleSubscription: $e');
+      _showMessage('Erreur lors de l\'achat: $e', Colors.red);
     }
   }
 
@@ -299,6 +352,10 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print('Debug - État actuel:');
+    print('isSubscriptionActive: $isSubscriptionActive');
+    print('subscriptionId: $subscriptionId');
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -354,25 +411,40 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
           Expanded(
             child: PlanDisplay(
               isMonthly: isMonthly,
-              currentPlan: currentPlan,
+              currentSubscriptionName:
+                  _getPlanDisplayName(subscriptionId), // Mis à jour ici
               onSubscribe: _handleSubscription,
               onPageChanged: (index) => setState(() => _currentIndex = index),
               currentIndex: _currentIndex, // Add this line
             ),
           ),
-          if (isSubscriptionActive && currentPlan != "Offre Gratuite")
+          if (subscriptionId != 'free')
             AnnulerAbonnement(
-              onCancelSuccess: () {
-                setState(() {
-                  isSubscriptionActive = false;
-                  currentPlan = "Offre Gratuite";
-                  numberOfCars = 1;
-                });
-                _showMessage('Abonnement annulé avec succès', Colors.orange);
+              onCancelSuccess: () async {
+                try {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user != null) {
+                    // Forcer un rechargement complet des données
+                    await _loadUserSubscription();
+
+                    // Mettre à jour l'état local immédiatement
+                    setState(() {
+                      isSubscriptionActive = false;
+                      subscriptionId = 'free';
+                      numberOfCars = 1;
+                      limiteContrat = 10; // Ajout de cette ligne
+                    });
+
+                    // Afficher le message de succès
+                    _showMessage(
+                        'Abonnement annulé avec succès', Colors.orange);
+                  }
+                } catch (e) {
+                  print('Erreur lors de la mise à jour de l\'état: $e');
+                  _showMessage('Erreur lors de l\'annulation', Colors.red);
+                }
               },
-              // Modification ici : passer l'ID de l'abonnement actuel
-              currentSubscriptionId: _getProductId(
-                  currentPlan, isMonthly), // Utilisez la fonction existante
+              currentSubscriptionId: subscriptionId,
               inAppPurchase: _inAppPurchase,
             ),
           _buildContactButton(),

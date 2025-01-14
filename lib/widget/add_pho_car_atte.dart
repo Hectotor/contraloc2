@@ -12,6 +12,7 @@ Future<XFile?> showImagePickerDialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
+      backgroundColor: Colors.white, // Ajout du fond blanc ici
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(

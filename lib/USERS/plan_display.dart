@@ -82,7 +82,8 @@ class PlanData {
 
 class PlanDisplay extends StatelessWidget {
   final bool isMonthly;
-  final String currentPlan;
+  final String
+      currentSubscriptionName; // Renommer currentPlan en currentSubscriptionName pour plus de clarté
   final Function(String) onSubscribe;
   final ValueChanged<int>? onPageChanged;
   final int currentIndex;
@@ -90,7 +91,7 @@ class PlanDisplay extends StatelessWidget {
   const PlanDisplay({
     Key? key,
     required this.isMonthly,
-    required this.currentPlan,
+    required this.currentSubscriptionName, // Mis à jour ici
     required this.onSubscribe,
     this.onPageChanged,
     required this.currentIndex,
@@ -98,7 +99,8 @@ class PlanDisplay extends StatelessWidget {
 
   // Ajouter cette méthode pour vérifier si un abonnement premium est actif
   bool _hasActiveSubscription() {
-    return currentPlan == "Offre Pro" || currentPlan == "Offre Premium";
+    return currentSubscriptionName == "Offre Pro" ||
+        currentSubscriptionName == "Offre Premium";
   }
 
   Widget _buildFeatureRow(Map<String, dynamic> feature) {
@@ -187,7 +189,7 @@ class PlanDisplay extends StatelessWidget {
             ElevatedButton(
               onPressed: isActive ||
                       (plan.title == "Offre Gratuite" &&
-                          currentPlan == "Offre Gratuite")
+                          currentSubscriptionName == "Offre Gratuite")
                   ? null
                   : () => onSubscribe(plan.title),
               style: ElevatedButton.styleFrom(
@@ -201,7 +203,7 @@ class PlanDisplay extends StatelessWidget {
               child: Text(
                 isActive ||
                         (plan.title == "Offre Gratuite" &&
-                            currentPlan == "Offre Gratuite")
+                            currentSubscriptionName == "Offre Gratuite")
                     ? "Plan actuel"
                     : "Souscrire",
                 style: const TextStyle(
@@ -247,7 +249,7 @@ class PlanDisplay extends StatelessWidget {
       ),
       itemBuilder: (context, index, realIndex) {
         final plan = plans[index];
-        final isActive = currentPlan == plan.title;
+        final isActive = currentSubscriptionName == plan.title;
         return _buildPlanCard(plan, isActive);
       },
     );

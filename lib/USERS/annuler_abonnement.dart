@@ -16,7 +16,6 @@ class AnnulerAbonnement extends StatelessWidget {
   }) : super(key: key);
 
   Future<void> _cancelSubscription(BuildContext context) async {
-    // Ajout des prints de débogage
     print('Début de _cancelSubscription');
     print('currentSubscriptionId: $currentSubscriptionId');
 
@@ -46,16 +45,9 @@ class AnnulerAbonnement extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              child: const Text(
-                'Confirmer',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Confirmer',
+                  style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -64,60 +56,69 @@ class AnnulerAbonnement extends StatelessWidget {
       print('Réponse dialog: $shouldCancel');
       if (shouldCancel != true) return;
 
-      print('Début annulation dans le store');
-      await inAppPurchase.restorePurchases();
-      print('Fin annulation dans le store');
-
       print('Début mise à jour Firestore');
+      // Mettre à jour Firestore d'abord
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .update({
         'numberOfCars': 1,
         'limiteContrat': 10,
-        'isSubscriptionActive': false,
+        'isSubscriptionActive': false, // Maintenant correctement mis à false
         'subscriptionId': 'free',
-        'subscriptionType': 'free',
-        'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
-        'subscriptionCancellationDate':
-            DateTime.now().toIso8601String(), // Ajouter la date d'annulation
+        'subscriptionCancellationDate': DateTime.now().toIso8601String(),
+        // Supprimé subscriptionType car redondant
       });
       print('Fin mise à jour Firestore');
 
+      // Appeler onCancelSuccess avant la restauration des achats
       onCancelSuccess();
       print('onCancelSuccess appelé');
 
-      // Confirmer à l'utilisateur
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Abonnement annulé avec succès'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // Ensuite, tenter de restaurer/annuler l'achat
+      print('Tentative de restauration des achats');
+      try {
+        await inAppPurchase.restorePurchases();
+      } catch (e) {
+        print('Erreur lors de la restauration des achats: $e');
+        // Continue même si la restauration échoue
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Abonnement annulé avec succès'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       print('Erreur dans _cancelSubscription: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur détaillée: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'annulation: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Ajout de print pour vérifier l'état du bouton
-    print('Build AnnulerAbonnement');
+    print('Debug AnnulerAbonnement:');
     print('currentSubscriptionId: $currentSubscriptionId');
-    print('Bouton actif: ${currentSubscriptionId != 'free'}');
+    print('Bouton activé: ${currentSubscriptionId != 'free'}');
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: ElevatedButton(
-        onPressed: currentSubscriptionId == 'free'
-            ? null
-            : () => _cancelSubscription(context),
+        // Modifier la condition ici
+        onPressed:
+            (currentSubscriptionId == 'free' || currentSubscriptionId.isEmpty)
+                ? null
+                : () => _cancelSubscription(context),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.red,
           foregroundColor: Colors.white,
