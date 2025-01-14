@@ -96,6 +96,11 @@ class PlanDisplay extends StatelessWidget {
     required this.currentIndex,
   }) : super(key: key);
 
+  // Ajouter cette méthode pour vérifier si un abonnement premium est actif
+  bool _hasActiveSubscription() {
+    return currentPlan == "Offre Pro" || currentPlan == "Offre Premium";
+  }
+
   Widget _buildFeatureRow(Map<String, dynamic> feature) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -120,6 +125,9 @@ class PlanDisplay extends StatelessWidget {
   }
 
   Widget _buildPlanCard(PlanData plan, bool isActive) {
+    // Vérifier si on doit masquer le bouton souscrire
+    bool hideSubscribeButton = _hasActiveSubscription() && !isActive;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -175,33 +183,48 @@ class PlanDisplay extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: isActive ||
-                    (plan.title == "Offre Gratuite" &&
-                        currentPlan == "Offre Gratuite")
-                ? null
-                : () => onSubscribe(plan.title),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isActive ? Colors.grey : const Color(0xFF08004D),
-              minimumSize: const Size(double.infinity, 48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              isActive ||
+          if (!hideSubscribeButton) // Condition pour afficher ou masquer le bouton
+            ElevatedButton(
+              onPressed: isActive ||
                       (plan.title == "Offre Gratuite" &&
                           currentPlan == "Offre Gratuite")
-                  ? "Plan actuel"
-                  : "Souscrire",
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
+                  ? null
+                  : () => onSubscribe(plan.title),
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    isActive ? Colors.grey : const Color(0xFF08004D),
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                isActive ||
+                        (plan.title == "Offre Gratuite" &&
+                            currentPlan == "Offre Gratuite")
+                    ? "Plan actuel"
+                    : "Souscrire",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
-          ),
+          if (hideSubscribeButton)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Veuillez d\'abord annuler votre abonnement actuel',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
         ],
       ),
     );

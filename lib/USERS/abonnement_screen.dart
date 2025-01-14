@@ -4,12 +4,26 @@ import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:ContraLoc/USERS/question_user.dart';
 import 'package:ContraLoc/USERS/plan_display.dart'; // Nouvel import
+import 'package:ContraLoc/USERS/annuler_abonnement.dart';
 
 class AbonnementScreen extends StatefulWidget {
   const AbonnementScreen({Key? key}) : super(key: key);
 
   @override
   State<AbonnementScreen> createState() => _AbonnementScreenState();
+}
+
+String _getProductId(String plan, bool isMonthly) {
+  switch (plan) {
+    case "Offre Pro":
+      return isMonthly ? 'ProMonthlySubscription' : 'ProYearlySubscription';
+    case "Offre Premium":
+      return isMonthly
+          ? 'PremiumMonthlySubscription'
+          : 'PremiumYearlySubscription';
+    default:
+      return '';
+  }
 }
 
 class _AbonnementScreenState extends State<AbonnementScreen> {
@@ -39,27 +53,15 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
   Future<void> _initInAppPurchase() async {
     final bool available = await _inAppPurchase.isAvailable();
-    if (!available) {
-      // Store n'est pas disponible
-      return;
-    }
+    if (!available) return;
 
-    // Écoutez les achats
-    final Stream<List<PurchaseDetails>> purchaseUpdated =
-        _inAppPurchase.purchaseStream;
-    purchaseUpdated.listen((purchaseDetailsList) {
-      _listenToPurchaseUpdated(purchaseDetailsList);
-    });
-
-    // Chargez les produits
-    final ProductDetailsResponse productDetailsResponse =
+    final ProductDetailsResponse response =
         await _inAppPurchase.queryProductDetails(_kProductIds.toSet());
 
-    if (productDetailsResponse.error == null) {
-      setState(() {
-        _products = productDetailsResponse.productDetails;
-      });
-    }
+    if (response.notFoundIDs.isNotEmpty) return;
+
+    setState(() => _products = response.productDetails);
+    _inAppPurchase.purchaseStream.listen(_listenToPurchaseUpdated);
   }
 
   Future<void> _listenToPurchaseUpdated(
@@ -250,67 +252,42 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     super.dispose();
   }
 
-  Future<void> _switchToLowerPlan(String plan) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({
-        'numberOfCars': 1,
-        'limiteContrat': 10,
-        'isSubscriptionActive': false,
-        'subscriptionId': 'free',
-        'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
-        'subscriptionType': 'free',
-      });
-
-      setState(() {
-        numberOfCars = 1;
-        isSubscriptionActive = false;
-        currentPlan = "Offre Gratuite";
-      });
-    }
-  }
-
   Future<void> _handleSubscription(String plan) async {
     try {
-      _lastAttemptedPurchase = plan; // Sauvegarder le plan tenté
-
       if (plan == "Offre Gratuite") {
-        await _switchToLowerPlan(plan);
+        _showMessage(
+          'Utilisez le bouton "Annuler mon abonnement" en bas de l\'écran',
+          Colors.orange,
+        );
         return;
       }
 
-      String productId = '';
-      if (plan.contains("Pro")) {
-        productId =
-            isMonthly ? 'ProMonthlySubscription' : 'ProYearlySubscription';
-      } else if (plan.contains("Premium")) {
-        productId = isMonthly
-            ? 'PremiumMonthlySubscription'
-            : 'PremiumYearlySubscription';
+      if (isSubscriptionActive && currentPlan != "Offre Gratuite") {
+        _showMessage(
+          'Veuillez d\'abord annuler votre abonnement actuel',
+          Colors.orange,
+        );
+        return;
       }
 
-      if (productId.isEmpty) return;
+      String productId = _getProductId(plan, isMonthly);
+      if (productId.isEmpty) {
+        _showMessage('Erreur: Produit non trouvé', Colors.red);
+        return;
+      }
 
       final productDetails = _products.firstWhere(
         (product) => product.id == productId,
         orElse: () => throw Exception('Produit non trouvé'),
       );
 
-      _showMessage('Démarrage de la transaction...', Colors.blue);
-
-      final PurchaseParam purchaseParam = PurchaseParam(
-        productDetails: productDetails,
-      );
-
       await _inAppPurchase.buyNonConsumable(
-        purchaseParam: purchaseParam,
+        purchaseParam: PurchaseParam(
+          productDetails: productDetails,
+        ),
       );
     } catch (e) {
-      _showMessage('Erreur de démarrage de la transaction', Colors.red);
-      print('Erreur: $e');
+      _showMessage('Erreur lors de l\'achat', Colors.red);
     }
   }
 
@@ -338,7 +315,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
       backgroundColor: Colors.grey[50],
       body: Column(
         children: [
-          const SizedBox(height: 40),
+          const SizedBox(height: 25),
           // Toggle Mensuel/Annuel
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -361,6 +338,18 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
               ],
             ),
           ),
+          const Padding(
+            padding: EdgeInsets.symmetric(
+                vertical: 10, horizontal: 20), // Réduit de 10 à 5
+            child: Text(
+              "Nos prix sont sans engagement",
+              style: TextStyle(
+                color: Color(0xFF08004D),
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
           // Nouveau widget PlanDisplay
           Expanded(
             child: PlanDisplay(
@@ -371,9 +360,23 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
               currentIndex: _currentIndex, // Add this line
             ),
           ),
-          // Bouton Contact
+          if (isSubscriptionActive && currentPlan != "Offre Gratuite")
+            AnnulerAbonnement(
+              onCancelSuccess: () {
+                setState(() {
+                  isSubscriptionActive = false;
+                  currentPlan = "Offre Gratuite";
+                  numberOfCars = 1;
+                });
+                _showMessage('Abonnement annulé avec succès', Colors.orange);
+              },
+              // Modification ici : passer l'ID de l'abonnement actuel
+              currentSubscriptionId: _getProductId(
+                  currentPlan, isMonthly), // Utilisez la fonction existante
+              inAppPurchase: _inAppPurchase,
+            ),
           _buildContactButton(),
-          const SizedBox(height: 10),
+          const SizedBox(height: 30),
         ],
       ),
     );
@@ -415,51 +418,23 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   }
 
   Widget _buildContactButton() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+    return TextButton.icon(
+      onPressed: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const QuestionUser()),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const QuestionUser()),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(
-                  Icons.help_outline,
-                  color: Color(0xFF08004D),
-                  size: 24,
-                ),
-                SizedBox(width: 12),
-                Text(
-                  "Des questions ? Contactez-nous",
-                  style: TextStyle(
-                    color: Color(0xFF08004D),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
+      icon: const Icon(
+        Icons.help_outline,
+        color: Color(0xFF08004D),
+        size: 24,
+      ),
+      label: const Text(
+        "Des questions ? Contactez-nous",
+        style: TextStyle(
+          color: Color(0xFF08004D),
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
         ),
       ),
     );
