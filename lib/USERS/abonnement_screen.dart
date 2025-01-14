@@ -503,6 +503,10 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
               },
               currentSubscriptionId: subscriptionId,
               inAppPurchase: _inAppPurchase,
+              appleApiKey:
+                  'votre_clé_api_apple_sandbox', // Remplacez par votre clé API Apple sandbox
+              googleApiKey:
+                  'votre_clé_api_google_sandbox', // Remplacez par votre clé API Google sandbox
             ),
           _buildContactButton(),
           const SizedBox(height: 30),
