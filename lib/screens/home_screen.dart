@@ -352,8 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        color: Colors
-                            .grey[50], // Set background color to light grey
+                        color: Colors.white, // Set background color to white
                         child: Column(
                           children: [
                             Expanded(

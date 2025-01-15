@@ -393,7 +393,7 @@ class _UserScreenState extends State<UserScreen> {
                           icon: Icons.phone),
                       _buildTextField("Adresse", _adresseController, true,
                           icon: Icons.location_on),
-                      _buildTextField("Numéro SIRET", _siretController, true,
+                      _buildTextField("Numéro SIRET", _siretController, false,
                           icon: Icons.business_center),
                       const SizedBox(height: 10),
                       Tampon(
@@ -523,8 +523,9 @@ class _UserScreenState extends State<UserScreen> {
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(color: Color(0xFF0F056B)),
-          prefixIcon:
-              icon != null ? Icon(icon, color: Color(0xFF0F056B)) : null,
+          prefixIcon: icon != null
+              ? Icon(icon, color: Colors.black.withOpacity(0.5))
+              : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Color(0xFF0F056B)),

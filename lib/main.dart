@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 // ignore: depend_on_referenced_packages
 import 'package:flutter_localizations/flutter_localizations.dart'; // Import localization delegates
 import 'package:firebase_core/firebase_core.dart';
+import 'package:purchases_flutter/purchases_flutter.dart'; // Import RevenueCat
 import 'screens/splash_screen.dart';
 
 void main() async {
@@ -16,6 +17,11 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Initialisation de RevenueCat
+  await Purchases.setDebugLogsEnabled(true);
+  await Purchases.setup(
+      "appl_surBKRbCRgBprWYKIjWlprQgfUc"); // Remplacez par votre clé API publique RevenueCat
 
   runApp(const MyApp());
 }

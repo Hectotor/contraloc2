@@ -1,41 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert'; // Ajout de cet import
+import 'package:purchases_flutter/purchases_flutter.dart'; // Import RevenueCat
 
 class AnnulerAbonnement extends StatelessWidget {
   final Function onCancelSuccess;
   final String currentSubscriptionId;
-  final InAppPurchase inAppPurchase;
-  final String appleApiKey; // Clé API pour Apple
-  final String googleApiKey; // Clé API pour Google
 
   const AnnulerAbonnement({
     Key? key,
     required this.onCancelSuccess,
     required this.currentSubscriptionId,
-    required this.inAppPurchase,
-    required this.appleApiKey, // Clé API pour Apple
-    required this.googleApiKey, // Clé API pour Google
   }) : super(key: key);
 
   Future<void> _cancelSubscription(BuildContext context) async {
     try {
-      // Finalize all pending transactions
-      await for (final purchases in inAppPurchase.purchaseStream.timeout(
-        const Duration(seconds: 2),
-        onTimeout: (sink) => sink.close(),
-      )) {
-        for (var purchase in purchases) {
-          if (purchase.pendingCompletePurchase) {
-            await inAppPurchase.completePurchase(purchase);
-          }
-        }
-        break;
-      }
-
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
@@ -66,42 +45,8 @@ class AnnulerAbonnement extends StatelessWidget {
 
       if (shouldCancel != true) return;
 
-      // Mise à jour chez Apple
-      final appleResponse = await http.post(
-        Uri.parse('https://api.apple.com/cancel_subscription'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization':
-              'Bearer $appleApiKey', // Utilisation de la clé API Apple
-        },
-        body: jsonEncode({
-          'subscriptionId': currentSubscriptionId,
-          'userId': user.uid,
-        }),
-      );
-
-      if (appleResponse.statusCode != 200) {
-        throw Exception('Erreur lors de la mise à jour de l\'abonnement Apple');
-      }
-
-      // Mise à jour chez Google
-      final googleResponse = await http.post(
-        Uri.parse('https://api.google.com/cancel_subscription'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization':
-              'Bearer $googleApiKey', // Utilisation de la clé API Google
-        },
-        body: jsonEncode({
-          'subscriptionId': currentSubscriptionId,
-          'userId': user.uid,
-        }),
-      );
-
-      if (googleResponse.statusCode != 200) {
-        throw Exception(
-            'Erreur lors de la mise à jour de l\'abonnement Google');
-      }
+      // Annulation via RevenueCat
+      await Purchases.logOut();
 
       // Mise à jour dans Firestore
       await FirebaseFirestore.instance
