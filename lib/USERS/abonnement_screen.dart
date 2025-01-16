@@ -40,6 +40,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     super.initState();
     _loadUserSubscription();
     _initRevenueCat();
+    _verifyOfferings(); // Ajout de cette ligne
   }
 
   Future<void> _initRevenueCat() async {
@@ -51,14 +52,51 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     }
   }
 
+  Future<void> _verifyOfferings() async {
+    try {
+      final offerings = await Purchases.getOfferings();
+      print('Debug RevenueCat Offerings:');
+      print('Current Offering: ${offerings.current?.identifier}');
+
+      if (offerings.current == null) {
+        print('Erreur: Aucune offre disponible');
+        return;
+      }
+
+      // Vérifier les packages disponibles
+      print('Packages disponibles:');
+      for (var package in offerings.current!.availablePackages) {
+        print('- ID: ${package.identifier}');
+        print('  - Produit: ${package.storeProduct.identifier}');
+        print('  - Prix: ${package.storeProduct.price}');
+        print('  - Description: ${package.storeProduct.description}');
+      }
+
+      // Vérifier l'état de l'utilisateur
+      final customerInfo = await Purchases.getCustomerInfo();
+      print('État de l\'abonnement:');
+      print('- Active: ${customerInfo.entitlements.active}');
+      print('- All: ${customerInfo.entitlements.all}');
+      print('- Active Subscriptions: ${customerInfo.activeSubscriptions}');
+    } catch (e) {
+      print('Erreur lors de la vérification des offres: $e');
+    }
+  }
+
   Future<void> _updateSubscriptionStatus(CustomerInfo customerInfo) async {
+    print('Début de _updateSubscriptionStatus');
+    print('Entitlements reçus: ${customerInfo.entitlements.all}');
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      print('Utilisateur non connecté');
+      return;
+    }
 
     final entitlements = customerInfo.entitlements.active;
     if (entitlements.isNotEmpty) {
-      final entitlement = entitlements.values.first;
-      final productIdentifier = entitlement.productIdentifier;
+      final firstEntitlement = entitlements.values.first;
+      final productIdentifier = firstEntitlement.productIdentifier;
+      print('Produit identifié: $productIdentifier');
 
       final updateData = {
         'numberOfCars': _getNumberOfCars(productIdentifier),
@@ -69,23 +107,42 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
       };
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update(updateData);
+      print('Mise à jour Firestore: $updateData');
 
-      setState(() {
-        numberOfCars = updateData['numberOfCars'] as int;
-        limiteContrat = updateData['limiteContrat'] as int;
-        isSubscriptionActive = true;
-        subscriptionId = productIdentifier;
-      });
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('authentification')
+            .doc(user.uid)
+            .update(updateData);
+
+        print('Firestore mis à jour avec succès');
+
+        setState(() {
+          numberOfCars = updateData['numberOfCars'] as int;
+          limiteContrat = updateData['limiteContrat'] as int;
+          isSubscriptionActive = true;
+          subscriptionId = productIdentifier;
+        });
+      } catch (e) {
+        print('Erreur lors de la mise à jour Firestore: $e');
+        // Afficher un message d'erreur pour confirmer l'absence d'écrasement
+        _showMessage('Impossible de mettre à jour Firestore: $e', Colors.red);
+        rethrow;
+      }
+    } else {
+      print('Aucun abonnement actif trouvé (entitlements vides)');
     }
   }
 
   Future<void> _handleSubscription(String plan) async {
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      print('Utilisateur connecté: ${user?.uid ?? "aucun"}');
+
       print('Début _handleSubscription pour le plan: $plan');
+      _lastAttemptedPurchase = plan; // Ajout de cette ligne
 
       if (plan == "Offre Gratuite") {
         _showMessage(
@@ -96,17 +153,48 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
       }
 
       Offerings offerings = await Purchases.getOfferings();
+      print('Vérification des offres disponibles:');
+      print('Offerings current: ${offerings.current?.identifier}');
+
       if (offerings.current == null) {
+        print('Erreur: Aucune offre disponible');
         _showMessage('Offres non disponibles pour le moment', Colors.orange);
         return;
       }
 
-      Package package = offerings.current!.availablePackages.firstWhere(
-        (pkg) => pkg.storeProduct.identifier == _getProductId(plan, isMonthly),
-      );
+      String productId = _getProductId(plan, isMonthly);
+      print('Recherche du produit avec ID: $productId');
 
-      CustomerInfo customerInfo = await Purchases.purchasePackage(package);
-      _updateSubscriptionStatus(customerInfo);
+      Package? package;
+      try {
+        package = offerings.current!.availablePackages.firstWhere(
+          (pkg) => pkg.storeProduct.identifier == productId,
+        );
+        print('Package trouvé: ${package.identifier}');
+      } catch (e) {
+        print('Erreur: Package non trouvé pour $productId');
+        throw Exception('Package non disponible');
+      }
+
+      print('Tentative d\'achat du package: ${package.identifier}');
+      await Purchases.purchasePackage(package);
+      print('Achat réussi, restauration des transactions...');
+
+      print('Relecture customerInfo après restoreTransactions()');
+      final latestCustomerInfo = await Purchases.getCustomerInfo();
+      print(
+          'Entitlements après achat: ${latestCustomerInfo.entitlements.active}');
+
+      print('Mise à jour du statut...');
+      await _updateSubscriptionStatus(latestCustomerInfo);
+
+      // Relecture du document Firestore pour vérifier
+      final postUpdateDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user?.uid)
+          .get();
+      print('Vérification post-update: ${postUpdateDoc.data()}');
+
       _showMessage('Abonnement activé avec succès!', Colors.green);
     } catch (e) {
       if (e is PlatformException && e.code == '1') {
@@ -128,7 +216,14 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         final doc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
+            .collection('authentification')
+            .doc(user.uid)
             .get();
+
+        if (!doc.exists || doc.data()?['userId'] != user.uid) {
+          print('Accès refusé ou document non trouvé');
+          return;
+        }
 
         if (doc.exists) {
           final data = doc.data();

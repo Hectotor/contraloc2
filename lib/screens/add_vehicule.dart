@@ -122,9 +122,14 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
         return null;
       }
 
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception("Utilisateur non connecté");
+      }
+
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final Reference storageRef =
-          FirebaseStorage.instance.ref().child('$folder/$fileName');
+      final Reference storageRef = FirebaseStorage.instance.ref().child(
+          'users/${user.uid}/vehicules/${_immatriculationController.text}/$folder/$fileName');
 
       // Créer un fichier temporaire pour l'image compressée
       final tempDir = await getTemporaryDirectory();
@@ -146,6 +151,8 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       final doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
+          .collection('authentification')
+          .doc(user.uid)
           .get();
       return doc.data()?['numberOfCars'] ?? 1;
     }
@@ -156,8 +163,9 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
           .collection('vehicules')
-          .where('userId', isEqualTo: user.uid)
           .get();
       return querySnapshot.docs.length;
     }
@@ -179,6 +187,8 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     });
 
     try {
+      final immatriculationId = _immatriculationController.text;
+
       if (widget.vehicleId == null) {
         // Only check subscription limit for new vehicles
         final subscriptionLimit = await _getUserSubscriptionLimit();
@@ -287,7 +297,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
         'userId': _auth.currentUser?.uid,
         'marque': _marqueController.text,
         'modele': _modeleController.text,
-        'immatriculation': _immatriculationController.text,
+        'immatriculation': immatriculationId,
         'vin': _vinController.text,
         'typeCarburant': _typeCarburant,
         'boiteVitesses': _boiteVitesses,
@@ -310,13 +320,30 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
 
       if (widget.vehicleId == null) {
         print("Ajout d'un nouveau véhicule...");
-        await _firestore.collection('vehicules').add(newVehicle);
+        await _firestore
+            .collection('users')
+            .doc(_auth.currentUser?.uid)
+            .collection('vehicules')
+            .doc(immatriculationId)
+            .set(newVehicle);
+        // Store the vehicle data in Firestore
+        await _firestore
+            .collection('vehicules')
+            .doc(immatriculationId)
+            .set(newVehicle);
         print("Véhicule ajouté avec succès.");
       } else {
         print("Mise à jour d'un véhicule existant...");
         await _firestore
+            .collection('users')
+            .doc(_auth.currentUser?.uid)
             .collection('vehicules')
-            .doc(widget.vehicleId)
+            .doc(immatriculationId)
+            .update(newVehicle);
+        // Store the vehicle data in Firestore
+        await _firestore
+            .collection('vehicules')
+            .doc(immatriculationId)
             .update(newVehicle);
         print("Véhicule mis à jour avec succès.");
       }

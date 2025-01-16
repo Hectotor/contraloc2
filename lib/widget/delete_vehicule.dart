@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../screens/add_vehicule.dart';
 
 class DeleteVehicule {
@@ -8,10 +10,18 @@ class DeleteVehicule {
 
   DeleteVehicule(this.context);
 
-  void navigateToAddVehicule([String? vehicleId]) async {
+  void navigateToAddVehicule([String? immatriculationId]) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
     Map<String, dynamic>? vehicleData;
-    if (vehicleId != null) {
-      final doc = await _firestore.collection('vehicules').doc(vehicleId).get();
+    if (immatriculationId != null) {
+      final doc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('vehicules')
+          .doc(immatriculationId)
+          .get();
       vehicleData = doc.data();
     }
     if (context.mounted) {
@@ -19,7 +29,7 @@ class DeleteVehicule {
         context,
         MaterialPageRoute(
           builder: (context) => AddVehiculeScreen(
-            vehicleId: vehicleId,
+            vehicleId: immatriculationId,
             vehicleData: vehicleData,
           ),
         ),
@@ -27,9 +37,59 @@ class DeleteVehicule {
     }
   }
 
-  Future<void> deleteVehicule(String vehicleId) async {
+  Future<void> deleteVehicule(String immatriculationId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
     try {
-      await _firestore.collection('vehicules').doc(vehicleId).delete();
+      // Verify if the user has access to the vehicle ID
+      final doc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('vehicules')
+          .doc(immatriculationId)
+          .get();
+
+      if (!doc.exists) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Vous n'avez pas accès à ce véhicule."),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Delete vehicle photos from Firebase Storage
+      final vehicleData = doc.data();
+      if (vehicleData != null) {
+        if (vehicleData['photoVehiculeUrl'] != null) {
+          final photoUrl = vehicleData['photoVehiculeUrl'];
+          final photoRef = FirebaseStorage.instance.refFromURL(photoUrl);
+          await photoRef.delete();
+        }
+        if (vehicleData['photoCarteGriseUrl'] != null) {
+          final carteGriseUrl = vehicleData['photoCarteGriseUrl'];
+          final carteGriseRef =
+              FirebaseStorage.instance.refFromURL(carteGriseUrl);
+          await carteGriseRef.delete();
+        }
+        if (vehicleData['photoAssuranceUrl'] != null) {
+          final assuranceUrl = vehicleData['photoAssuranceUrl'];
+          final assuranceRef =
+              FirebaseStorage.instance.refFromURL(assuranceUrl);
+          await assuranceRef.delete();
+        }
+      }
+
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('vehicules')
+          .doc(immatriculationId)
+          .delete();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -47,7 +107,7 @@ class DeleteVehicule {
     }
   }
 
-  void showActionDialog(String vehicleId) {
+  void showActionDialog(String immatriculationId) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -74,7 +134,7 @@ class DeleteVehicule {
                 title: const Text('Modifier le véhicule'),
                 onTap: () {
                   Navigator.pop(context);
-                  navigateToAddVehicule(vehicleId);
+                  navigateToAddVehicule(immatriculationId);
                 },
               ),
               ListTile(
@@ -85,7 +145,7 @@ class DeleteVehicule {
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  _showDeleteConfirmationDialog(vehicleId);
+                  _showDeleteConfirmationDialog(immatriculationId);
                 },
               ),
               const SizedBox(height: 20),
@@ -116,7 +176,7 @@ class DeleteVehicule {
     );
   }
 
-  void _showDeleteConfirmationDialog(String vehicleId) {
+  void _showDeleteConfirmationDialog(String immatriculationId) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -168,7 +228,7 @@ class DeleteVehicule {
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context);
-                        deleteVehicule(vehicleId);
+                        deleteVehicule(immatriculationId);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,

@@ -210,31 +210,12 @@ class _LocationPageState extends State<LocationPage> {
       String? permisVersoUrl;
       List<String> vehiculeUrls = [];
 
-      // Upload permis photos
-      if (widget.permisRecto != null) {
-        uploadTasks.add(_compressAndUploadPhoto(widget.permisRecto!, 'permis'));
-      }
-      if (widget.permisVerso != null) {
-        uploadTasks.add(_compressAndUploadPhoto(widget.permisVerso!, 'permis'));
-      }
-
-      // Upload vehicle photos
-      for (var photo in _photos) {
-        uploadTasks.add(_compressAndUploadPhoto(photo, 'photos'));
-      }
-
-      List<String> photoUrls = await Future.wait(uploadTasks);
-
-      // Separate permis and vehicle photos
-      if (widget.permisRecto != null) {
-        permisRectoUrl = photoUrls.removeAt(0);
-      }
-      if (widget.permisVerso != null) {
-        permisVersoUrl = photoUrls.removeAt(0);
-      }
-      vehiculeUrls = photoUrls;
-
-      await _firestore.collection('locations').add({
+      // Ajouter le contrat dans Firestore et obtenir l'ID du contrat
+      final contratRef = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('locations')
+          .add({
         'userId': user.uid,
         'nom': widget.nom ?? '',
         'prenom': widget.prenom ?? '',
@@ -259,6 +240,46 @@ class _LocationPageState extends State<LocationPage> {
             FieldValue.serverTimestamp(), // Ajouter la date de création
         'numeroPermis': widget.numeroPermis ??
             '', // Assurez-vous que numeroPermis est bien stocké
+      });
+
+      final contratId = contratRef.id;
+
+      // Upload permis photos
+      if (widget.permisRecto != null) {
+        uploadTasks.add(
+            _compressAndUploadPhoto(widget.permisRecto!, 'permis', contratId));
+      }
+      if (widget.permisVerso != null) {
+        uploadTasks.add(
+            _compressAndUploadPhoto(widget.permisVerso!, 'permis', contratId));
+      }
+
+      // Upload vehicle photos
+      for (var photo in _photos) {
+        uploadTasks.add(_compressAndUploadPhoto(photo, 'photos', contratId));
+      }
+
+      List<String> photoUrls = await Future.wait(uploadTasks);
+
+      // Separate permis and vehicle photos
+      if (widget.permisRecto != null) {
+        permisRectoUrl = photoUrls.removeAt(0);
+      }
+      if (widget.permisVerso != null) {
+        permisVersoUrl = photoUrls.removeAt(0);
+      }
+      vehiculeUrls = photoUrls;
+
+      // Mise à jour des URLs des photos dans Firestore
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('locations')
+          .doc(contratId)
+          .update({
+        'permisRecto': permisRectoUrl,
+        'permisVerso': permisVersoUrl,
+        'photos': vehiculeUrls,
       });
 
       // Si un email client est disponible, générer et envoyer le PDF
@@ -370,7 +391,8 @@ class _LocationPageState extends State<LocationPage> {
     }
   }
 
-  Future<String> _compressAndUploadPhoto(File photo, String folder) async {
+  Future<String> _compressAndUploadPhoto(
+      File photo, String folder, String contratId) async {
     // Compress the image
     final compressedImage = await FlutterImageCompress.compressWithFile(
       photo.absolute.path,
@@ -380,11 +402,16 @@ class _LocationPageState extends State<LocationPage> {
     );
 
     if (compressedImage != null) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception("Utilisateur non connecté");
+      }
+
       String fileName =
           '${folder}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       Reference ref = FirebaseStorage.instance
           .ref()
-          .child('locations/${widget.immatriculation}/$folder/$fileName');
+          .child('users/${user.uid}/locations/$contratId/$folder/$fileName');
 
       // Create a temporary file for the compressed image
       final tempDir = await getTemporaryDirectory();

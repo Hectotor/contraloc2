@@ -7,8 +7,9 @@ class FirestoreService {
     if (userId == null) return Stream.empty();
 
     return FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
         .collection('locations')
-        .where('userId', isEqualTo: userId)
         .where('status', isEqualTo: 'en_cours')
         .orderBy('dateCreation', descending: true)
         .snapshots();
@@ -19,8 +20,9 @@ class FirestoreService {
     if (userId == null) return Stream.empty();
 
     return FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
         .collection('locations')
-        .where('userId', isEqualTo: userId)
         .where('status', isEqualTo: 'restitue')
         .orderBy('dateRestitution', descending: true)
         .snapshots();
@@ -37,8 +39,9 @@ class FirestoreService {
     final endOfDay = Timestamp.fromDate(
         DateTime(date.year, date.month, date.day, 23, 59, 59));
     return FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
         .collection('locations')
-        .where('userId', isEqualTo: userId)
         .where('dateCreation', isGreaterThanOrEqualTo: startOfDay)
         .where('dateCreation', isLessThanOrEqualTo: endOfDay)
         .get();
@@ -51,8 +54,9 @@ class FirestoreService {
     }
 
     return FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
         .collection('locations')
-        .where('userId', isEqualTo: userId)
         .get();
   }
 
@@ -67,8 +71,9 @@ class FirestoreService {
     final endOfMonth = DateTime(now.year, now.month + 1, 0);
 
     return FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
         .collection('locations')
-        .where('userId', isEqualTo: userId)
         .where('dateCreation', isGreaterThanOrEqualTo: startOfMonth)
         .where('dateCreation', isLessThanOrEqualTo: endOfMonth)
         .orderBy('dateCreation', descending: true)

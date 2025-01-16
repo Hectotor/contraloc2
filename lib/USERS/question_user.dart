@@ -66,7 +66,15 @@ class _QuestionUserState extends State<QuestionUser> {
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(currentUser?.uid)
+          .collection('authentification')
+          .doc(currentUser?.uid)
           .get();
+
+      if (!userDoc.exists || userDoc.data()?['userId'] != currentUser?.uid) {
+        print('Accès refusé ou document non trouvé');
+        return;
+      }
+
       final userData = userDoc.data() ?? {};
 
       final userName = '${userData['prenom'] ?? ''} ${userData['nom'] ?? ''}';

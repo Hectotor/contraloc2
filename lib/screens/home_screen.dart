@@ -30,7 +30,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadUserData() async {
     final user = _auth.currentUser;
     if (user != null) {
-      final userData = await _firestore.collection('users').doc(user.uid).get();
+      final userData = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('authentification')
+          .doc(user.uid)
+          .get();
       if (userData.exists) {
         setState(() {
           _prenom = userData.data()?['prenom'] ?? '';
@@ -44,6 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (user != null) {
       final doc = await FirebaseFirestore.instance
           .collection('users')
+          .doc(user.uid)
+          .collection('authentification')
           .doc(user.uid)
           .get();
       return doc.data()?['numberOfCars'] ?? 1;
@@ -114,6 +121,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
+          .collection('authentification')
+          .doc(user.uid)
           .get();
       final limiteContrat = userDoc.data()?['limiteContrat'] ?? 4;
 
@@ -122,10 +131,11 @@ class _HomeScreenState extends State<HomeScreen> {
       final startOfMonth = DateTime(now.year, now.month, 1);
       final endOfMonth = DateTime(now.year, now.month + 1, 0);
 
-      // Compter les contrats créés ce mois-ci en utilisant la collection 'location'
+      // Compter les contrats créés ce mois-ci en utilisant la collection 'locations'
       final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
           .collection('locations')
-          .where('userId', isEqualTo: user.uid)
           .where('dateCreation', isGreaterThanOrEqualTo: startOfMonth)
           .where('dateCreation', isLessThanOrEqualTo: endOfMonth)
           .get();
@@ -334,16 +344,36 @@ class _HomeScreenState extends State<HomeScreen> {
                           return;
                         }
 
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ClientPage(
-                              marque: data['marque'] ?? '',
-                              modele: data['modele'] ?? '',
-                              immatriculation: data['immatriculation'] ?? '',
-                            ),
-                          ),
-                        );
+                        // Verify if the user has access to the vehicle ID
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (user != null) {
+                          final doc = await FirebaseFirestore.instance
+                              .collection('vehicules')
+                              .doc(vehicle.id)
+                              .get();
+
+                          if (doc.exists && doc.data()?['userId'] == user.uid) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ClientPage(
+                                  marque: data['marque'] ?? '',
+                                  modele: data['modele'] ?? '',
+                                  immatriculation:
+                                      data['immatriculation'] ?? '',
+                                ),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    "Vous n'avez pas accès à ce véhicule."),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
                       },
                       onLongPress: () =>
                           _deleteVehicule.showActionDialog(vehicle.id),

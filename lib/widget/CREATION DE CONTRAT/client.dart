@@ -42,7 +42,6 @@ class _ClientPageState extends State<ClientPage> {
   final TextEditingController _telephoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _numeroPermisController = TextEditingController();
-// Firestore instance
 
   File? _permisRecto;
   File? _permisVerso;
@@ -59,6 +58,8 @@ class _ClientPageState extends State<ClientPage> {
     if (user != null) {
       final doc = await FirebaseFirestore.instance
           .collection('users')
+          .doc(user.uid)
+          .collection('authentification')
           .doc(user.uid)
           .get();
 

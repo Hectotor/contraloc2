@@ -8,7 +8,6 @@ import '../screens/login.dart'; // Import de l'écran de connexion si l'utilisat
 import '../USERS/tampon.dart';
 import '../USERS/logo.dart';
 import '../USERS/question_user.dart'; // Import the question user screen
-//import '../USERS/abonnement.dart'; // Import the new abonnement screen
 import '../USERS/abonnement_screen.dart'; // Add this import
 import '../USERS/supprimer_compte.dart'; // Import du fichier supprimer_compte.dart
 
@@ -61,8 +60,12 @@ class _UserScreenState extends State<UserScreen> {
   // Charger les données utilisateur depuis Firestore
   Future<void> _loadUserData() async {
     try {
-      final doc =
-          await _firestore.collection('users').doc(currentUser!.uid).get();
+      final doc = await _firestore
+          .collection('users')
+          .doc(currentUser!.uid)
+          .collection('authentification')
+          .doc(currentUser!.uid)
+          .get();
       if (!doc.exists) {
         // Initialisation des valeurs par défaut pour un nouvel utilisateur
         await _firestore.collection('users').doc(currentUser!.uid).set({
@@ -74,12 +77,6 @@ class _UserScreenState extends State<UserScreen> {
           'siret': '',
           'numberOfCars': 1,
           'limiteContrat': 10, // Ajout de la limite de contrats
-          'isSubscriptionActive':
-              false, // Changer ici : mettre false par défaut
-          'subscriptionId': 'free', // ID de l'abonnement gratuit
-          'subscriptionType': 'monthly', // Type d'abonnement par défaut
-          'subscriptionPurchaseDate':
-              DateTime.now().toIso8601String(), // Date d'activation
         });
       } else {
         final data = doc.data()!;
@@ -87,10 +84,6 @@ class _UserScreenState extends State<UserScreen> {
         final Map<String, dynamic> defaultValues = {
           'numberOfCars': 1,
           'limiteContrat': 10,
-          'isSubscriptionActive': true,
-          'subscriptionId': 'free',
-          'subscriptionType': 'monthly',
-          'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
         };
 
         bool needsUpdate = false;
@@ -173,7 +166,9 @@ class _UserScreenState extends State<UserScreen> {
       await _firestore
           .collection('users')
           .doc(currentUser!.uid)
-          .update(userData);
+          .collection('authentification')
+          .doc(currentUser!.uid)
+          .set(userData);
 
       setState(() {
         _logoUrl = logoUrl; // Met à jour l'URL du logo dans l'état
@@ -243,8 +238,9 @@ class _UserScreenState extends State<UserScreen> {
 
     try {
       final fileName = '${currentUser!.uid}.jpg';
-      final Reference storageRef =
-          FirebaseStorage.instance.ref().child('logos/$fileName');
+      final Reference storageRef = FirebaseStorage.instance
+          .ref()
+          .child('users/${currentUser!.uid}/logo/$fileName');
 
       await storageRef.putFile(imageFile);
       final downloadUrl = await storageRef.getDownloadURL();

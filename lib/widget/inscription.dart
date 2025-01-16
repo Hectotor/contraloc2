@@ -88,13 +88,22 @@ class _InscriptionPageState extends State<InscriptionPage> {
       await userCredential.user!.sendEmailVerification();
 
       // Save user information to Firestore
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
+      await _firestore
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .collection('authentification')
+          .doc(userCredential.user!.uid)
+          .set({
         'nomEntreprise': _nomEntrepriseController.text.trim(),
         'prenom': _prenomController.text.trim(),
         'nom': _nomController.text.trim(),
         'adresse': _adresseController.text.trim(),
         'email': email,
         'telephone': _telephoneController.text.trim(),
+        'subscriptionId': 'free',
+        'isSubscriptionActive': false,
+        'numberOfCars': 1,
+        'limiteContrat': 10,
       });
 
       setState(() {

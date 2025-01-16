@@ -92,6 +92,8 @@ class _ContratModifierState extends State<ContratModifier> {
         final doc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
+            .collection('authentification')
+            .doc('userId')
             .get();
 
         setState(() {
@@ -110,8 +112,10 @@ class _ContratModifierState extends State<ContratModifier> {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         final doc = await FirebaseFirestore.instance
-            .collection('contrats')
+            .collection('users')
             .doc(user.uid)
+            .collection('contrats')
+            .doc('userId')
             .get();
 
         // Safely access the data
@@ -142,8 +146,10 @@ class _ContratModifierState extends State<ContratModifier> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       await FirebaseFirestore.instance
-          .collection('contrats')
+          .collection('users')
           .doc(user.uid)
+          .collection('contrats')
+          .doc('userId')
           .set({
         'texte': _controller.text,
         'updatedAt': FieldValue.serverTimestamp(),

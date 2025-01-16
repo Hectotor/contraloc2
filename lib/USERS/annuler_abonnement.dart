@@ -18,6 +18,17 @@ class AnnulerAbonnement extends StatelessWidget {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
+      // Verify if the user has access to the document
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (!doc.exists || doc.data()?['userId'] != user.uid) {
+        print('Accès refusé ou document non trouvé');
+        return;
+      }
+
       bool? shouldCancel = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -45,12 +56,18 @@ class AnnulerAbonnement extends StatelessWidget {
 
       if (shouldCancel != true) return;
 
-      // Annulation via RevenueCat
-      await Purchases.logOut();
+      // Obtenir les informations actuelles du client
+      final customerInfo = await Purchases.getCustomerInfo();
+
+      if (customerInfo.activeSubscriptions.isEmpty) {
+        throw Exception('Aucun abonnement actif trouvé');
+      }
 
       // Mise à jour dans Firestore
       await FirebaseFirestore.instance
           .collection('users')
+          .doc(user.uid)
+          .collection('authentification')
           .doc(user.uid)
           .update({
         'isSubscriptionActive': false,
@@ -61,21 +78,22 @@ class AnnulerAbonnement extends StatelessWidget {
         'subscriptionCancellationDate': DateTime.now().toIso8601String(),
       });
 
-      // Appeler le callback immédiatement après la mise à jour Firestore
+      // Appeler le callback
       onCancelSuccess();
 
-      // Montrer le message de succès après que tout est terminé
+      // Montrer le message de succès
       if (context.mounted) {
-        Navigator.pop(context); // Retourner à l'écran précédent
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Abonnement annulé avec succès'),
+            content: Text(
+                'Votre abonnement sera annulé à la fin de la période en cours'),
             backgroundColor: Colors.green,
           ),
         );
       }
     } catch (e) {
-      print('Erreur dans _cancelSubscription: $e');
+      print('Erreur détaillée dans _cancelSubscription: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

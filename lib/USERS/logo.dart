@@ -62,8 +62,9 @@ class _LogoWidgetState extends State<LogoWidget> {
 
     try {
       final fileName = '${widget.currentUser!.uid}.jpg';
-      final Reference storageRef =
-          FirebaseStorage.instance.ref().child('logos/$fileName');
+      final Reference storageRef = FirebaseStorage.instance
+          .ref()
+          .child('users/${widget.currentUser!.uid}/logos/$fileName');
 
       await storageRef.putFile(imageFile);
       return await storageRef.getDownloadURL();

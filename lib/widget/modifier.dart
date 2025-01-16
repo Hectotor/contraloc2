@@ -101,17 +101,20 @@ class _ModifierScreenState extends State<ModifierScreen> {
     }
   }
 
-  // Nouvelle m������thode pour télécharger les photos avec index
+  // Nouvelle méthode pour télécharger les photos avec index
   Future<List<String>> _uploadPhotos(List<File> photos) async {
     List<String> urls = [];
     int startIndex = _photosRetourUrls
         .length; // Commence à partir du nombre de photos existantes
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception("Utilisateur non connecté");
+    }
     for (var photo in photos) {
       String fileName =
           'retour_${DateTime.now().millisecondsSinceEpoch}_${startIndex + urls.length}.jpg';
-      Reference ref = FirebaseStorage.instance
-          .ref()
-          .child('locations/${widget.contratId}/photos_retour/$fileName');
+      Reference ref = FirebaseStorage.instance.ref().child(
+          'users/${user.uid}/locations/${widget.contratId}/photos_retour/$fileName');
 
       await ref.putFile(photo);
       String downloadUrl = await ref.getDownloadURL();
@@ -150,6 +153,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
       // Mettre à jour Firestore avec les URLs
       await FirebaseFirestore.instance
+          .collection('users')
+          .doc(FirebaseAuth.instance.currentUser!.uid)
           .collection('locations')
           .doc(widget.contratId)
           .update({
@@ -270,6 +275,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
       if (user != null) {
         final conditionsDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
             .collection('contrats')
             .doc(user.uid)
             .get();

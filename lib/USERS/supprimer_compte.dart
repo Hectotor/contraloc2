@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../screens/login.dart'; // Import de l'écran de connexion
 
 class SupprimerCompte extends StatelessWidget {
@@ -10,6 +11,60 @@ class SupprimerCompte extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
+        // Delete user photos from Firebase Storage
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('authentification')
+            .doc(user.uid)
+            .get();
+
+        if (userDoc.exists) {
+          final userData = userDoc.data();
+          if (userData != null) {
+            if (userData['logoUrl'] != null) {
+              final logoUrl = userData['logoUrl'];
+              final logoRef = FirebaseStorage.instance.refFromURL(logoUrl);
+              await logoRef.delete();
+            }
+
+            // Delete vehicle photos
+            final vehicleDocs = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('vehicules')
+                .get();
+
+            for (var vehicleDoc in vehicleDocs.docs) {
+              final vehicleData = vehicleDoc.data();
+              if (vehicleData['photoVehiculeUrl'] != null) {
+                final photoUrl = vehicleData['photoVehiculeUrl'];
+                final photoRef = FirebaseStorage.instance.refFromURL(photoUrl);
+                await photoRef.delete();
+              }
+              if (vehicleData['photoCarteGriseUrl'] != null) {
+                final carteGriseUrl = vehicleData['photoCarteGriseUrl'];
+                final carteGriseRef =
+                    FirebaseStorage.instance.refFromURL(carteGriseUrl);
+                await carteGriseRef.delete();
+              }
+              if (vehicleData['photoAssuranceUrl'] != null) {
+                final assuranceUrl = vehicleData['photoAssuranceUrl'];
+                final assuranceRef =
+                    FirebaseStorage.instance.refFromURL(assuranceUrl);
+                await assuranceRef.delete();
+              }
+            }
+
+            // Delete driving license photos
+            if (userData['photoPermisUrl'] != null) {
+              final permisUrl = userData['photoPermisUrl'];
+              final permisRef = FirebaseStorage.instance.refFromURL(permisUrl);
+              await permisRef.delete();
+            }
+          }
+        }
+
         // Supprimer les données utilisateur de Firestore
         await FirebaseFirestore.instance
             .collection('users')
