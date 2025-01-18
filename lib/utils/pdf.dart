@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:path_provider/path_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter/services.dart' show NetworkAssetBundle, rootBundle;
@@ -8,6 +8,9 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'pdf_signa_cachet.dart';
 import 'pdf_voiture.dart';
 import 'pdf_info_contact.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:open_filex/open_filex.dart';
 
 Future<String> generatePdf(
     Map<String, dynamic> data,
@@ -368,13 +371,35 @@ Future<String> generatePdf(
     ),
   );
 
-  // Sauvegarder le PDF
-  final directory = await getTemporaryDirectory();
-  final path = '${directory.path}/contrat.pdf';
-  final output = File(path);
-  await output.writeAsBytes(await pdf.save());
+  // Après la génération du PDF (après pdf.addPage...)
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) throw Exception("Utilisateur non connecté");
 
-  return path;
+  final pdfBytes = await pdf.save();
+  final fileName = 'contrat.pdf';
+
+  // Sauvegarder directement le PDF dans la collection de l'utilisateur
+  final storageRef = FirebaseStorage.instance.ref().child(
+      'users/${user.uid}/locations/${data['contratId']}/documents/$fileName');
+
+  // Upload le PDF dans Firebase Storage
+  await storageRef.putData(pdfBytes);
+  final downloadUrl = await storageRef.getDownloadURL();
+
+  // Mettre à jour le document Firestore avec l'URL du PDF
+  await FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .collection('locations')
+      .doc(data['contratId'])
+      .update({
+    'pdfUrl': downloadUrl,
+  });
+
+  // Ouvrir directement le PDF depuis l'URL
+  await OpenFilex.open(downloadUrl);
+
+  return downloadUrl;
 }
 
 // Méthodes de calcul intégrées

@@ -2,11 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class FirestoreService {
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   static Stream<QuerySnapshot> getContrats(String status) {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return Stream.empty();
 
-    return FirebaseFirestore.instance
+    // Index composite utilisé ici
+    return _firestore
         .collection('users')
         .doc(userId)
         .collection('locations')
@@ -19,7 +22,8 @@ class FirestoreService {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return Stream.empty();
 
-    return FirebaseFirestore.instance
+    // Index composite utilisé ici
+    return _firestore
         .collection('users')
         .doc(userId)
         .collection('locations')
@@ -30,52 +34,51 @@ class FirestoreService {
 
   static Future<QuerySnapshot> getContratsByDate(DateTime date) {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) {
-      return FirebaseFirestore.instance.collection('locations').limit(1).get();
-    }
+    if (userId == null) throw Exception("Utilisateur non connecté");
 
-    final startOfDay =
-        Timestamp.fromDate(DateTime(date.year, date.month, date.day));
-    final endOfDay = Timestamp.fromDate(
-        DateTime(date.year, date.month, date.day, 23, 59, 59));
-    return FirebaseFirestore.instance
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
+
+    // Index composite utilisé ici
+    return _firestore
         .collection('users')
         .doc(userId)
         .collection('locations')
-        .where('dateCreation', isGreaterThanOrEqualTo: startOfDay)
-        .where('dateCreation', isLessThanOrEqualTo: endOfDay)
+        .where('dateCreation',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('dateCreation',
+            isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
         .get();
   }
 
   static Future<QuerySnapshot> getAllContrats() {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) {
-      return FirebaseFirestore.instance.collection('locations').limit(1).get();
-    }
+    if (userId == null) throw Exception("Utilisateur non connecté");
 
-    return FirebaseFirestore.instance
+    return _firestore
         .collection('users')
         .doc(userId)
         .collection('locations')
+        .orderBy('dateCreation', descending: true)
         .get();
   }
 
   static Future<QuerySnapshot> getMonthlyContrats() {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) {
-      return FirebaseFirestore.instance.collection('locations').limit(1).get();
-    }
+    if (userId == null) throw Exception("Utilisateur non connecté");
 
     final now = DateTime.now();
     final startOfMonth = DateTime(now.year, now.month, 1);
     final endOfMonth = DateTime(now.year, now.month + 1, 0);
 
-    return FirebaseFirestore.instance
+    // Index composite utilisé ici
+    return _firestore
         .collection('users')
         .doc(userId)
         .collection('locations')
-        .where('dateCreation', isGreaterThanOrEqualTo: startOfMonth)
-        .where('dateCreation', isLessThanOrEqualTo: endOfMonth)
+        .where('dateCreation',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
+            isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
         .orderBy('dateCreation', descending: true)
         .get();
   }

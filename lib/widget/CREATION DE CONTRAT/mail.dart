@@ -19,22 +19,27 @@ class EmailService {
     String? logoUrl,
   }) async {
     try {
-      // Récupérer les paramètres SMTP depuis Firestore
+      // Récupérer les paramètres SMTP depuis admin/smtpSettings
       final adminDoc = await FirebaseFirestore.instance
           .collection('admin')
           .doc('smtpSettings')
           .get();
 
-      final adminData = adminDoc.data() ?? {};
-      final smtpEmail = adminData['smtpEmail'] ?? 'contact@contraloc.fr';
-      final smtpPassword = adminData['smtpPassword'] ?? '';
-      final smtpServer = adminData['smtpServer'] ?? 'contraloc.fr';
-      final smtpPort = 465;
-
-      if (smtpEmail.isEmpty || smtpPassword.isEmpty || smtpServer.isEmpty) {
-        throw Exception('Configuration SMTP manquante');
+      if (!adminDoc.exists) {
+        throw Exception('Configuration SMTP non trouvée');
       }
 
+      final smtpData = adminDoc.data() ?? {};
+      final smtpEmail = smtpData['smtpEmail'] ?? '';
+      final smtpPassword = smtpData['smtpPassword'] ?? '';
+      final smtpServer = smtpData['smtpServer'] ?? '';
+      final smtpPort = smtpData['smtpPort'] ?? 465;
+
+      if (smtpEmail.isEmpty || smtpPassword.isEmpty || smtpServer.isEmpty) {
+        throw Exception('Configuration SMTP incomplète');
+      }
+
+      // Vérifier que le fichier PDF existe
       if (!File(pdfPath).existsSync()) {
         throw Exception('Le fichier PDF est introuvable');
       }

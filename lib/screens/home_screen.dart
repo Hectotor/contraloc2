@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async'; // Import Timer
 import '../widget/delete_vehicule.dart';
-import '../widget/CREATION DE CONTRAT/client.dart';
+import '../widget/CREATION DE CONTRAT/client.dart'; // Assurez-vous que ce fichier est correctement importé
 import '../utils/animation.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -62,8 +62,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
           .collection('vehicules')
-          .where('userId', isEqualTo: user.uid)
           .get();
       return querySnapshot.docs.length;
     }
@@ -223,8 +224,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore
+            .collection('users')
+            .doc(_auth.currentUser?.uid)
             .collection('vehicules')
-            .where('userId', isEqualTo: _auth.currentUser?.uid)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -337,22 +339,22 @@ class _HomeScreenState extends State<HomeScreen> {
                             await _getUserSubscriptionLimit();
                         final vehicleCount = await _getUserVehicleCount();
 
-                        // Modifié : permettre l'accès si on est dans la limite de l'abonnement
                         if (vehicleCount > subscriptionLimit) {
-                          // Changé de >= à >
                           await _showSubscriptionLimitDialog();
                           return;
                         }
 
-                        // Verify if the user has access to the vehicle ID
+                        // Modification ici : vérifier dans la sous-collection de l'utilisateur
                         final user = FirebaseAuth.instance.currentUser;
                         if (user != null) {
                           final doc = await FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(user.uid)
                               .collection('vehicules')
                               .doc(vehicle.id)
                               .get();
 
-                          if (doc.exists && doc.data()?['userId'] == user.uid) {
+                          if (doc.exists) {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -367,8 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text(
-                                    "Vous n'avez pas accès à ce véhicule."),
+                                content: Text("Ce véhicule n'existe plus."),
                                 backgroundColor: Colors.red,
                               ),
                             );
