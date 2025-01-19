@@ -287,7 +287,10 @@ class DeleteVehicule {
                       ),
                       child: const Text(
                         "Supprimer",
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),

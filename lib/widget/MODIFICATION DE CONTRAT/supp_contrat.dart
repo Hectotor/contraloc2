@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import '../navigation.dart'; // Ajouter cet import
 
 class SuppContrat {
   static Future<void> deleteContract(
@@ -68,9 +67,14 @@ class SuppContrat {
           .doc(contratId)
           .delete();
 
-      // Fermer le dialogue et afficher le succès
-      if (dialogContext != null && dialogContext?.mounted == true) {
+      // Fermer le dialogue de chargement
+      if (dialogContext != null && dialogContext!.mounted) {
         Navigator.pop(dialogContext!);
+      }
+
+      // Vérifier si le contexte est toujours valide
+      if (context.mounted) {
+        // Afficher le message de succès
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Le contrat a été supprimé avec succès'),
@@ -78,27 +82,20 @@ class SuppContrat {
             duration: Duration(seconds: 2),
           ),
         );
-      }
 
-      // Navigation
-      if (context.mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const NavigationPage(initialTab: 1),
-          ),
-        );
+        // Quitter la page actuelle
+        Navigator.of(context).pop();
       }
 
       // Supprimer les photos en arrière-plan
       _deletePhotosLater(photosToDelete);
     } catch (e) {
-      // Fermer le dialogue en cas d'erreur
-      if (dialogContext != null && Navigator.canPop(dialogContext!)) {
+      // Fermer le dialogue de chargement en cas d'erreur
+      if (dialogContext != null && dialogContext!.mounted) {
         Navigator.pop(dialogContext!);
       }
 
-      // Afficher une alerte en cas d'erreur
+      // Vérifier si le contexte est toujours valide avant d'afficher l'erreur
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

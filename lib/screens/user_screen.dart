@@ -66,40 +66,30 @@ class _UserScreenState extends State<UserScreen> {
           .collection('authentification')
           .doc(currentUser!.uid)
           .get();
+
       if (!doc.exists) {
         // Initialisation des valeurs par défaut pour un nouvel utilisateur
-        await _firestore.collection('users').doc(currentUser!.uid).set({
+        await _firestore
+            .collection('users')
+            .doc(currentUser!.uid)
+            .collection('authentification')
+            .doc(currentUser!.uid)
+            .set({
           'nomEntreprise': '',
           'nom': '',
           'prenom': '',
+          'email': currentUser?.email ?? '', // Ajout de l'email
           'telephone': '',
           'adresse': '',
           'siret': '',
           'numberOfCars': 1,
-          'limiteContrat': 10, // Ajout de la limite de contrats
+          'limiteContrat': 10,
+          'isSubscriptionActive': false,
+          'subscriptionId': 'free',
+          'subscriptionType': 'monthly',
         });
       } else {
         final data = doc.data()!;
-        // Vérifier et ajouter les valeurs par défaut si elles sont manquantes
-        final Map<String, dynamic> defaultValues = {
-          'numberOfCars': 1,
-          'limiteContrat': 10,
-        };
-
-        bool needsUpdate = false;
-        defaultValues.forEach((key, value) {
-          if (!data.containsKey(key)) {
-            data[key] = value;
-            needsUpdate = true;
-          }
-        });
-
-        if (needsUpdate) {
-          await _firestore
-              .collection('users')
-              .doc(currentUser!.uid)
-              .update(data);
-        }
 
         setState(() {
           _nomEntrepriseController.text = data['nomEntreprise'] ?? '';
@@ -129,10 +119,9 @@ class _UserScreenState extends State<UserScreen> {
       _isLoading = true;
     });
 
-    String? logoUrl = _logoUrl; // Initialisation avec l'URL existante
+    String? logoUrl = _logoUrl;
     try {
       if (_logo != null) {
-        // Ne télécharge que si une nouvelle image est sélectionnée
         logoUrl = await _uploadLogoToStorage(File(_logo!.path));
       }
 
@@ -140,20 +129,14 @@ class _UserScreenState extends State<UserScreen> {
         'nomEntreprise': _nomEntrepriseController.text.trim(),
         'nom': _nomController.text.trim(),
         'prenom': _prenomController.text.trim(),
+        'email': _emailController.text.trim(),
         'telephone': _telephoneController.text.trim(),
         'adresse': _adresseController.text.trim(),
         'siret': _siretController.text.trim(),
-        'limiteContrat':
-            10, // Ajout de la limite de contrats si pas déjà définie
       };
 
-      // N'ajoute logoUrl que s'il n'est pas null
       if (logoUrl != null) {
         userData['logoUrl'] = logoUrl;
-      }
-
-      // Ajoute les données du tampon seulement si nous avons un logo
-      if (logoUrl != null) {
         userData['tampon'] = {
           'logoPath': logoUrl,
           'nomEntreprise': _nomEntrepriseController.text.trim(),
@@ -163,15 +146,16 @@ class _UserScreenState extends State<UserScreen> {
         };
       }
 
+      // Utiliser update() au lieu de set()
       await _firestore
           .collection('users')
           .doc(currentUser!.uid)
           .collection('authentification')
           .doc(currentUser!.uid)
-          .set(userData);
+          .update(userData); // Changé de set() à update()
 
       setState(() {
-        _logoUrl = logoUrl; // Met à jour l'URL du logo dans l'état
+        _logoUrl = logoUrl;
         _isLoading = false;
       });
 
@@ -365,12 +349,22 @@ class _UserScreenState extends State<UserScreen> {
                             _logoUrl = newLogoUrl;
                           });
                           if (newLogoUrl != null) {
-                            await _firestore
+                            final docRef = _firestore
                                 .collection('users')
                                 .doc(currentUser!.uid)
-                                .update({
-                              'logoUrl': newLogoUrl,
-                            });
+                                .collection('authentification')
+                                .doc(currentUser!.uid);
+                            final doc = await docRef.get();
+                            if (doc.exists) {
+                              await docRef.update({
+                                'logoUrl': newLogoUrl,
+                              });
+                            } else {
+                              await docRef.set({
+                                'logoUrl': newLogoUrl,
+                                // Ajoutez ici d'autres champs nécessaires pour créer le document
+                              });
+                            }
                           }
                         },
                         currentUser: currentUser,

@@ -129,6 +129,7 @@ class _ClientPageState extends State<ClientPage> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
+        backgroundColor: Colors.white, // Ajout du fond blanc
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),

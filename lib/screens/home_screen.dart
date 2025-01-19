@@ -76,6 +76,10 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
           title: const Text(
             "Limite d'abonnement atteinte",
             style: TextStyle(
@@ -211,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Modification ici
+      backgroundColor: Colors.white, // Modification ici
       appBar: AppBar(
         title: const Text(
           "Mes véhicules",

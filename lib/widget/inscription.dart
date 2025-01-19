@@ -4,6 +4,18 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 
+// Définition de UpperCaseTextFormatter
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
+    );
+  }
+}
+
 class InscriptionPage extends StatefulWidget {
   const InscriptionPage({Key? key}) : super(key: key);
 
@@ -87,14 +99,16 @@ class _InscriptionPageState extends State<InscriptionPage> {
 
       await userCredential.user!.sendEmailVerification();
 
-      // Save user information to Firestore
+      // Save user information to Firestore with authentification subcollection
       await _firestore
           .collection('users')
           .doc(userCredential.user!.uid)
           .collection('authentification')
           .doc(userCredential.user!.uid)
           .set({
-        'nomEntreprise': _nomEntrepriseController.text.trim(),
+        'nomEntreprise': _nomEntrepriseController.text
+            .trim()
+            .toUpperCase(), // Convert to uppercase
         'prenom': _prenomController.text.trim(),
         'nom': _nomController.text.trim(),
         'adresse': _adresseController.text.trim(),
@@ -124,6 +138,7 @@ class _InscriptionPageState extends State<InscriptionPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
+        backgroundColor: Colors.white, // Ajout du fond blanc
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
@@ -234,19 +249,55 @@ class _InscriptionPageState extends State<InscriptionPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildTextField("Nom de l'entreprise",
-                            _nomEntrepriseController, true),
-                        _buildTextField("Prénom", _prenomController, true),
-                        _buildTextField("Nom", _nomController, true),
-                        _buildTextField("Adresse", _adresseController, true),
-                        _buildTextField("Email", _emailController, true,
-                            keyboardType: TextInputType.emailAddress),
-                        _buildTextField("Téléphone", _telephoneController, true,
-                            keyboardType: TextInputType.phone),
+                        _buildTextField(
+                          "Nom de l'entreprise",
+                          _nomEntrepriseController,
+                          true,
+                          inputFormatters: [UpperCaseTextFormatter()],
+                          icon: Icons.business,
+                        ),
+                        _buildTextField(
+                          "Prénom",
+                          _prenomController,
+                          true,
+                          icon: Icons.person,
+                        ),
+                        _buildTextField(
+                          "Nom",
+                          _nomController,
+                          true,
+                          icon: Icons.person_outline,
+                        ),
+                        _buildTextField(
+                          "Adresse",
+                          _adresseController,
+                          true,
+                          icon: Icons.location_on,
+                        ),
+                        _buildTextField(
+                          "Email",
+                          _emailController,
+                          true,
+                          keyboardType: TextInputType.emailAddress,
+                          icon: Icons.email,
+                        ),
+                        _buildTextField(
+                          "Téléphone",
+                          _telephoneController,
+                          true,
+                          keyboardType: TextInputType.phone,
+                          icon: Icons.phone,
+                        ),
                         _buildPasswordField(
-                            "Mot de passe", _passwordController),
-                        _buildPasswordField("Confirmer le mot de passe",
-                            _confirmPasswordController),
+                          "Mot de passe",
+                          _passwordController,
+                          icon: Icons.lock_outline,
+                        ),
+                        _buildPasswordField(
+                          "Confirmer le mot de passe",
+                          _confirmPasswordController,
+                          icon: Icons.lock_outline,
+                        ),
                         const SizedBox(height: 30),
                         ElevatedButton(
                           onPressed: _register,
@@ -286,19 +337,16 @@ class _InscriptionPageState extends State<InscriptionPage> {
   Widget _buildTextField(
       String label, TextEditingController controller, bool isEditable,
       {bool isReadOnly = false,
-      TextInputType keyboardType = TextInputType.text}) {
+      TextInputType keyboardType = TextInputType.text,
+      List<TextInputFormatter>? inputFormatters,
+      IconData? icon}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextFormField(
         controller: controller,
         readOnly: isReadOnly,
         keyboardType: keyboardType,
-        inputFormatters: label == "Téléphone"
-            ? [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(10),
-              ]
-            : null,
+        inputFormatters: inputFormatters,
         onChanged: (value) {
           if (label == "Email") {
             setState(() {});
@@ -306,6 +354,9 @@ class _InscriptionPageState extends State<InscriptionPage> {
         },
         decoration: InputDecoration(
           labelText: label,
+          prefixIcon: icon != null
+              ? Icon(icon, color: Colors.black.withOpacity(0.5))
+              : null,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           errorText: label == "Email" &&
                   controller.text.isNotEmpty &&
@@ -318,7 +369,8 @@ class _InscriptionPageState extends State<InscriptionPage> {
     );
   }
 
-  Widget _buildPasswordField(String label, TextEditingController controller) {
+  Widget _buildPasswordField(String label, TextEditingController controller,
+      {IconData? icon}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextField(
@@ -327,7 +379,9 @@ class _InscriptionPageState extends State<InscriptionPage> {
             label == "Mot de passe" ? !_showPassword : !_showConfirmPassword,
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF0F056B)),
+          prefixIcon: icon != null
+              ? Icon(icon, color: Colors.black.withOpacity(0.5))
+              : null,
           suffixIcon: IconButton(
             icon: Icon(
               label == "Mot de passe"

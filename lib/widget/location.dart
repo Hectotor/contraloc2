@@ -1,13 +1,12 @@
 import 'package:ContraLoc/utils/pdf.dart';
+import 'package:ContraLoc/widget/MES%20CONTRATS/contrat_condition.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:signature/signature.dart';
-
 import '../widget/navigation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'package:firebase_storage/firebase_storage.dart'; // Import Firebase Storage
 // ignore: depend_on_referenced_packages
@@ -282,12 +281,24 @@ class _LocationPageState extends State<LocationPage> {
         final vehicleData =
             vehicleDoc.docs.isNotEmpty ? vehicleDoc.docs.first.data() : {};
 
-        // Récupérer les conditions
+        // Récupérer les conditions depuis la collection 'users'
         final conditionsDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
             .collection('contrats')
-            .doc(FirebaseAuth.instance.currentUser!.uid)
+            .doc(user.uid)
             .get();
-        final conditions = conditionsDoc.data()?['texte'] ?? '';
+
+        String conditions = '';
+        if (conditionsDoc.exists && conditionsDoc.data()?['texte'] != null) {
+          conditions = conditionsDoc.data()?['texte'];
+        } else {
+          // Utiliser les conditions par défaut si aucune condition personnalisée n'existe
+          final defaultConditionsDoc =
+              await _firestore.collection('contrats').doc('default').get();
+          conditions = defaultConditionsDoc.data()?['texte'] ??
+              ContratModifier.defaultContract;
+        }
 
         final signatureAller = await _signatureController.toPngBytes();
 
@@ -332,7 +343,7 @@ class _LocationPageState extends State<LocationPage> {
           _pourcentageEssence.toString(),
           _typeLocation,
           vehicleData['prixLocation'] ?? '',
-          condition: conditions,
+          condition: conditions, // Passer les conditions récupérées
         );
 
         // Envoyer le PDF par email

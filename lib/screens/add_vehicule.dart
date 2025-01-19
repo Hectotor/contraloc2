@@ -537,18 +537,22 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                 borderRadius: BorderRadius.circular(12),
                 color: Colors.grey[200],
               ),
-              child: image != null
-                  ? image.path.startsWith('http')
-                      ? Image.network(
-                          image.path,
-                          fit: BoxFit.cover,
-                        )
-                      : Image.file(
-                          File(image.path),
-                          fit: BoxFit.cover,
-                        )
-                  : const Icon(Icons.add_a_photo,
-                      size: 50, color: Color(0xFF08004D)),
+              child: ClipRRect(
+                // Ajout du ClipRRect pour arrondir l'image
+                borderRadius: BorderRadius.circular(12),
+                child: image != null
+                    ? image.path.startsWith('http')
+                        ? Image.network(
+                            image.path,
+                            fit: BoxFit.cover,
+                          )
+                        : Image.file(
+                            File(image.path),
+                            fit: BoxFit.cover,
+                          )
+                    : const Icon(Icons.add_a_photo,
+                        size: 50, color: Color(0xFF08004D)),
+              ),
             ),
           ),
         ],

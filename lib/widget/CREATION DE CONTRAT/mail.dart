@@ -3,6 +3,7 @@ import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EmailService {
   static Future<void> sendEmailWithPdf({
@@ -19,6 +20,24 @@ class EmailService {
     String? logoUrl,
   }) async {
     try {
+      // Récupérer les données de l'utilisateur
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final userData = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('authentification')
+            .doc(user.uid)
+            .get();
+
+        if (userData.exists) {
+          nomEntreprise = userData.data()?['nomEntreprise'] ?? 'Contraloc';
+          adresse = userData.data()?['adresse'] ?? '';
+          telephone = userData.data()?['telephone'] ?? '';
+          logoUrl = userData.data()?['logoUrl'];
+        }
+      }
+
       // Récupérer les paramètres SMTP depuis admin/smtpSettings
       final adminDoc = await FirebaseFirestore.instance
           .collection('admin')
@@ -81,10 +100,10 @@ class EmailService {
 
               <br>
               <div style="display: flex; align-items: center;">
-                ${logoUrl != null ? '<img src="$logoUrl" alt="Logo" style="width: 150px; height: auto; margin-right: 15px;" />' : ''}
+                ${logoUrl != null ? '<img src="$logoUrl" alt="Logo" style="width: 70px; height: auto; margin-right: 15px;" />' : ''}
                 <div>
                   <p style="margin: 0; font-weight: bold; font-size: 16px; color: #08004D;">${nomEntreprise ?? "Contraloc"}</p>
-                  ${adresse != null ? '<p style="margin: 0; color: #555;">$adresse</p>' : ''}
+                  ${adresse != null ? '<p style="margin: 0; color #555;">Adresse: $adresse</p>' : ''}
                   ${telephone != null ? '<p style="margin: 0; color: #555;">Téléphone : $telephone</p>' : ''}
                 </div>
               </div>
