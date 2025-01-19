@@ -126,7 +126,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
   Future<void> _updateContrat() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Validate kilometrageRetour
     if (_kilometrageRetourController.text.isNotEmpty &&
         int.tryParse(_kilometrageRetourController.text) != null &&
         widget.data['kilometrageDepart'] != null &&
@@ -143,18 +142,27 @@ class _ModifierScreenState extends State<ModifierScreen> {
       return;
     }
 
-    setState(() {
-      _isUpdatingContrat = true; // Set loading state to true
-    });
+    // Afficher le dialogue de chargement
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(child: CircularProgressIndicator());
+      },
+    );
 
     try {
-      // Télécharger les photos d'abord
-      _photosRetourUrls = await _uploadPhotos(_photosRetour);
+      // Conserver les URLs existantes
+      List<String> allPhotosUrls = List<String>.from(_photosRetourUrls);
 
-      // Mettre à jour Firestore avec les URLs
+      // Ajouter les nouvelles photos seulement s'il y en a
+      if (_photosRetour.isNotEmpty) {
+        List<String> newUrls = await _uploadPhotos(_photosRetour);
+        allPhotosUrls.addAll(newUrls);
+      }
+
+      // Mettre à jour Firestore
       await FirebaseFirestore.instance
-          .collection('users')
-          .doc(FirebaseAuth.instance.currentUser!.uid)
           .collection('locations')
           .doc(widget.contratId)
           .update({
@@ -163,35 +171,43 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'kilometrageRetour': _kilometrageRetourController.text.isNotEmpty
             ? _kilometrageRetourController.text
             : null,
-        'photosRetourUrls':
-            _photosRetourUrls, // Stocker les URLs au lieu des chemins
-        'status': 'restitue', // Mettre à jour le statut en "restitue"
-        'dateRestitution':
-            FieldValue.serverTimestamp(), // Ajouter la date de restitution
+        'photosRetourUrls': allPhotosUrls,
+        'status': 'restitue',
+        'dateRestitution': FieldValue.serverTimestamp(),
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Contrat mis à jour avec succès !"),
-          backgroundColor: Colors.green, // Fond vert
-        ),
-      );
+      // Fermer le dialogue de chargement
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
 
-      // Rediriger vers NavigationPage avec l'onglet "Contrats"
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => NavigationPage(initialTab: 1),
-        ),
-      );
+      // Afficher le message de succès et naviguer
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Contrat mis à jour avec succès !"),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const NavigationPage(initialTab: 1),
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erreur : $e")),
-      );
-    } finally {
-      setState(() {
-        _isUpdatingContrat = false; // Set loading state to false
-      });
+      // Fermer le dialogue de chargement en cas d'erreur
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erreur : $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -275,8 +291,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
       if (user != null) {
         final conditionsDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
             .collection('contrats')
             .doc(user.uid)
             .get();

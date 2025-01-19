@@ -118,5 +118,12 @@
     <array>
         <string>armv7</string>
     </array>
+
+
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <true/>
+    <key>UIFileSharingEnabled</key>
+    <true/>
+
 </dict>
 </plist>

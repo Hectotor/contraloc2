@@ -89,17 +89,20 @@ class _ContratModifierState extends State<ContratModifier> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+        // Correction du chemin en s'inspirant de client.dart
         final doc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .collection('authentification')
-            .doc('userId')
+            .doc(user.uid) // Utiliser user.uid au lieu de 'userId'
             .get();
 
         setState(() {
           final subscriptionId = doc.data()?['subscriptionId'] ?? 'free';
           isPremiumUser = subscriptionId == 'PremiumMonthlySubscription' ||
               subscriptionId == 'PremiumYearlySubscription';
+          print('Status Premium: $isPremiumUser'); // Pour le débogage
+          print('SubscriptionId: $subscriptionId'); // Pour le débogage
         });
       }
     } catch (e) {

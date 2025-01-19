@@ -42,55 +42,69 @@ class DeleteVehicule {
     if (user == null) return;
 
     try {
-      // Verify if the user has access to the vehicle ID
-      final doc = await _firestore
+      // Afficher un indicateur de chargement
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+
+      // Récupérer d'abord le document du véhicule
+      final vehicleDoc = await _firestore
           .collection('users')
           .doc(user.uid)
           .collection('vehicules')
           .doc(immatriculationId)
           .get();
 
-      if (!doc.exists) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Vous n'avez pas accès à ce véhicule."),
-              backgroundColor: Colors.red,
-            ),
-          );
+      if (!vehicleDoc.exists) {
+        // Si le document n'existe pas, essayer de le trouver par l'immatriculation
+        final querySnapshot = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('vehicules')
+            .where('immatriculation', isEqualTo: immatriculationId)
+            .get();
+
+        if (querySnapshot.docs.isEmpty) {
+          if (context.mounted) {
+            Navigator.pop(context); // Fermer l'indicateur de chargement
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Véhicule non trouvé."),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
         }
-        return;
+
+        // Utiliser le premier document trouvé
+        final vehicleData = querySnapshot.docs.first;
+
+        // Supprimer les photos
+        final data = vehicleData.data();
+        await _deleteVehiclePhotos(data);
+
+        // Supprimer le document
+        await vehicleData.reference.delete();
+      } else {
+        // Supprimer les photos
+        final data = vehicleDoc.data();
+        if (data != null) {
+          await _deleteVehiclePhotos(data);
+        }
+
+        // Supprimer le document
+        await vehicleDoc.reference.delete();
       }
 
-      // Delete vehicle photos from Firebase Storage
-      final vehicleData = doc.data();
-      if (vehicleData != null) {
-        if (vehicleData['photoVehiculeUrl'] != null) {
-          final photoUrl = vehicleData['photoVehiculeUrl'];
-          final photoRef = FirebaseStorage.instance.refFromURL(photoUrl);
-          await photoRef.delete();
-        }
-        if (vehicleData['photoCarteGriseUrl'] != null) {
-          final carteGriseUrl = vehicleData['photoCarteGriseUrl'];
-          final carteGriseRef =
-              FirebaseStorage.instance.refFromURL(carteGriseUrl);
-          await carteGriseRef.delete();
-        }
-        if (vehicleData['photoAssuranceUrl'] != null) {
-          final assuranceUrl = vehicleData['photoAssuranceUrl'];
-          final assuranceRef =
-              FirebaseStorage.instance.refFromURL(assuranceUrl);
-          await assuranceRef.delete();
-        }
-      }
-
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('vehicules')
-          .doc(immatriculationId)
-          .delete();
       if (context.mounted) {
+        Navigator.pop(context); // Fermer l'indicateur de chargement
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Véhicule supprimé avec succès !"),
@@ -100,10 +114,44 @@ class DeleteVehicule {
       }
     } catch (e) {
       if (context.mounted) {
+        Navigator.pop(context); // Fermer l'indicateur de chargement
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erreur lors de la suppression : $e")),
+          SnackBar(
+            content: Text("Erreur lors de la suppression : $e"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
+    }
+  }
+
+  Future<void> _deleteVehiclePhotos(Map<String, dynamic> vehicleData) async {
+    try {
+      if (vehicleData['photoVehiculeUrl'] != null) {
+        await _deleteStorageFile(vehicleData['photoVehiculeUrl']);
+      }
+      if (vehicleData['photoCarteGriseUrl'] != null) {
+        await _deleteStorageFile(vehicleData['photoCarteGriseUrl']);
+      }
+      if (vehicleData['photoAssuranceUrl'] != null) {
+        await _deleteStorageFile(vehicleData['photoAssuranceUrl']);
+      }
+    } catch (e) {
+      print('Erreur lors de la suppression des photos: $e');
+    }
+  }
+
+  Future<void> _deleteStorageFile(String? fileUrl) async {
+    try {
+      if (fileUrl != null &&
+          fileUrl.isNotEmpty &&
+          (fileUrl.startsWith('gs://') ||
+              fileUrl.startsWith('https://firebasestorage.googleapis.com'))) {
+        final ref = FirebaseStorage.instance.refFromURL(fileUrl);
+        await ref.delete();
+      }
+    } catch (e) {
+      print('Erreur lors de la suppression du fichier: $e');
     }
   }
 

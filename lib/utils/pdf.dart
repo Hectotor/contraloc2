@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter/services.dart' show NetworkAssetBundle, rootBundle;
@@ -8,9 +8,9 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'pdf_signa_cachet.dart';
 import 'pdf_voiture.dart';
 import 'pdf_info_contact.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:open_filex/open_filex.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 Future<String> generatePdf(
     Map<String, dynamic> data,
@@ -371,35 +371,43 @@ Future<String> generatePdf(
     ),
   );
 
-  // Après la génération du PDF (après pdf.addPage...)
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) throw Exception("Utilisateur non connecté");
-
   final pdfBytes = await pdf.save();
-  final fileName = 'contrat.pdf';
 
-  // Sauvegarder directement le PDF dans la collection de l'utilisateur
-  final storageRef = FirebaseStorage.instance.ref().child(
-      'users/${user.uid}/locations/${data['contratId']}/documents/$fileName');
+  // Créer un fichier temporaire local
+  final directory = await getApplicationDocumentsDirectory();
+  final tempFileName = 'contrat_${DateTime.now().millisecondsSinceEpoch}.pdf';
+  final tempFilePath = '${directory.path}/$tempFileName';
+  final tempFile = File(tempFilePath);
+  await tempFile.writeAsBytes(pdfBytes);
 
-  // Upload le PDF dans Firebase Storage
-  await storageRef.putData(pdfBytes);
-  final downloadUrl = await storageRef.getDownloadURL();
+  // Uploader vers Firebase Storage
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Utilisateur non connecté");
 
-  // Mettre à jour le document Firestore avec l'URL du PDF
-  await FirebaseFirestore.instance
-      .collection('users')
-      .doc(user.uid)
-      .collection('locations')
-      .doc(data['contratId'])
-      .update({
-    'pdfUrl': downloadUrl,
-  });
+    final storageRef = FirebaseStorage.instance
+        .ref()
+        .child('users/${user.uid}/contrats/$tempFileName');
 
-  // Ouvrir directement le PDF depuis l'URL
-  await OpenFilex.open(downloadUrl);
+    await storageRef.putFile(tempFile);
+    final downloadUrl = await storageRef.getDownloadURL();
 
-  return downloadUrl;
+    // Mettre à jour le document Firestore avec l'URL du PDF
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('locations')
+        .doc(data['id'])
+        .update({
+      'pdfUrl': downloadUrl,
+      'lastUpdated': FieldValue.serverTimestamp(),
+    });
+
+    return tempFilePath;
+  } catch (e) {
+    print('Erreur lors du téléchargement du PDF: $e');
+    return tempFilePath; // Retourne quand même le chemin local en cas d'erreur
+  }
 }
 
 // Méthodes de calcul intégrées

@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../widget/CREATION DE CONTRAT/client.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -51,6 +53,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   XFile? _carteGrisePhoto;
   XFile? _assurancePhoto;
   bool _isLoading = false;
+  final Dio dio = Dio();
 
   @override
   void initState() {
@@ -146,31 +149,67 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     }
   }
 
-  Future<int> _getUserSubscriptionLimit() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .get();
-      return doc.data()?['numberOfCars'] ?? 1;
-    }
-    return 1;
-  }
+  // Removed unused method _getUserSubscriptionLimit
 
-  Future<int> _getUserVehicleCount() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('vehicules')
-          .get();
-      return querySnapshot.docs.length;
+  Future<void> _moveStorageFiles(String oldImmat, String newImmat) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      // Structure des URLs des photos
+      final oldPhotos = {
+        'vehicule': widget.vehicleData?['photoVehiculeUrl'],
+        'carte_grise': widget.vehicleData?['photoCarteGriseUrl'],
+        'assurance': widget.vehicleData?['photoAssuranceUrl'],
+      };
+
+      Map<String, String> newUrls = {};
+
+      for (var entry in oldPhotos.entries) {
+        String? oldUrl = entry.value;
+        if (oldUrl != null && oldUrl.isNotEmpty) {
+          // Créer un nouveau nom de fichier
+          final fileName =
+              '${entry.key}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+          // Télécharger l'image depuis l'URL
+          final response = await dio.get(oldUrl,
+              options: Options(responseType: ResponseType.bytes));
+          final imageBytes = response.data;
+
+          // Créer une nouvelle référence dans le storage
+          final newRef = FirebaseStorage.instance
+              .ref()
+              .child('users/${user.uid}/vehicules/$newImmat/$fileName');
+
+          // Upload le fichier
+          await newRef.putData(imageBytes);
+
+          // Obtenir la nouvelle URL
+          final newUrl = await newRef.getDownloadURL();
+          newUrls[entry.key] = newUrl;
+
+          // Supprimer l'ancien fichier
+          try {
+            final oldRef = FirebaseStorage.instance.refFromURL(oldUrl);
+            await oldRef.delete();
+          } catch (e) {
+            print('Erreur lors de la suppression de l\'ancien fichier: $e');
+          }
+        }
+      }
+
+      // Mettre à jour les URLs dans vehicleData
+      if (newUrls['vehicule'] != null)
+        widget.vehicleData?['photoVehiculeUrl'] = newUrls['vehicule'];
+      if (newUrls['carte_grise'] != null)
+        widget.vehicleData?['photoCarteGriseUrl'] = newUrls['carte_grise'];
+      if (newUrls['assurance'] != null)
+        widget.vehicleData?['photoAssuranceUrl'] = newUrls['assurance'];
+    } catch (e) {
+      print('Erreur lors du déplacement des fichiers: $e');
+      throw Exception('Erreur lors du déplacement des photos: $e');
     }
-    return 0;
   }
 
   Future<void> _saveVehicule() async {
@@ -183,143 +222,119 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception("User not authenticated");
-      }
+      if (user == null) throw Exception("User not authenticated");
 
-      // Utiliser l'ID existant lors d'une modification
-      final docId = widget.vehicleId ?? _immatriculationController.text;
+      // Si c'est une modification et que l'immatriculation a changé
+      if (widget.vehicleId != null &&
+          widget.vehicleId != _immatriculationController.text) {
+        // 1. Déplacer les fichiers dans le storage
+        await _moveStorageFiles(
+          widget.vehicleId!,
+          _immatriculationController.text,
+        );
 
-      // Référence au document du véhicule dans la collection de l'utilisateur
-      final userVehicleRef = _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('vehicules')
-          .doc(docId);
+        // 2. Préparer les données du véhicule
+        final vehicleData = await _prepareVehicleData();
 
-      // Si c'est une nouvelle création
-      if (widget.vehicleId == null) {
-        // Vérifier si un véhicule avec cette immatriculation existe déjà
-        final existingVehicle = await _firestore
+        // 3. Créer le nouveau document
+        final newVehicleRef = _firestore
             .collection('users')
             .doc(user.uid)
             .collection('vehicules')
-            .doc(docId)
-            .get();
+            .doc(_immatriculationController.text);
 
-        if (existingVehicle.exists) {
-          setState(() {
-            _isLoading = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content:
-                  Text("Un véhicule avec cette immatriculation existe déjà"),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
+        // 4. Sauvegarder les données
+        await newVehicleRef.set(vehicleData);
 
-        final subscriptionLimit = await _getUserSubscriptionLimit();
-        final vehicleCount = await _getUserVehicleCount();
+        // 5. Supprimer l'ancien document
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('vehicules')
+            .doc(widget.vehicleId)
+            .delete();
 
-        if (vehicleCount >= subscriptionLimit) {
-          setState(() {
-            _isLoading = false;
-          });
-          // ... code existant pour afficher le dialogue d'abonnement ...
-          return;
-        }
-      }
-
-      print("Début de l'enregistrement du véhicule...");
-
-      String? photoVoitureUrl;
-      String? photoCarteGriseUrl;
-      String? photoAssuranceUrl;
-
-      // Gestion des photos
-      if (_carPhoto != null && !_carPhoto!.path.startsWith('http')) {
-        try {
-          photoVoitureUrl =
-              await _uploadImageToStorage(File(_carPhoto!.path), 'vehicule');
-        } catch (e) {
-          photoVoitureUrl = widget.vehicleData?['photoVehiculeUrl'];
-        }
+        showEnregistrementPopup(context);
       } else {
-        photoVoitureUrl = widget.vehicleData?['photoVehiculeUrl'];
+        // Cas normal : création ou modification sans changement d'immatriculation
+        final docId = widget.vehicleId ?? _immatriculationController.text;
+        final vehicleRef = _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('vehicules')
+            .doc(docId);
+
+        final vehicleData = await _prepareVehicleData();
+        await vehicleRef.set(vehicleData, SetOptions(merge: true));
+        showEnregistrementPopup(context);
       }
-
-      if (_carteGrisePhoto != null &&
-          !_carteGrisePhoto!.path.startsWith('http')) {
-        try {
-          photoCarteGriseUrl = await _uploadImageToStorage(
-              File(_carteGrisePhoto!.path), 'carte_grise');
-        } catch (e) {
-          photoCarteGriseUrl = widget.vehicleData?['photoCarteGriseUrl'];
-        }
-      } else {
-        photoCarteGriseUrl = widget.vehicleData?['photoCarteGriseUrl'];
-      }
-
-      if (_assurancePhoto != null &&
-          !_assurancePhoto!.path.startsWith('http')) {
-        try {
-          photoAssuranceUrl = await _uploadImageToStorage(
-              File(_assurancePhoto!.path), 'assurance');
-        } catch (e) {
-          photoAssuranceUrl = widget.vehicleData?['photoAssuranceUrl'];
-        }
-      } else {
-        photoAssuranceUrl = widget.vehicleData?['photoAssuranceUrl'];
-      }
-
-      final vehicleData = {
-        'userId': user.uid,
-        'marque': _marqueController.text,
-        'modele': _modeleController.text,
-        'immatriculation': _immatriculationController.text,
-        'vin': _vinController.text,
-        'typeCarburant': _typeCarburant,
-        'boiteVitesses': _boiteVitesses,
-        'prixLocation': _prixLocationController.text,
-        'franchise': _franchiseController.text,
-        'kilometrageSupp': _kilometrageSuppController.text,
-        'rayures': _rayuresController.text,
-        'assuranceNom': _assuranceNomController.text,
-        'assuranceNumero': _assuranceNumeroController.text,
-        'entretienDate': _entretienDateController.text,
-        'photoVehiculeUrl':
-            photoVoitureUrl ?? widget.vehicleData?['photoVehiculeUrl'] ?? '',
-        'photoCarteGriseUrl': photoCarteGriseUrl ??
-            widget.vehicleData?['photoCarteGriseUrl'] ??
-            '',
-        'photoAssuranceUrl':
-            photoAssuranceUrl ?? widget.vehicleData?['photoAssuranceUrl'] ?? '',
-      };
-
-      // Utiliser set avec merge:true pour la mise à jour
-      await userVehicleRef.set(vehicleData, SetOptions(merge: true));
-
-      print("Affichage du popup de confirmation...");
-      showEnregistrementPopup(context);
     } catch (e) {
       print("Erreur lors de l'enregistrement du véhicule : $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erreur lors de l'enregistrement : $e")),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur lors de l'enregistrement : $e")),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
+  }
+
+  // Nouvelle méthode pour préparer les données du véhicule
+  Future<Map<String, dynamic>> _prepareVehicleData() async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("User not authenticated");
+
+    String? photoVoitureUrl;
+    String? photoCarteGriseUrl;
+    String? photoAssuranceUrl;
+
+    // Gestion des photos
+    if (_carPhoto != null && !_carPhoto!.path.startsWith('http')) {
+      photoVoitureUrl =
+          await _uploadImageToStorage(File(_carPhoto!.path), 'vehicule');
+    } else {
+      photoVoitureUrl = widget.vehicleData?['photoVehiculeUrl'];
+    }
+
+    if (_carteGrisePhoto != null &&
+        !_carteGrisePhoto!.path.startsWith('http')) {
+      photoCarteGriseUrl = await _uploadImageToStorage(
+          File(_carteGrisePhoto!.path), 'carte_grise');
+    } else {
+      photoCarteGriseUrl = widget.vehicleData?['photoCarteGriseUrl'];
+    }
+
+    if (_assurancePhoto != null && !_assurancePhoto!.path.startsWith('http')) {
+      photoAssuranceUrl =
+          await _uploadImageToStorage(File(_assurancePhoto!.path), 'assurance');
+    } else {
+      photoAssuranceUrl = widget.vehicleData?['photoAssuranceUrl'];
+    }
+
+    return {
+      'userId': user.uid,
+      'marque': _marqueController.text,
+      'modele': _modeleController.text,
+      'immatriculation': _immatriculationController.text,
+      'vin': _vinController.text,
+      'typeCarburant': _typeCarburant,
+      'boiteVitesses': _boiteVitesses,
+      'prixLocation': _prixLocationController.text,
+      'franchise': _franchiseController.text,
+      'kilometrageSupp': _kilometrageSuppController.text,
+      'rayures': _rayuresController.text,
+      'assuranceNom': _assuranceNomController.text,
+      'assuranceNumero': _assuranceNumeroController.text,
+      'entretienDate': _entretienDateController.text,
+      'photoVehiculeUrl': photoVoitureUrl ?? '',
+      'photoCarteGriseUrl': photoCarteGriseUrl ?? '',
+      'photoAssuranceUrl': photoAssuranceUrl ?? '',
+    };
   }
 
   @override
