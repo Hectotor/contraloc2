@@ -42,23 +42,45 @@ class CreateContrat {
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          // Ajout du bouton de validation
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.check_circle),
+            onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
+          ),
         ),
       ),
     );
   }
 
   static Widget buildDropdown(String typeLocation, Function onChanged) {
-    return DropdownButtonFormField<String>(
-      value: typeLocation,
-      onChanged: (value) => onChanged(value),
-      items: [
-        const DropdownMenuItem(value: "Gratuite", child: Text("Gratuite")),
-        const DropdownMenuItem(value: "Payante", child: Text("Payante")),
-      ],
-      decoration: InputDecoration(
-        labelText: "Type de location",
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: DropdownButtonFormField<String>(
+        value: typeLocation,
+        onChanged: (value) => onChanged(value),
+        items: const [
+          DropdownMenuItem(
+            value: "Gratuite",
+            child: Text("Gratuite", style: TextStyle(color: Colors.black)),
+          ),
+          DropdownMenuItem(
+            value: "Payante",
+            child: Text("Payante", style: TextStyle(color: Colors.black)),
+          ),
+        ],
+        dropdownColor:
+            Colors.white, // Ajout de cette ligne pour le fond du menu
+        decoration: InputDecoration(
+          labelText: "Type de location",
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          filled: true,
+          fillColor: Colors.white,
         ),
       ),
     );

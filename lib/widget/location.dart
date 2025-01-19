@@ -263,12 +263,32 @@ class _LocationPageState extends State<LocationPage> {
 
       // Si un email client est disponible, générer et envoyer le PDF
       if (widget.email != null && widget.email!.isNotEmpty) {
-        // Récupérer les données utilisateur
-        final userDoc = await _firestore
+        // Récupérer les données utilisateur de manière plus robuste
+        final userDoc = await FirebaseFirestore.instance
             .collection('users')
-            .doc(FirebaseAuth.instance.currentUser!.uid)
+            .doc(user.uid)
+            .collection('authentification')
+            .doc(user.uid)
             .get();
-        final userData = userDoc.data() ?? {};
+
+        if (!userDoc.exists) {
+          throw Exception('Données utilisateur non trouvées');
+        }
+
+        final userData = userDoc.data()!;
+
+        // S'assurer que toutes les données sont présentes
+        final nomEntreprise = userData['nomEntreprise'] ?? '';
+        final adresseEntreprise = userData['adresse'] ?? '';
+        final telephoneEntreprise = userData['telephone'] ?? '';
+        final siretEntreprise = userData['siret'] ?? '';
+
+        // Debug print pour vérifier les données
+        print('Données entreprise pour PDF:');
+        print('Nom: $nomEntreprise');
+        print('Adresse: $adresseEntreprise');
+        print('Téléphone: $telephoneEntreprise');
+        print('SIRET: $siretEntreprise');
 
         // Récupérer les données du véhicule depuis la collection de l'utilisateur
         final vehicleDoc = await _firestore
@@ -322,11 +342,11 @@ class _LocationPageState extends State<LocationPage> {
           '', // kilometrageRetour
           '', // commentaireRetour
           [], // photosRetour
-          userData['nomEntreprise'] ?? '',
+          nomEntreprise, // déjà passé comme paramètre positionnel
           userData['logoUrl'] ?? '',
-          userData['adresse'] ?? '',
-          userData['telephone'] ?? '',
-          userData['siret'] ?? '',
+          adresseEntreprise, // déjà passé comme paramètre positionnel
+          telephoneEntreprise, // déjà passé comme paramètre positionnel
+          siretEntreprise, // déjà passé comme paramètre positionnel
           '', // commentaireRetourData
           vehicleData['typeCarburant'] ?? '',
           vehicleData['boiteVitesses'] ?? '',
@@ -343,7 +363,7 @@ class _LocationPageState extends State<LocationPage> {
           _pourcentageEssence.toString(),
           _typeLocation,
           vehicleData['prixLocation'] ?? '',
-          condition: conditions, // Passer les conditions récupérées
+          condition: conditions, // seul paramètre nommé nécessaire
         );
 
         // Envoyer le PDF par email

@@ -535,7 +535,6 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
               decoration: BoxDecoration(
                 border: Border.all(color: const Color(0xFF08004D)),
                 borderRadius: BorderRadius.circular(12),
-                color: Colors.grey[200],
               ),
               child: ClipRRect(
                 // Ajout du ClipRRect pour arrondir l'image
@@ -551,7 +550,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                             fit: BoxFit.cover,
                           )
                     : const Icon(Icons.add_a_photo,
-                        size: 50, color: Color(0xFF08004D)),
+                        size: 50, color: Color.fromARGB(152, 8, 0, 77)),
               ),
             ),
           ),

@@ -203,67 +203,47 @@ class _QuestionUserState extends State<QuestionUser> {
             padding: const EdgeInsets.all(20.0),
             child: Column(
               children: [
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(top: 20, bottom: 30),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        spreadRadius: 1,
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
+                ElevatedButton(
+                  onPressed: _launchWhatsApp,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF25D366),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    minimumSize: const Size(double.infinity, 55),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
                   ),
-                  child: Column(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      ElevatedButton(
-                        onPressed: _launchWhatsApp,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF25D366),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          minimumSize: const Size(double.infinity, 55),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Image.asset(
-                              'assets/icon/whatsapp_icon.png',
-                              height: 28,
-                              width: 28,
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              "Contactez-nous sur WhatsApp",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
+                      Image.asset(
+                        'assets/icon/whatsapp_icon.png',
+                        height: 28,
+                        width: 28,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(width: 12),
                       const Text(
-                        "Réponse rapide garantie",
+                        "Contactez-nous sur WhatsApp",
                         style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF25D366),
+                          fontSize: 18,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(height: 8),
+                const Text(
+                  "ou",
+                  style: TextStyle(
+                    fontSize: 25,
+                    color: Color(0xFF0F056B),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
@@ -351,63 +331,44 @@ class _QuestionUserState extends State<QuestionUser> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        spreadRadius: 1,
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: Image.asset(
+                    'assets/icon/IconContraLoc.png',
+                    height: 80,
+                    width: 80,
                   ),
-                  child: Column(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(15),
-                        child: Image.asset(
-                          'assets/icon/IconContraLoc.png',
-                          height: 80,
-                          width: 80,
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      const Text(
-                        "ContraLoc",
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0F056B),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        "06 17 03 88 90",
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Color(0xFF0F056B),
-                        ),
-                      ),
-                      const Text(
-                        "contact@contraloc.fr",
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Color(0xFF0F056B),
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      const Text(
-                        "Depuis 2020 - contraloc.fr",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0x800F056B),
-                        ),
-                      ),
-                    ],
+                ),
+                const SizedBox(height: 15),
+                const Text(
+                  "ContraLoc",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F056B),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "06 17 03 88 90",
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Color(0xFF0F056B),
+                  ),
+                ),
+                const Text(
+                  "contact@contraloc.fr",
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Color(0xFF0F056B),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                const Text(
+                  "Depuis 2020 - contraloc.fr",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0x800F056B),
                   ),
                 ),
                 const SizedBox(height: 20),

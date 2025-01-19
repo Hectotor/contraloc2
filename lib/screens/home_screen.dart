@@ -431,6 +431,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                               ),
                             ),
+                            const Divider(
+                              color: Colors.black12,
+                              height: 1,
+                              thickness: 1,
+                            ),
                             Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Column(

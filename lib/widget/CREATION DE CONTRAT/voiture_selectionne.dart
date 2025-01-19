@@ -34,8 +34,6 @@ class VoitureSelectionne extends StatelessWidget {
 
         if (vehiculeDoc.docs.isNotEmpty) {
           final data = vehiculeDoc.docs.first.data();
-          print(
-              "Données du véhicule trouvées : ${data['photoVehiculeUrl']}"); // Debug log
           return data['photoVehiculeUrl'] as String?;
         }
       }

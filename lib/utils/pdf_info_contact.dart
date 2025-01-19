@@ -10,6 +10,7 @@ class PdfInfoContactWidget {
     required Map<String, dynamic> clientData,
     required pw.Font boldFont,
     required pw.Font ttf,
+    pw.ImageProvider? logoImage, // Ajout du paramètre logoImage
   }) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -21,6 +22,7 @@ class PdfInfoContactWidget {
           siret: siret,
           boldFont: boldFont,
           ttf: ttf,
+          logoImage: logoImage, // Passage du logoImage
         ),
         _buildClientInfo(
           clientData: clientData,
@@ -38,6 +40,8 @@ class PdfInfoContactWidget {
     required String siret,
     required pw.Font boldFont,
     required pw.Font ttf,
+    pw.ImageProvider?
+        logoImage, // On peut garder le paramètre mais ne pas l'utiliser
   }) {
     return pw.Container(
       width: 250,
@@ -50,7 +54,8 @@ class PdfInfoContactWidget {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text('Informations Garage:',
+          // Suppression du bloc logo ici
+          pw.Text('Informations Loueur:',
               style: pw.TextStyle(
                 fontSize: 18,
                 font: boldFont,

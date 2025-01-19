@@ -126,6 +126,14 @@ class _ModifierScreenState extends State<ModifierScreen> {
   Future<void> _updateContrat() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Utilisateur non connecté")),
+      );
+      return;
+    }
+
     if (_kilometrageRetourController.text.isNotEmpty &&
         int.tryParse(_kilometrageRetourController.text) != null &&
         widget.data['kilometrageDepart'] != null &&
@@ -163,6 +171,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
       // Mettre à jour Firestore
       await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
           .collection('locations')
           .doc(widget.contratId)
           .update({
@@ -266,17 +276,29 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
   Future<void> _generatePdf() async {
     setState(() {
-      _isGeneratingPdf = true; // Set loading state to true
+      _isGeneratingPdf = true;
     });
 
     try {
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(FirebaseAuth.instance.currentUser!.uid)
+          .collection('authentification')
+          .doc(FirebaseAuth.instance.currentUser!.uid)
           .get();
-      final userData = userDoc.data() ?? {};
 
-      // Récupérez les données du véhicule
+      if (!userDoc.exists) {
+        throw Exception('Données utilisateur non trouvées');
+      }
+
+      final userData = userDoc.data()!;
+
+      final nomEntreprise = userData['nomEntreprise'] ?? '';
+      final adresseEntreprise = userData['adresse'] ?? '';
+      final telephoneEntreprise = userData['telephone'] ?? '';
+      final siretEntreprise = userData['siret'] ?? '';
+
+      // Récupérer les données du véhicule
       final vehicleDoc = await FirebaseFirestore.instance
           .collection('vehicules')
           .where('immatriculation', isEqualTo: widget.data['immatriculation'])
@@ -285,10 +307,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
       final vehicleData =
           vehicleDoc.docs.isNotEmpty ? vehicleDoc.docs.first.data() : {};
 
-      // Récupérer les conditions depuis la collection 'contrats' ou utiliser le texte par défaut
+      // Récupérer les conditions
       final user = FirebaseAuth.instance.currentUser;
       String conditions;
-
       if (user != null) {
         final conditionsDoc = await FirebaseFirestore.instance
             .collection('contrats')
@@ -307,15 +328,14 @@ class _ModifierScreenState extends State<ModifierScreen> {
         _dateFinEffectifController.text,
         _kilometrageRetourController.text,
         _commentaireRetourController.text,
-        _photosRetour, // Assurez-vous que les photos de retour sont passées ici
-
-        userData['nomEntreprise'] ?? '',
+        _photosRetour,
+        nomEntreprise,
         userData['logoUrl'] ?? '',
-        userData['adresse'] ?? '',
-        userData['telephone'] ?? '',
-        userData['siret'] ?? '',
+        adresseEntreprise,
+        telephoneEntreprise,
+        siretEntreprise,
         widget.data['commentaireRetour'] ?? '',
-        vehicleData['typeCarburant'] ?? '', // Utilisez les données du véhicule
+        vehicleData['typeCarburant'] ?? '',
         vehicleData['boiteVitesses'] ?? '',
         vehicleData['vin'] ?? '',
         vehicleData['assuranceNom'] ?? '',
@@ -333,7 +353,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
         condition: conditions,
       );
 
-      // Ouvrir le PDF après sa génération
       await OpenFilex.open(pdfPath);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -341,7 +360,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
       );
     } finally {
       setState(() {
-        _isGeneratingPdf = false; // Set loading state to false
+        _isGeneratingPdf = false;
       });
     }
   }

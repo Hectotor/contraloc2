@@ -10,34 +10,34 @@ import 'pdf_voiture.dart';
 import 'pdf_info_contact.dart';
 
 Future<String> generatePdf(
-    Map<String, dynamic> data,
-    String dateFinEffectif,
-    String kilometrageRetour,
-    String commentaireRetour,
-    List<File>
-        photosRetour, // This parameter can be removed if not used elsewhere
-    String nomEntreprise,
-    String logoUrl,
-    String adresse,
-    String telephone,
-    String siret,
-    String commentaireRetourData,
-    String typeCarburant,
-    String boiteVitesses,
-    String vin,
-    String assuranceNom,
-    String assuranceNumero,
-    String franchise,
-    String kilometrageSupp,
-    String rayures,
-    String dateDebut,
-    String dateFinTheorique,
-    String dateFinEffectifData,
-    String kilometrageDepart,
-    String pourcentageEssence,
-    String typeLocation,
-    String prixLocation,
-    {required String condition}) async {
+  Map<String, dynamic> data,
+  String dateFinEffectif,
+  String kilometrageRetour,
+  String commentaireRetour,
+  List<File> photosRetour,
+  String nomEntreprise,
+  String logoUrl,
+  String adresse,
+  String telephone,
+  String siret,
+  String commentaireRetourData,
+  String typeCarburant,
+  String boiteVitesses,
+  String vin,
+  String assuranceNom,
+  String assuranceNumero,
+  String franchise,
+  String kilometrageSupp,
+  String rayures,
+  String dateDebut,
+  String dateFinTheorique,
+  String dateFinEffectifData,
+  String kilometrageDepart,
+  String pourcentageEssence,
+  String typeLocation,
+  String prixLocation, {
+  required String condition,
+}) async {
   final pdf = pw.Document();
 
 // Chargez les données des polices
@@ -187,6 +187,7 @@ Future<String> generatePdf(
               clientData: data,
               boldFont: boldFont,
               ttf: ttf,
+              logoImage: logoImage, // Ajout du logoImage ici
             ),
             pw.SizedBox(height: 20),
             PdfVoitureWidget.build(
