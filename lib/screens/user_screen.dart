@@ -38,6 +38,8 @@ class _UserScreenState extends State<UserScreen> {
 
   User? currentUser;
   bool _isLoading = false; // Add loading state
+  bool isSubscriptionActive = false; // Add subscription state
+  String subscriptionId = 'free'; // Add subscription ID state
 
   @override
   void initState() {
@@ -60,38 +62,55 @@ class _UserScreenState extends State<UserScreen> {
   // Charger les données utilisateur depuis Firestore
   Future<void> _loadUserData() async {
     try {
-      final doc = await _firestore
+      // Correction du chemin de la collection
+      final docRef = _firestore
           .collection('users')
           .doc(currentUser!.uid)
           .collection('authentification')
-          .doc(currentUser!.uid)
-          .get();
+          .doc(currentUser!.uid);
+
+      // D'abord, vérifions si le document existe
+      final doc = await docRef.get();
+      print('DEBUG - Document exists: ${doc.exists}');
+      print('DEBUG - Document data: ${doc.data()}');
 
       if (!doc.exists) {
-        // Initialisation des valeurs par défaut pour un nouvel utilisateur
-        await _firestore
-            .collection('users')
-            .doc(currentUser!.uid)
-            .collection('authentification')
-            .doc(currentUser!.uid)
-            .set({
-          'nomEntreprise': '',
-          'nom': '',
-          'prenom': '',
-          'email': currentUser?.email ?? '', // Ajout de l'email
-          'telephone': '',
-          'adresse': '',
-          'siret': '',
-          'numberOfCars': 1,
-          'limiteContrat': 10,
-          'isSubscriptionActive': false,
-          'subscriptionId': 'free',
-          'subscriptionType': 'monthly',
-        });
+        print('DEBUG - Creating new user document');
+        // Création du document avec toutes les données nécessaires
+        await docRef.set(
+            {
+              'nomEntreprise': '',
+              'nom': '',
+              'prenom': '',
+              'email': currentUser?.email ?? '',
+              'telephone': '',
+              'adresse': '',
+              'siret': '',
+              'numberOfCars': 1,
+              'limiteContrat': 10,
+              'isSubscriptionActive': false,
+              'subscriptionId': 'free',
+              'subscriptionType': 'monthly',
+            },
+            SetOptions(
+                merge:
+                    true)); // Utiliser merge pour éviter d'écraser d'autres données
+
+        // Relire le document pour vérifier
+        final updatedDoc = await docRef.get();
+        print('DEBUG - New document data: ${updatedDoc.data()}');
       } else {
         final data = doc.data()!;
+        print('DEBUG - Loading existing data');
+        print('DEBUG - Subscription status: ${data['isSubscriptionActive']}');
+        print('DEBUG - Subscription ID: ${data['subscriptionId']}');
 
         setState(() {
+          // Mise à jour des champs d'abonnement en premier
+          isSubscriptionActive = data['isSubscriptionActive'] ?? false;
+          subscriptionId = data['subscriptionId'] ?? 'free';
+
+          // Puis mise à jour des autres champs
           _nomEntrepriseController.text = data['nomEntreprise'] ?? '';
           _nomController.text = data['nom'] ?? '';
           _prenomController.text = data['prenom'] ?? '';
@@ -103,11 +122,8 @@ class _UserScreenState extends State<UserScreen> {
         });
       }
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erreur lors du chargement des données : $e")),
-        );
-      }
+      print('DEBUG - Error loading user data: $e');
+      // ... handle error ...
     }
   }
 

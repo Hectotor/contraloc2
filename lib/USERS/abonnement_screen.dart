@@ -5,7 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart'; // Import RevenueCat
 import 'package:ContraLoc/USERS/question_user.dart';
 import 'package:ContraLoc/USERS/plan_display.dart';
-import 'package:ContraLoc/USERS/annuler_abonnement.dart';
+import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
+import 'dart:io'; // Import dart:io for Platform
 
 class AbonnementScreen extends StatefulWidget {
   const AbonnementScreen({Key? key}) : super(key: key);
@@ -17,11 +18,13 @@ class AbonnementScreen extends StatefulWidget {
 String _getPlanDisplayName(String subscriptionId) {
   switch (subscriptionId) {
     case 'ProMonthlySubscription':
-    case 'ProYearlySubscription':
       return 'Offre Pro';
+    case 'ProYearlySubscription':
+      return 'Offre Pro Annuel';
     case 'PremiumMonthlySubscription':
-    case 'PremiumYearlySubscription':
       return 'Offre Premium';
+    case 'PremiumYearlySubscription':
+      return 'Offre Premium Annuel';
     default:
       return 'Offre Gratuite';
   }
@@ -34,19 +37,60 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   String subscriptionId = 'free';
   int _currentIndex = 0;
   bool isMonthly = true;
+  bool _isLoading = false;
+
+  void _showLoading(bool show) {
+    setState(() {
+      _isLoading = show;
+    });
+  }
 
   @override
   void initState() {
     super.initState();
     _loadUserSubscription();
     _initRevenueCat();
-    _verifyOfferings(); // Ajout de cette ligne
+    _setupPurchasesListener();
+    _verifyOfferings();
+  }
+
+  void _setupPurchasesListener() {
+    Purchases.addCustomerInfoUpdateListener((customerInfo) async {
+      print('Mise à jour RevenueCat détectée!');
+      print('Entitlements actifs: ${customerInfo.entitlements.active}');
+      print('Abonnements actifs: ${customerInfo.activeSubscriptions}');
+
+      // Si nous avons des entitlements actifs, mettre à jour Firestore
+      if (customerInfo.entitlements.active.isNotEmpty) {
+        await _updateSubscriptionStatus(customerInfo);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    // Nettoyage du listener quand l'écran est détruit
+    Purchases.removeCustomerInfoUpdateListener((customerInfo) async {
+      print('Mise à jour RevenueCat détectée!');
+      print('Entitlements actifs: ${customerInfo.entitlements.active}');
+      print('Abonnements actifs: ${customerInfo.activeSubscriptions}');
+
+      // Si nous avons des entitlements actifs, mettre à jour Firestore
+      if (customerInfo.entitlements.active.isNotEmpty) {
+        await _updateSubscriptionStatus(customerInfo);
+      }
+    });
+    super.dispose();
   }
 
   Future<void> _initRevenueCat() async {
     try {
-      CustomerInfo customerInfo = await Purchases.getCustomerInfo();
-      _updateSubscriptionStatus(customerInfo);
+      await Purchases
+          .syncPurchases(); // Synchroniser les achats avant de récupérer CustomerInfo
+      CustomerInfo updatedCustomerInfo =
+          await Purchases.getCustomerInfo(); // Obtenir CustomerInfo mis à jour
+      _updateSubscriptionStatus(
+          updatedCustomerInfo); // Mettre à jour le statut de l'abonnement avec des données à jour
     } catch (e) {
       print('Erreur lors de l\'initialisation de RevenueCat: $e');
     }
@@ -54,30 +98,19 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
   Future<void> _verifyOfferings() async {
     try {
-      final offerings = await Purchases.getOfferings();
-      print('Debug RevenueCat Offerings:');
-      print('Current Offering: ${offerings.current?.identifier}');
+      // Force une synchronisation avec RevenueCat
+      await Purchases.syncPurchases();
 
-      if (offerings.current == null) {
-        print('Erreur: Aucune offre disponible');
-        return;
-      }
-
-      // Vérifier les packages disponibles
-      print('Packages disponibles:');
-      for (var package in offerings.current!.availablePackages) {
-        print('- ID: ${package.identifier}');
-        print('  - Produit: ${package.storeProduct.identifier}');
-        print('  - Prix: ${package.storeProduct.price}');
-        print('  - Description: ${package.storeProduct.description}');
-      }
-
-      // Vérifier l'état de l'utilisateur
       final customerInfo = await Purchases.getCustomerInfo();
-      print('État de l\'abonnement:');
-      print('- Active: ${customerInfo.entitlements.active}');
-      print('- All: ${customerInfo.entitlements.all}');
-      print('- Active Subscriptions: ${customerInfo.activeSubscriptions}');
+      print('Debug - État actuel RevenueCat:');
+      print('Active Subscriptions: ${customerInfo.activeSubscriptions}');
+      print('Active Entitlements: ${customerInfo.entitlements.active}');
+      print('Latest ExpirationDate: ${customerInfo.latestExpirationDate}');
+
+      if (customerInfo.activeSubscriptions.isNotEmpty) {
+        print('Abonnement actif trouvé, mise à jour de Firestore...');
+        await _updateSubscriptionStatus(customerInfo);
+      }
     } catch (e) {
       print('Erreur lors de la vérification des offres: $e');
     }
@@ -85,58 +118,72 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
   Future<void> _updateSubscriptionStatus(CustomerInfo customerInfo) async {
     print('Début de _updateSubscriptionStatus');
-    print('Entitlements reçus: ${customerInfo.entitlements.all}');
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      print('Utilisateur non connecté');
-      return;
-    }
+    print('Tous les abonnements actifs: ${customerInfo.activeSubscriptions}');
+    print('Tous les entitlements: ${customerInfo.entitlements.all}');
 
-    final entitlements = customerInfo.entitlements.active;
-    if (entitlements.isNotEmpty) {
-      final firstEntitlement = entitlements.values.first;
-      final productIdentifier = firstEntitlement.productIdentifier;
-      print('Produit identifié: $productIdentifier');
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Si nous avons un abonnement actif
+    if (customerInfo.activeSubscriptions.isNotEmpty) {
+      final subscription = customerInfo.activeSubscriptions.first;
+      print('Abonnement actif trouvé: $subscription');
+
+      // Déterminons le type d'abonnement
+      bool isPremium = subscription.toLowerCase().contains('premium');
+      bool isYearly = subscription.toLowerCase().contains('yearly');
 
       final updateData = {
-        'numberOfCars': _getNumberOfCars(productIdentifier),
-        'limiteContrat': _getLimiteContrat(productIdentifier),
+        'numberOfCars': isPremium ? 999 : 5,
+        'limiteContrat': isPremium ? 999 : 10,
         'isSubscriptionActive': true,
-        'subscriptionId': productIdentifier,
-        'subscriptionType': isMonthly ? 'monthly' : 'yearly',
+        'subscriptionId': subscription,
+        'subscriptionType': isYearly ? 'yearly' : 'monthly',
         'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
+        'subscriptionExpirationDate': customerInfo.latestExpirationDate != null
+            ? DateTime.parse(customerInfo.latestExpirationDate!)
+                .toIso8601String()
+            : null,
+        'activeSubscriptionIdentifier': subscription,
       };
 
-      print('Mise à jour Firestore: $updateData');
+      print('Tentative de mise à jour Firestore avec: $updateData');
 
       try {
-        await FirebaseFirestore.instance
+        final docRef = FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .collection('authentification')
-            .doc(user.uid)
-            .update(updateData);
+            .doc(user.uid);
 
-        print('Firestore mis à jour avec succès');
+        await docRef.set(updateData, SetOptions(merge: true));
 
-        setState(() {
-          numberOfCars = updateData['numberOfCars'] as int;
-          limiteContrat = updateData['limiteContrat'] as int;
-          isSubscriptionActive = true;
-          subscriptionId = productIdentifier;
-        });
+        // Vérification immédiate
+        final verificationDoc = await docRef.get();
+        print('Vérification après mise à jour: ${verificationDoc.data()}');
+
+        if (verificationDoc.exists) {
+          setState(() {
+            isSubscriptionActive = true;
+            subscriptionId = subscription;
+            numberOfCars = updateData['numberOfCars'] as int;
+            limiteContrat = updateData['limiteContrat'] as int;
+            isMonthly = !isYearly;
+          });
+          print('État local mis à jour avec succès');
+        }
       } catch (e) {
         print('Erreur lors de la mise à jour Firestore: $e');
-        // Afficher un message d'erreur pour confirmer l'absence d'écrasement
-        _showMessage('Impossible de mettre à jour Firestore: $e', Colors.red);
+        print('Stack trace: ${StackTrace.current}');
         rethrow;
       }
     } else {
-      print('Aucun abonnement actif trouvé (entitlements vides)');
+      print('Aucun abonnement actif trouvé dans RevenueCat');
     }
   }
 
   Future<void> _handleSubscription(String plan) async {
+    _showLoading(true); // Afficher le chargement
     try {
       final user = FirebaseAuth.instance.currentUser;
       print('Utilisateur connecté: ${user?.uid ?? "aucun"}');
@@ -204,6 +251,8 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         print('Erreur dans _handleSubscription: $e');
         _showMessage('Erreur lors de l\'achat.', Colors.red);
       }
+    } finally {
+      _showLoading(false); // Cacher le chargement
     }
   }
 
@@ -220,7 +269,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
             .doc(user.uid)
             .get();
 
-        if (!doc.exists || doc.data()?['userId'] != user.uid) {
+        if (!doc.exists) {
           print('Accès refusé ou document non trouvé');
           return;
         }
@@ -321,28 +370,6 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     }
   }
 
-  int _getNumberOfCars(String subscriptionId) {
-    if (subscriptionId.contains('PremiumMonthly') ||
-        subscriptionId.contains('PremiumYearly')) {
-      return 999;
-    } else if (subscriptionId.contains('ProMonthly') ||
-        subscriptionId.contains('ProYearly')) {
-      return 5;
-    }
-    return 1;
-  }
-
-  int _getLimiteContrat(String subscriptionId) {
-    if (subscriptionId.contains('PremiumMonthly') ||
-        subscriptionId.contains('PremiumYearly')) {
-      return 999;
-    } else if (subscriptionId.contains('ProMonthly') ||
-        subscriptionId.contains('ProYearly')) {
-      return 10;
-    }
-    return 10;
-  }
-
   void _showMessage(String message, Color color) {
     if (!mounted) return;
 
@@ -370,6 +397,24 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     }
   }
 
+  Future<void> _openManageSubscription() async {
+    String url;
+    if (Platform.isIOS) {
+      url = 'https://apps.apple.com/account/subscriptions';
+    } else if (Platform.isAndroid) {
+      url = 'https://play.google.com/store/account/subscriptions';
+    } else {
+      // Handle other platforms or show an error message
+      throw 'Platform not supported';
+    }
+
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     print('Debug - État actuel:');
@@ -390,68 +435,85 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         backgroundColor: const Color(0xFF08004D),
       ),
       backgroundColor: Colors.grey[50],
-      body: Column(
+      body: Stack(
         children: [
-          const SizedBox(height: 25),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
+          Column(
+            children: [
+              const SizedBox(height: 25),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                _buildToggleButton(true, "Mensuel", Icons.calendar_today),
-                _buildToggleButton(false, "Annuel", Icons.calendar_month),
-              ],
-            ),
+                child: Row(
+                  children: [
+                    _buildToggleButton(true, "Mensuel", Icons.calendar_today),
+                    _buildToggleButton(false, "Annuel", Icons.calendar_month),
+                  ],
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                child: Text(
+                  "Nos prix sont sans engagement",
+                  style: TextStyle(
+                    color: Color(0xFF08004D),
+                    fontSize: 14,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: PlanDisplay(
+                  isMonthly: isMonthly,
+                  currentSubscriptionName: _getPlanDisplayName(subscriptionId),
+                  onSubscribe: _handleSubscription,
+                  onPageChanged: (index) =>
+                      setState(() => _currentIndex = index),
+                  currentIndex: _currentIndex,
+                ),
+              ),
+              if (subscriptionId != 'free')
+                ElevatedButton(
+                  onPressed: _openManageSubscription,
+                  child: const Text('Gérer mon abonnement'),
+                ),
+              _buildContactButton(),
+              const SizedBox(height: 30),
+            ],
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-            child: Text(
-              "Nos prix sont sans engagement",
-              style: TextStyle(
-                color: Color(0xFF08004D),
-                fontSize: 14,
-                fontStyle: FontStyle.italic,
+          if (_isLoading)
+            Container(
+              color: Colors.black54,
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Traitement en cours...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          Expanded(
-            child: PlanDisplay(
-              isMonthly: isMonthly,
-              currentSubscriptionName: _getPlanDisplayName(subscriptionId),
-              onSubscribe: _handleSubscription,
-              onPageChanged: (index) => setState(() => _currentIndex = index),
-              currentIndex: _currentIndex,
-            ),
-          ),
-          if (subscriptionId != 'free')
-            AnnulerAbonnement(
-              onCancelSuccess: () async {
-                final user = FirebaseAuth.instance.currentUser;
-                if (user != null) {
-                  setState(() {
-                    isSubscriptionActive = false;
-                    subscriptionId = 'free';
-                    numberOfCars = 1;
-                    limiteContrat = 10;
-                  });
-                  await _loadUserSubscription(); // Recharger les données après l'annulation
-                }
-              },
-              currentSubscriptionId: subscriptionId,
-            ),
-          _buildContactButton(),
-          const SizedBox(height: 30),
         ],
       ),
     );

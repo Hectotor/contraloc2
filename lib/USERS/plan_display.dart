@@ -58,7 +58,7 @@ class PlanData {
       ],
     ),
     PlanData(
-      title: "Offre Pro",
+      title: "Offre Pro Annuel", // Assurez-vous que le titre correspond
       price: "119.99€/an",
       features: [
         {"text": "5 voitures", "isAvailable": true},
@@ -68,7 +68,7 @@ class PlanData {
       ],
     ),
     PlanData(
-      title: "Offre Premium",
+      title: "Offre Premium Annuel", // Assurez-vous que le titre correspond
       price: "239.99€/an",
       features: [
         {"text": "Voitures illimitées", "isAvailable": true},
@@ -102,13 +102,13 @@ class PlanDisplay extends StatefulWidget {
 }
 
 class _PlanDisplayState extends State<PlanDisplay> {
-  bool _hasActiveSubscription() {
-    return widget.currentSubscriptionName == "Offre Pro" ||
-        widget.currentSubscriptionName == "Offre Premium";
-  }
-
   // Déplacer les autres méthodes ici, en remplaçant les références directes aux propriétés
   // par widget.propriété (ex: widget.currentSubscriptionName)
+
+  bool _hasActiveSubscription() {
+    // Implement your logic to check if there is an active subscription
+    return widget.currentSubscriptionName.isNotEmpty;
+  }
 
   Widget _buildFeatureRow(Map<String, dynamic> feature) {
     return Padding(
@@ -142,9 +142,16 @@ class _PlanDisplayState extends State<PlanDisplay> {
       isActivePlan = widget.currentSubscriptionName == "Offre Gratuite";
     }
 
-    bool hideSubscribeButton = _hasActiveSubscription() &&
-        !isActivePlan &&
-        plan.title != widget.currentSubscriptionName;
+    // Vérifiez si le plan actuel correspond au type d'abonnement (mensuel ou annuel)
+    if (plan.title.contains("Pro") &&
+        widget.currentSubscriptionName.contains("Pro")) {
+      isActivePlan = (widget.isMonthly && plan.title == "Offre Pro") ||
+          (!widget.isMonthly && plan.title == "Offre Pro Annuel");
+    } else if (plan.title.contains("Premium") &&
+        widget.currentSubscriptionName.contains("Premium")) {
+      isActivePlan = (widget.isMonthly && plan.title == "Offre Premium") ||
+          (!widget.isMonthly && plan.title == "Offre Premium Annuel");
+    }
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -201,35 +208,7 @@ class _PlanDisplayState extends State<PlanDisplay> {
             ),
           ),
           const SizedBox(height: 16),
-          if (!hideSubscribeButton) // Condition pour afficher ou masquer le bouton
-            ElevatedButton(
-              onPressed: isActive
-                  ? null
-                  : () {
-                      // Ne pas mettre à jour l'état ici
-                      // La mise à jour doit se faire uniquement après confirmation du paiement
-                      widget.onSubscribe(plan.title);
-                      // Supprimer le setState ici car il sera géré par le callback après validation du paiement
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    isActive ? Colors.grey : const Color(0xFF08004D),
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                isActive ? "Plan actuel" : "Souscrire",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-          if (hideSubscribeButton)
+          if (plan.title == "Offre Gratuite" && _hasActiveSubscription())
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
@@ -239,6 +218,31 @@ class _PlanDisplayState extends State<PlanDisplay> {
                   color: Colors.grey[600],
                   fontSize: 14,
                   fontStyle: FontStyle.italic,
+                ),
+              ),
+            )
+          else
+            ElevatedButton(
+              onPressed: isActivePlan
+                  ? null
+                  : () {
+                      widget.onSubscribe(plan.title);
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    isActivePlan ? Colors.grey : const Color(0xFF08004D),
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                isActivePlan ? "Plan actuel" : "Souscrire",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
                 ),
               ),
             ),
