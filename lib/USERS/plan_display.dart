@@ -105,11 +105,6 @@ class _PlanDisplayState extends State<PlanDisplay> {
   // Déplacer les autres méthodes ici, en remplaçant les références directes aux propriétés
   // par widget.propriété (ex: widget.currentSubscriptionName)
 
-  bool _hasActiveSubscription() {
-    // Implement your logic to check if there is an active subscription
-    return widget.currentSubscriptionName.isNotEmpty;
-  }
-
   Widget _buildFeatureRow(Map<String, dynamic> feature) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -134,25 +129,9 @@ class _PlanDisplayState extends State<PlanDisplay> {
   }
 
   Widget _buildPlanCard(PlanData plan, bool isActive) {
-    // Corrigeons la logique pour déterminer si c'est le plan actif
     bool isActivePlan = widget.currentSubscriptionName == plan.title;
 
-    // Si c'est l'offre gratuite, elle n'est active que si currentSubscriptionName est "Offre Gratuite"
-    if (plan.title == "Offre Gratuite") {
-      isActivePlan = widget.currentSubscriptionName == "Offre Gratuite";
-    }
-
-    // Vérifiez si le plan actuel correspond au type d'abonnement (mensuel ou annuel)
-    if (plan.title.contains("Pro") &&
-        widget.currentSubscriptionName.contains("Pro")) {
-      isActivePlan = (widget.isMonthly && plan.title == "Offre Pro") ||
-          (!widget.isMonthly && plan.title == "Offre Pro Annuel");
-    } else if (plan.title.contains("Premium") &&
-        widget.currentSubscriptionName.contains("Premium")) {
-      isActivePlan = (widget.isMonthly && plan.title == "Offre Premium") ||
-          (!widget.isMonthly && plan.title == "Offre Premium Annuel");
-    }
-
+    // Modification ici : suppression de la condition qui empêchait le changement d'abonnement
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -208,17 +187,14 @@ class _PlanDisplayState extends State<PlanDisplay> {
             ),
           ),
           const SizedBox(height: 16),
-          if (plan.title == "Offre Gratuite" && _hasActiveSubscription())
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Veuillez d\'abord annuler votre abonnement actuel',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                ),
+          if (plan.title == "Offre Gratuite")
+            Text(
+              'Veuillez utiliser le bouton "Gérer mon abonnement"',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
               ),
             )
           else
@@ -237,7 +213,7 @@ class _PlanDisplayState extends State<PlanDisplay> {
                 ),
               ),
               child: Text(
-                isActivePlan ? "Plan actuel" : "Souscrire",
+                isActivePlan ? "Plan actuel" : "Changer pour ce plan",
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
