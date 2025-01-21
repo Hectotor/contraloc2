@@ -70,8 +70,8 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         // Récupérer l'entitlement avec la date d'achat la plus récente
         final latestEntitlement = customerInfo.entitlements.all.values.reduce(
           (a, b) {
-            final aDate = DateTime.parse(a.latestPurchaseDate!);
-            final bDate = DateTime.parse(b.latestPurchaseDate!);
+            final aDate = DateTime.parse(a.latestPurchaseDate);
+            final bDate = DateTime.parse(b.latestPurchaseDate);
             return aDate.isAfter(bDate) ? a : b;
           },
         );
