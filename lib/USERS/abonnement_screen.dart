@@ -54,34 +54,35 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   Future<void> _initializeSubscription() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        print('🚨 No user is currently logged in.');
-        return;
-      }
+      if (user == null) return;
 
-      // Fetch customer info from RevenueCat
+      // 1. Vérifier RevenueCat
       final customerInfo = await Purchases.getCustomerInfo();
-      print('🔍 RevenueCat Customer Info:');
-      print('Active Subscriptions: ${customerInfo.activeSubscriptions}');
-      print('Active Entitlements: ${customerInfo.entitlements.active}');
+      print('🔍 État RevenueCat initial:');
+      print('Abonnements: ${customerInfo.activeSubscriptions}');
+      print('Entitlements: ${customerInfo.entitlements.all}');
 
-      // Initialize subscription variables
-      String currentSubscriptionId = 'free'; // Default to free
+      // 2. Déterminer l'abonnement correspondant au dernier achat
+      String currentSubscriptionId = 'free';
       bool hasActiveSubscription = false;
 
-      // Check if there are active entitlements
-      if (customerInfo.entitlements.active.isNotEmpty) {
-        final entitlement = customerInfo.entitlements.active.values.first;
-        currentSubscriptionId = entitlement.productIdentifier;
-        hasActiveSubscription = true;
+      if (customerInfo.entitlements.all.isNotEmpty) {
+        // Récupérer l'entitlement avec la date d'achat la plus récente
+        final latestEntitlement = customerInfo.entitlements.all.values.reduce(
+          (a, b) {
+            final aDate = DateTime.parse(a.latestPurchaseDate!);
+            final bDate = DateTime.parse(b.latestPurchaseDate!);
+            return aDate.isAfter(bDate) ? a : b;
+          },
+        );
 
-        print('✅ Active entitlement found: $currentSubscriptionId');
-      } else {
-        print('ℹ️ No active entitlements found. Setting subscription to free.');
+        currentSubscriptionId = latestEntitlement.productIdentifier;
+        hasActiveSubscription = latestEntitlement.isActive;
+
+        print('✅ Dernier abonnement détecté: $currentSubscriptionId');
       }
 
-      // Update Firestore with the subscription details
-      print('📦 Updating Firestore with subscription details...');
+      // 3. Mettre à jour Firestore avec l'entitlement du dernier achat
       await _firestore
           .collection('users')
           .doc(user.uid)
@@ -95,20 +96,22 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
             : (currentSubscriptionId.contains('Pro') ? 5 : 1),
         'limiteContrat': currentSubscriptionId.contains('Premium') ? 999 : 10,
         'subscriptionType':
-            currentSubscriptionId.contains('Yearly') ? 'yearly' : 'monthly',
+            currentSubscriptionId.toLowerCase().contains('yearly')
+                ? 'yearly'
+                : 'monthly',
         'lastSyncDate': DateTime.now().toIso8601String(),
       }, SetOptions(merge: true));
 
-      // Update local state
+      // 4. Mettre à jour l'état local
       setState(() {
         subscriptionId = currentSubscriptionId;
         isSubscriptionActive = hasActiveSubscription;
         isMonthly = !currentSubscriptionId.toLowerCase().contains('yearly');
       });
 
-      print('🎉 Subscription initialization complete.');
+      print('🎉 Initialisation de l\'abonnement terminée.');
     } catch (e) {
-      print('❌ Error initializing subscription: $e');
+      print('❌ Erreur initialisation: $e');
     }
   }
 
