@@ -10,7 +10,6 @@ import 'dart:io'; // Import dart:io for Platform
 
 class AbonnementScreen extends StatefulWidget {
   const AbonnementScreen({Key? key}) : super(key: key);
-
   @override
   State<AbonnementScreen> createState() => _AbonnementScreenState();
 }
@@ -38,7 +37,8 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   int _currentIndex = 0;
   bool isMonthly = true;
   bool _isLoading = false;
-
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+// Ajoutez ces variables pour sauvegarder l'état précédent
   void _showLoading(bool show) {
     setState(() {
       _isLoading = show;
@@ -48,23 +48,68 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserSubscription();
-    _initRevenueCat();
-    _setupPurchasesListener();
-    _verifyOfferings();
+    _initializeSubscription();
   }
 
-  void _setupPurchasesListener() {
-    Purchases.addCustomerInfoUpdateListener((customerInfo) async {
-      print('🔔 Mise à jour RevenueCat détectée!');
-      print('📦 Abonnements actifs: ${customerInfo.activeSubscriptions}');
-      print('✨ Entitlements actifs: ${customerInfo.entitlements.active}');
-
-      if (customerInfo.entitlements.active.isNotEmpty) {
-        print('📝 Mise à jour Firestore...');
-        await _updateSubscriptionStatus(customerInfo);
+  Future<void> _initializeSubscription() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('🚨 No user is currently logged in.');
+        return;
       }
-    });
+
+      // Fetch customer info from RevenueCat
+      final customerInfo = await Purchases.getCustomerInfo();
+      print('🔍 RevenueCat Customer Info:');
+      print('Active Subscriptions: ${customerInfo.activeSubscriptions}');
+      print('Active Entitlements: ${customerInfo.entitlements.active}');
+
+      // Initialize subscription variables
+      String currentSubscriptionId = 'free'; // Default to free
+      bool hasActiveSubscription = false;
+
+      // Check if there are active entitlements
+      if (customerInfo.entitlements.active.isNotEmpty) {
+        final entitlement = customerInfo.entitlements.active.values.first;
+        currentSubscriptionId = entitlement.productIdentifier;
+        hasActiveSubscription = true;
+
+        print('✅ Active entitlement found: $currentSubscriptionId');
+      } else {
+        print('ℹ️ No active entitlements found. Setting subscription to free.');
+      }
+
+      // Update Firestore with the subscription details
+      print('📦 Updating Firestore with subscription details...');
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('authentification')
+          .doc(user.uid)
+          .set({
+        'subscriptionId': currentSubscriptionId,
+        'isSubscriptionActive': hasActiveSubscription,
+        'numberOfCars': currentSubscriptionId.contains('Premium')
+            ? 999
+            : (currentSubscriptionId.contains('Pro') ? 5 : 1),
+        'limiteContrat': currentSubscriptionId.contains('Premium') ? 999 : 10,
+        'subscriptionType':
+            currentSubscriptionId.contains('Yearly') ? 'yearly' : 'monthly',
+        'lastSyncDate': DateTime.now().toIso8601String(),
+      }, SetOptions(merge: true));
+
+      // Update local state
+      setState(() {
+        subscriptionId = currentSubscriptionId;
+        isSubscriptionActive = hasActiveSubscription;
+        isMonthly = !currentSubscriptionId.toLowerCase().contains('yearly');
+      });
+
+      print('🎉 Subscription initialization complete.');
+    } catch (e) {
+      print('❌ Error initializing subscription: $e');
+    }
   }
 
   @override
@@ -72,163 +117,6 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     super.dispose();
   }
 
-  Future<void> _initRevenueCat() async {
-    try {
-      // Ajoutez ces logs de débogage
-      print('Début initialisation RevenueCat');
-      print('Configuration actuelle:');
-      final offerings = await Purchases.getOfferings();
-      print('Offres disponibles: ${offerings.current?.availablePackages}');
-
-      await Purchases
-          .syncPurchases(); // Synchroniser les achats avant de récupérer CustomerInfo
-      CustomerInfo updatedCustomerInfo =
-          await Purchases.getCustomerInfo(); // Obtenir CustomerInfo mis à jour
-      _updateSubscriptionStatus(
-          updatedCustomerInfo); // Mettre à jour le statut de l'abonnement avec des données à jour
-    } catch (e) {
-      print('Erreur lors de l\'initialisation de RevenueCat: $e');
-    }
-  }
-
-  Future<void> _verifyOfferings() async {
-    try {
-      // Force une synchronisation avec RevenueCat
-      await Purchases.syncPurchases();
-
-      final customerInfo = await Purchases.getCustomerInfo();
-      print('Debug - État actuel RevenueCat:');
-      print('Active Subscriptions: ${customerInfo.activeSubscriptions}');
-      print('Active Entitlements: ${customerInfo.entitlements.active}');
-      print('Latest ExpirationDate: ${customerInfo.latestExpirationDate}');
-
-      if (customerInfo.activeSubscriptions.isNotEmpty) {
-        print('Abonnement actif trouvé, mise à jour de Firestore...');
-        await _updateSubscriptionStatus(customerInfo);
-      }
-    } catch (e) {
-      print('Erreur lors de la vérification des offres: $e');
-    }
-  }
-
-// Modifie la fonction _updateSubscriptionStatus pour mieux gérer la synchronisation
-  Future<void> _updateSubscriptionStatus(CustomerInfo customerInfo) async {
-    print('Début de _updateSubscriptionStatus');
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    // Affichez les informations de CustomerInfo pour vérifier ce que RevenueCat renvoie
-    print('CustomerInfo: ${customerInfo.toJson()}');
-
-    // Vérifier les Entitlements actifs
-    if (customerInfo.entitlements.active.isNotEmpty) {
-      // Déterminer le niveau d'accès
-      bool hasFreeAccess =
-          customerInfo.entitlements.active['free_access'] != null;
-      bool hasPremiumAccess =
-          customerInfo.entitlements.active['premium_access'] != null;
-      bool hasProAccess =
-          customerInfo.entitlements.active['pro_access'] != null;
-
-      print('Debug - hasFreeAccess: $hasFreeAccess');
-      print('Debug - hasPremiumAccess: $hasPremiumAccess');
-      print('Debug - hasProAccess: $hasProAccess');
-
-      String subscription;
-      if (hasPremiumAccess) {
-        subscription = customerInfo
-            .entitlements.active['premium_access']!.productIdentifier;
-      } else if (hasProAccess) {
-        subscription =
-            customerInfo.entitlements.active['pro_access']!.productIdentifier;
-      } else {
-        subscription = hasFreeAccess ? 'free_access' : 'free';
-      }
-
-      print('Debug - Nouveau subscriptionId: $subscription');
-
-      // Mettre à jour les données utilisateur selon le niveau d'accès
-      final updateData = {
-        'numberOfCars': hasPremiumAccess
-            ? 999
-            : (hasProAccess ? 5 : 1), // Passe à 999 voitures pour Premium
-        'limiteContrat': hasPremiumAccess
-            ? 999
-            : (hasProAccess ? 10 : 10), // Passe à illimité (999) pour Premium
-        'isSubscriptionActive': true, // Devient true
-        'subscriptionId':
-            subscription, // Devient 'PremiumMonthlySubscription' ou 'PremiumYearlySubscription'
-        'subscriptionType': subscription.toLowerCase().contains('yearly')
-            ? 'yearly'
-            : 'monthly',
-        'subscriptionPurchaseDate': DateTime.now().toIso8601String(),
-        'subscriptionExpirationDate': customerInfo.latestExpirationDate,
-      };
-
-      try {
-        // Met à jour Firestore
-        final docRef = FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('authentification')
-            .doc(user.uid);
-
-        await docRef.set(updateData, SetOptions(merge: true));
-
-        // Met à jour l'état local
-        setState(() {
-          isSubscriptionActive = true;
-          subscriptionId = subscription;
-          numberOfCars = updateData['numberOfCars'] as int;
-          limiteContrat = updateData['limiteContrat'] as int;
-          isMonthly = !subscription.toLowerCase().contains('yearly');
-        });
-
-        print('Debug - État mis à jour:');
-        print('isSubscriptionActive: $isSubscriptionActive');
-        print('subscriptionId: $subscriptionId');
-      } catch (e) {
-        print('Erreur mise à jour Firestore: $e');
-        throw e;
-      }
-    } else {
-      // Pas d'abonnement actif - réinitialise à l'offre gratuite
-      await _resetToFreeSubscription(user.uid);
-    }
-  }
-
-// Nouvelle fonction pour réinitialiser à l'offre gratuite
-  Future<void> _resetToFreeSubscription(String uid) async {
-    final freeData = {
-      'numberOfCars': 1,
-      'limiteContrat': 10,
-      'isSubscriptionActive': false,
-      'subscriptionId': 'free',
-      'subscriptionType': 'monthly',
-    };
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('authentification')
-          .doc(uid)
-          .set(freeData, SetOptions(merge: true));
-
-      setState(() {
-        isSubscriptionActive = false;
-        subscriptionId = 'free';
-        numberOfCars = 1;
-        limiteContrat = 10;
-        isMonthly = true;
-      });
-    } catch (e) {
-      print('Erreur réinitialisation abonnement gratuit: $e');
-    }
-  }
-
-// Modifiez la fonction _handleSubscription comme ceci :
   Future<void> _handleSubscription(String plan) async {
     _showLoading(true);
     final user = FirebaseAuth.instance.currentUser;
@@ -240,163 +128,91 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     try {
       if (plan == "Offre Gratuite") return;
 
-      // 1. Récupérer l'ID du produit
+      // 1. Vérifier l'abonnement actuel
+      final currentInfo = await Purchases.getCustomerInfo();
       String productId = _getProductId(plan, isMonthly);
-      print('Tentative d\'achat du produit: $productId');
 
-      // 2. Récupérer les offres
+      print('📱 État actuel: ${currentInfo.activeSubscriptions}');
+      print('🎯 Changement vers: $productId');
+
+      // 2. Obtenir les offres
       final offerings = await Purchases.getOfferings();
-      if (offerings.current == null) throw Exception('Aucune offre disponible');
+      if (offerings.current == null) {
+        throw Exception('Aucune offre disponible');
+      }
+
+      // Log available packages
+      print('🔍 Available Packages:');
+      for (var pkg in offerings.current!.availablePackages) {
+        print('Package ID: ${pkg.storeProduct.identifier}');
+      }
 
       // 3. Trouver le package
       final package = offerings.current!.availablePackages.firstWhere(
         (pkg) => pkg.storeProduct.identifier == productId,
-        orElse: () => throw Exception('Package non trouvé'),
+        orElse: () {
+          print('❌ Package with ID $productId not found.');
+          throw Exception('Package non trouvé');
+        },
       );
 
-      // 4. Tenter l'achat
-      print('Début de l\'achat...');
-      await Purchases.purchasePackage(package);
-
-      // 5. La mise à jour de Firestore sera gérée par le listener
-      print('Achat réussi, en attente de la mise à jour du listener...');
-
-      _showMessage('Abonnement en cours d\'activation...', Colors.green);
-    } on PlatformException catch (e) {
-      if (e.code == '1' || e.code == 'payment_cancelled') {
-        _showMessage('Achat annulé', Colors.orange);
-      } else {
-        _showMessage('Erreur: ${e.message}', Colors.red);
-      }
-    } catch (e) {
-      print('ERREUR: $e');
-      _showMessage('Erreur lors de l\'achat', Colors.red);
-    } finally {
-      _showLoading(false);
-    }
-  }
-
-  Future<void> _loadUserSubscription() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      try {
-        print('Début de la vérification de l\'abonnement...');
-
-        final doc = await FirebaseFirestore.instance
+      // 4. Désactiver l'ancien abonnement
+      if (currentInfo.activeSubscriptions.isNotEmpty) {
+        print('📝 Désactivation de l\'ancien abonnement...');
+        await _firestore
             .collection('users')
             .doc(user.uid)
             .collection('authentification')
             .doc(user.uid)
-            .get();
-
-        if (!doc.exists) {
-          // Initialisation correcte pour un nouvel utilisateur
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .collection('authentification')
-              .doc(user.uid)
-              .set({
-            'isSubscriptionActive': false, // Assurez-vous que c'est false
-            'subscriptionId': 'free', // Assurez-vous que c'est 'free'
-            'numberOfCars': 1,
-            'limiteContrat': 10,
-            'subscriptionType': 'monthly',
-            'subscriptionPurchaseDate': null,
-            'subscriptionExpirationDate': null
-          }, SetOptions(merge: true));
-
-          // Mise à jour de l'état local
-          setState(() {
-            isSubscriptionActive = false;
-            subscriptionId = 'free';
-            numberOfCars = 1;
-            limiteContrat = 10;
-            isMonthly = true;
-          });
-          return; // Sortir après l'initialisation
-        }
-
-        if (doc.exists) {
-          final data = doc.data();
-          if (data != null) {
-            final storedSubscriptionId = data['subscriptionId'] ?? 'free';
-            final isActive = data['isSubscriptionActive'] ?? false;
-            final storedSubscriptionType =
-                data['subscriptionType'] ?? 'monthly';
-
-            print('Données trouvées dans Firestore:');
-            print('storedSubscriptionId: $storedSubscriptionId');
-            print('isSubscriptionActive: $isActive');
-
-            bool shouldBeActive = storedSubscriptionId != 'free';
-
-            if (!shouldBeActive && isActive) {
-              print('Incohérence détectée - Réinitialisation des données');
-              await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user.uid)
-                  .update({
-                'isSubscriptionActive': false,
-                'subscriptionId': 'free',
-                'numberOfCars': 1,
-                'limiteContrat': 10,
-                'subscriptionType': 'monthly'
-              });
-
-              setState(() {
-                isSubscriptionActive = false;
-                subscriptionId = 'free';
-                numberOfCars = 1;
-                limiteContrat = 10;
-                isMonthly = true;
-              });
-            } else {
-              setState(() {
-                isSubscriptionActive = shouldBeActive && isActive;
-                subscriptionId = storedSubscriptionId;
-                numberOfCars = data['numberOfCars'] ?? 1;
-                limiteContrat = data['limiteContrat'] ?? 10;
-                isMonthly = storedSubscriptionType == 'monthly';
-              });
-            }
-
-            print('État mis à jour:');
-            print('subscriptionId: $subscriptionId');
-            print('isSubscriptionActive: $isSubscriptionActive');
-            print('numberOfCars: $numberOfCars');
-          }
-        } else {
-          print('Document utilisateur non trouvé - Initialisation par défaut');
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .set({
-            'isSubscriptionActive': false,
-            'subscriptionId': 'free',
-            'numberOfCars': 1,
-            'limiteContrat': 10,
-            'subscriptionType': 'monthly'
-          });
-
-          setState(() {
-            isSubscriptionActive = false;
-            subscriptionId = 'free';
-            numberOfCars = 1;
-            limiteContrat = 10;
-            isMonthly = true;
-          });
-        }
-      } catch (e) {
-        print('Erreur lors de la vérification de l\'abonnement: $e');
-        setState(() {
-          isSubscriptionActive = false;
-          subscriptionId = 'free';
-          numberOfCars = 1;
-          limiteContrat = 10;
-          isMonthly = true;
+            .update({
+          'isSubscriptionActive': false,
+          'subscriptionId': 'free',
         });
       }
+
+      // 5. Effectuer le nouvel achat
+      print('💳 Achat du nouvel abonnement...');
+      final purchaseResult = await Purchases.purchasePackage(package);
+
+      // 6. Vérifier le résultat
+      print('🎉 Purchase Result: ${purchaseResult.entitlements.active}');
+      if (purchaseResult.entitlements.active.isNotEmpty) {
+        String newSubscriptionId = purchaseResult.activeSubscriptions.first;
+        print('✅ Nouvel abonnement actif: $newSubscriptionId');
+
+        // 7. Mettre à jour Firestore
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('authentification')
+            .doc(user.uid)
+            .update({
+          'subscriptionId': newSubscriptionId,
+          'isSubscriptionActive': true,
+          'numberOfCars': plan.contains("Premium") ? 999 : 5,
+          'limiteContrat': plan.contains("Premium") ? 999 : 10,
+          'subscriptionType': isMonthly ? 'monthly' : 'yearly',
+          'lastUpdateDate': FieldValue.serverTimestamp(),
+        });
+
+        setState(() {
+          subscriptionId = newSubscriptionId;
+          isSubscriptionActive = true;
+        });
+
+        _showMessage('Abonnement modifié avec succès!', Colors.green);
+      } else {
+        throw Exception('Aucun abonnement actif trouvé après l\'achat.');
+      }
+    } catch (e) {
+      print('❌ ERREUR: $e');
+      _showMessage(
+          e is PlatformException && e.code == '1'
+              ? 'Changement annulé'
+              : 'Erreur lors du changement',
+          Colors.red);
+    } finally {
+      _showLoading(false);
     }
   }
 
@@ -417,7 +233,6 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
   void _showMessage(String message, Color color) {
     if (!mounted) return;
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -435,7 +250,6 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   }
 
   String? _lastAttemptedPurchase;
-
   void _retryLastPurchase() {
     if (_lastAttemptedPurchase != null) {
       _handleSubscription(_lastAttemptedPurchase!);
@@ -449,10 +263,9 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     } else if (Platform.isAndroid) {
       url = 'https://play.google.com/store/account/subscriptions';
     } else {
-      // Handle other platforms or show an error message
+// Handle other platforms or show an error message
       throw 'Platform not supported';
     }
-
     if (await canLaunch(url)) {
       await launch(url);
     } else {
@@ -465,7 +278,6 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     print('Debug - État actuel:');
     print('isSubscriptionActive: $isSubscriptionActive');
     print('subscriptionId: $subscriptionId');
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
