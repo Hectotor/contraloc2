@@ -119,6 +119,9 @@
         <string>armv7</string>
     </array>
 
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
 
     <key>LSSupportsOpeningDocumentsInPlace</key>
     <true/>

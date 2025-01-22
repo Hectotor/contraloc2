@@ -189,7 +189,7 @@ class _PlanDisplayState extends State<PlanDisplay> {
           const SizedBox(height: 16),
           if (plan.title == "Offre Gratuite")
             Text(
-              'Veuillez utiliser le bouton "Gérer mon abonnement"',
+              'Veuillez utiliser le bouton\n"Gérer mon abonnement"',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.grey[600],
@@ -213,7 +213,7 @@ class _PlanDisplayState extends State<PlanDisplay> {
                 ),
               ),
               child: Text(
-                isActivePlan ? "Plan actuel" : "Changer pour ce plan",
+                isActivePlan ? "Offre actuelle" : "Choisir cette offre",
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,

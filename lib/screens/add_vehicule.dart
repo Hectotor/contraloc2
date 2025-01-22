@@ -1,6 +1,4 @@
 import 'package:dio/dio.dart';
-
-import '../widget/CREATION DE CONTRAT/client.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +11,17 @@ import '../widget/enregistrer_vehicule.dart';
 import '../widget/add_pho_car_atte.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter/cupertino.dart';
+
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
+    );
+  }
+}
 
 class AddVehiculeScreen extends StatefulWidget {
   final String? vehicleId;
@@ -436,52 +445,96 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
 
   Widget _buildTextField(String label, TextEditingController controller,
       {bool isRequired = false}) {
-    // Vérifier si le champ doit être numérique
-    bool isNumericField = [
+    // Déterminer le type de clavier et les icônes spécifiques
+    TextInputType? keyboardType;
+    Widget? suffixIcon;
+
+    if ([
       "Prix de location par jour (€)",
       "Montant de la franchise (€)",
       "Montant kilométrage supplémentaire (€)",
       "Montant rayures par élément (€)",
-      "Numéro de l'assurance"
-    ].contains(label);
+      "N° téléphone l'assurance"
+    ].contains(label)) {
+      keyboardType = TextInputType.number;
+      suffixIcon = IconButton(
+        icon: Icon(Icons.check_circle,
+            color: Colors.grey[400]), // Couleur plus claire
+        onPressed: () {
+          FocusScope.of(context).unfocus();
+        },
+      );
+    }
+
+    // Configuration spéciale pour le numéro de téléphone de l'assurance
+    if (label == "N° téléphone l'assurance") {
+      keyboardType = TextInputType.phone;
+    }
+
+    // Configuration spéciale pour la date d'entretien
+    if (label == "Date du prochain entretien") {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16.0),
+        child: TextFormField(
+          controller: controller,
+          readOnly: true,
+          onTap: () async {
+            final pickedDate = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime.now(),
+              lastDate: DateTime(2100),
+              locale: const Locale('fr', 'FR'),
+              builder: (context, child) {
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: const ColorScheme.light(
+                      primary: Color(0xFF08004D),
+                      onPrimary: Colors.white,
+                      surface: Colors.white,
+                      onSurface: Color(0xFF08004D),
+                    ),
+                  ),
+                  child: child!,
+                );
+              },
+            );
+            if (pickedDate != null) {
+              setState(() {
+                controller.text = pickedDate.toLocal().toString().split(' ')[0];
+              });
+            }
+          },
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: const TextStyle(color: Color(0xFF08004D)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            suffixIcon: Icon(Icons.calendar_today,
+                color: Colors.grey[400]), // Couleur plus claire
+          ),
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextFormField(
         controller: controller,
-        keyboardType:
-            isNumericField ? TextInputType.number : TextInputType.text,
+        keyboardType: keyboardType,
+        textCapitalization: TextCapitalization
+            .characters, // Forcer les majuscules pendant la saisie
         inputFormatters: [
-          if (isNumericField)
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))
-          else if (label == "Marque" ||
-              label == "Modèle" ||
-              label == "Immatriculation" ||
-              label == "Numéro de série (VIN)")
-            UpperCaseTextFormatter()
+          // Ne pas appliquer le formateur pour les champs numériques
+          if (keyboardType != TextInputType.number &&
+              keyboardType != TextInputType.phone &&
+              label != "Date du prochain entretien")
+            UpperCaseTextFormatter(),
         ],
-        validator: (value) {
-          if (isRequired && (value == null || value.isEmpty)) {
-            return "Ce champ est requis";
-          }
-          if (isNumericField && value != null && value.isNotEmpty) {
-            if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
-              return "Veuillez entrer uniquement des chiffres";
-            }
-          }
-          return null;
-        },
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(color: Color(0xFF08004D)),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF08004D)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF08004D)),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          suffixIcon: suffixIcon,
         ),
       ),
     );

@@ -7,6 +7,7 @@ import 'package:ContraLoc/USERS/question_user.dart';
 import 'package:ContraLoc/USERS/plan_display.dart';
 import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
 import 'dart:io'; // Import dart:io for Platform
+import 'dart:async'; // Import StreamSubscription
 
 class AbonnementScreen extends StatefulWidget {
   const AbonnementScreen({Key? key}) : super(key: key);
@@ -38,6 +39,8 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   bool isMonthly = true;
   bool _isLoading = false;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  StreamSubscription? _subscriptionStream; // Add this line
+
 // Ajoutez ces variables pour sauvegarder l'état précédent
   void _showLoading(bool show) {
     setState(() {
@@ -49,6 +52,37 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   void initState() {
     super.initState();
     _initializeSubscription();
+    _setupSubscriptionListener();
+  }
+
+  void _setupSubscriptionListener() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    _subscriptionStream = _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('authentification')
+        .doc(user.uid)
+        .snapshots()
+        .listen((snapshot) {
+      if (!snapshot.exists) return;
+
+      final data = snapshot.data() as Map<String, dynamic>;
+      setState(() {
+        subscriptionId = data['subscriptionId'] ?? 'free';
+        isSubscriptionActive = data['isSubscriptionActive'] ?? false;
+        numberOfCars = data['numberOfCars'] ?? 1;
+        limiteContrat = data['limiteContrat'] ?? 10;
+        isMonthly = (data['subscriptionType'] ?? 'monthly') == 'monthly';
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _subscriptionStream?.cancel();
+    super.dispose();
   }
 
   Future<void> _initializeSubscription() async {
@@ -113,11 +147,6 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     } catch (e) {
       print('❌ Erreur initialisation: $e');
     }
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   Future<void> _handleSubscription(String plan) async {
@@ -204,6 +233,12 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         });
 
         _showMessage('Abonnement modifié avec succès!', Colors.green);
+
+        // Afficher le popup de confirmation
+        showDialog(
+          context: context,
+          builder: (BuildContext context) => _buildActivationDialog(),
+        );
       } else {
         throw Exception('Aucun abonnement actif trouvé après l\'achat.');
       }
@@ -217,6 +252,79 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     } finally {
       _showLoading(false);
     }
+  }
+
+  Widget _buildActivationDialog() {
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icône animée ou image
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF08004D).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.workspace_premium,
+                color: Color(0xFF08004D),
+                size: 48,
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Titre
+            const Text(
+              "Félicitations ! 🎉",
+              style: TextStyle(
+                color: Color(0xFF08004D),
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Message
+            const Text(
+              "Votre abonnement est en cours d'activation.\n\nLe processus sera terminé dans moins de 5 minutes.\nVous pouvez continuer à utiliser l'application normalement. ✨",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Bouton OK
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF08004D),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  "Compris !",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   String _getProductId(String plan, bool isMonthly) {
@@ -345,6 +453,12 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
               if (subscriptionId != 'free')
                 ElevatedButton(
                   onPressed: _openManageSubscription,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Colors.white, // Set background color to white
+                    foregroundColor: const Color(
+                        0xFF08004D), // Set text color to match the theme
+                  ),
                   child: const Text('Gérer mon abonnement'),
                 ),
               _buildContactButton(),

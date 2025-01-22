@@ -25,9 +25,9 @@ class CommentaireWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             suffixIcon: IconButton(
-              icon: const Icon(Icons.check_circle),
+              icon: Icon(Icons.check_circle,
+                  color: Colors.grey[400]), // Couleur plus claire
               onPressed: () {
-                // Fermer le clavier
                 FocusScope.of(context).unfocus();
               },
             ),

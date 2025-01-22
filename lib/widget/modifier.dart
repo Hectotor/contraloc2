@@ -280,11 +280,15 @@ class _ModifierScreenState extends State<ModifierScreen> {
     });
 
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception("Utilisateur non connecté");
+
+      // Récupérer les données utilisateur
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(FirebaseAuth.instance.currentUser!.uid)
+          .doc(user.uid)
           .collection('authentification')
-          .doc(FirebaseAuth.instance.currentUser!.uid)
+          .doc(user.uid)
           .get();
 
       if (!userDoc.exists) {
@@ -293,13 +297,10 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
       final userData = userDoc.data()!;
 
-      final nomEntreprise = userData['nomEntreprise'] ?? '';
-      final adresseEntreprise = userData['adresse'] ?? '';
-      final telephoneEntreprise = userData['telephone'] ?? '';
-      final siretEntreprise = userData['siret'] ?? '';
-
-      // Récupérer les données du véhicule
+      // Récupérer les données du véhicule depuis la collection de l'utilisateur
       final vehicleDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
           .collection('vehicules')
           .where('immatriculation', isEqualTo: widget.data['immatriculation'])
           .get();
@@ -308,32 +309,27 @@ class _ModifierScreenState extends State<ModifierScreen> {
           vehicleDoc.docs.isNotEmpty ? vehicleDoc.docs.first.data() : {};
 
       // Récupérer les conditions
-      final user = FirebaseAuth.instance.currentUser;
-      String conditions;
-      if (user != null) {
-        final conditionsDoc = await FirebaseFirestore.instance
-            .collection('contrats')
-            .doc(user.uid)
-            .get();
+      final conditionsDoc = await FirebaseFirestore.instance
+          .collection('contrats')
+          .doc(user.uid)
+          .get();
 
-        final conditionsData = conditionsDoc.data();
-        conditions =
-            conditionsData?['texte'] ?? ContratModifier.defaultContract;
-      } else {
-        conditions = ContratModifier.defaultContract;
-      }
+      final conditions =
+          conditionsDoc.exists && conditionsDoc.data()?['texte'] != null
+              ? conditionsDoc.data()!['texte']
+              : ContratModifier.defaultContract;
 
       final pdfPath = await generatePdf(
         widget.data,
-        _dateFinEffectifController.text,
-        _kilometrageRetourController.text,
-        _commentaireRetourController.text,
-        _photosRetour,
-        nomEntreprise,
+        widget.data['dateFinEffectif'] ?? '',
+        widget.data['kilometrageRetour'] ?? '',
+        widget.data['commentaireRetour'] ?? '',
+        [],
+        userData['nomEntreprise'] ?? '',
         userData['logoUrl'] ?? '',
-        adresseEntreprise,
-        telephoneEntreprise,
-        siretEntreprise,
+        userData['adresse'] ?? '',
+        userData['telephone'] ?? '',
+        userData['siret'] ?? '',
         widget.data['commentaireRetour'] ?? '',
         vehicleData['typeCarburant'] ?? '',
         vehicleData['boiteVitesses'] ?? '',

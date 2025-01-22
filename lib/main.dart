@@ -4,7 +4,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'; // Import localization delegates
 import 'package:firebase_core/firebase_core.dart';
 import 'package:purchases_flutter/purchases_flutter.dart'; // Import RevenueCat
+import 'dart:io'; // Import dart:io for Platform
+import 'package:flutter/services.dart'; // Import SystemChrome
 import 'screens/splash_screen.dart';
+
+enum Store { appleStore, googlePlay }
+
+class StoreConfig {
+  final Store store;
+  final String apiKey;
+  static StoreConfig? _instance;
+  factory StoreConfig({required Store store, required String apiKey}) {
+    _instance ??= StoreConfig._internal(store, apiKey);
+    return _instance!;
+  }
+  StoreConfig._internal(this.store, this.apiKey);
+  static StoreConfig get instance {
+    return _instance!;
+  }
+
+  static bool isForAppleStore() => _instance!.store == Store.appleStore;
+  static bool isForGooglePlay() => _instance!.store == Store.googlePlay;
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,10 +39,31 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Configuration du store en fonction de la plateforme
+  if (Platform.isIOS) {
+    StoreConfig(
+      store: Store.appleStore,
+      apiKey:
+          "appl_surBKRbCRgBprWYKIjWlprQgfUc", // Remplacez par votre clé API publique RevenueCat pour iOS
+    );
+  } else if (Platform.isAndroid) {
+    StoreConfig(
+      store: Store.googlePlay,
+      apiKey:
+          "goog_abc123xyz456", // Remplacez par votre clé API publique RevenueCat pour Android
+    );
+  }
+
   // Initialisation de RevenueCat
-  await Purchases.setDebugLogsEnabled(true);
-  await Purchases.setup(
-      "appl_surBKRbCRgBprWYKIjWlprQgfUc"); // Remplacez par votre clé API publique RevenueCat
+  final PurchasesConfiguration configuration =
+      PurchasesConfiguration(StoreConfig.instance.apiKey);
+  await Purchases.configure(configuration);
+
+  // Forcer l'orientation en portrait
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   runApp(const MyApp());
 }

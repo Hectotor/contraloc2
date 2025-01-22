@@ -48,6 +48,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
   }
 
+  Future<String?> _getVehiclePhotoUrl(
+      String userId, String immatriculation) async {
+    final vehiculeDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('vehicules')
+        .where('immatriculation', isEqualTo: immatriculation)
+        .get();
+
+    if (vehiculeDoc.docs.isNotEmpty) {
+      return vehiculeDoc.docs.first.data()['photoVehiculeUrl'] as String?;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -98,96 +113,104 @@ class _CalendarScreenState extends State<CalendarScreen> {
               final contract = _contracts[index];
               final data = contract.data() as Map<String, dynamic>;
 
-              return GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ModifierScreen(
-                        contratId: contract.id,
-                        data: data,
+              return FutureBuilder<String?>(
+                future: _getVehiclePhotoUrl(
+                    contract['userId'], data['immatriculation']),
+                builder: (context, snapshot) {
+                  final photoUrl = snapshot.data;
+
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ModifierScreen(
+                            contratId: contract.id,
+                            data: data,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Card(
+                      elevation: 4,
+                      margin: EdgeInsets.symmetric(
+                        horizontal: MediaQuery.of(context).size.width * 0.05,
+                        vertical: MediaQuery.of(context).size.width * 0.02,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      color: Colors.white, // Ajout de la couleur blanche
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: MediaQuery.of(context).size.width * 0.2,
+                              height: MediaQuery.of(context).size.width * 0.2,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.grey[200],
+                                image: photoUrl != null && photoUrl.isNotEmpty
+                                    ? DecorationImage(
+                                        image: NetworkImage(photoUrl),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
+                              ),
+                              child: photoUrl == null || photoUrl.isEmpty
+                                  ? const Icon(Icons.directions_car,
+                                      size: 50, color: Colors.grey)
+                                  : null,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "${data['nom'] ?? ''} ${data['prenom'] ?? ''}",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize:
+                                          MediaQuery.of(context).size.width *
+                                              0.045,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "Date de création : ${data['dateDebut'] ?? ''}",
+                                    style: TextStyle(
+                                      fontSize:
+                                          MediaQuery.of(context).size.width *
+                                              0.035,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  Text(
+                                    "Immatriculation : ${data['immatriculation'] ?? ''}",
+                                    style: TextStyle(
+                                      fontSize:
+                                          MediaQuery.of(context).size.width *
+                                              0.035,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 18,
+                              color: Colors.grey,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
                 },
-                child: Card(
-                  elevation: 4,
-                  margin: EdgeInsets.symmetric(
-                    horizontal: MediaQuery.of(context).size.width * 0.05,
-                    vertical: MediaQuery.of(context).size.width * 0.02,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  color: Colors.white, // Ajout de la couleur blanche
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: MediaQuery.of(context).size.width * 0.2,
-                          height: MediaQuery.of(context).size.width * 0.2,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            color: Colors.grey[200],
-                            image: data['photoVehiculeUrl'] != null &&
-                                    data['photoVehiculeUrl'].isNotEmpty
-                                ? DecorationImage(
-                                    image:
-                                        NetworkImage(data['photoVehiculeUrl']),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                          ),
-                          child: data['photoVehiculeUrl'] == null ||
-                                  data['photoVehiculeUrl'].isEmpty
-                              ? const Icon(Icons.directions_car,
-                                  size: 50, color: Colors.grey)
-                              : null,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "${data['nom'] ?? ''} ${data['prenom'] ?? ''}",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize:
-                                      MediaQuery.of(context).size.width * 0.045,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Date de création : ${data['dateDebut'] ?? ''}",
-                                style: TextStyle(
-                                  fontSize:
-                                      MediaQuery.of(context).size.width * 0.035,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              Text(
-                                "Immatriculation : ${data['immatriculation'] ?? ''}",
-                                style: TextStyle(
-                                  fontSize:
-                                      MediaQuery.of(context).size.width * 0.035,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.arrow_forward_ios,
-                          size: 18,
-                          color: Colors.grey,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               );
             },
           ),
