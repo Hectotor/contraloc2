@@ -308,10 +308,12 @@ class _ModifierScreenState extends State<ModifierScreen> {
       final vehicleData =
           vehicleDoc.docs.isNotEmpty ? vehicleDoc.docs.first.data() : {};
 
-      // Récupérer les conditions
+      // Récupérer les conditions mises à jour depuis Firestore
       final conditionsDoc = await FirebaseFirestore.instance
-          .collection('contrats')
+          .collection('users')
           .doc(user.uid)
+          .collection('contrats')
+          .doc('userId')
           .get();
 
       final conditions =
@@ -346,7 +348,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         widget.data['pourcentageEssence']?.toString() ?? '0',
         widget.data['typeLocation'] ?? '',
         vehicleData['prixLocation'] ?? '',
-        condition: conditions,
+        condition: conditions, // Utiliser les conditions mises à jour
       );
 
       await OpenFilex.open(pdfPath);

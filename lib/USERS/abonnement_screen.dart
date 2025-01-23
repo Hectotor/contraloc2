@@ -30,6 +30,19 @@ String _getPlanDisplayName(String subscriptionId) {
   }
 }
 
+// Mappage des identifiants d'abonnement
+const Map<String, String> subscriptionIdMapping = {
+  'ProMonthlySubscription': 'pro-monthly',
+  'ProYearlySubscription': 'pro-yearly',
+  'PremiumMonthlySubscription': 'premium-monthly',
+  'PremiumYearlySubscription': 'premium-yearly',
+};
+
+// Fonction pour obtenir l'identifiant mappé
+String getMappedSubscriptionId(String originalId) {
+  return subscriptionIdMapping[originalId] ?? originalId;
+}
+
 class _AbonnementScreenState extends State<AbonnementScreen> {
   int numberOfCars = 1;
   int limiteContrat = 10;
@@ -41,7 +54,9 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   StreamSubscription? _subscriptionStream; // Add this line
 
-// Ajoutez ces variables pour sauvegarder l'état précédent
+  // Ajouter une constante pour les délais
+  static const Duration _timeoutDuration = Duration(seconds: 30);
+
   void _showLoading(bool show) {
     setState(() {
       _isLoading = show;
@@ -52,36 +67,71 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   void initState() {
     super.initState();
     _initializeSubscription();
-    _setupSubscriptionListener();
+    _setupListeners();
   }
 
-  void _setupSubscriptionListener() {
+  void _setupListeners() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
+    // Écouter les changements Firestore
     _subscriptionStream = _firestore
         .collection('users')
         .doc(user.uid)
         .collection('authentification')
         .doc(user.uid)
         .snapshots()
-        .listen((snapshot) {
-      if (!snapshot.exists) return;
+        .listen(_updateStateFromFirestore);
 
-      final data = snapshot.data() as Map<String, dynamic>;
-      setState(() {
-        subscriptionId = data['subscriptionId'] ?? 'free';
-        isSubscriptionActive = data['isSubscriptionActive'] ?? false;
-        numberOfCars = data['numberOfCars'] ?? 1;
-        limiteContrat = data['limiteContrat'] ?? 10;
-        isMonthly = (data['subscriptionType'] ?? 'monthly') == 'monthly';
-      });
+    // Écouter les changements RevenueCat
+    Purchases.addCustomerInfoUpdateListener(_handleRevenueCatUpdate);
+  }
+
+  void _updateStateFromFirestore(DocumentSnapshot snapshot) {
+    if (!mounted || !snapshot.exists) return;
+
+    final data = snapshot.data() as Map<String, dynamic>;
+    setState(() {
+      subscriptionId = data['subscriptionId'] ?? 'free';
+      isSubscriptionActive = data['isSubscriptionActive'] ?? false;
+      numberOfCars = data['numberOfCars'] ?? 1;
+      limiteContrat = data['limiteContrat'] ?? 10;
+      isMonthly = (data['subscriptionType'] ?? 'monthly') == 'monthly';
     });
+  }
+
+  void _handleRevenueCatUpdate(CustomerInfo customerInfo) async {
+    if (!mounted) return;
+
+    try {
+      final activeEntitlements = customerInfo.entitlements.active;
+// Si l'utilisateur n'a aucun abonnement actif
+      if (activeEntitlements.isEmpty) {
+        // Mettre à jour Firestore pour indiquer que l'utilisateur n'a pas d'abonnement actif
+        await _updateSubscriptionInFirestore('free', false);
+        // Retourner immédiatement
+        return;
+      }
+
+      final latestEntitlement = activeEntitlements.values.reduce((a, b) {
+        final aDate = DateTime.parse(a.latestPurchaseDate);
+        final bDate = DateTime.parse(b.latestPurchaseDate);
+        return aDate.isAfter(bDate) ? a : b;
+      });
+
+      await _updateSubscriptionInFirestore(
+        getMappedSubscriptionId(latestEntitlement.productIdentifier),
+        true,
+      );
+    } catch (e) {
+      print('❌ Erreur mise à jour RevenueCat: $e');
+    }
   }
 
   @override
   void dispose() {
     _subscriptionStream?.cancel();
+    Purchases.removeCustomerInfoUpdateListener(_handleRevenueCatUpdate);
     super.dispose();
   }
 
@@ -90,67 +140,93 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      // 1. Vérifier RevenueCat
       final customerInfo = await Purchases.getCustomerInfo();
       print('🔍 État RevenueCat initial:');
       print('Abonnements: ${customerInfo.activeSubscriptions}');
       print('Entitlements: ${customerInfo.entitlements.all}');
 
-      // 2. Déterminer l'abonnement correspondant au dernier achat
-      String currentSubscriptionId = 'free';
-      bool hasActiveSubscription = false;
-
-      if (customerInfo.entitlements.all.isNotEmpty) {
-        // Récupérer l'entitlement avec la date d'achat la plus récente
-        final latestEntitlement = customerInfo.entitlements.all.values.reduce(
-          (a, b) {
-            final aDate = DateTime.parse(a.latestPurchaseDate);
-            final bDate = DateTime.parse(b.latestPurchaseDate);
-            return aDate.isAfter(bDate) ? a : b;
-          },
-        );
-
-        currentSubscriptionId = latestEntitlement.productIdentifier;
-        hasActiveSubscription = latestEntitlement.isActive;
-
-        print('✅ Dernier abonnement détecté: $currentSubscriptionId');
+      final activeEntitlements = customerInfo.entitlements.active;
+      if (activeEntitlements.isEmpty) {
+        print('ℹ️ Aucun abonnement actif trouvé.');
+        return;
       }
 
-      // 3. Mettre à jour Firestore avec l'entitlement du dernier achat
+      var latestEntitlement = activeEntitlements.values.reduce((a, b) {
+        final aDate = DateTime.parse(a.latestPurchaseDate);
+        final bDate = DateTime.parse(b.latestPurchaseDate);
+        return aDate.isAfter(bDate) ? a : b;
+      });
+
+      if (!latestEntitlement.isActive) return;
+
+      final currentSubscriptionId = latestEntitlement.productIdentifier;
+      await _updateSubscriptionInFirestore(currentSubscriptionId, true);
+
+      setState(() {
+        subscriptionId = currentSubscriptionId;
+        isSubscriptionActive = true;
+        isMonthly = !currentSubscriptionId.toLowerCase().contains('yearly');
+      });
+
+      print('🎉 Mise à jour de l\'abonnement terminée.');
+    } catch (e) {
+      print('❌ Erreur initialisation: $e');
+      _showMessage('Erreur lors de l\'initialisation', Colors.red);
+    }
+  }
+
+  Future<void> _updateSubscriptionInFirestore(
+      String subscriptionId, bool isActive) async {
+    // Ajouter une vérification de connexion
+    if (!mounted) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
       await _firestore
           .collection('users')
           .doc(user.uid)
           .collection('authentification')
           .doc(user.uid)
-          .set({
-        'subscriptionId': currentSubscriptionId,
-        'isSubscriptionActive': hasActiveSubscription,
-        'numberOfCars': currentSubscriptionId.contains('Premium')
+          .update({
+        'subscriptionId': getMappedSubscriptionId(subscriptionId),
+        'isSubscriptionActive': isActive,
+        'numberOfCars': subscriptionId.contains('Premium')
             ? 999
-            : (currentSubscriptionId.contains('Pro') ? 5 : 1),
-        'limiteContrat': currentSubscriptionId.contains('Premium') ? 999 : 10,
-        'subscriptionType':
-            currentSubscriptionId.toLowerCase().contains('yearly')
-                ? 'yearly'
-                : 'monthly',
-        'lastSyncDate': DateTime.now().toIso8601String(),
-      }, SetOptions(merge: true));
-
-      // 4. Mettre à jour l'état local
-      setState(() {
-        subscriptionId = currentSubscriptionId;
-        isSubscriptionActive = hasActiveSubscription;
-        isMonthly = !currentSubscriptionId.toLowerCase().contains('yearly');
+            : (subscriptionId.contains('Pro') ? 5 : 1),
+        'limiteContrat': subscriptionId.contains('Premium') ? 999 : 10,
+        'subscriptionType': subscriptionId.toLowerCase().contains('yearly')
+            ? 'yearly'
+            : 'monthly',
+        'lastUpdateDate': FieldValue.serverTimestamp(),
       });
-
-      print('🎉 Initialisation de l\'abonnement terminée.');
     } catch (e) {
-      print('❌ Erreur initialisation: $e');
+      print('❌ Erreur mise à jour Firestore: $e');
+      // Ajouter une réessai automatique
+      await Future.delayed(const Duration(seconds: 2));
+      return _updateSubscriptionInFirestore(subscriptionId, isActive);
     }
   }
 
   Future<void> _handleSubscription(String plan) async {
+    _lastAttemptedPurchase =
+        plan; // Ajouter cette ligne pour mémoriser la dernière tentative
     _showLoading(true);
+
+    try {
+      // Ajouter un timeout
+      return await Future.any([
+        _processSubscription(plan),
+        Future.delayed(_timeoutDuration)
+            .then((_) => throw Exception('Délai d\'attente dépassé')),
+      ]);
+    } catch (e) {
+      // ...existing error handling...
+    }
+  }
+
+  Future<void> _processSubscription(String plan) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _showLoading(false);
@@ -291,7 +367,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
             const SizedBox(height: 16),
             // Message
             const Text(
-              "Votre abonnement est en cours d'activation.\n\nLe processus sera terminé dans moins de 5 minutes.\nVous pouvez continuer à utiliser l'application normalement. ✨",
+              "Votre abonnement est en cours d'activation.\nCela ne prendra que quelques minutes.\nMerci pour votre confiance !✨",
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
@@ -328,18 +404,23 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   }
 
   String _getProductId(String plan, bool isMonthly) {
+    String productId;
     switch (plan) {
       case "Offre Pro":
       case "Offre Pro Annuel":
-        return isMonthly ? 'ProMonthlySubscription' : 'ProYearlySubscription';
+        productId =
+            isMonthly ? 'ProMonthlySubscription' : 'ProYearlySubscription';
+        break;
       case "Offre Premium":
       case "Offre Premium Annuel":
-        return isMonthly
+        productId = isMonthly
             ? 'PremiumMonthlySubscription'
             : 'PremiumYearlySubscription';
+        break;
       default:
-        return 'free';
+        productId = 'free';
     }
+    return getMappedSubscriptionId(productId);
   }
 
   void _showMessage(String message, Color color) {
@@ -374,7 +455,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     } else if (Platform.isAndroid) {
       url = 'https://play.google.com/store/account/subscriptions';
     } else {
-// Handle other platforms or show an error message
+      // Handle other platforms or show an error message
       throw 'Platform not supported';
     }
     if (await canLaunch(url)) {

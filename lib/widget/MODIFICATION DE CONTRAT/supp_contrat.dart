@@ -49,17 +49,41 @@ class SuppContrat {
       // Sauvegarder les URLs des photos
       List<String> photosToDelete = [];
       if (contratData.exists) {
-        final data = contratData.data();
-        if (data != null) {
-          photosToDelete.addAll(List<String>.from(data['photos'] ?? []));
-          if (data['permisRecto'] != null)
-            photosToDelete.add(data['permisRecto']);
-          if (data['permisVerso'] != null)
-            photosToDelete.add(data['permisVerso']);
+        final data = contratData.data()!;
+
+        // Ajouter les photos standard
+        if (data['photos'] != null) {
+          photosToDelete.addAll(List<String>.from(data['photos']));
+        }
+
+        // Ajouter les photos de retour
+        if (data['photosRetourUrls'] != null) {
+          photosToDelete.addAll(List<String>.from(data['photosRetourUrls']));
+        }
+
+        // Ajouter les photos de permis
+        if (data['permisRecto'] != null) {
+          photosToDelete.add(data['permisRecto']);
+        }
+        if (data['permisVerso'] != null) {
+          photosToDelete.add(data['permisVerso']);
         }
       }
 
-      // Supprimer d'abord le contrat
+      // Supprimer d'abord les photos
+      await Future.wait(photosToDelete.map((photoUrl) async {
+        if (photoUrl.isNotEmpty &&
+            photoUrl.startsWith('https://firebasestorage.googleapis.com')) {
+          try {
+            final ref = FirebaseStorage.instance.refFromURL(photoUrl);
+            await ref.delete();
+          } catch (e) {
+            print('Erreur lors de la suppression de la photo: $e');
+          }
+        }
+      }));
+
+      // Ensuite supprimer le contrat
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -72,23 +96,10 @@ class SuppContrat {
         Navigator.pop(dialogContext!);
       }
 
-      // Vérifier si le contexte est toujours valide
+      // Retourner à l'écran précédent
       if (context.mounted) {
-        // Afficher le message de succès
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Le contrat a été supprimé avec succès'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-
-        // Quitter la page actuelle
-        Navigator.of(context).pop();
+        Navigator.pop(context);
       }
-
-      // Supprimer les photos en arrière-plan
-      _deletePhotosLater(photosToDelete);
     } catch (e) {
       // Fermer le dialogue de chargement en cas d'erreur
       if (dialogContext != null && dialogContext!.mounted) {
@@ -107,20 +118,6 @@ class SuppContrat {
       }
 
       print('Erreur lors de la suppression : $e');
-    }
-  }
-
-  // Nouvelle méthode pour supprimer les photos en arrière-plan
-  static Future<void> _deletePhotosLater(List<String> photoUrls) async {
-    for (String photoUrl in photoUrls) {
-      if (photoUrl.isNotEmpty &&
-          photoUrl.startsWith('https://firebasestorage.googleapis.com')) {
-        try {
-          await FirebaseStorage.instance.refFromURL(photoUrl).delete();
-        } catch (e) {
-          print('Erreur lors de la suppression de la photo: $e');
-        }
-      }
     }
   }
 

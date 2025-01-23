@@ -117,7 +117,13 @@ class _EtatVehiculeState extends State<EtatVehicule> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Padding(
+        backgroundColor: Colors.white, // Ajout du fond blanc
+        child: Container(
+          // Ajout d'un Container pour plus de style
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
           padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,

@@ -103,12 +103,25 @@ class _UserScreenState extends State<UserScreen> {
       _isLoading = true;
     });
 
-    String? logoUrl = _logoUrl;
     try {
+      // Utilisez le logoUrl existant si aucun nouveau logo n'est sélectionné
+      String? finalLogoUrl = _logoUrl;
+
+      // Si un nouveau logo a été sélectionné, uploadez-le
       if (_logo != null) {
-        logoUrl = await _uploadLogoToStorage(File(_logo!.path));
+        finalLogoUrl = await _uploadLogoToStorage(File(_logo!.path));
       }
 
+      // Créer l'objet tampon avec le logo actuel
+      final Map<String, dynamic> tamponData = {
+        'logoUrl': finalLogoUrl, // Utilisez le logo final ici
+        'nomEntreprise': _nomEntrepriseController.text.trim(),
+        'adresse': _adresseController.text.trim(),
+        'telephone': _telephoneController.text.trim(),
+        'siret': _siretController.text.trim(),
+      };
+
+      // Créer l'objet de données utilisateur complet
       final Map<String, dynamic> userData = {
         'nomEntreprise': _nomEntrepriseController.text.trim(),
         'nom': _nomController.text.trim(),
@@ -117,29 +130,21 @@ class _UserScreenState extends State<UserScreen> {
         'telephone': _telephoneController.text.trim(),
         'adresse': _adresseController.text.trim(),
         'siret': _siretController.text.trim(),
+        'logoUrl': finalLogoUrl,
+        'tampon': tamponData, // Ajouter les données du tampon
+        'lastUpdateDate': FieldValue.serverTimestamp(),
       };
 
-      if (logoUrl != null) {
-        userData['logoUrl'] = logoUrl;
-        userData['tampon'] = {
-          'logoPath': logoUrl,
-          'nomEntreprise': _nomEntrepriseController.text.trim(),
-          'adresse': _adresseController.text.trim(),
-          'telephone': _telephoneController.text.trim(),
-          'siret': _siretController.text.trim(),
-        };
-      }
-
-      // Utiliser update() au lieu de set()
+      // Mettre à jour Firestore
       await _firestore
           .collection('users')
           .doc(currentUser!.uid)
           .collection('authentification')
           .doc(currentUser!.uid)
-          .update(userData); // Changé de set() à update()
+          .update(userData);
 
       setState(() {
-        _logoUrl = logoUrl;
+        _logoUrl = finalLogoUrl;
         _isLoading = false;
       });
 
