@@ -58,7 +58,7 @@ void main() async {
     } else if (Platform.isAndroid) {
       StoreConfig(
         store: Store.googlePlay,
-        apiKey: "goog_abc123xyz456",
+        apiKey: "goog_XlRowaKUKvXsFhNqZdqzRbQnVzO",
       );
     }
 

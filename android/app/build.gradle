@@ -18,12 +18,12 @@ android {
         disable 'Deprecation'
         disable 'Unchecked'
     }
-    namespace = "com.contraloc.app"
+    namespace = "com.contratloc.app"
     compileSdk = 35 // Cible la dernière version du SDK Android
     ndkVersion = "27.0.12077973" // Version NDK utilisée pour les bibliothèques natives
 
     defaultConfig {
-        applicationId = "com.contraloc.app"
+        applicationId = "com.contratloc.app"
         minSdkVersion 23 // Minimum Android 6.0
         targetSdkVersion flutter.targetSdkVersion // Aligné avec Flutter
         versionCode 15 // Version du code, doit être incrémenté à chaque mise à jour

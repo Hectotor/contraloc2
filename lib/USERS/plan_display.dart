@@ -42,6 +42,7 @@ class PlanData {
         {"text": "Contrats illimités", "isAvailable": true},
         {"text": "États des lieux simplifiés", "isAvailable": true},
         {"text": "Prise de photos", "isAvailable": true},
+        {"text": "Modification des conditions du contrat", "isAvailable": true},
       ],
     ),
   ];
@@ -76,6 +77,7 @@ class PlanData {
         {"text": "Contrats illimités", "isAvailable": true},
         {"text": "États des lieux simplifiés", "isAvailable": true},
         {"text": "Prise de photos", "isAvailable": true},
+        {"text": "Modification des conditions du contrat", "isAvailable": true},
       ],
     ),
   ];
@@ -110,14 +112,10 @@ class PlanDisplay extends StatefulWidget {
 class PlanDisplayState extends State<PlanDisplay> {
   bool isProcessing = false;
   String? _previousLastSyncDate;
-  Timer? _blockTimer;
-  bool _buttonsBlocked = false;
-  DateTime? _blockEndTime;
 
   @override
   void initState() {
     super.initState();
-    _restoreBlockState();
   }
 
   @override
@@ -131,11 +129,19 @@ class PlanDisplayState extends State<PlanDisplay> {
       _previousLastSyncDate = widget.lastSyncDate;
       _resetAllState();
     }
+    // Vérifier si la synchronisation est terminée
+    if (widget.lastSyncDate != _previousLastSyncDate) {
+      _previousLastSyncDate = widget.lastSyncDate;
+      if (mounted) {
+        setState(() {
+          isProcessing = false;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
-    _blockTimer?.cancel();
     super.dispose();
   }
 
@@ -155,56 +161,6 @@ class PlanDisplayState extends State<PlanDisplay> {
         isProcessing = false;
       });
     }
-  }
-
-  void _restoreBlockState() {
-    if (_blockEndTime != null && _blockEndTime!.isAfter(DateTime.now())) {
-      final remaining = _blockEndTime!.difference(DateTime.now());
-      _startBlockTimer(remaining);
-    }
-  }
-
-  void startButtonBlock() {
-    if (!mounted) return;
-
-    setState(() {
-      _buttonsBlocked = true;
-      _blockEndTime = DateTime.now().add(const Duration(minutes: 45));
-    });
-
-    _blockTimer?.cancel();
-    _blockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-
-      if (_blockEndTime != null && DateTime.now().isAfter(_blockEndTime!)) {
-        timer.cancel();
-        setState(() {
-          _buttonsBlocked = false;
-          _blockEndTime = null;
-        });
-      } else {
-        setState(() {}); // Pour mettre à jour le compteur
-      }
-    });
-  }
-
-  void _startBlockTimer(Duration duration) {
-    setState(() {
-      _buttonsBlocked = true;
-    });
-
-    _blockTimer?.cancel();
-    _blockTimer = Timer(duration, () {
-      if (mounted) {
-        setState(() {
-          _buttonsBlocked = false;
-          _blockEndTime = null;
-        });
-      }
-    });
   }
 
   Widget _buildFeatureRow(Map<String, dynamic> feature) {
@@ -234,7 +190,8 @@ class PlanDisplayState extends State<PlanDisplay> {
     bool isActivePlan = widget.currentSubscriptionName == plan.title;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(
+          horizontal: 20, vertical: 40), // Augmenter le padding vertical
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -300,7 +257,7 @@ class PlanDisplayState extends State<PlanDisplay> {
             )
           else
             ElevatedButton(
-              onPressed: (isActivePlan || _buttonsBlocked)
+              onPressed: isActivePlan
                   ? null
                   : () async {
                       setState(() {
@@ -349,7 +306,7 @@ class PlanDisplayState extends State<PlanDisplay> {
       children: [
         Expanded(
           child: AbsorbPointer(
-            absorbing: isProcessing || _buttonsBlocked, // Modifié ici
+            absorbing: isProcessing,
             child: CarouselSlider.builder(
               itemCount: plans.length,
               options: CarouselOptions(
@@ -369,34 +326,7 @@ class PlanDisplayState extends State<PlanDisplay> {
             ),
           ),
         ),
-        // Ajouter le chronomètre en dessous du carrousel
-        if (_buttonsBlocked && _blockEndTime != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.timer, color: Colors.red),
-                const SizedBox(width: 8),
-                Text(
-                  'Activation en cours : ${_formatDuration(_blockEndTime!.difference(DateTime.now()))}',
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
       ],
     );
-  }
-
-  String _formatDuration(Duration duration) {
-    if (duration.isNegative) return "00:00";
-    int minutes = duration.inMinutes;
-    int seconds = (duration.inSeconds % 60);
-    return "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
   }
 }
