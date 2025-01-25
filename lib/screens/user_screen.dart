@@ -41,6 +41,8 @@ class _UserScreenState extends State<UserScreen> {
   bool isSubscriptionActive = false; // Add subscription state
   String subscriptionId = 'free'; // Add subscription ID state
 
+  bool _isUserDataLoaded = false; // Add a flag to check if user data is loaded
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +63,8 @@ class _UserScreenState extends State<UserScreen> {
 
   // Charger les données utilisateur depuis Firestore
   Future<void> _loadUserData() async {
+    if (_isUserDataLoaded) return; // Return if data is already loaded
+
     try {
       final docRef = _firestore
           .collection('users')
@@ -88,6 +92,7 @@ class _UserScreenState extends State<UserScreen> {
           _adresseController.text = data['adresse'] ?? '';
           _siretController.text = data['siret'] ?? '';
           _logoUrl = data['logoUrl'] as String?;
+          _isUserDataLoaded = true; // Set the flag to true after loading data
         });
       }
     } catch (e) {

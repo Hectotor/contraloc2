@@ -65,8 +65,8 @@ class _ClientPageState extends State<ClientPage> {
 
       setState(() {
         final subscriptionId = doc.data()?['subscriptionId'] ?? 'free';
-        isPremiumUser = subscriptionId == 'PremiumMonthlySubscription' ||
-            subscriptionId == 'PremiumYearlySubscription';
+        isPremiumUser = subscriptionId == 'premium-monthly' ||
+            subscriptionId == 'premium-yearly';
       });
     }
   }
@@ -290,9 +290,7 @@ class _ClientPageState extends State<ClientPage> {
       icon: Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock,
           color: Colors.white),
       label: Text(
-        isPremiumUser
-            ? "Ajouter photo permis"
-            : "Ajouter photo permis (Premium)",
+        isPremiumUser ? "Ajouter photo permis" : "Ajouter photo permis",
         style: const TextStyle(color: Colors.white, fontSize: 18),
       ),
     );

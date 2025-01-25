@@ -350,6 +350,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.0"
+  flutter_doc_scanner:
+    dependency: "direct main"
+    description:
+      name: flutter_doc_scanner
+      sha256: "2132bfbc5464aa4e3b754020dccc92410abb298ae65e2d2fb4ea7d15f98f3b38"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.15"
   flutter_image_compress:
     dependency: "direct main"
     description:

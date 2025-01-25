@@ -42,8 +42,8 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
 
       setState(() {
         final subscriptionId = doc.data()?['subscriptionId'] ?? 'free';
-        isPremiumUser = subscriptionId == 'PremiumMonthlySubscription' ||
-            subscriptionId == 'PremiumYearlySubscription';
+        isPremiumUser = subscriptionId == 'premium-monthly' ||
+            subscriptionId == 'premium-yearly';
       });
     }
   }
@@ -114,6 +114,7 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
+        backgroundColor: Colors.white, // Ajout du fond blanc
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),

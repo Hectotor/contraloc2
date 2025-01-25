@@ -42,8 +42,8 @@ class _EtatVehiculeState extends State<EtatVehicule> {
 
       setState(() {
         final subscriptionId = doc.data()?['subscriptionId'] ?? 'free';
-        isPremiumUser = subscriptionId == 'PremiumMonthlySubscription' ||
-            subscriptionId == 'PremiumYearlySubscription';
+        isPremiumUser = subscriptionId == 'premium-monthly' ||
+            subscriptionId == 'premium-yearly';
       });
     }
   }
@@ -217,9 +217,7 @@ class _EtatVehiculeState extends State<EtatVehicule> {
           icon: Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock,
               color: Colors.white),
           label: Text(
-            isPremiumUser
-                ? "Ajouter des photos"
-                : "Ajouter des photos (Premium)",
+            isPremiumUser ? "Ajouter des photos" : "Ajouter des photos",
             style: const TextStyle(color: Colors.white, fontSize: 18),
           ),
         ),

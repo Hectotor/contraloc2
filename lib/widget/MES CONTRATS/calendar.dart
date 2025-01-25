@@ -13,6 +13,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _selectedDay = DateTime.now();
   List<DocumentSnapshot> _contracts = [];
   Map<DateTime, List<DocumentSnapshot>> _contractsByDay = {};
+  final Map<String, String?> _photoUrlCache = {}; // Add a cache for photo URLs
 
   @override
   void initState() {
@@ -50,6 +51,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<String?> _getVehiclePhotoUrl(
       String userId, String immatriculation) async {
+    final cacheKey = '$userId-$immatriculation';
+    if (_photoUrlCache.containsKey(cacheKey)) {
+      return _photoUrlCache[cacheKey];
+    }
+
     final vehiculeDoc = await FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
@@ -58,7 +64,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
         .get();
 
     if (vehiculeDoc.docs.isNotEmpty) {
-      return vehiculeDoc.docs.first.data()['photoVehiculeUrl'] as String?;
+      final photoUrl =
+          vehiculeDoc.docs.first.data()['photoVehiculeUrl'] as String?;
+      _photoUrlCache[cacheKey] = photoUrl; // Cache the photo URL
+      return photoUrl;
     }
     return null;
   }

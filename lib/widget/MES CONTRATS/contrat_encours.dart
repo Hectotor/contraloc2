@@ -6,10 +6,17 @@ import '../modifier.dart';
 class ContratEnCours extends StatelessWidget {
   final String searchText;
 
-  const ContratEnCours({Key? key, required this.searchText}) : super(key: key);
+  ContratEnCours({Key? key, required this.searchText}) : super(key: key);
+
+  final Map<String, String?> _photoUrlCache = {}; // Add a cache for photo URLs
 
   Future<String?> _getVehiclePhotoUrl(
       String userId, String immatriculation) async {
+    final cacheKey = '$userId-$immatriculation';
+    if (_photoUrlCache.containsKey(cacheKey)) {
+      return _photoUrlCache[cacheKey];
+    }
+
     final vehiculeDoc = await FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
@@ -18,7 +25,10 @@ class ContratEnCours extends StatelessWidget {
         .get();
 
     if (vehiculeDoc.docs.isNotEmpty) {
-      return vehiculeDoc.docs.first.data()['photoVehiculeUrl'] as String?;
+      final photoUrl =
+          vehiculeDoc.docs.first.data()['photoVehiculeUrl'] as String?;
+      _photoUrlCache[cacheKey] = photoUrl; // Cache the photo URL
+      return photoUrl;
     }
     return null;
   }

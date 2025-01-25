@@ -1,4 +1,5 @@
 import 'package:ContraLoc/USERS/abonnement_screen.dart';
+import 'package:ContraLoc/services/subscription_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -19,27 +20,53 @@ class _HomeScreenState extends State<HomeScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   late DeleteVehicule _deleteVehicule;
   String _prenom = '';
+  bool _isUserDataLoaded = false; // Add a flag to check if user data is loaded
 
   @override
   void initState() {
     super.initState();
     _deleteVehicule = DeleteVehicule(context);
     _loadUserData();
+    _setupSubscriptionCheck();
+  }
+
+  void _setupSubscriptionCheck() {
+    // Vérification initiale au démarrage
+    SubscriptionService.checkAndUpdateSubscription();
+
+    // Vérification toutes les 24 heures
+    Timer.periodic(const Duration(hours: 24), (_) {
+      if (mounted) {
+        print('🕒 Vérification quotidienne de l\'abonnement');
+        SubscriptionService.checkAndUpdateSubscription();
+      }
+    });
   }
 
   Future<void> _loadUserData() async {
+    if (_isUserDataLoaded) return;
+
     final user = _auth.currentUser;
     if (user != null) {
-      final userData = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .get();
-      if (userData.exists) {
-        setState(() {
-          _prenom = userData.data()?['prenom'] ?? '';
-        });
+      try {
+        // Vérifier l'abonnement avant de charger les données
+        await SubscriptionService.checkAndUpdateSubscription();
+
+        final userData = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('authentification')
+            .doc(user.uid)
+            .get();
+
+        if (userData.exists && mounted) {
+          setState(() {
+            _prenom = userData.data()?['prenom'] ?? '';
+            _isUserDataLoaded = true;
+          });
+        }
+      } catch (e) {
+        print('❌ Erreur chargement données: $e');
       }
     }
   }

@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:ContraLoc/firebase_options.dart';
+import 'package:ContraLoc/services/subscription_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 // ignore: depend_on_referenced_packages
 import 'package:flutter_localizations/flutter_localizations.dart'; // Import localization delegates
@@ -34,30 +37,50 @@ void main() async {
   ImageCache().maximumSize = 1024;
   ImageCache().maximumSizeBytes = 50 * 1024 * 1024; // 50MB
 
-  // Configuration Firebase avec options personnalisées
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  // Configuration du store en fonction de la plateforme
-  if (Platform.isIOS) {
-    StoreConfig(
-      store: Store.appleStore,
-      apiKey:
-          "appl_surBKRbCRgBprWYKIjWlprQgfUc", // Remplacez par votre clé API publique RevenueCat pour iOS
+  // Configuration Firebase AVANT RevenueCat
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
     );
-  } else if (Platform.isAndroid) {
-    StoreConfig(
-      store: Store.googlePlay,
-      apiKey:
-          "goog_abc123xyz456", // Remplacez par votre clé API publique RevenueCat pour Android
-    );
+    print('✅ Firebase initialisé avec succès');
+  } catch (e) {
+    print('❌ Erreur initialisation Firebase: $e');
+    return; // Arrêter l'exécution si Firebase échoue
   }
 
-  // Initialisation de RevenueCat
-  final PurchasesConfiguration configuration =
-      PurchasesConfiguration(StoreConfig.instance.apiKey);
-  await Purchases.configure(configuration);
+  // Configuration de RevenueCat APRÈS Firebase
+  try {
+    if (Platform.isIOS) {
+      StoreConfig(
+        store: Store.appleStore,
+        apiKey: "appl_surBKRbCRgBprWYKIjWlprQgfUc",
+      );
+    } else if (Platform.isAndroid) {
+      StoreConfig(
+        store: Store.googlePlay,
+        apiKey: "goog_abc123xyz456",
+      );
+    }
+
+    await Purchases.setLogLevel(LogLevel.debug);
+    await Purchases.configure(
+      PurchasesConfiguration(StoreConfig.instance.apiKey)
+        ..appUserID = FirebaseAuth.instance.currentUser?.uid,
+    );
+    print('✅ RevenueCat configuré avec succès');
+  } catch (e) {
+    print('❌ Erreur configuration RevenueCat: $e');
+  }
+
+  // Vérification de l'abonnement
+  if (FirebaseAuth.instance.currentUser != null) {
+    await SubscriptionService.checkAndUpdateSubscription();
+  }
+
+  // Vérification périodique toutes les heures
+  Timer.periodic(const Duration(hours: 1), (_) {
+    SubscriptionService.checkAndUpdateSubscription();
+  });
 
   // Forcer l'orientation en portrait
   SystemChrome.setPreferredOrientations([

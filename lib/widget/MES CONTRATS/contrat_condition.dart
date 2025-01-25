@@ -99,8 +99,8 @@ class _ContratModifierState extends State<ContratModifier> {
 
         setState(() {
           final subscriptionId = doc.data()?['subscriptionId'] ?? 'free';
-          isPremiumUser = subscriptionId == 'PremiumMonthlySubscription' ||
-              subscriptionId == 'PremiumYearlySubscription';
+          isPremiumUser = subscriptionId == 'premium-monthly' ||
+              subscriptionId == 'premium-yearly';
           print('Status Premium: $isPremiumUser'); // Pour le débogage
           print('SubscriptionId: $subscriptionId'); // Pour le débogage
         });

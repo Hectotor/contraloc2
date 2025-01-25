@@ -39,8 +39,8 @@ dependencies:
   carousel_slider: ^5.0.0
   purchases_flutter: ^8.4.1
   dio: ^5.7.0
+  flutter_doc_scanner: ^0.0.15
   
-
 
 dev_dependencies:
   flutter_test:
