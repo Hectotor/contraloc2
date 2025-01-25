@@ -77,6 +77,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   StreamSubscription? _subscriptionStream; // Add this line
   String? lastSyncDate;
+  bool isProcessing = false;
 
   // Ajouter une constante pour les délais
   static const Duration _timeoutDuration = Duration(seconds: 30);
@@ -134,6 +135,17 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
     try {
       final activeEntitlements = customerInfo.entitlements.active;
+
+      // Éviter les mises à jour trop rapides
+      if (activeEntitlements.isEmpty) {
+        // Attendre un peu avant de confirmer qu'il n'y a vraiment pas d'abonnement
+        await Future.delayed(const Duration(seconds: 2));
+        final recheck = await Purchases.getCustomerInfo();
+        if (recheck.entitlements.active.isNotEmpty) {
+          return; // Annuler la mise à jour si un abonnement est trouvé
+        }
+      }
+
       print('🔄 Mise à jour RevenueCat reçue');
 
       // Obtenir l'état actuel de Firestore
@@ -228,6 +240,9 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   }
 
   Future<void> _handleSubscription(String plan) async {
+    setState(() {
+      isProcessing = true;
+    });
     _lastAttemptedPurchase =
         plan; // Ajouter cette ligne pour mémoriser la dernière tentative
     _showLoading(true);
@@ -248,11 +263,19 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _showLoading(false);
+      setState(() {
+        isProcessing = false;
+      });
       return;
     }
 
     try {
-      if (plan == "Offre Gratuite") return;
+      if (plan == "Offre Gratuite") {
+        setState(() {
+          isProcessing = false; // Réinitialiser isProcessing
+        });
+        return;
+      }
 
       print('🔄 Début du processus d\'abonnement pour: $plan');
 
@@ -283,79 +306,51 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
       );
 
       // 4. Effectuer l'achat
-      print(
-          '💳 Tentative d\'achat du package: ${package.storeProduct.identifier}');
       final purchaseResult = await Purchases.purchasePackage(package);
 
-      // 5. Vérifier et mettre à jour Firestore
       if (purchaseResult.entitlements.active.isNotEmpty) {
-        print('✅ Achat réussi! Mise à jour Firestore...');
-
-        // Préparer les données de mise à jour
-        final updateData = {
-          'subscriptionId': productId,
-          'isSubscriptionActive': true,
-          'planName': plan,
-          'purchaseDate': FieldValue.serverTimestamp(),
-        };
-
-        print('📝 Données à mettre à jour: $updateData');
-
-        // Mise à jour Firestore avec retry
-        bool updated = false;
-        int attempts = 0;
-        while (!updated && attempts < 3) {
-          try {
-            await _firestore
-                .collection('users')
-                .doc(user.uid)
-                .collection('authentification')
-                .doc(user.uid)
-                .update(updateData);
-            updated = true;
-            print('✅ Mise à jour Firestore réussie!');
-          } catch (e) {
-            attempts++;
-            print('❌ Tentative $attempts échouée: $e');
-            await Future.delayed(const Duration(seconds: 1));
-          }
-        }
-
-        if (!updated) {
-          throw Exception(
-              'Échec de la mise à jour Firestore après 3 tentatives');
-        }
-
-        // Mettre à jour l'état local
+        // Mettre à jour l'état local d'abord
         setState(() {
           subscriptionId = productId;
           isSubscriptionActive = true;
           _isLoading = false;
+          isProcessing = false; // Important: réinitialiser ici
         });
 
-        // Afficher uniquement le popup de confirmation
+        // Mettre à jour Firestore
+        await _updateSubscriptionInFirestore(productId, true);
+
+        // Afficher la popup de confirmation
         _showActivationPopup();
-      } else {
-        throw Exception('Échec de l\'activation de l\'abonnement');
+
+        // Démarrer le blocage des boutons
+        final planDisplayState =
+            context.findRootAncestorStateOfType<PlanDisplayState>();
+        if (planDisplayState != null && mounted) {
+          planDisplayState.startButtonBlock();
+        }
       }
     } catch (e) {
       print('❌ ERREUR PROCESSUS: $e');
-      _showLoading(false);
+      setState(() {
+        isProcessing = false;
+        _isLoading = false;
+      });
 
-      // Vérifier si c'est une annulation volontaire
       if (e is PlatformException &&
           e.code == '1' &&
           e.details?['userCancelled'] == true) {
         _showMessage(
-          'Achat annulé',
-          Colors.orange, // Couleur orange pour une annulation
+          'Vous avez annulé la transaction. Vous pouvez réessayer à tout moment.',
+          Colors.orange,
         );
-        return; // Sort de la fonction sans autre traitement
+      } else {
+        _showMessage(
+          'Une erreur est survenue lors de l\'activation. '
+          'Veuillez vérifier votre connexion et réessayer.',
+          Colors.red.shade700,
+        );
       }
-
-      // Pour les autres erreurs
-      _showMessage(
-          'Erreur lors de l\'activation. Veuillez réessayer.', Colors.red);
     }
   }
 
@@ -393,14 +388,55 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
   void _showMessage(String message, Color color) {
     if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              Icon(
+                message.contains('annulé')
+                    ? Icons.info_outline
+                    : Icons.error_outline,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      message.contains('annulé')
+                          ? 'Transaction Annulée'
+                          : 'Erreur de Transaction',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      message,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
         backgroundColor: color,
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 5),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        margin: const EdgeInsets.all(8),
         action: message.contains('Erreur')
             ? SnackBarAction(
-                label: 'Réessayer',
+                label: 'RÉESSAYER',
                 textColor: Colors.white,
                 onPressed: () => _retryLastPurchase(),
               )
@@ -432,6 +468,8 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
       throw 'Could not launch $url';
     }
   }
+
+  // Removed unused _startActivationTimer method
 
   @override
   Widget build(BuildContext context) {

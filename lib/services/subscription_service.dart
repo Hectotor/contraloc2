@@ -3,19 +3,26 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 class SubscriptionService {
-  // Ajouter cette nouvelle méthode de standardisation
   static String standardizeSubscriptionId(String originalId) {
-    String normalizedId = originalId.toLowerCase();
+    // Nettoyer et normaliser l'ID
+    String normalizedId = originalId.toLowerCase().trim();
 
-    // Conversion des IDs iOS
-    if (originalId == 'PremiumMonthlySubscription') return 'premium-monthly';
-    if (originalId == 'PremiumYearlySubscription') return 'premium-yearly';
-    if (originalId == 'ProMonthlySubscription') return 'pro-monthly';
-    if (originalId == 'ProYearlySubscription') return 'pro-yearly';
+    // Conversion explicite des IDs iOS vers format standardisé
+    Map<String, String> iosMapping = {
+      'promonthlysubscription': 'pro-monthly',
+      'proyearlysubscription': 'pro-yearly',
+      'premiummonthlysubscription': 'premium-monthly',
+      'premiumyearlysubscription': 'premium-yearly',
+    };
 
-    // Les IDs Android sont déjà standardisés
-    if (normalizedId.contains('premium-') || normalizedId.contains('pro-')) {
-      return normalizedId;
+    // Essayer la conversion iOS d'abord
+    String standardizedId =
+        iosMapping[normalizedId.replaceAll('-', '')] ?? normalizedId;
+
+    // Vérifier si c'est déjà un ID standardisé
+    if (standardizedId.contains('pro-') ||
+        standardizedId.contains('premium-')) {
+      return standardizedId;
     }
 
     return 'free';
@@ -32,22 +39,15 @@ class SubscriptionService {
       // Vérifier les entitlements actifs
       final activeEntitlements = customerInfo.entitlements.active;
 
-      // Vérifier l'état actuel dans Firestore
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .get();
-
-      final currentFirestoreData = userDoc.data();
-      final currentSubscriptionId =
-          currentFirestoreData?['subscriptionId'] ?? 'free';
-
-      // Si aucun abonnement actif dans RevenueCat
+      // Ne pas mettre à jour immédiatement vers "free"
       if (activeEntitlements.isEmpty) {
         print('ℹ️ Aucun abonnement actif dans RevenueCat');
-        if (currentSubscriptionId != 'free') {
+        // Ajouter un délai avant de passer à free pour éviter les flashs
+        await Future.delayed(const Duration(seconds: 2));
+
+        // Revérifier les entitlements après le délai
+        final recheck = await Purchases.getCustomerInfo();
+        if (recheck.entitlements.active.isEmpty) {
           await _updateFirestoreSubscription('free', false);
         }
         return;
@@ -62,15 +62,27 @@ class SubscriptionService {
         if (latestDate == null || purchaseDate.isAfter(latestDate)) {
           latestDate = purchaseDate;
           latestEntitlement = entitlement;
+          print('📅 Date achat trouvée: ${purchaseDate.toIso8601String()}');
         }
       }
 
       if (latestEntitlement != null) {
         final standardizedId =
             standardizeSubscriptionId(latestEntitlement.productIdentifier);
-        print('📦 Abonnement RevenueCat trouvé: $standardizedId');
+        print('📦 Dernier abonnement RevenueCat: $standardizedId');
+        print('📅 Date du dernier achat: ${latestDate?.toIso8601String()}');
 
         // Vérifier si une mise à jour est nécessaire
+        final currentDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('authentification')
+            .doc(user.uid)
+            .get();
+
+        final currentData = currentDoc.data();
+        final currentSubscriptionId = currentData?['subscriptionId'];
+
         if (standardizedId != currentSubscriptionId) {
           print(
               '🔄 Mise à jour nécessaire: $currentSubscriptionId -> $standardizedId');
@@ -91,55 +103,82 @@ class SubscriptionService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    print('🔄 Mise à jour Firestore avec ID: $subscriptionId');
+    // Ne pas mettre à jour vers "free" immédiatement si un changement est en cours
+    if (subscriptionId == 'free') {
+      // Vérifier l'état actuel dans Firestore
+      final currentDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('authentification')
+          .doc(user.uid)
+          .get();
 
-    // Standardiser l'ID avant utilisation
-    String standardizedId = standardizeSubscriptionId(subscriptionId);
-    String normalizedId = standardizedId.toLowerCase();
+      final currentData = currentDoc.data();
+      final currentSubscriptionId = currentData?['subscriptionId'];
 
-    // Déterminer le type d'abonnement plus précisément
-    bool isPremium = normalizedId.contains('premium');
-    bool isPro = normalizedId.contains('pro');
-    bool isYearly = normalizedId.contains('yearly');
+      // Si l'utilisateur a déjà un abonnement actif, attendre confirmation
+      if (currentSubscriptionId != null && currentSubscriptionId != 'free') {
+        print('⏳ Attente de confirmation du changement d\'abonnement...');
+        await Future.delayed(const Duration(seconds: 2));
 
-    // Calculer les limites en fonction du type d'abonnement
-    int numberOfCars;
-    int limiteContrat;
-
-    // Assurer la cohérence des données
-    String planName;
-    if (isPremium) {
-      planName = isYearly ? "Offre Premium Annuel" : "Offre Premium";
-      numberOfCars = 999;
-      limiteContrat = 999;
-    } else if (isPro) {
-      planName = isYearly ? "Offre Pro Annuel" : "Offre Pro";
-      numberOfCars = 5;
-      limiteContrat = 10;
-    } else {
-      planName = "Offre Gratuite";
-      numberOfCars = 1;
-      limiteContrat = 10;
+        // Revérifier RevenueCat
+        final customerInfo = await Purchases.getCustomerInfo();
+        if (customerInfo.entitlements.active.isNotEmpty) {
+          print('🔄 Abonnement toujours actif, annulation du passage à free');
+          return;
+        }
+      }
     }
 
+    // Standardiser l'ID et déterminer le type d'abonnement
+    String standardizedId = standardizeSubscriptionId(subscriptionId);
+
+    // Debug logs
+    print('🔍 ID Original: $subscriptionId');
+    print('📝 ID Standardisé: $standardizedId');
+
+    // Déterminer explicitement le type d'abonnement
+    String planType;
+    if (standardizedId.startsWith('premium-')) {
+      planType = 'premium';
+    } else if (standardizedId.startsWith('pro-')) {
+      planType = 'pro';
+    } else {
+      planType = 'free';
+    }
+
+    // Debug log pour vérification
+    print('👉 Plan Type déterminé: $planType');
+
+    final subscriptionInfo = SubscriptionInfo(
+      planType: planType,
+      planName: _getPlanName(standardizedId),
+      numberOfCars: planType == 'premium' ? 999 : (planType == 'pro' ? 5 : 1),
+      limiteContrat: planType == 'premium' ? 999 : 10,
+    );
+
     final data = {
-      'subscriptionId': standardizedId, // Utiliser l'ID standardisé
-      'lastKnownProductId': subscriptionId, // Garder l'ID original
-      'planName': planName, // Ajout de cette ligne
+      'subscriptionId': standardizedId,
+      'lastKnownProductId': subscriptionId,
+      'planName': subscriptionInfo.planName,
+      'planType': subscriptionInfo.planType,
       'isSubscriptionActive': isActive,
-      'numberOfCars': numberOfCars,
-      'limiteContrat': limiteContrat,
-      'subscriptionType': isYearly ? 'yearly' : 'monthly',
+      'isExpired': !isActive,
+      'numberOfCars': subscriptionInfo.numberOfCars,
+      'limiteContrat': subscriptionInfo.limiteContrat,
+      'subscriptionType':
+          standardizedId.contains('yearly') ? 'yearly' : 'monthly',
       'lastUpdateDate': FieldValue.serverTimestamp(),
       'lastUpdateTimestamp': DateTime.now().millisecondsSinceEpoch,
-      'isExpired': !isActive,
-      'planType': isPremium ? 'premium' : (isPro ? 'pro' : 'free'),
       'status': isActive ? 'active' : 'expired',
-      // Supprimer le champ newProductId s'il existe
       'newProductId': FieldValue.delete(),
     };
 
-    print('📝 Données à mettre à jour: $data');
+    // Debug final
+    print('📊 Données finales:');
+    print('- subscriptionId: ${data['subscriptionId']}');
+    print('- planType: ${data['planType']}');
+    print('- planName: ${data['planName']}');
 
     try {
       await FirebaseFirestore.instance
@@ -155,4 +194,33 @@ class SubscriptionService {
       rethrow;
     }
   }
+
+  // Nouvelle méthode helper pour déterminer le nom du plan
+  static String _getPlanName(String standardizedId) {
+    if (standardizedId.contains('premium')) {
+      return standardizedId.contains('yearly')
+          ? "Offre Premium Annuel"
+          : "Offre Premium";
+    } else if (standardizedId.contains('pro')) {
+      return standardizedId.contains('yearly')
+          ? "Offre Pro Annuel"
+          : "Offre Pro";
+    }
+    return "Offre Gratuite";
+  }
+}
+
+// Classe helper pour la gestion des infos d'abonnement
+class SubscriptionInfo {
+  final String planType;
+  final String planName;
+  final int numberOfCars;
+  final int limiteContrat;
+
+  SubscriptionInfo({
+    required this.planType,
+    required this.planName,
+    required this.numberOfCars,
+    required this.limiteContrat,
+  });
 }
