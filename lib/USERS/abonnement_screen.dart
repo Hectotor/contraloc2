@@ -56,10 +56,10 @@ const Map<String, String> subscriptionIdMappingIOS = {
 };
 
 const Map<String, String> subscriptionIdMappingAndroid = {
-  'pro-monthly': 'pro-monthly',
-  'pro-yearly': 'pro-yearly',
-  'premium-monthly': 'premium-monthly',
-  'premium-yearly': 'premium-yearly',
+  'offre_contraloc:pro-monthly': 'pro-monthly',
+  'offre_contraloc:pro-yearly': 'pro-yearly',
+  'offre_contraloc:premium-monthly': 'premium-monthly',
+  'offre_contraloc:premium-yearly': 'premium-yearly',
 };
 
 // Fonction pour obtenir l'identifiant mappé
@@ -419,8 +419,8 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
       // Conversion vers format iOS
       return '${standardId.split('-').map((part) => part.substring(0, 1).toUpperCase() + part.substring(1)).join('').replaceAll('-', '')}Subscription';
     } else {
-      // Pour Android, utiliser l'ID standardisé tel quel
-      return standardId;
+      // Pour Android, ajouter le préfixe offre_contraloc:
+      return 'offre_contraloc:$standardId';
     }
   }
 

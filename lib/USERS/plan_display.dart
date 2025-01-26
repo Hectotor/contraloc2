@@ -213,7 +213,7 @@ class PlanDisplayState extends State<PlanDisplay> {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: 20, vertical: 0), // Augmenter le padding vertical
+          horizontal: 15, vertical: 0), // Augmenter le padding vertical
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),

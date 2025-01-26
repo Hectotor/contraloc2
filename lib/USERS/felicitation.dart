@@ -38,7 +38,7 @@ class FelicitationDialog extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const Text(
-              "Votre abonnement est en cours d'activation ✨.\n\nMerci de bien vouloir patienter !\n\nEn attendant, vous pouvez continuer à profiter de Contraloc ✨.",
+              "Votre abonnement est désormais actif.\nMerci pour votre confiance ! ✨",
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,

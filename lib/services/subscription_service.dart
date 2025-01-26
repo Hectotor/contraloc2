@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -85,10 +84,10 @@ class SubscriptionService {
 
     // Conversion des IDs Android
     Map<String, String> androidToStandard = {
-      'pro_monthly': 'pro-monthly',
-      'pro_yearly': 'pro-yearly',
-      'premium_monthly': 'premium-monthly',
-      'premium_yearly': 'premium-yearly',
+      'offre_contraloc:pro-monthly': 'pro-monthly',
+      'offre_contraloc:pro-yearly': 'pro-yearly',
+      'offre_contraloc:premium-monthly': 'premium-monthly',
+      'offre_contraloc:premium-yearly': 'premium-yearly',
     };
 
     // Normaliser l'ID selon la plateforme
