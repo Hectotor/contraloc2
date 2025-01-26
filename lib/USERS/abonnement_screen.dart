@@ -19,26 +19,24 @@ class AbonnementScreen extends StatefulWidget {
 }
 
 String _getPlanDisplayName(String subscriptionId) {
-  // Normaliser l'ID d'abonnement et enlever les tirets
+  print('🔍 Getting plan name for subscriptionId: $subscriptionId');
+
+  // Normaliser l'ID d'abonnement
   String normalizedId = subscriptionId.toLowerCase().replaceAll('-', '');
+  print('- Normalized ID: $normalizedId');
 
-  // Vérification plus précise des IDs
-  if (normalizedId == 'proyearly') {
-    return 'Offre Pro Annuel';
-  } else if (normalizedId == 'promonthly') {
-    return 'Offre Pro';
-  } else if (normalizedId == 'premiumyearly') {
-    return 'Offre Premium Annuel';
-  } else if (normalizedId == 'premiummonthly') {
-    return 'Offre Premium';
-  } else if (normalizedId == 'free') {
-    return 'Offre Gratuite';
-  }
+  // Faire correspondre exactement les IDs avec les noms d'affichage
+  Map<String, String> planNames = {
+    'premiummonthly': 'Offre Premium',
+    'premiumyearly': 'Offre Premium Annuel',
+    'promonthly': 'Offre Pro',
+    'proyearly': 'Offre Pro Annuel',
+    'free': 'Offre Gratuite'
+  };
 
-  // Log pour le débogage
-  print(
-      'ID d\'abonnement non reconnu: $subscriptionId (normalisé: $normalizedId)');
-  return 'Offre Gratuite';
+  String planName = planNames[normalizedId] ?? 'Offre Gratuite';
+  print('- Resolved plan name: $planName');
+  return planName;
 }
 
 // Mappage des identifiants d'abonnement (standardisé)
@@ -117,6 +115,10 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     final data = snapshot.data() as Map<String, dynamic>;
     final newLastSyncDate = data['lastSyncDate']?.toString();
 
+    print('🔄 Données reçues de Firestore:');
+    print('- subscriptionId: ${data['subscriptionId']}');
+    print('- planName: ${data['planName']}');
+
     if (lastSyncDate != newLastSyncDate) {
       setState(() {
         lastSyncDate = newLastSyncDate;
@@ -126,6 +128,11 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         limiteContrat = data['limiteContrat'] ?? 10;
         isMonthly = (data['subscriptionType'] ?? 'monthly') == 'monthly';
       });
+
+      // Force une reconstruction immédiate
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -189,6 +196,9 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
           print('🔄 Mise à jour Firestore nécessaire');
           await _updateSubscriptionInFirestore(mappedId, true);
         }
+      } else {
+        // Si aucun abonnement actif n'est trouvé, mettre à jour Firebase pour refléter l'expiration
+        await _updateSubscriptionInFirestore('free', false);
       }
     } catch (e) {
       print('❌ Erreur lors de la mise à jour RevenueCat: $e');
@@ -213,22 +223,31 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     if (user == null) return;
 
     try {
+      final data = {
+        'subscriptionId': getMappedSubscriptionId(subscriptionId),
+        'isSubscriptionActive': isActive,
+        'numberOfCars': subscriptionId.contains('premium-')
+            ? 999
+            : (subscriptionId.contains('pro-') ? 5 : 1),
+        'limiteContrat': subscriptionId.contains('premium-') ? 999 : 10,
+        'subscriptionType': subscriptionId.toLowerCase().contains('yearly')
+            ? 'yearly'
+            : 'monthly',
+        'lastUpdateDate': FieldValue.serverTimestamp(),
+        'planName': _getPlanDisplayName(subscriptionId), // Ajout important ici
+      };
+
       await _firestore
           .collection('users')
           .doc(user.uid)
           .collection('authentification')
           .doc(user.uid)
-          .update({
-        'subscriptionId': getMappedSubscriptionId(subscriptionId),
-        'isSubscriptionActive': isActive,
-        'numberOfCars': subscriptionId.contains('Premium')
-            ? 999
-            : (subscriptionId.contains('Pro') ? 5 : 1),
-        'limiteContrat': subscriptionId.contains('Premium') ? 999 : 10,
-        'subscriptionType': subscriptionId.toLowerCase().contains('yearly')
-            ? 'yearly'
-            : 'monthly',
-        'lastUpdateDate': FieldValue.serverTimestamp(),
+          .update(data);
+
+      // Mettre à jour l'état local immédiatement
+      setState(() {
+        this.subscriptionId = getMappedSubscriptionId(subscriptionId);
+        isSubscriptionActive = isActive;
       });
     } catch (e) {
       print('❌ Erreur mise à jour Firestore: $e');
@@ -446,11 +465,6 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print('Debug - État actuel:');
-    print('isSubscriptionActive: $isSubscriptionActive');
-    print('subscriptionId: $subscriptionId');
-    print(
-        'currentSubscriptionName: ${_getPlanDisplayName(subscriptionId)}'); // Ajoutez cette ligne
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -469,7 +483,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         children: [
           Column(
             children: [
-              const SizedBox(height: 25),
+              const SizedBox(height: 15), // Réduit de 25 à 15
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 20),
                 decoration: BoxDecoration(
@@ -492,7 +506,8 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
                 ),
               ),
               const Padding(
-                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                padding: EdgeInsets.symmetric(
+                    vertical: 5, horizontal: 20), // Réduit de 10 à 5
                 child: Text(
                   "Nos prix sont sans engagement",
                   style: TextStyle(

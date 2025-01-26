@@ -53,20 +53,24 @@ void main() async {
     if (Platform.isIOS) {
       StoreConfig(
         store: Store.appleStore,
-        apiKey: "appl_surBKRbCRgBprWYKIjWlprQgfUc",
+        apiKey: "public_ios_api_key", // Utilisez la clé API publique pour iOS
       );
     } else if (Platform.isAndroid) {
       StoreConfig(
         store: Store.googlePlay,
-        apiKey: "goog_XlRowaKUKvXsFhNqZdqzRbQnVzO",
+        apiKey:
+            "public_android_api_key", // Utilisez la clé API publique pour Android
       );
     }
 
     await Purchases.setLogLevel(LogLevel.debug);
-    await Purchases.configure(
-      PurchasesConfiguration(StoreConfig.instance.apiKey)
-        ..appUserID = FirebaseAuth.instance.currentUser?.uid,
-    );
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await Purchases.configure(
+        PurchasesConfiguration(StoreConfig.instance.apiKey)
+          ..appUserID = user.uid,
+      );
+    }
     print('✅ RevenueCat configuré avec succès');
   } catch (e) {
     print('❌ Erreur configuration RevenueCat: $e');

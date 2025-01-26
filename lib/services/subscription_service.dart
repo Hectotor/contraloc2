@@ -3,36 +3,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 class SubscriptionService {
-  static String standardizeSubscriptionId(String originalId) {
-    // Nettoyer et normaliser l'ID
-    String normalizedId = originalId.toLowerCase().trim();
-
-    // Conversion explicite des IDs iOS vers format standardisé
-    Map<String, String> iosMapping = {
-      'promonthlysubscription': 'pro-monthly',
-      'proyearlysubscription': 'pro-yearly',
-      'premiummonthlysubscription': 'premium-monthly',
-      'premiumyearlysubscription': 'premium-yearly',
-    };
-
-    // Essayer la conversion iOS d'abord
-    String standardizedId =
-        iosMapping[normalizedId.replaceAll('-', '')] ?? normalizedId;
-
-    // Vérifier si c'est déjà un ID standardisé
-    if (standardizedId.contains('pro-') ||
-        standardizedId.contains('premium-')) {
-      return standardizedId;
-    }
-
-    return 'free';
-  }
-
   static Future<void> checkAndUpdateSubscription() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     try {
+      // Configurer RevenueCat avec l'identifiant unique de l'utilisateur
+      await Purchases.configure(
+          PurchasesConfiguration("public_api_key")..appUserID = user.uid);
+
       final customerInfo = await Purchases.getCustomerInfo();
       print('🔍 Vérification abonnement RevenueCat');
 
@@ -67,8 +46,7 @@ class SubscriptionService {
       }
 
       if (latestEntitlement != null) {
-        final standardizedId =
-            standardizeSubscriptionId(latestEntitlement.productIdentifier);
+        final standardizedId = latestEntitlement.productIdentifier;
         print('📦 Dernier abonnement RevenueCat: $standardizedId');
         print('📅 Date du dernier achat: ${latestDate?.toIso8601String()}');
 
@@ -86,8 +64,7 @@ class SubscriptionService {
         if (standardizedId != currentSubscriptionId) {
           print(
               '🔄 Mise à jour nécessaire: $currentSubscriptionId -> $standardizedId');
-          await _updateFirestoreSubscription(
-              latestEntitlement.productIdentifier, true);
+          await _updateFirestoreSubscription(standardizedId, true);
         } else {
           print('✅ Firestore déjà synchronisé avec RevenueCat');
         }
@@ -130,55 +107,34 @@ class SubscriptionService {
       }
     }
 
-    // Standardiser l'ID et déterminer le type d'abonnement
-    String standardizedId = standardizeSubscriptionId(subscriptionId);
-
-    // Debug logs
-    print('🔍 ID Original: $subscriptionId');
-    print('📝 ID Standardisé: $standardizedId');
-
-    // Déterminer explicitement le type d'abonnement
+    // Déterminer le type de plan correctement
     String planType;
-    if (standardizedId.startsWith('premium-')) {
+    if (subscriptionId.startsWith('premium-')) {
       planType = 'premium';
-    } else if (standardizedId.startsWith('pro-')) {
+    } else if (subscriptionId.startsWith('pro-')) {
       planType = 'pro';
     } else {
       planType = 'free';
     }
 
-    // Debug log pour vérification
-    print('👉 Plan Type déterminé: $planType');
-
-    final subscriptionInfo = SubscriptionInfo(
-      planType: planType,
-      planName: _getPlanName(standardizedId),
-      numberOfCars: planType == 'premium' ? 999 : (planType == 'pro' ? 5 : 1),
-      limiteContrat: planType == 'premium' ? 999 : 10,
-    );
-
     final data = {
-      'subscriptionId': standardizedId,
+      'subscriptionId': subscriptionId,
       'lastKnownProductId': subscriptionId,
-      'planName': subscriptionInfo.planName,
-      'planType': subscriptionInfo.planType,
+      'planName': _getPlanName(subscriptionId),
+      'planType': planType, // Utiliser le planType déterminé
       'isSubscriptionActive': isActive,
       'isExpired': !isActive,
-      'numberOfCars': subscriptionInfo.numberOfCars,
-      'limiteContrat': subscriptionInfo.limiteContrat,
+      'numberOfCars': subscriptionId.startsWith('premium-')
+          ? 999
+          : (subscriptionId.startsWith('pro-') ? 5 : 1),
+      'limiteContrat': subscriptionId.startsWith('premium-') ? 999 : 10,
       'subscriptionType':
-          standardizedId.contains('yearly') ? 'yearly' : 'monthly',
+          subscriptionId.contains('yearly') ? 'yearly' : 'monthly',
       'lastUpdateDate': FieldValue.serverTimestamp(),
       'lastUpdateTimestamp': DateTime.now().millisecondsSinceEpoch,
       'status': isActive ? 'active' : 'expired',
       'newProductId': FieldValue.delete(),
     };
-
-    // Debug final
-    print('📊 Données finales:');
-    print('- subscriptionId: ${data['subscriptionId']}');
-    print('- planType: ${data['planType']}');
-    print('- planName: ${data['planName']}');
 
     try {
       await FirebaseFirestore.instance
@@ -196,17 +152,81 @@ class SubscriptionService {
   }
 
   // Nouvelle méthode helper pour déterminer le nom du plan
-  static String _getPlanName(String standardizedId) {
-    if (standardizedId.contains('premium')) {
-      return standardizedId.contains('yearly')
-          ? "Offre Premium Annuel"
-          : "Offre Premium";
-    } else if (standardizedId.contains('pro')) {
-      return standardizedId.contains('yearly')
-          ? "Offre Pro Annuel"
-          : "Offre Pro";
+  static String _getPlanName(String subscriptionId) {
+    print('🔍 Getting plan name for subscriptionId: $subscriptionId');
+
+    // Faire correspondre exactement les IDs avec les noms d'affichage
+    Map<String, String> planNames = {
+      'premium-monthly': 'Offre Premium',
+      'premium-yearly': 'Offre Premium Annuel',
+      'pro-monthly': 'Offre Pro',
+      'pro-yearly': 'Offre Pro Annuel',
+      'free': 'Offre Gratuite'
+    };
+
+    String planName = planNames[subscriptionId] ?? 'Offre Gratuite';
+    print('- Resolved plan name: $planName');
+    return planName;
+  }
+
+  static Future<void> checkAndUpdateExpiredSubscription() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final customerInfo = await Purchases.getCustomerInfo();
+      print('🔍 Vérification des abonnements expirés RevenueCat');
+
+      // Vérifier les entitlements actifs
+      final activeEntitlements = customerInfo.entitlements.active;
+
+      if (activeEntitlements.isEmpty) {
+        print('ℹ️ Aucun abonnement actif dans RevenueCat');
+        await _updateFirestoreSubscription('free', false);
+        return;
+      }
+
+      // Trouver l'abonnement actif le plus récent dans RevenueCat
+      EntitlementInfo? latestEntitlement;
+      DateTime? latestDate;
+
+      for (var entitlement in activeEntitlements.values) {
+        final purchaseDate = DateTime.parse(entitlement.latestPurchaseDate);
+        if (latestDate == null || purchaseDate.isAfter(latestDate)) {
+          latestDate = purchaseDate;
+          latestEntitlement = entitlement;
+          print('📅 Date achat trouvée: ${purchaseDate.toIso8601String()}');
+        }
+      }
+
+      if (latestEntitlement != null) {
+        final standardizedId = latestEntitlement.productIdentifier;
+        print('📦 Dernier abonnement RevenueCat: $standardizedId');
+        print('📅 Date du dernier achat: ${latestDate?.toIso8601String()}');
+
+        // Vérifier si une mise à jour est nécessaire
+        final currentDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('authentification')
+            .doc(user.uid)
+            .get();
+
+        final currentData = currentDoc.data();
+        final currentSubscriptionId = currentData?['subscriptionId'];
+
+        if (standardizedId != currentSubscriptionId) {
+          print(
+              '🔄 Mise à jour nécessaire: $currentSubscriptionId -> $standardizedId');
+          await _updateFirestoreSubscription(standardizedId, true);
+        } else {
+          print('✅ Firestore déjà synchronisé avec RevenueCat');
+        }
+      }
+    } catch (e) {
+      print('❌ Erreur lors de la vérification RevenueCat: $e');
+      // Ne pas mettre à jour Firestore en cas d'erreur pour éviter de perdre des données
     }
-    return "Offre Gratuite";
   }
 }
 

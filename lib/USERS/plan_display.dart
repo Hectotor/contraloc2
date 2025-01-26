@@ -1,6 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 
 class PlanData {
   final String title;
@@ -112,10 +114,12 @@ class PlanDisplay extends StatefulWidget {
 class PlanDisplayState extends State<PlanDisplay> {
   bool isProcessing = false;
   String? _previousLastSyncDate;
+  // Suppression de showActivationMessage
 
   @override
   void initState() {
     super.initState();
+    // Suppression de _loadActivationStartTime
   }
 
   @override
@@ -142,6 +146,7 @@ class PlanDisplayState extends State<PlanDisplay> {
 
   @override
   void dispose() {
+    // Suppression de _activationTimer?.cancel()
     super.dispose();
   }
 
@@ -187,11 +192,19 @@ class PlanDisplayState extends State<PlanDisplay> {
   }
 
   Widget _buildPlanCard(PlanData plan, bool isActive) {
-    bool isActivePlan = widget.currentSubscriptionName == plan.title;
+    // Comparer le nom du plan avec le planName actuel de l'utilisateur
+    bool isActivePlan = widget.subscriptionId == 'free'
+        ? plan.title == "Offre Gratuite"
+        : plan.title == widget.currentSubscriptionName;
+
+    // Debug pour vérification
+    print('Plan: ${plan.title}');
+    print('Current subscription name: ${widget.currentSubscriptionName}');
+    print('Is active: $isActivePlan');
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: 20, vertical: 40), // Augmenter le padding vertical
+          horizontal: 20, vertical: 0), // Augmenter le padding vertical
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -208,7 +221,7 @@ class PlanDisplayState extends State<PlanDisplay> {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
               color: Colors.white,
             ),
@@ -260,18 +273,7 @@ class PlanDisplayState extends State<PlanDisplay> {
               onPressed: isActivePlan
                   ? null
                   : () async {
-                      setState(() {
-                        isProcessing = true;
-                      });
-                      try {
-                        await widget.onSubscribe(plan.title);
-                      } catch (e) {
-                        if (mounted) {
-                          setState(() {
-                            isProcessing = false;
-                          });
-                        }
-                      }
+                      await _handleSubscription(plan.title);
                     },
               style: ElevatedButton.styleFrom(
                 backgroundColor: isActivePlan
@@ -292,6 +294,7 @@ class PlanDisplayState extends State<PlanDisplay> {
                 ),
               ),
             ),
+          const SizedBox(height: 30), // Augmenté de 16 à 30
         ],
       ),
     );
@@ -302,11 +305,13 @@ class PlanDisplayState extends State<PlanDisplay> {
     final plans =
         widget.isMonthly ? PlanData.monthlyPlans : PlanData.yearlyPlans;
 
+    // Supprimer les logs de débogage ici
     return Column(
       children: [
         Expanded(
           child: AbsorbPointer(
-            absorbing: isProcessing,
+            absorbing: isProcessing &&
+                widget.subscriptionId != 'free', // Modification ici
             child: CarouselSlider.builder(
               itemCount: plans.length,
               options: CarouselOptions(
@@ -326,7 +331,65 @@ class PlanDisplayState extends State<PlanDisplay> {
             ),
           ),
         ),
+        // Suppression de showActivationMessage
       ],
     );
+  }
+
+  Future<void> _handleSubscription(String plan) async {
+    setState(() {
+      isProcessing = true;
+    });
+
+    try {
+      await widget.onSubscribe(plan);
+      if (plan != "Offre Gratuite" && mounted) {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          // Attendre que Firestore soit mis à jour
+          await Future.delayed(const Duration(seconds: 2));
+
+          final doc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('authentification')
+              .doc(user.uid)
+              .get();
+
+          if (doc.exists) {
+            final data = doc.data();
+            if (data?['lastKnownProductId'] != null) {
+              // Suppression de showActivationMessage
+              await _updateActivationStartTimeInFirestore();
+            }
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isProcessing = false;
+          // Suppression de showActivationMessage
+        });
+      }
+    }
+  }
+
+  // Suppression de startActivationTimer
+
+  // Suppression de _loadActivationStartTime
+
+  Future<void> _updateActivationStartTimeInFirestore() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('authentification')
+        .doc(user.uid)
+        .update({
+      // Suppression de 'activationStartTime'
+    });
   }
 }
