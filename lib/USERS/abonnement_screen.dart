@@ -21,20 +21,28 @@ class AbonnementScreen extends StatefulWidget {
 String _getPlanDisplayName(String subscriptionId) {
   print('🔍 Getting plan name for subscriptionId: $subscriptionId');
 
-  // Normaliser l'ID d'abonnement
-  String normalizedId = subscriptionId.toLowerCase().replaceAll('-', '');
-  print('- Normalized ID: $normalizedId');
+  // Normaliser l'ID d'abonnement pour gérer tous les formats possibles
+  String normalizedId = subscriptionId
+      .toLowerCase()
+      .replaceAll('subscription', '')
+      .replaceAll('_', '-')
+      .trim();
 
   // Faire correspondre exactement les IDs avec les noms d'affichage
   Map<String, String> planNames = {
-    'premiummonthly': 'Offre Premium',
-    'premiumyearly': 'Offre Premium Annuel',
     'promonthly': 'Offre Pro',
     'proyearly': 'Offre Pro Annuel',
+    'premiummonthly': 'Offre Premium',
+    'premiumyearly': 'Offre Premium Annuel',
+    'pro-monthly': 'Offre Pro',
+    'pro-yearly': 'Offre Pro Annuel',
+    'premium-monthly': 'Offre Premium',
+    'premium-yearly': 'Offre Premium Annuel',
     'free': 'Offre Gratuite'
   };
 
   String planName = planNames[normalizedId] ?? 'Offre Gratuite';
+  print('- Normalized ID: $normalizedId');
   print('- Resolved plan name: $planName');
   return planName;
 }
@@ -114,26 +122,21 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
     final data = snapshot.data() as Map<String, dynamic>;
     final newLastSyncDate = data['lastSyncDate']?.toString();
+    final newSubscriptionId = data['subscriptionId'] ?? 'free';
 
-    print('🔄 Données reçues de Firestore:');
-    print('- subscriptionId: ${data['subscriptionId']}');
-    print('- planName: ${data['planName']}');
+    print('📱 État Firestore reçu:');
+    print('- subscriptionId: $newSubscriptionId');
+    print('- lastSyncDate: $newLastSyncDate');
+    print('- isActive: ${data['isSubscriptionActive']}');
 
-    if (lastSyncDate != newLastSyncDate) {
-      setState(() {
-        lastSyncDate = newLastSyncDate;
-        subscriptionId = data['subscriptionId'] ?? 'free';
-        isSubscriptionActive = data['isSubscriptionActive'] ?? false;
-        numberOfCars = data['numberOfCars'] ?? 1;
-        limiteContrat = data['limiteContrat'] ?? 10;
-        isMonthly = (data['subscriptionType'] ?? 'monthly') == 'monthly';
-      });
-
-      // Force une reconstruction immédiate
-      if (mounted) {
-        setState(() {});
-      }
-    }
+    setState(() {
+      subscriptionId = newSubscriptionId;
+      lastSyncDate = newLastSyncDate;
+      isSubscriptionActive = data['isSubscriptionActive'] ?? false;
+      numberOfCars = data['numberOfCars'] ?? 1;
+      limiteContrat = data['limiteContrat'] ?? 10;
+      isMonthly = (data['subscriptionType'] ?? 'monthly') == 'monthly';
+    });
   }
 
   void _handleRevenueCatUpdate(CustomerInfo customerInfo) async {
@@ -465,6 +468,8 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print('🏗️ Construction avec subscriptionId: $subscriptionId');
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(

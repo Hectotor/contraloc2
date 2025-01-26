@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permettre la lecture des clés API RevenueCat sans authentification
+    match /api_keys/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // Règles existantes pour les autres collections
+    match /users/{userId}/authentification/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Règle par défaut - refuser tout accès non explicitement autorisé
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

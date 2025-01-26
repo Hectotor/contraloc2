@@ -3,31 +3,36 @@ import 'package:ContraLoc/firebase_options.dart';
 import 'package:ContraLoc/services/subscription_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-// ignore: depend_on_referenced_packages
-import 'package:flutter_localizations/flutter_localizations.dart'; // Import localization delegates
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'package:purchases_flutter/purchases_flutter.dart'; // Import RevenueCat
-import 'dart:io'; // Import dart:io for Platform
+import 'dart:io'; // Import dart:io pour Platform
 import 'package:flutter/services.dart'; // Import SystemChrome
 import 'screens/splash_screen.dart';
 
-enum Store { appleStore, googlePlay }
+Future<String> fetchRevenueCatKey() async {
+  try {
+    // Récupère les clés API depuis Firestore
+    final snapshot = await FirebaseFirestore.instance
+        .collection('api_keys')
+        .doc('revenuecat')
+        .get();
 
-class StoreConfig {
-  final Store store;
-  final String apiKey;
-  static StoreConfig? _instance;
-  factory StoreConfig({required Store store, required String apiKey}) {
-    _instance ??= StoreConfig._internal(store, apiKey);
-    return _instance!;
-  }
-  StoreConfig._internal(this.store, this.apiKey);
-  static StoreConfig get instance {
-    return _instance!;
-  }
+    final data = snapshot.data();
+    if (data == null) throw Exception('Clés API RevenueCat introuvables.');
 
-  static bool isForAppleStore() => _instance!.store == Store.appleStore;
-  static bool isForGooglePlay() => _instance!.store == Store.googlePlay;
+    if (Platform.isIOS) {
+      return data['ios_api_key'];
+    } else if (Platform.isAndroid) {
+      return data['android_api_key'];
+    } else {
+      throw Exception('Plateforme non prise en charge.');
+    }
+  } catch (e) {
+    print('❌ Erreur lors de la récupération des clés RevenueCat: $e');
+    throw e;
+  }
 }
 
 void main() async {
@@ -37,7 +42,7 @@ void main() async {
   ImageCache().maximumSize = 1024;
   ImageCache().maximumSizeBytes = 50 * 1024 * 1024; // 50MB
 
-  // Configuration Firebase AVANT RevenueCat
+  // Initialisation Firebase
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -48,43 +53,52 @@ void main() async {
     return; // Arrêter l'exécution si Firebase échoue
   }
 
-  // Configuration de RevenueCat APRÈS Firebase
+  // Récupération et configuration de RevenueCat
+  String revenueCatKey;
   try {
-    if (Platform.isIOS) {
-      StoreConfig(
-        store: Store.appleStore,
-        apiKey: "public_ios_api_key", // Utilisez la clé API publique pour iOS
-      );
-    } else if (Platform.isAndroid) {
-      StoreConfig(
-        store: Store.googlePlay,
-        apiKey:
-            "public_android_api_key", // Utilisez la clé API publique pour Android
-      );
+    revenueCatKey = await fetchRevenueCatKey();
+    await Purchases.setLogLevel(LogLevel.debug);
+
+    // Configuration initiale de RevenueCat
+    print('🔑 Configuration RevenueCat initiale');
+    await Purchases.configure(PurchasesConfiguration(revenueCatKey));
+
+    // Synchroniser l'utilisateur actuel si connecté
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      print('🔄 Vérification de la synchronisation RevenueCat');
+      try {
+        final customerInfo = await Purchases.getCustomerInfo();
+        // Ne pas faire de logOut, seulement logIn si nécessaire
+        if (customerInfo.originalAppUserId != currentUser.uid) {
+          print('⚠️ Désynchronisation détectée, mise à jour...');
+          await Purchases.logIn(currentUser.uid);
+          print('✅ ID utilisateur RevenueCat synchronisé');
+        } else {
+          print('✅ ID utilisateur déjà synchronisé');
+        }
+      } catch (e) {
+        print('❌ Erreur synchronisation RevenueCat: $e');
+      }
     }
 
-    await Purchases.setLogLevel(LogLevel.debug);
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      await Purchases.configure(
-        PurchasesConfiguration(StoreConfig.instance.apiKey)
-          ..appUserID = user.uid,
-      );
-    }
     print('✅ RevenueCat configuré avec succès');
   } catch (e) {
     print('❌ Erreur configuration RevenueCat: $e');
+    return;
   }
 
-  // Vérification de l'abonnement
+  // Vérifier les abonnements uniquement si un utilisateur est connecté
   if (FirebaseAuth.instance.currentUser != null) {
     await SubscriptionService.checkAndUpdateSubscription();
-  }
 
-  // Vérification périodique toutes les heures
-  Timer.periodic(const Duration(hours: 1), (_) {
-    SubscriptionService.checkAndUpdateSubscription();
-  });
+    // Vérification périodique
+    Timer.periodic(const Duration(hours: 1), (_) {
+      if (FirebaseAuth.instance.currentUser != null) {
+        SubscriptionService.checkAndUpdateSubscription();
+      }
+    });
+  }
 
   // Forcer l'orientation en portrait
   SystemChrome.setPreferredOrientations([
@@ -116,10 +130,10 @@ class MyApp extends StatelessWidget {
                 GlobalCupertinoLocalizations.delegate,
               ],
               supportedLocales: const [
-                Locale('fr', 'FR'), // Add French locale
+                Locale('fr', 'FR'), // Ajouter d'autres langues si nécessaire
               ],
-              home: SplashScreen(), // Appel du SplashScreen au démarrage
-              debugShowCheckedModeBanner: false, // Retire le badge "debug"
+              home: SplashScreen(), // Écran de démarrage
+              debugShowCheckedModeBanner: false, // Retirer le badge "debug"
               builder: (context, child) {
                 return ScrollConfiguration(
                   behavior: ScrollBehavior().copyWith(
@@ -127,7 +141,7 @@ class MyApp extends StatelessWidget {
                   ),
                   child: MediaQuery(
                     data: MediaQuery.of(context).copyWith(
-                      textScaleFactor: 1.0, // Force une échelle de texte fixe
+                      textScaleFactor: 1.0, // Échelle fixe pour le texte
                     ),
                     child: child!,
                   ),

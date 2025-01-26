@@ -193,6 +193,7 @@ class _UserScreenState extends State<UserScreen> {
   Future<void> _logout() async {
     try {
       await _auth.signOut();
+      // Suppression de Purchases.logOut() ici, car nous ne voulons pas déconnecter RevenueCat
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const LoginPage()),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import '../widget/inscription.dart'; // Import de la page d'inscription
 import '../widget/navigation.dart'; // Import de la page de navigation
 
@@ -40,7 +41,27 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      // Connexion Firebase
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Synchroniser l'ID utilisateur avec RevenueCat
+      if (userCredential.user != null) {
+        try {
+          final customerInfo = await Purchases.getCustomerInfo();
+          if (customerInfo.originalAppUserId != userCredential.user!.uid) {
+            await Purchases.logOut();
+            await Purchases.logIn(userCredential.user!.uid);
+          }
+          print('✅ ID utilisateur RevenueCat synchronisé après connexion');
+        } catch (e) {
+          print('⚠️ Erreur synchronisation RevenueCat: $e');
+          // Continuer malgré l'erreur car l'utilisateur est déjà connecté
+        }
+      }
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const NavigationPage()),

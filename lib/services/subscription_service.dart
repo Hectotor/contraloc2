@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -8,10 +10,6 @@ class SubscriptionService {
     if (user == null) return;
 
     try {
-      // Configurer RevenueCat avec l'identifiant unique de l'utilisateur
-      await Purchases.configure(
-          PurchasesConfiguration("public_api_key")..appUserID = user.uid);
-
       final customerInfo = await Purchases.getCustomerInfo();
       print('🔍 Vérification abonnement RevenueCat');
 
@@ -75,80 +73,81 @@ class SubscriptionService {
     }
   }
 
+  // Ajouter cette fonction de conversion
+  static String standardizeSubscriptionId(String originalId) {
+    // Conversion des IDs iOS
+    Map<String, String> iosToStandard = {
+      'ProMonthlySubscription': 'pro-monthly',
+      'ProYearlySubscription': 'pro-yearly',
+      'PremiumMonthlySubscription': 'premium-monthly',
+      'PremiumYearlySubscription': 'premium-yearly',
+    };
+
+    // Conversion des IDs Android
+    Map<String, String> androidToStandard = {
+      'pro_monthly': 'pro-monthly',
+      'pro_yearly': 'pro-yearly',
+      'premium_monthly': 'premium-monthly',
+      'premium_yearly': 'premium-yearly',
+    };
+
+    // Normaliser l'ID selon la plateforme
+    String standardizedId;
+    if (Platform.isIOS) {
+      standardizedId = iosToStandard[originalId] ?? originalId;
+    } else if (Platform.isAndroid) {
+      standardizedId = androidToStandard[originalId] ?? originalId;
+    } else {
+      standardizedId = originalId;
+    }
+
+    print('🔄 Standardizing subscription ID:');
+    print('- Original: $originalId');
+    print('- Standardized: $standardizedId');
+
+    return standardizedId;
+  }
+
   static Future<void> _updateFirestoreSubscription(
       String subscriptionId, bool isActive) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Ne pas mettre à jour vers "free" immédiatement si un changement est en cours
-    if (subscriptionId == 'free') {
-      // Vérifier l'état actuel dans Firestore
-      final currentDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .get();
+    String standardizedId = standardizeSubscriptionId(subscriptionId);
 
-      final currentData = currentDoc.data();
-      final currentSubscriptionId = currentData?['subscriptionId'];
-
-      // Si l'utilisateur a déjà un abonnement actif, attendre confirmation
-      if (currentSubscriptionId != null && currentSubscriptionId != 'free') {
-        print('⏳ Attente de confirmation du changement d\'abonnement...');
-        await Future.delayed(const Duration(seconds: 2));
-
-        // Revérifier RevenueCat
-        final customerInfo = await Purchases.getCustomerInfo();
-        if (customerInfo.entitlements.active.isNotEmpty) {
-          print('🔄 Abonnement toujours actif, annulation du passage à free');
-          return;
-        }
-      }
-    }
-
-    // Déterminer le type de plan correctement
-    String planType;
-    if (subscriptionId.startsWith('premium-')) {
-      planType = 'premium';
-    } else if (subscriptionId.startsWith('pro-')) {
-      planType = 'pro';
-    } else {
-      planType = 'free';
-    }
-
+    // Suppression du délai de vérification pour permettre la mise à jour immédiate
     final data = {
-      'subscriptionId': subscriptionId,
-      'lastKnownProductId': subscriptionId,
-      'planName': _getPlanName(subscriptionId),
-      'planType': planType, // Utiliser le planType déterminé
+      'subscriptionId': standardizedId,
+      'lastKnownProductId': standardizedId,
+      'planName': _getPlanName(standardizedId),
+      'planType': standardizedId.startsWith('premium-')
+          ? 'premium'
+          : standardizedId.startsWith('pro-')
+              ? 'pro'
+              : 'free',
       'isSubscriptionActive': isActive,
       'isExpired': !isActive,
-      'numberOfCars': subscriptionId.startsWith('premium-')
+      'numberOfCars': standardizedId.startsWith('premium-')
           ? 999
-          : (subscriptionId.startsWith('pro-') ? 5 : 1),
-      'limiteContrat': subscriptionId.startsWith('premium-') ? 999 : 10,
+          : standardizedId.startsWith('pro-')
+              ? 5
+              : 1,
+      'limiteContrat': standardizedId.startsWith('premium-') ? 999 : 10,
       'subscriptionType':
-          subscriptionId.contains('yearly') ? 'yearly' : 'monthly',
+          standardizedId.contains('yearly') ? 'yearly' : 'monthly',
       'lastUpdateDate': FieldValue.serverTimestamp(),
-      'lastUpdateTimestamp': DateTime.now().millisecondsSinceEpoch,
-      'status': isActive ? 'active' : 'expired',
-      'newProductId': FieldValue.delete(),
+      'status': 'active',
+      'immediateUpgrade': true, // Marquer comme mise à niveau immédiate
     };
 
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .update(data);
-      print(
-          '✅ Mise à jour Firestore réussie avec le plan: ${data['planType']}');
-    } catch (e) {
-      print('❌ Erreur mise à jour Firestore: $e');
-      rethrow;
-    }
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('authentification')
+        .doc(user.uid)
+        .update(data);
+
+    print('✅ Mise à jour immédiate vers ${data['planName']}');
   }
 
   // Nouvelle méthode helper pour déterminer le nom du plan

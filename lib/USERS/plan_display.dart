@@ -192,15 +192,24 @@ class PlanDisplayState extends State<PlanDisplay> {
   }
 
   Widget _buildPlanCard(PlanData plan, bool isActive) {
-    // Comparer le nom du plan avec le planName actuel de l'utilisateur
-    bool isActivePlan = widget.subscriptionId == 'free'
-        ? plan.title == "Offre Gratuite"
-        : plan.title == widget.currentSubscriptionName;
+    // Convertir le titre du plan en format d'ID standardisé
+    String planId = '';
+    if (plan.title.contains("Pro")) {
+      planId = widget.isMonthly ? 'pro-monthly' : 'pro-yearly';
+    } else if (plan.title.contains("Premium")) {
+      planId = widget.isMonthly ? 'premium-monthly' : 'premium-yearly';
+    } else {
+      planId = 'free';
+    }
 
-    // Debug pour vérification
-    print('Plan: ${plan.title}');
-    print('Current subscription name: ${widget.currentSubscriptionName}');
-    print('Is active: $isActivePlan');
+    // Vérifier si c'est le plan actif en comparant les IDs
+    bool isActivePlan = widget.subscriptionId == planId;
+
+    print('📦 Comparaison des plans:');
+    print('- Plan title: ${plan.title}');
+    print('- Plan ID: $planId');
+    print('- Current subscription ID: ${widget.subscriptionId}');
+    print('- Is active: $isActivePlan');
 
     return Container(
       padding: const EdgeInsets.symmetric(
