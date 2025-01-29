@@ -56,6 +56,11 @@ class _ModifierScreenState extends State<ModifierScreen> {
   List<String> _photosRetourUrls = [];
   bool _isGeneratingPdf = false; // Add a state variable for loading
   bool _isUpdatingContrat = false; // Add a state variable for updating
+  final TextEditingController _nettoyageIntController = TextEditingController();
+  final TextEditingController _nettoyageExtController = TextEditingController();
+  final TextEditingController _carburantManquantController =
+      TextEditingController();
+  final TextEditingController _cautionController = TextEditingController();
 
   @override
   void initState() {
@@ -64,6 +69,10 @@ class _ModifierScreenState extends State<ModifierScreen> {
         .format(DateTime.now()); // Date et heure actuelles par défaut
     _commentaireRetourController.text = widget.data['commentaireRetour'] ?? '';
     _kilometrageRetourController.text = widget.data['kilometrageRetour'] ?? '';
+    _nettoyageIntController.text = widget.data['nettoyageInt'] ?? '';
+    _nettoyageExtController.text = widget.data['nettoyageExt'] ?? '';
+    _carburantManquantController.text = widget.data['carburantManquant'] ?? '';
+    _cautionController.text = widget.data['caution'] ?? '';
 
     // Récupérer les URLs des photos depuis Firestore
     if (widget.data['photosRetourUrls'] != null) {
@@ -184,6 +193,10 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'photosRetourUrls': allPhotosUrls,
         'status': 'restitue',
         'dateRestitution': FieldValue.serverTimestamp(),
+        // Ajouter ces trois champs
+        'nettoyageInt': _nettoyageIntController.text,
+        'nettoyageExt': _nettoyageExtController.text,
+        'carburantManquant': _carburantManquantController.text,
       });
 
       // Fermer le dialogue de chargement
@@ -322,7 +335,13 @@ class _ModifierScreenState extends State<ModifierScreen> {
               : ContratModifier.defaultContract;
 
       final pdfPath = await generatePdf(
-        widget.data,
+        {
+          ...widget.data,
+          'nettoyageInt': _nettoyageIntController.text,
+          'nettoyageExt': _nettoyageExtController.text,
+          'carburantManquant': _carburantManquantController.text,
+          'caution': _cautionController.text, // Ajouter cette ligne
+        },
         widget.data['dateFinEffectif'] ?? '',
         widget.data['kilometrageRetour'] ?? '',
         widget.data['commentaireRetour'] ?? '',

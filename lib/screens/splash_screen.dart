@@ -47,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 5),
             const Text(
-              'Contraloc',
+              'ContraLoc',
               style: TextStyle(
                 fontSize: 35,
                 fontWeight: FontWeight.bold,

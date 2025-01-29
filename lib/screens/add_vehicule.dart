@@ -54,6 +54,10 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       TextEditingController(); // New field
   final TextEditingController _entretienDateController =
       TextEditingController();
+  final TextEditingController _carburantManquantController =
+      TextEditingController();
+  final TextEditingController _nettoyageIntController = TextEditingController();
+  final TextEditingController _nettoyageExtController = TextEditingController();
 
   String _typeCarburant = "Essence"; // Initialize with a valid value
   String _boiteVitesses = "Manuelle"; // Initialize with a valid value
@@ -85,6 +89,10 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
           widget.vehicleData!['entretienDate'] ?? '';
       _typeCarburant = widget.vehicleData!['typeCarburant'] ?? 'Essence';
       _boiteVitesses = widget.vehicleData!['boiteVitesses'] ?? 'Manuelle';
+      _nettoyageIntController.text = widget.vehicleData!['nettoyageInt'] ?? '';
+      _nettoyageExtController.text = widget.vehicleData!['nettoyageExt'] ?? '';
+      _carburantManquantController.text =
+          widget.vehicleData!['carburantManquant'] ?? '';
       // Load images if available
       if (widget.vehicleData!['photoVehiculeUrl'] != null &&
           widget.vehicleData!['photoVehiculeUrl'].isNotEmpty) {
@@ -340,6 +348,9 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       'assuranceNom': _assuranceNomController.text,
       'assuranceNumero': _assuranceNumeroController.text,
       'entretienDate': _entretienDateController.text,
+      'nettoyageInt': _nettoyageIntController.text,
+      'nettoyageExt': _nettoyageExtController.text,
+      'carburantManquant': _carburantManquantController.text,
       'photoVehiculeUrl': photoVoitureUrl ?? '',
       'photoCarteGriseUrl': photoCarteGriseUrl ?? '',
       'photoAssuranceUrl': photoAssuranceUrl ?? '',
@@ -390,13 +401,72 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                       (value) => setState(() => _boiteVitesses = value!)),
                   _buildSectionTitle("Informations de location"),
                   _buildTextField(
-                      "Prix de location par jour (€)", _prixLocationController),
+                    "Prix de location par jour (€)",
+                    _prixLocationController,
+                    keyboardType:
+                        TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                    ],
+                  ),
                   _buildTextField(
-                      "Montant de la franchise (€)", _franchiseController),
-                  _buildTextField("Montant kilométrage supplémentaire (€)",
-                      _kilometrageSuppController),
+                    "Franchise (€)",
+                    _franchiseController,
+                    keyboardType:
+                        TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                    ],
+                  ),
                   _buildTextField(
-                      "Montant rayures par élément (€)", _rayuresController),
+                    "Kilométrage supplémentaire (€)",
+                    _kilometrageSuppController,
+                    isRequired: true,
+                    keyboardType:
+                        TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                    ],
+                  ),
+                  _buildTextField(
+                    "Carburant manquant (€)",
+                    _carburantManquantController,
+                    isRequired: true,
+                    keyboardType:
+                        TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                    ],
+                  ),
+                  _buildTextField(
+                    "Frais de nettoyage intérieur (€)",
+                    _nettoyageIntController,
+                    isRequired: true,
+                    keyboardType:
+                        TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                    ],
+                  ),
+                  _buildTextField(
+                    "Frais de nettoyage extérieur (€)",
+                    _nettoyageExtController,
+                    isRequired: true,
+                    keyboardType:
+                        TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                    ],
+                  ),
+                  _buildTextField(
+                    "Rayures par élément (€)",
+                    _rayuresController,
+                    keyboardType:
+                        TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                    ],
+                  ),
                   _buildSectionTitle("Assurance et maintenance"),
                   _buildTextField(
                       "Nom de l'assurance", _assuranceNomController),
@@ -444,19 +514,23 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   }
 
   Widget _buildTextField(String label, TextEditingController controller,
-      {bool isRequired = false}) {
+      {bool isRequired = false,
+      TextInputType? keyboardType,
+      List<TextInputFormatter>? inputFormatters}) {
     // Déterminer le type de clavier et les icônes spécifiques
-    TextInputType? keyboardType;
     Widget? suffixIcon;
 
     if ([
       "Prix de location par jour (€)",
-      "Montant de la franchise (€)",
-      "Montant kilométrage supplémentaire (€)",
-      "Montant rayures par élément (€)",
-      "N° téléphone l'assurance"
+      "Franchise (€)",
+      "Kilométrage supplémentaire (€)",
+      "Rayures par élément (€)",
+      "N° téléphone l'assurance",
+      "Carburant manquant (€)",
+      "Frais de nettoyage intérieur (€)",
+      "Frais de nettoyage extérieur (€)"
     ].contains(label)) {
-      keyboardType = TextInputType.number;
+      keyboardType = keyboardType ?? TextInputType.number;
       suffixIcon = IconButton(
         icon: Icon(Icons.check_circle,
             color: Colors.grey[400]), // Couleur plus claire
@@ -523,13 +597,14 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
         keyboardType: keyboardType,
         textCapitalization: TextCapitalization
             .characters, // Forcer les majuscules pendant la saisie
-        inputFormatters: [
-          // Ne pas appliquer le formateur pour les champs numériques
-          if (keyboardType != TextInputType.number &&
-              keyboardType != TextInputType.phone &&
-              label != "Date du prochain entretien")
-            UpperCaseTextFormatter(),
-        ],
+        inputFormatters: inputFormatters ??
+            [
+              // Ne pas appliquer le formateur pour les champs numériques
+              if (keyboardType != TextInputType.number &&
+                  keyboardType != TextInputType.phone &&
+                  label != "Date du prochain entretien")
+                UpperCaseTextFormatter(),
+            ],
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(color: Color(0xFF08004D)),

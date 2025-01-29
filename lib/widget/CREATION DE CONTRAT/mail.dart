@@ -71,10 +71,19 @@ class EmailService {
         ssl: true,
       );
 
+      print('Tentative d\'envoi depuis $smtpEmail via $smtpServer:$smtpPort');
       final message = Message()
         ..from = Address(smtpEmail, nomEntreprise ?? 'Contraloc')
         ..recipients.add(email)
         ..subject = '🚗 Votre contrat de location $marque $modele'
+        ..headers = {
+          'Message-ID':
+              '<${DateTime.now().millisecondsSinceEpoch}@contraloc.fr>',
+          'X-Mailer': 'Contraloc Mailer',
+          'Return-Path': '<$smtpEmail>',
+          'List-Unsubscribe': '<mailto:$smtpEmail>',
+          'Feedback-ID': 'contraloc:${DateTime.now().millisecondsSinceEpoch}'
+        }
         ..html = '''
           <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.6;">
             <div style="background-color: #08004D; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">

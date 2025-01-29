@@ -64,6 +64,10 @@ class PdfVoitureWidget {
               prixRayures,
               coutTotalTheorique,
               coutTotal,
+              data['nettoyageInt'] ?? '',
+              data['nettoyageExt'] ?? '',
+              data['carburantManquant'] ?? '',
+              data['caution'] ?? '', // Ajouter ce paramètre
               ttf),
         ],
       ),
@@ -125,6 +129,10 @@ class PdfVoitureWidget {
       String prixRayures,
       double? coutTotalTheorique,
       double? coutTotal,
+      String nettoyageInt,
+      String nettoyageExt,
+      String carburantManquant,
+      String caution, // Ajouter ce paramètre
       pw.Font ttf) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start, // Ensure left alignment
@@ -181,6 +189,23 @@ class PdfVoitureWidget {
             ],
           ),
         ],
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('Frais de nettoyage intérieur: $nettoyageInt €',
+                style: pw.TextStyle(font: ttf)),
+            pw.Text('Frais de nettoyage extérieur: $nettoyageExt €',
+                style: pw.TextStyle(font: ttf)),
+          ],
+        ),
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('Carburant manquant: $carburantManquant €',
+                style: pw.TextStyle(font: ttf)),
+            pw.Text('Caution: $caution €', style: pw.TextStyle(font: ttf)),
+          ],
+        ),
       ],
     );
   }

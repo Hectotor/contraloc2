@@ -72,6 +72,11 @@ class _LocationPageState extends State<LocationPage> {
 
   late final SignatureController _signatureController;
   final TextEditingController _prixLocationController = TextEditingController();
+  final TextEditingController _nettoyageIntController = TextEditingController();
+  final TextEditingController _nettoyageExtController = TextEditingController();
+  final TextEditingController _carburantManquantController =
+      TextEditingController();
+  final TextEditingController _cautionController = TextEditingController();
 
   @override
   void initState() {
@@ -100,6 +105,11 @@ class _LocationPageState extends State<LocationPage> {
         final vehicleData = vehiculeDoc.docs.first.data();
         setState(() {
           _prixLocationController.text = vehicleData['prixLocation'] ?? '';
+          _nettoyageIntController.text = vehicleData['nettoyageInt'] ?? '';
+          _nettoyageExtController.text = vehicleData['nettoyageExt'] ?? '';
+          _carburantManquantController.text =
+              vehicleData['carburantManquant'] ?? '';
+          _cautionController.text = vehicleData['caution'] ?? '';
         });
       }
     }
@@ -259,6 +269,10 @@ class _LocationPageState extends State<LocationPage> {
             FieldValue.serverTimestamp(), // Ajouter la date de création
         'numeroPermis': widget.numeroPermis ??
             '', // Assurez-vous que numeroPermis est bien stocké
+        'nettoyageInt': _nettoyageIntController.text,
+        'nettoyageExt': _nettoyageExtController.text,
+        'carburantManquant': _carburantManquantController.text,
+        'caution': _cautionController.text,
       });
 
       // Si un email client est disponible, générer et envoyer le PDF
@@ -330,13 +344,17 @@ class _LocationPageState extends State<LocationPage> {
             'adresse': widget.adresse,
             'telephone': widget.telephone,
             'email': widget.email,
-            'numeroPermis': widget.numeroPermis, // Ajoutez cette ligne
+            'numeroPermis': widget.numeroPermis,
             'marque': widget.marque,
             'modele': widget.modele,
             'immatriculation': widget.immatriculation,
             'commentaire': _commentaireController.text,
             'photos': vehiculeUrls,
             'signatureAller': signatureAller,
+            'nettoyageInt': _nettoyageIntController.text,
+            'nettoyageExt': _nettoyageExtController.text,
+            'carburantManquant': _carburantManquantController.text,
+            'caution': _cautionController.text, // Ajouter cette ligne
           },
           '', // dateFinEffectif
           '', // kilometrageRetour
@@ -465,7 +483,7 @@ class _LocationPageState extends State<LocationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Ajout ici
+      backgroundColor: Colors.white, // Ajout ici
       appBar: AppBar(
         title: const Text(
           "Détails de la Location",
@@ -508,7 +526,12 @@ class _LocationPageState extends State<LocationPage> {
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
                     ]),
-                const SizedBox(height: 20),
+                CreateContrat.buildTextField(
+                  "Caution (€)",
+                  _cautionController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                ),
                 CreateContrat.buildDropdown(_typeLocation, (value) {
                   setState(() {
                     _typeLocation = value!;
@@ -564,6 +587,7 @@ class _LocationPageState extends State<LocationPage> {
                     });
                   },
                 ),
+
                 const SizedBox(height: 20),
                 Padding(
                   padding: const EdgeInsets.only(

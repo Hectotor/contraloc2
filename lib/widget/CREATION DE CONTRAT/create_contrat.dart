@@ -44,7 +44,8 @@ class CreateContrat {
           ),
           // Ajout du bouton de validation
           suffixIcon: IconButton(
-            icon: const Icon(Icons.check_circle),
+            icon: Icon(Icons.check_circle,
+                color: Colors.grey[400]), // Changé à gris clair
             onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
           ),
         ),

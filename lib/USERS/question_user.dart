@@ -66,12 +66,12 @@ class _QuestionUserState extends State<QuestionUser> {
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(currentUser?.uid)
-          .collection('authentification')
-          .doc(currentUser?.uid)
+          .collection('authentification') // Ajout de la sous-collection
+          .doc(currentUser?.uid) // Même ID pour le document d'authentification
           .get();
 
-      if (!userDoc.exists || userDoc.data()?['userId'] != currentUser?.uid) {
-        print('Accès refusé ou document non trouvé');
+      if (!userDoc.exists) {
+        print('Document utilisateur non trouvé dans authentification');
         return;
       }
 
@@ -86,16 +86,17 @@ class _QuestionUserState extends State<QuestionUser> {
 
       // Configurer le serveur SMTP
       final smtpServerConfig = SmtpServer(
-        smtpServer,
-        port: smtpPort,
-        username: smtpEmail,
+        'contraloc.fr',
+        port: 465,
+        username: 'contact@contraloc.fr', // Changé de noreply à contact
         password: smtpPassword,
-        ssl: smtpPort == 465,
+        ssl: true,
       );
 
       // Création de l'email avec un contenu HTML structuré
       final emailMessage = Message()
-        ..from = Address(smtpEmail, 'ContraLoc')
+        ..from = Address(
+            'contact@contraloc.fr', 'ContraLoc') // Changé de noreply à contact
         ..recipients.add('contact@contraloc.fr') // Destinataire
         ..subject = 'Question d\'un utilisateur'
         ..html = '''
