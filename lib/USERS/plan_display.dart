@@ -202,14 +202,13 @@ class PlanDisplayState extends State<PlanDisplay> {
       planId = 'free';
     }
 
-    // Vérifier si c'est le plan actif en comparant les IDs
-    bool isActivePlan = widget.subscriptionId == planId;
+    // Comparer avec l'ID standardisé
+    bool isActivePlan = widget.subscriptionId == planId ||
+        (widget.subscriptionId == 'offre_contraloc' && planId == 'pro-monthly');
 
-    print('📦 Comparaison des plans:');
-    print('- Plan title: ${plan.title}');
-    print('- Plan ID: $planId');
-    print('- Current subscription ID: ${widget.subscriptionId}');
-    print('- Is active: $isActivePlan');
+    // Modifier les logs pour ne garder que l'essentiel
+    print('📦 Plan: ${plan.title} (ID: $planId)');
+    print('- Current subscription: ${widget.subscriptionId}');
 
     return Container(
       padding: const EdgeInsets.symmetric(

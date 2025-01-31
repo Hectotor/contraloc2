@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:ContraLoc/USERS/felicitation.dart';
 import 'package:ContraLoc/services/subscription_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -9,7 +11,6 @@ import 'package:purchases_flutter/models/entitlement_info_wrapper.dart'; // Impo
 import 'package:ContraLoc/USERS/question_user.dart';
 import 'package:ContraLoc/USERS/plan_display.dart';
 import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
-import 'dart:io'; // Import dart:io for Platform
 import 'dart:async'; // Import StreamSubscription
 
 class AbonnementScreen extends StatefulWidget {
@@ -19,21 +20,11 @@ class AbonnementScreen extends StatefulWidget {
 }
 
 String _getPlanDisplayName(String subscriptionId) {
-  print('🔍 Getting plan name for subscriptionId: $subscriptionId');
-
-  // Normaliser l'ID d'abonnement pour gérer tous les formats possibles
-  String normalizedId = subscriptionId
-      .toLowerCase()
-      .replaceAll('subscription', '')
-      .replaceAll('_', '-')
-      .trim();
+  // Nettoyer l'ID de tout préfixe potentiel
+  String cleanId = subscriptionId.split(':').last;
 
   // Faire correspondre exactement les IDs avec les noms d'affichage
   Map<String, String> planNames = {
-    'promonthly': 'Offre Pro',
-    'proyearly': 'Offre Pro Annuel',
-    'premiummonthly': 'Offre Premium',
-    'premiumyearly': 'Offre Premium Annuel',
     'pro-monthly': 'Offre Pro',
     'pro-yearly': 'Offre Pro Annuel',
     'premium-monthly': 'Offre Premium',
@@ -41,13 +32,10 @@ String _getPlanDisplayName(String subscriptionId) {
     'free': 'Offre Gratuite'
   };
 
-  String planName = planNames[normalizedId] ?? 'Offre Gratuite';
-  print('- Normalized ID: $normalizedId');
-  print('- Resolved plan name: $planName');
-  return planName;
+  return planNames[cleanId] ?? 'Offre Gratuite';
 }
 
-// Mappage des identifiants d'abonnement (standardisé)
+// Mappage uniquement pour iOS (Android utilise directement les IDs standardisés)
 const Map<String, String> subscriptionIdMappingIOS = {
   'ProMonthlySubscription': 'pro-monthly',
   'ProYearlySubscription': 'pro-yearly',
@@ -55,21 +43,9 @@ const Map<String, String> subscriptionIdMappingIOS = {
   'PremiumYearlySubscription': 'premium-yearly',
 };
 
-const Map<String, String> subscriptionIdMappingAndroid = {
-  'offre_contraloc:pro-monthly': 'pro-monthly',
-  'offre_contraloc:pro-yearly': 'pro-yearly',
-  'offre_contraloc:premium-monthly': 'premium-monthly',
-  'offre_contraloc:premium-yearly': 'premium-yearly',
-};
-
-// Fonction pour obtenir l'identifiant mappé
+// Simplifier la fonction pour obtenir l'identifiant mappé
 String getMappedSubscriptionId(String originalId) {
-  if (Platform.isIOS) {
-    return subscriptionIdMappingIOS[originalId] ?? originalId;
-  } else if (Platform.isAndroid) {
-    return subscriptionIdMappingAndroid[originalId] ?? originalId;
-  }
-  return originalId;
+  return subscriptionIdMappingIOS[originalId] ?? originalId;
 }
 
 class _AbonnementScreenState extends State<AbonnementScreen> {
@@ -404,24 +380,28 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   // Removed unused _buildActivationDialog method
 
   String _getProductId(String plan, bool isMonthly) {
-    // Déterminer d'abord l'ID standardisé
-    String standardId;
-    if (plan.contains("Premium")) {
-      standardId = isMonthly ? 'premium-monthly' : 'premium-yearly';
-    } else if (plan.contains("Pro")) {
-      standardId = isMonthly ? 'pro-monthly' : 'pro-yearly';
+    if (Platform.isAndroid) {
+      // Pour Android
+      if (plan.contains("Premium")) {
+        return isMonthly
+            ? 'offre_contraloc:premium-monthly'
+            : 'offre_contraloc:premium-yearly';
+      } else if (plan.contains("Pro")) {
+        return isMonthly
+            ? 'offre_contraloc:pro-monthly'
+            : 'offre_contraloc:pro-yearly';
+      }
     } else {
-      return 'free';
+      // Pour iOS
+      if (plan.contains("Premium")) {
+        return isMonthly
+            ? 'PremiumMonthlySubscription'
+            : 'PremiumYearlySubscription';
+      } else if (plan.contains("Pro")) {
+        return isMonthly ? 'ProMonthlySubscription' : 'ProYearlySubscription';
+      }
     }
-
-    // Convertir vers le format spécifique à la plateforme
-    if (Platform.isIOS) {
-      // Conversion vers format iOS
-      return '${standardId.split('-').map((part) => part.substring(0, 1).toUpperCase() + part.substring(1)).join('').replaceAll('-', '')}Subscription';
-    } else {
-      // Pour Android, ajouter le préfixe offre_contraloc:
-      return 'offre_contraloc:$standardId';
-    }
+    return 'free';
   }
 
   void _showMessage(String message, Color color) {
@@ -450,19 +430,16 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   }
 
   Future<void> _openManageSubscription() async {
-    String url;
     if (Platform.isIOS) {
-      url = 'https://apps.apple.com/account/subscriptions';
+      const url = 'https://apps.apple.com/account/subscriptions';
+      if (await canLaunch(url)) {
+        await launch(url);
+      }
     } else if (Platform.isAndroid) {
-      url = 'https://play.google.com/store/account/subscriptions';
-    } else {
-      // Handle other platforms or show an error message
-      throw 'Platform not supported';
-    }
-    if (await canLaunch(url)) {
-      await launch(url);
-    } else {
-      throw 'Could not launch $url';
+      const url = 'https://play.google.com/store/account/subscriptions';
+      if (await canLaunch(url)) {
+        await launch(url);
+      }
     }
   }
 
@@ -580,35 +557,30 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   Widget _buildToggleButton(bool isMonthlyButton, String text, IconData icon) {
     final bool isSelected = isMonthly == isMonthlyButton;
     return Expanded(
-      child: GestureDetector(
-        onTap: _isLoading
-            ? null
-            : () => setState(() => isMonthly = isMonthlyButton),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF08004D) : Colors.white,
-            borderRadius: BorderRadius.horizontal(
-              left: Radius.circular(isMonthlyButton ? 12 : 0),
-              right: Radius.circular(!isMonthlyButton ? 12 : 0),
-            ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF08004D) : Colors.white,
+          borderRadius: BorderRadius.horizontal(
+            left: Radius.circular(isMonthlyButton ? 12 : 0),
+            right: Radius.circular(!isMonthlyButton ? 12 : 0),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon,
-                  size: 20, color: isSelected ? Colors.white : Colors.grey),
-              const SizedBox(width: 8),
-              Text(
-                text,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.grey,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon,
+                size: 20, color: isSelected ? Colors.white : Colors.grey),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

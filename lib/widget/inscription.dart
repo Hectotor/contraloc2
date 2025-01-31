@@ -54,10 +54,21 @@ class _InscriptionPageState extends State<InscriptionPage> {
     String password = _passwordController.text.trim();
     String confirmPassword = _confirmPasswordController.text.trim();
 
+    // Capitaliser la première lettre du prénom et du nom
+    String prenom = _prenomController.text.trim();
+    String nom = _nomController.text.trim();
+
+    prenom = prenom.isNotEmpty
+        ? prenom[0].toUpperCase() + prenom.substring(1).toLowerCase()
+        : '';
+    nom = nom.isNotEmpty
+        ? nom[0].toUpperCase() + nom.substring(1).toLowerCase()
+        : '';
+
     // Check if any field is empty
     if (_nomEntrepriseController.text.trim().isEmpty ||
-        _prenomController.text.trim().isEmpty ||
-        _nomController.text.trim().isEmpty ||
+        prenom.isEmpty ||
+        nom.isEmpty ||
         _adresseController.text.trim().isEmpty ||
         email.isEmpty ||
         _telephoneController.text.trim().isEmpty ||
@@ -109,8 +120,8 @@ class _InscriptionPageState extends State<InscriptionPage> {
         'nomEntreprise': _nomEntrepriseController.text
             .trim()
             .toUpperCase(), // Convert to uppercase
-        'prenom': _prenomController.text.trim(),
-        'nom': _nomController.text.trim(),
+        'prenom': prenom, // Utiliser le prénom formaté
+        'nom': nom, // Utiliser le nom formaté
         'adresse': _adresseController.text.trim(),
         'email': email,
         'telephone': _telephoneController.text.trim(),

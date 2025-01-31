@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -12,8 +11,30 @@ class SubscriptionService {
       final customerInfo = await Purchases.getCustomerInfo();
       print('🔍 Vérification abonnement RevenueCat');
 
-      // Vérifier les entitlements actifs
       final activeEntitlements = customerInfo.entitlements.active;
+
+      print('📦 Entitlements actifs: ${activeEntitlements.length}');
+      activeEntitlements.forEach((key, value) {
+        print('- Entitlement: ${value.identifier}');
+        print('- ProductId: ${value.productIdentifier}');
+      });
+
+      // Forcer la mise à jour si l'ID est 'offre_contraloc'
+      final currentDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('authentification')
+          .doc(user.uid)
+          .get();
+
+      final currentData = currentDoc.data();
+      final currentSubscriptionId = currentData?['subscriptionId'];
+
+      if (currentSubscriptionId == 'offre_contraloc') {
+        print('🔄 Conversion offre_contraloc vers pro-monthly');
+        await _updateFirestoreSubscription('pro-monthly', true);
+        return;
+      }
 
       // Ne pas mettre à jour immédiatement vers "free"
       if (activeEntitlements.isEmpty) {
@@ -72,9 +93,9 @@ class SubscriptionService {
     }
   }
 
-  // Ajouter cette fonction de conversion
+  // Simplifié pour utiliser directement les IDs standardisés
   static String standardizeSubscriptionId(String originalId) {
-    // Conversion des IDs iOS
+    // Conversion des IDs iOS uniquement
     Map<String, String> iosToStandard = {
       'ProMonthlySubscription': 'pro-monthly',
       'ProYearlySubscription': 'pro-yearly',
@@ -82,29 +103,7 @@ class SubscriptionService {
       'PremiumYearlySubscription': 'premium-yearly',
     };
 
-    // Conversion des IDs Android
-    Map<String, String> androidToStandard = {
-      'offre_contraloc:pro-monthly': 'pro-monthly',
-      'offre_contraloc:pro-yearly': 'pro-yearly',
-      'offre_contraloc:premium-monthly': 'premium-monthly',
-      'offre_contraloc:premium-yearly': 'premium-yearly',
-    };
-
-    // Normaliser l'ID selon la plateforme
-    String standardizedId;
-    if (Platform.isIOS) {
-      standardizedId = iosToStandard[originalId] ?? originalId;
-    } else if (Platform.isAndroid) {
-      standardizedId = androidToStandard[originalId] ?? originalId;
-    } else {
-      standardizedId = originalId;
-    }
-
-    print('🔄 Standardizing subscription ID:');
-    print('- Original: $originalId');
-    print('- Standardized: $standardizedId');
-
-    return standardizedId;
+    return iosToStandard[originalId] ?? originalId;
   }
 
   static Future<void> _updateFirestoreSubscription(
@@ -112,9 +111,42 @@ class SubscriptionService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    String standardizedId = standardizeSubscriptionId(subscriptionId);
+    print('🔄 Début mise à jour Firestore:');
+    print('- ID reçu: $subscriptionId');
 
-    // Suppression du délai de vérification pour permettre la mise à jour immédiate
+    String standardizedId;
+    try {
+      final customerInfo = await Purchases.getCustomerInfo();
+      final activeEntitlements = customerInfo.entitlements.active;
+
+      print('📦 Vérification entitlements:');
+      activeEntitlements.forEach((key, value) {
+        print('- Entitlement ID: ${value.identifier}');
+        print('- Product ID: ${value.productIdentifier}');
+      });
+
+      // Déterminer le type basé sur l'entitlement_id pour iOS et Android
+      if (activeEntitlements.values.any((e) =>
+          e.identifier == 'premium-monthly_access' ||
+          e.productIdentifier == 'PremiumMonthlySubscription')) {
+        standardizedId = 'premium-monthly';
+        print('✨ Détection premium depuis entitlement');
+      } else if (activeEntitlements.values.any((e) =>
+          e.identifier == 'pro-monthly_access' ||
+          e.productIdentifier == 'ProMonthlySubscription')) {
+        standardizedId = 'pro-monthly';
+        print('✨ Détection pro depuis entitlement');
+      } else {
+        standardizedId = 'free';
+        print('ℹ️ Aucun entitlement reconnu');
+      }
+
+      print('- ID standardisé final: $standardizedId');
+    } catch (e) {
+      print('⚠️ Erreur entitlements: $e');
+      standardizedId = 'free';
+    }
+
     final data = {
       'subscriptionId': standardizedId,
       'lastKnownProductId': standardizedId,
@@ -136,8 +168,11 @@ class SubscriptionService {
           standardizedId.contains('yearly') ? 'yearly' : 'monthly',
       'lastUpdateDate': FieldValue.serverTimestamp(),
       'status': 'active',
-      'immediateUpgrade': true, // Marquer comme mise à niveau immédiate
     };
+
+    print('📝 Données finales pour Firestore:');
+    print('- subscriptionId: ${data['subscriptionId']}');
+    print('- lastKnownProductId: ${data['lastKnownProductId']}');
 
     await FirebaseFirestore.instance
         .collection('users')
@@ -146,25 +181,30 @@ class SubscriptionService {
         .doc(user.uid)
         .update(data);
 
-    print('✅ Mise à jour immédiate vers ${data['planName']}');
+    print(
+        '✅ Mise à jour Firestore terminée avec ID: ${data['subscriptionId']}');
   }
 
-  // Nouvelle méthode helper pour déterminer le nom du plan
+  // Mise à jour de la fonction getPlanName pour gérer les IDs simplifiés
   static String _getPlanName(String subscriptionId) {
-    print('🔍 Getting plan name for subscriptionId: $subscriptionId');
+    // Nettoyer l'ID d'abord
+    String cleanId = subscriptionId;
+    if (cleanId.contains(':')) {
+      cleanId = cleanId.split(':')[1];
+    }
+    if (cleanId == 'offre_contraloc') {
+      cleanId = 'pro-monthly';
+    }
 
-    // Faire correspondre exactement les IDs avec les noms d'affichage
     Map<String, String> planNames = {
-      'premium-monthly': 'Offre Premium',
-      'premium-yearly': 'Offre Premium Annuel',
       'pro-monthly': 'Offre Pro',
       'pro-yearly': 'Offre Pro Annuel',
+      'premium-monthly': 'Offre Premium',
+      'premium-yearly': 'Offre Premium Annuel',
       'free': 'Offre Gratuite'
     };
 
-    String planName = planNames[subscriptionId] ?? 'Offre Gratuite';
-    print('- Resolved plan name: $planName');
-    return planName;
+    return planNames[cleanId] ?? 'Offre Gratuite';
   }
 
   static Future<void> checkAndUpdateExpiredSubscription() async {
@@ -226,19 +266,4 @@ class SubscriptionService {
       // Ne pas mettre à jour Firestore en cas d'erreur pour éviter de perdre des données
     }
   }
-}
-
-// Classe helper pour la gestion des infos d'abonnement
-class SubscriptionInfo {
-  final String planType;
-  final String planName;
-  final int numberOfCars;
-  final int limiteContrat;
-
-  SubscriptionInfo({
-    required this.planType,
-    required this.planName,
-    required this.numberOfCars,
-    required this.limiteContrat,
-  });
 }
