@@ -226,6 +226,50 @@ class SubscriptionService {
       // Ne pas mettre à jour Firestore en cas d'erreur pour éviter de perdre des données
     }
   }
+
+  static Future<void> updateFirebaseUponPurchase(String subscriptionId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      String standardizedId = standardizeSubscriptionId(subscriptionId);
+
+      final data = {
+        'subscriptionId': standardizedId,
+        'lastKnownProductId': standardizedId,
+        'planName': _getPlanName(standardizedId),
+        'planType': standardizedId.startsWith('premium-')
+            ? 'premium'
+            : standardizedId.startsWith('pro-')
+                ? 'pro'
+                : 'free',
+        'isSubscriptionActive': true,
+        'isExpired': false,
+        'numberOfCars': standardizedId.startsWith('premium-')
+            ? 999
+            : standardizedId.startsWith('pro-')
+                ? 5
+                : 1,
+        'limiteContrat': standardizedId.startsWith('premium-') ? 999 : 10,
+        'subscriptionType':
+            standardizedId.contains('yearly') ? 'yearly' : 'monthly',
+        'lastUpdateDate': FieldValue.serverTimestamp(),
+        'status': 'active',
+        'immediateUpgrade': true,
+      };
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('authentification')
+          .doc(user.uid)
+          .update(data);
+
+      print('✅ Firebase updated upon purchase with ${data['planName']}');
+    } catch (e) {
+      print('❌ Error updating Firebase upon purchase: $e');
+    }
+  }
 }
 
 // Classe helper pour la gestion des infos d'abonnement

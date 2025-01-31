@@ -368,6 +368,9 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
         // Afficher uniquement le popup de confirmation
         _showActivationPopup();
+
+        // Call the new method to update Firebase upon successful purchase
+        await SubscriptionService.updateFirebaseUponPurchase(productId);
       } else {
         throw Exception('Échec de l\'activation de l\'abonnement');
       }

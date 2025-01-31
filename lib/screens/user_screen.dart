@@ -10,6 +10,7 @@ import '../USERS/logo.dart';
 import '../USERS/question_user.dart'; // Import the question user screen
 import '../USERS/abonnement_screen.dart'; // Add this import
 import '../USERS/supprimer_compte.dart'; // Import du fichier supprimer_compte.dart
+import '../services/subscription_service.dart'; // Import SubscriptionService
 
 class UserScreen extends StatefulWidget {
   const UserScreen({Key? key}) : super(key: key);
@@ -152,6 +153,9 @@ class _UserScreenState extends State<UserScreen> {
         _logoUrl = finalLogoUrl;
         _isLoading = false;
       });
+
+      // Update Firebase when user data changes due to a purchase via RevenueCat
+      await SubscriptionService.updateFirebaseUponPurchase(subscriptionId);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

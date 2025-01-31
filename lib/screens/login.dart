@@ -4,6 +4,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../widget/inscription.dart'; // Import de la page d'inscription
 import '../widget/navigation.dart'; // Import de la page de navigation
+import '../services/subscription_service.dart'; // Import SubscriptionService
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -56,6 +57,9 @@ class _LoginPageState extends State<LoginPage> {
             await Purchases.logIn(userCredential.user!.uid);
           }
           print('✅ ID utilisateur RevenueCat synchronisé après connexion');
+
+          // Mettre à jour Firebase lors de la synchronisation de l'ID utilisateur avec RevenueCat
+          await SubscriptionService.updateFirebaseUponPurchase(userCredential.user!.uid);
         } catch (e) {
           print('⚠️ Erreur synchronisation RevenueCat: $e');
           // Continuer malgré l'erreur car l'utilisateur est déjà connecté
