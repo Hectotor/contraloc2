@@ -125,17 +125,27 @@ class SubscriptionService {
         print('- Product ID: ${value.productIdentifier}');
       });
 
-      // Déterminer le type basé sur l'entitlement_id pour iOS et Android
+      // Modifier cette partie pour inclure les abonnements annuels
       if (activeEntitlements.values.any((e) =>
+          e.identifier == 'premium-yearly_access' ||
+          e.productIdentifier == 'PremiumYearlySubscription')) {
+        standardizedId = 'premium-yearly';
+        print('✨ Détection premium annuel depuis entitlement');
+      } else if (activeEntitlements.values.any((e) =>
           e.identifier == 'premium-monthly_access' ||
           e.productIdentifier == 'PremiumMonthlySubscription')) {
         standardizedId = 'premium-monthly';
-        print('✨ Détection premium depuis entitlement');
+        print('✨ Détection premium mensuel depuis entitlement');
+      } else if (activeEntitlements.values.any((e) =>
+          e.identifier == 'pro-yearly_access' ||
+          e.productIdentifier == 'ProYearlySubscription')) {
+        standardizedId = 'pro-yearly';
+        print('✨ Détection pro annuel depuis entitlement');
       } else if (activeEntitlements.values.any((e) =>
           e.identifier == 'pro-monthly_access' ||
           e.productIdentifier == 'ProMonthlySubscription')) {
         standardizedId = 'pro-monthly';
-        print('✨ Détection pro depuis entitlement');
+        print('✨ Détection pro mensuel depuis entitlement');
       } else {
         standardizedId = 'free';
         print('ℹ️ Aucun entitlement reconnu');

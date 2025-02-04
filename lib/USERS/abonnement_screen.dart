@@ -557,30 +557,38 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   Widget _buildToggleButton(bool isMonthlyButton, String text, IconData icon) {
     final bool isSelected = isMonthly == isMonthlyButton;
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF08004D) : Colors.white,
-          borderRadius: BorderRadius.horizontal(
-            left: Radius.circular(isMonthlyButton ? 12 : 0),
-            right: Radius.circular(!isMonthlyButton ? 12 : 0),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon,
-                size: 20, color: isSelected ? Colors.white : Colors.grey),
-            const SizedBox(width: 8),
-            Text(
-              text,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+      child: GestureDetector(
+        // Ajouter ce GestureDetector
+        onTap: () {
+          setState(() {
+            isMonthly = isMonthlyButton;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF08004D) : Colors.white,
+            borderRadius: BorderRadius.horizontal(
+              left: Radius.circular(isMonthlyButton ? 12 : 0),
+              right: Radius.circular(!isMonthlyButton ? 12 : 0),
             ),
-          ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  size: 20, color: isSelected ? Colors.white : Colors.grey),
+              const SizedBox(width: 8),
+              Text(
+                text,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.grey,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
