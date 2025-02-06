@@ -1,17 +1,9 @@
-import 'dart:io';
-
-import 'package:ContraLoc/USERS/felicitation.dart';
 import 'package:ContraLoc/services/subscription_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:purchases_flutter/purchases_flutter.dart'; // Import RevenueCat
-import 'package:purchases_flutter/models/entitlement_info_wrapper.dart'; // Import Entitlement
-import 'package:ContraLoc/USERS/question_user.dart';
-import 'package:ContraLoc/USERS/plan_display.dart';
-import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
-import 'dart:async'; // Import StreamSubscription
+import '../services/revenue_cat_service.dart';
+import 'question_user.dart';
+import 'plan_display.dart';
+import 'felicitation.dart';
 
 class AbonnementScreen extends StatefulWidget {
   const AbonnementScreen({Key? key}) : super(key: key);
@@ -19,435 +11,77 @@ class AbonnementScreen extends StatefulWidget {
   State<AbonnementScreen> createState() => _AbonnementScreenState();
 }
 
-String _getPlanDisplayName(String subscriptionId) {
-  // Nettoyer l'ID de tout préfixe potentiel
-  String cleanId = subscriptionId.split(':').last;
-
-  // Faire correspondre exactement les IDs avec les noms d'affichage
-  Map<String, String> planNames = {
-    'pro-monthly': 'Offre Pro',
-    'pro-yearly': 'Offre Pro Annuel',
-    'premium-monthly': 'Offre Premium',
-    'premium-yearly': 'Offre Premium Annuel',
-    'free': 'Offre Gratuite'
-  };
-
-  return planNames[cleanId] ?? 'Offre Gratuite';
-}
-
-// Mappage uniquement pour iOS (Android utilise directement les IDs standardisés)
-const Map<String, String> subscriptionIdMappingIOS = {
-  'ProMonthlySubscription': 'pro-monthly',
-  'ProYearlySubscription': 'pro-yearly',
-  'PremiumMonthlySubscription': 'premium-monthly',
-  'PremiumYearlySubscription': 'premium-yearly',
-};
-
-// Simplifier la fonction pour obtenir l'identifiant mappé
-String getMappedSubscriptionId(String originalId) {
-  return subscriptionIdMappingIOS[originalId] ?? originalId;
-}
-
 class _AbonnementScreenState extends State<AbonnementScreen> {
-  int numberOfCars = 1;
-  int limiteContrat = 10;
-  bool isSubscriptionActive = false;
-  String subscriptionId = 'free';
-  int _currentIndex = 0;
   bool isMonthly = true;
   bool _isLoading = false;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  StreamSubscription? _subscriptionStream; // Add this line
-  String? lastSyncDate;
-
-  // Ajouter une constante pour les délais
-  static const Duration _timeoutDuration = Duration(seconds: 30);
-
-  void _showLoading(bool show) {
-    setState(() {
-      _isLoading = show;
-    });
-  }
+  String _currentEntitlement = 'free';
 
   @override
   void initState() {
     super.initState();
-    SubscriptionService.checkAndUpdateSubscription();
-    _setupListeners();
+    _checkCurrentEntitlement();
   }
 
-  void _setupListeners() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    // Écouter les changements Firestore
-    _subscriptionStream = _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('authentification')
-        .doc(user.uid)
-        .snapshots()
-        .listen(_updateStateFromFirestore);
-
-    // Écouter les changements RevenueCat
-    Purchases.addCustomerInfoUpdateListener(_handleRevenueCatUpdate);
-  }
-
-  void _updateStateFromFirestore(DocumentSnapshot snapshot) {
-    if (!mounted || !snapshot.exists) return;
-
-    final data = snapshot.data() as Map<String, dynamic>;
-    final newLastSyncDate = data['lastSyncDate']?.toString();
-    final newSubscriptionId = data['subscriptionId'] ?? 'free';
-
-    print('📱 État Firestore reçu:');
-    print('- subscriptionId: $newSubscriptionId');
-    print('- lastSyncDate: $newLastSyncDate');
-    print('- isActive: ${data['isSubscriptionActive']}');
-
-    setState(() {
-      subscriptionId = newSubscriptionId;
-      lastSyncDate = newLastSyncDate;
-      isSubscriptionActive = data['isSubscriptionActive'] ?? false;
-      numberOfCars = data['numberOfCars'] ?? 1;
-      limiteContrat = data['limiteContrat'] ?? 10;
-      isMonthly = (data['subscriptionType'] ?? 'monthly') == 'monthly';
-    });
-  }
-
-  void _handleRevenueCatUpdate(CustomerInfo customerInfo) async {
-    if (!mounted) return;
-
-    try {
-      final activeEntitlements = customerInfo.entitlements.active;
-
-      // Éviter les mises à jour trop rapides
-      if (activeEntitlements.isEmpty) {
-        // Attendre un peu avant de confirmer qu'il n'y a vraiment pas d'abonnement
-        await Future.delayed(const Duration(seconds: 2));
-        final recheck = await Purchases.getCustomerInfo();
-        if (recheck.entitlements.active.isNotEmpty) {
-          return; // Annuler la mise à jour si un abonnement est trouvé
-        }
-      }
-
-      print('🔄 Mise à jour RevenueCat reçue');
-
-      // Obtenir l'état actuel de Firestore
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
-      final userDoc = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .get();
-
-      final currentSubscriptionId = userDoc.data()?['subscriptionId'] ?? 'free';
-
-      if (activeEntitlements.isEmpty) {
-        print('ℹ️ Aucun abonnement actif dans RevenueCat');
-        if (currentSubscriptionId != 'free') {
-          await _updateSubscriptionInFirestore('free', false);
-        }
-        return;
-      }
-
-      // Trouver l'abonnement le plus récent
-      EntitlementInfo? latestEntitlement;
-      DateTime? latestDate;
-
-      for (var entitlement in activeEntitlements.values) {
-        final purchaseDate = DateTime.parse(entitlement.latestPurchaseDate);
-        if (latestDate == null || purchaseDate.isAfter(latestDate)) {
-          latestDate = purchaseDate;
-          latestEntitlement = entitlement;
-        }
-      }
-
-      if (latestEntitlement != null) {
-        final mappedId =
-            getMappedSubscriptionId(latestEntitlement.productIdentifier);
-        print('📦 Dernier abonnement actif: $mappedId');
-
-        if (mappedId != currentSubscriptionId) {
-          print('🔄 Mise à jour Firestore nécessaire');
-          await _updateSubscriptionInFirestore(mappedId, true);
-        }
-      } else {
-        // Si aucun abonnement actif n'est trouvé, mettre à jour Firebase pour refléter l'expiration
-        await _updateSubscriptionInFirestore('free', false);
-      }
-    } catch (e) {
-      print('❌ Erreur lors de la mise à jour RevenueCat: $e');
-    }
-  }
-
-  @override
-  void dispose() {
-    _subscriptionStream?.cancel();
-    Purchases.removeCustomerInfoUpdateListener(_handleRevenueCatUpdate);
-    super.dispose();
-  }
-
-  // Removed unused _initializeSubscription method
-
-  Future<void> _updateSubscriptionInFirestore(
-      String subscriptionId, bool isActive) async {
-    // Ajouter une vérification de connexion
-    if (!mounted) return;
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    try {
-      final data = {
-        'subscriptionId': getMappedSubscriptionId(subscriptionId),
-        'isSubscriptionActive': isActive,
-        'numberOfCars': subscriptionId.contains('premium-')
-            ? 999
-            : (subscriptionId.contains('pro-') ? 5 : 1),
-        'limiteContrat': subscriptionId.contains('premium-') ? 999 : 10,
-        'subscriptionType': subscriptionId.toLowerCase().contains('yearly')
-            ? 'yearly'
-            : 'monthly',
-        'lastUpdateDate': FieldValue.serverTimestamp(),
-        'planName': _getPlanDisplayName(subscriptionId), // Ajout important ici
-      };
-
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .update(data);
-
-      // Mettre à jour l'état local immédiatement
+  Future<void> _checkCurrentEntitlement() async {
+    final customerInfo = await RevenueCatService.checkEntitlements();
+    if (customerInfo != null) {
       setState(() {
-        this.subscriptionId = getMappedSubscriptionId(subscriptionId);
-        isSubscriptionActive = isActive;
+        if (RevenueCatService.hasPremiumAccess(customerInfo)) {
+          _currentEntitlement = isMonthly
+              ? RevenueCatService.entitlementPremiumMonthly
+              : RevenueCatService.entitlementPremiumYearly;
+        } else if (RevenueCatService.hasProAccess(customerInfo)) {
+          _currentEntitlement = isMonthly
+              ? RevenueCatService.entitlementProMonthly
+              : RevenueCatService.entitlementProYearly;
+        } else {
+          _currentEntitlement = 'free';
+        }
       });
-    } catch (e) {
-      print('❌ Erreur mise à jour Firestore: $e');
-      // Ajouter une réessai automatique
-      await Future.delayed(const Duration(seconds: 2));
-      return _updateSubscriptionInFirestore(subscriptionId, isActive);
-    }
-  }
-
-  Future<void> _handleSubscription(String plan) async {
-    _lastAttemptedPurchase =
-        plan; // Ajouter cette ligne pour mémoriser la dernière tentative
-    _showLoading(true);
-
-    try {
-      // Ajouter un timeout
-      return await Future.any([
-        _processSubscription(plan),
-        Future.delayed(_timeoutDuration)
-            .then((_) => throw Exception('Délai d\'attente dépassé')),
-      ]);
-    } catch (e) {
-      // ...existing error handling...
     }
   }
 
   Future<void> _processSubscription(String plan) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      _showLoading(false);
-      return;
-    }
+    setState(() => _isLoading = true);
 
     try {
-      if (plan == "Offre Gratuite") return;
+      final customerInfo =
+          await RevenueCatService.purchaseProduct(plan, isMonthly);
 
-      print('🔄 Début du processus d\'abonnement pour: $plan');
+      if (customerInfo != null) {
+        // Add this line to update Firestore
+        await SubscriptionService.updateSubscriptionStatus();
 
-      // 1. Obtenir les offres RevenueCat
-      final offerings = await Purchases.getOfferings();
-      if (offerings.current == null) {
-        throw Exception('Aucune offre disponible');
-      }
-
-      // 2. Déterminer l'ID du produit
-      String productId = _getProductId(plan, isMonthly);
-      print('🎯 ID Produit recherché: $productId');
-      print('📅 Type abonnement: ${isMonthly ? "Mensuel" : "Annuel"}');
-
-      // Debug des packages disponibles
-      print('📦 Packages disponibles:');
-      offerings.current!.availablePackages.forEach((pkg) {
-        print('- ${pkg.storeProduct.identifier}');
-      });
-
-      // 3. Trouver le package
-      final package = offerings.current!.availablePackages.firstWhere(
-        (pkg) => pkg.storeProduct.identifier == productId,
-        orElse: () {
-          print('❌ Package non trouvé pour ID: $productId');
-          throw Exception('Package non trouvé');
-        },
-      );
-
-      // 4. Effectuer l'achat
-      print(
-          '💳 Tentative d\'achat du package: ${package.storeProduct.identifier}');
-      final purchaseResult = await Purchases.purchasePackage(package);
-
-      // 5. Vérifier et mettre à jour Firestore
-      if (purchaseResult.entitlements.active.isNotEmpty) {
-        print('✅ Achat réussi! Mise à jour Firestore...');
-
-        // Préparer les données de mise à jour
-        final updateData = {
-          'subscriptionId': productId,
-          'isSubscriptionActive': true,
-          'planName': plan,
-          'purchaseDate': FieldValue.serverTimestamp(),
-        };
-
-        print('📝 Données à mettre à jour: $updateData');
-
-        // Mise à jour Firestore avec retry
-        bool updated = false;
-        int attempts = 0;
-        while (!updated && attempts < 3) {
-          try {
-            await _firestore
-                .collection('users')
-                .doc(user.uid)
-                .collection('authentification')
-                .doc(user.uid)
-                .update(updateData);
-            updated = true;
-            print('✅ Mise à jour Firestore réussie!');
-          } catch (e) {
-            attempts++;
-            print('❌ Tentative $attempts échouée: $e');
-            await Future.delayed(const Duration(seconds: 1));
-          }
-        }
-
-        if (!updated) {
-          throw Exception(
-              'Échec de la mise à jour Firestore après 3 tentatives');
-        }
-
-        // Mettre à jour l'état local
-        setState(() {
-          subscriptionId = productId;
-          isSubscriptionActive = true;
-          _isLoading = false;
-        });
-
-        // Afficher uniquement le popup de confirmation
+        await _checkCurrentEntitlement();
         _showActivationPopup();
-      } else {
-        throw Exception('Échec de l\'activation de l\'abonnement');
       }
     } catch (e) {
-      print('❌ ERREUR PROCESSUS: $e');
-      _showLoading(false);
-
-      // Vérifier si c'est une annulation volontaire
-      if (e is PlatformException &&
-          e.code == '1' &&
-          e.details?['userCancelled'] == true) {
-        _showMessage(
-          'Achat annulé',
-          Colors.orange, // Couleur orange pour une annulation
-        );
-        return; // Sort de la fonction sans autre traitement
-      }
-
-      // Pour les autres erreurs
-      _showMessage(
-          'Erreur lors de l\'activation. Veuillez réessayer.', Colors.red);
+      print('❌ Erreur achat: $e');
+      _showMessage('Erreur lors de l\'achat. Veuillez réessayer.', Colors.red);
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
-  // Ajouter cette nouvelle méthode
   void _showActivationPopup() {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) => const FelicitationDialog(),
+      builder: (context) => const FelicitationDialog(),
     );
-  }
-
-  // Removed unused _buildActivationDialog method
-
-  String _getProductId(String plan, bool isMonthly) {
-    if (Platform.isAndroid) {
-      // Pour Android
-      if (plan.contains("Premium")) {
-        return isMonthly
-            ? 'offre_contraloc:premium-monthly'
-            : 'offre_contraloc:premium-yearly';
-      } else if (plan.contains("Pro")) {
-        return isMonthly
-            ? 'offre_contraloc:pro-monthly'
-            : 'offre_contraloc:pro-yearly';
-      }
-    } else {
-      // Pour iOS
-      if (plan.contains("Premium")) {
-        return isMonthly
-            ? 'PremiumMonthlySubscription'
-            : 'PremiumYearlySubscription';
-      } else if (plan.contains("Pro")) {
-        return isMonthly ? 'ProMonthlySubscription' : 'ProYearlySubscription';
-      }
-    }
-    return 'free';
   }
 
   void _showMessage(String message, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: color,
-        duration: const Duration(seconds: 3),
-        action: message.contains('Erreur')
-            ? SnackBarAction(
-                label: 'Réessayer',
-                textColor: Colors.white,
-                onPressed: () => _retryLastPurchase(),
-              )
-            : null,
-      ),
+      SnackBar(content: Text(message), backgroundColor: color),
     );
-  }
-
-  String? _lastAttemptedPurchase;
-  void _retryLastPurchase() {
-    if (_lastAttemptedPurchase != null) {
-      _handleSubscription(_lastAttemptedPurchase!);
-    }
-  }
-
-  Future<void> _openManageSubscription() async {
-    if (Platform.isIOS) {
-      const url = 'https://apps.apple.com/account/subscriptions';
-      if (await canLaunch(url)) {
-        await launch(url);
-      }
-    } else if (Platform.isAndroid) {
-      const url = 'https://play.google.com/store/account/subscriptions';
-      if (await canLaunch(url)) {
-        await launch(url);
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    print('🏗️ Construction avec subscriptionId: $subscriptionId');
-
     return Scaffold(
+      backgroundColor: Colors.white, // Ajout du fond blanc
       appBar: AppBar(
         title: const Text(
           "Mon abonnement",
@@ -457,99 +91,80 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
             fontSize: 24,
           ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: const Color(0xFF08004D),
+        iconTheme: const IconThemeData(
+            color: Colors.white), // Ajout pour le bouton retour
+        centerTitle: true, // Optionnel : pour centrer le titre
       ),
-      backgroundColor: Colors.grey[50],
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              const SizedBox(height: 15), // Réduit de 25 à 15
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    _buildToggleButton(true, "Mensuel", Icons.calendar_today),
-                    _buildToggleButton(false, "Annuel", Icons.calendar_month),
-                  ],
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(
-                    vertical: 5, horizontal: 20), // Réduit de 10 à 5
-                child: Text(
-                  "Nos prix sont sans engagement",
-                  style: TextStyle(
-                    color: Color(0xFF08004D),
-                    fontSize: 14,
-                    fontStyle: FontStyle.italic,
+      body: Container(
+        color: Colors.white, // Ajout du fond blanc au container principal
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                // Toggle mensuel/annuel
+                Container(
+                  margin: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      _buildToggleButton(true, "Mensuel", Icons.calendar_today),
+                      _buildToggleButton(false, "Annuel", Icons.calendar_month),
+                    ],
                   ),
                 ),
-              ),
-              Expanded(
-                child: PlanDisplay(
-                  isMonthly: isMonthly,
-                  currentSubscriptionName: _getPlanDisplayName(subscriptionId),
-                  subscriptionId: subscriptionId,
-                  lastSyncDate: lastSyncDate, // Ajouter ce paramètre
-                  onSubscribe: _handleSubscription,
-                  onPageChanged: (index) =>
-                      setState(() => _currentIndex = index),
-                  currentIndex: _currentIndex,
-                ),
-              ),
-              if (subscriptionId != 'free')
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _openManageSubscription,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Colors.white, // Set background color to white
-                    foregroundColor: const Color(
-                        0xFF08004D), // Set text color to match the theme
+
+                // Affichage des plans
+                Expanded(
+                  child: PlanDisplay(
+                    isMonthly: isMonthly,
+                    currentEntitlement: _currentEntitlement,
+                    onSubscribe: _processSubscription,
+                    onPageChanged: (index) {
+                      // Gérer le changement de page si nécessaire
+                    },
                   ),
-                  child: const Text('Gérer mon abonnement'),
                 ),
-              _buildContactButton(),
-              const SizedBox(height: 30),
-            ],
-          ),
-          if (_isLoading)
-            Container(
-              color: Colors.black54,
-              child: const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+
+                // Bouton de contact
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20.0),
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const QuestionUser()),
+                      );
+                    },
+                    icon: const Icon(
+                      Icons.help_outline,
+                      color: Color(0xFF08004D),
+                      size: 24,
                     ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Traitement en cours...',
+                    label: const Text(
+                      "Des questions ? Contactez-nous",
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Color(0xFF08004D),
                         fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
                       ),
                     ),
-                  ],
+                  ),
+                ),
+              ],
+            ),
+            if (_isLoading)
+              Container(
+                color: Colors.black54,
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -558,12 +173,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     final bool isSelected = isMonthly == isMonthlyButton;
     return Expanded(
       child: GestureDetector(
-        // Ajouter ce GestureDetector
-        onTap: () {
-          setState(() {
-            isMonthly = isMonthlyButton;
-          });
-        },
+        onTap: () => setState(() => isMonthly = isMonthlyButton),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
@@ -576,42 +186,17 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon,
-                  size: 20, color: isSelected ? Colors.white : Colors.grey),
+              Icon(icon, color: isSelected ? Colors.white : Colors.grey),
               const SizedBox(width: 8),
               Text(
                 text,
                 style: TextStyle(
                   color: isSelected ? Colors.white : Colors.grey,
-                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContactButton() {
-    return TextButton.icon(
-      onPressed: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const QuestionUser()),
-      ),
-      icon: const Icon(
-        Icons.help_outline,
-        color: Color(0xFF08004D),
-        size: 24,
-      ),
-      label: const Text(
-        "Des questions ? Contactez-nous",
-        style: TextStyle(
-          color: Color(0xFF08004D),
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.3,
         ),
       ),
     );

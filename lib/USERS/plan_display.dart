@@ -1,8 +1,12 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
+
+import 'package:ContraLoc/services/revenue_cat_service.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
+
+import 'package:purchases_flutter/purchases_flutter.dart';
 
 class PlanData {
   final String title;
@@ -88,84 +92,33 @@ class PlanData {
 // Remplacer "class PlanDisplay extends StatelessWidget" par:
 class PlanDisplay extends StatefulWidget {
   final bool isMonthly;
-  final String currentSubscriptionName;
+  final String currentEntitlement;
   final Function(String) onSubscribe;
   final ValueChanged<int>? onPageChanged;
-  final int currentIndex;
-  final String subscriptionId; // Ajouter ce paramètre
-  final String? lastSyncDate; // Ajouter ce paramètre
 
   const PlanDisplay({
     Key? key,
     required this.isMonthly,
-    required this.currentSubscriptionName,
+    required this.currentEntitlement,
     required this.onSubscribe,
     this.onPageChanged,
-    required this.currentIndex,
-    required this.subscriptionId, // Ajouter ce paramètre
-    this.lastSyncDate, // Ajouter ce paramètre
   }) : super(key: key);
 
   @override
-  State<PlanDisplay> createState() =>
-      PlanDisplayState(); // Enlever l'underscore
+  State<PlanDisplay> createState() => PlanDisplayState();
 }
 
 class PlanDisplayState extends State<PlanDisplay> {
   bool isProcessing = false;
-  String? _previousLastSyncDate;
-  // Suppression de showActivationMessage
 
   @override
   void initState() {
     super.initState();
-    // Suppression de _loadActivationStartTime
-  }
-
-  @override
-  void didUpdateWidget(PlanDisplay oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.subscriptionId != oldWidget.subscriptionId) {
-      _checkAndResetActivation();
-    }
-    if (widget.lastSyncDate != _previousLastSyncDate &&
-        widget.lastSyncDate != null) {
-      _previousLastSyncDate = widget.lastSyncDate;
-      _resetAllState();
-    }
-    // Vérifier si la synchronisation est terminée
-    if (widget.lastSyncDate != _previousLastSyncDate) {
-      _previousLastSyncDate = widget.lastSyncDate;
-      if (mounted) {
-        setState(() {
-          isProcessing = false;
-        });
-      }
-    }
   }
 
   @override
   void dispose() {
-    // Suppression de _activationTimer?.cancel()
     super.dispose();
-  }
-
-  Future<void> _checkAndResetActivation() async {
-    if (widget.subscriptionId != 'free') {
-      if (mounted) {
-        setState(() {
-          isProcessing = false;
-        });
-      }
-    }
-  }
-
-  void _resetAllState() {
-    if (mounted) {
-      setState(() {
-        isProcessing = false;
-      });
-    }
   }
 
   Widget _buildFeatureRow(Map<String, dynamic> feature) {
@@ -191,28 +144,24 @@ class PlanDisplayState extends State<PlanDisplay> {
     );
   }
 
-  Widget _buildPlanCard(PlanData plan, bool isActive) {
-    // Convertir le titre du plan en format d'ID standardisé
-    String planId = '';
-    if (plan.title.contains("Pro")) {
-      planId = widget.isMonthly ? 'pro-monthly' : 'pro-yearly';
-    } else if (plan.title.contains("Premium")) {
-      planId = widget.isMonthly ? 'premium-monthly' : 'premium-yearly';
+  Widget _buildPlanCard(PlanData plan) {
+    // Déterminer si le plan est actif en fonction de l'entitlement
+    bool isActivePlan = false;
+    if (plan.title.contains("Premium")) {
+      isActivePlan = widget.currentEntitlement ==
+              RevenueCatService.entitlementPremiumMonthly ||
+          widget.currentEntitlement ==
+              RevenueCatService.entitlementPremiumYearly;
+    } else if (plan.title.contains("Pro")) {
+      isActivePlan = widget.currentEntitlement ==
+              RevenueCatService.entitlementProMonthly ||
+          widget.currentEntitlement == RevenueCatService.entitlementProYearly;
     } else {
-      planId = 'free';
+      isActivePlan = widget.currentEntitlement == 'free';
     }
 
-    // Comparer avec l'ID standardisé
-    bool isActivePlan = widget.subscriptionId == planId ||
-        (widget.subscriptionId == 'offre_contraloc' && planId == 'pro-monthly');
-
-    // Modifier les logs pour ne garder que l'essentiel
-    print('📦 Plan: ${plan.title} (ID: $planId)');
-    print('- Current subscription: ${widget.subscriptionId}');
-
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 15, vertical: 0), // Augmenter le padding vertical
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -313,13 +262,11 @@ class PlanDisplayState extends State<PlanDisplay> {
     final plans =
         widget.isMonthly ? PlanData.monthlyPlans : PlanData.yearlyPlans;
 
-    // Supprimer les logs de débogage ici
     return Column(
       children: [
         Expanded(
           child: AbsorbPointer(
-            absorbing: isProcessing &&
-                widget.subscriptionId != 'free', // Modification ici
+            absorbing: isProcessing, // Simplification ici
             child: CarouselSlider.builder(
               itemCount: plans.length,
               options: CarouselOptions(
@@ -333,71 +280,262 @@ class PlanDisplayState extends State<PlanDisplay> {
               ),
               itemBuilder: (context, index, realIndex) {
                 final plan = plans[index];
-                final isActive = widget.currentSubscriptionName == plan.title;
-                return _buildPlanCard(plan, isActive);
+                return _buildPlanCard(plan); // On passe seulement le plan
               },
             ),
           ),
         ),
-        // Suppression de showActivationMessage
       ],
     );
   }
 
-  Future<void> _handleSubscription(String plan) async {
-    setState(() {
-      isProcessing = true;
-    });
+  Widget _buildPaymentButton({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFF08004D)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: const Color(0xFF08004D)),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF08004D),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentDialog(String plan) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Stack(
+        children: [
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  spreadRadius: 5,
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.payment_rounded,
+                  size: 48,
+                  color: Color(0xFF08004D),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  "Choisissez votre moyen de paiement",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF08004D),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Pour ${plan.toLowerCase()}",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                if (Platform.isIOS) ...[
+                  _buildPaymentButton(
+                    icon: Icons.apple,
+                    title: "Apple Pay",
+                    onTap: () => _processPayment(plan, 'apple_pay'),
+                  ),
+                ] else if (Platform.isAndroid) ...[
+                  _buildPaymentButton(
+                    icon: Icons.payment,
+                    title: "Google Pay",
+                    onTap: () => _processPayment(plan, 'google_pay'),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                _buildPaymentButton(
+                  icon: Icons.credit_card,
+                  title: "Carte bancaire",
+                  onTap: () => _processPayment(plan, 'card'),
+                ),
+                const SizedBox(height: 24),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    "Annuler",
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isProcessing)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _processPayment(String plan, String method) async {
+    if (!mounted) return;
+
+    // Afficher un dialogue de chargement
+    showDialog(
+      context: context,
+      barrierDismissible: false, // L'utilisateur ne peut pas fermer le dialogue
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.all(30),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(Color(0xFF08004D)),
+                    strokeWidth: 3,
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    "Traitement en cours...",
+                    style: TextStyle(
+                      color: Color(0xFF08004D),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
 
     try {
-      await widget.onSubscribe(plan);
-      if (plan != "Offre Gratuite" && mounted) {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          // Attendre que Firestore soit mis à jour
-          await Future.delayed(const Duration(seconds: 2));
+      setState(() => isProcessing = true);
 
-          final doc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .collection('authentification')
-              .doc(user.uid)
-              .get();
+      // Fermer le popup de méthode de paiement
+      Navigator.of(context).pop();
 
-          if (doc.exists) {
-            final data = doc.data();
-            if (data?['lastKnownProductId'] != null) {
-              // Suppression de showActivationMessage
-              await _updateActivationStartTimeInFirestore();
-            }
-          }
+      if (method == 'apple_pay' && Platform.isIOS) {
+        final canUseApplePay = await Purchases.canMakePayments();
+        if (!canUseApplePay) {
+          throw PlatformException(
+            code: 'apple_pay_not_available',
+            message: 'Apple Pay n\'est pas disponible sur cet appareil',
+          );
         }
       }
+
+      final customerInfo =
+          await RevenueCatService.purchaseProduct(plan, widget.isMonthly);
+
+      // Fermer le dialogue de chargement
+      if (mounted) Navigator.of(context).pop();
+
+      if (mounted && customerInfo != null) {
+        widget.onSubscribe(plan);
+      }
     } catch (e) {
+      // Fermer le dialogue de chargement en cas d'erreur
+      if (mounted) Navigator.of(context).pop();
+
+      print('❌ Erreur paiement: $e');
       if (mounted) {
-        setState(() {
-          isProcessing = false;
-          // Suppression de showActivationMessage
-        });
+        _showError(e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isProcessing = false);
       }
     }
   }
 
-  // Suppression de startActivationTimer
+  void _showError(String message) {
+    if (!mounted) return;
+    Navigator.of(context).pop(); // Utiliser Navigator.of(context)
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
 
-  // Suppression de _loadActivationStartTime
+  // Modifier la méthode _handleSubscription pour afficher le dialogue
+  Future<void> _handleSubscription(String plan) async {
+    if (plan == "Offre Gratuite") {
+      await widget.onSubscribe(plan);
+      return;
+    }
 
-  Future<void> _updateActivationStartTimeInFirestore() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('authentification')
-        .doc(user.uid)
-        .update({
-      // Suppression de 'activationStartTime'
-    });
+    await showDialog(
+      context: context,
+      builder: (context) => _buildPaymentDialog(plan),
+    );
   }
 }

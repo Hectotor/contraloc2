@@ -1,8 +1,9 @@
 import 'package:ContraLoc/USERS/abonnement_screen.dart';
-import 'package:ContraLoc/services/subscription_service.dart';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import 'dart:async'; // Import Timer
 import '../widget/delete_vehicule.dart';
 import '../widget/CREATION DE CONTRAT/client.dart'; // Assurez-vous que ce fichier est correctement importé
@@ -31,16 +32,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _setupSubscriptionCheck() {
+    print('🔄 Initialisation de la vérification des abonnements');
     // Vérification initiale au démarrage
-    SubscriptionService.checkAndUpdateSubscription();
 
     // Vérification toutes les 24 heures
-    Timer.periodic(const Duration(hours: 24), (_) {
-      if (mounted) {
-        print('🕒 Vérification quotidienne de l\'abonnement');
-        SubscriptionService.checkAndUpdateSubscription();
-      }
-    });
+    Timer.periodic(const Duration(hours: 24), (_) {});
   }
 
   Future<void> _loadUserData() async {
@@ -49,8 +45,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = _auth.currentUser;
     if (user != null) {
       try {
-        // Vérifier l'abonnement avant de charger les données
-        await SubscriptionService.checkAndUpdateSubscription();
+        print('👤 Chargement des données utilisateur...');
+        // Vérifier l'état de l'abonnement via RevenueCat
+        final customerInfo = await Purchases.getCustomerInfo();
+        print(
+            '📱 État RevenueCat: ${customerInfo.entitlements.active.length} abonnement(s) actif(s)');
 
         final userData = await _firestore
             .collection('users')
@@ -72,17 +71,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<int> _getUserSubscriptionLimit() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .get();
-      return doc.data()?['numberOfCars'] ?? 1;
+    try {
+      final customerInfo = await Purchases.getCustomerInfo();
+      if (customerInfo.entitlements.active.isNotEmpty) {
+        final entitlement = customerInfo.entitlements.active.values.first;
+        if (entitlement.identifier.contains('premium-monthly_access') ||
+            entitlement.identifier.contains('premium-yearly_access')) {
+          return 999;
+        } else if (entitlement.identifier.contains('pro-monthly_access') ||
+            entitlement.identifier.contains('pro-yearly_access')) {
+          return 5;
+        }
+      }
+      return 1;
+    } catch (e) {
+      print('❌ Erreur vérification limite: $e');
+      return 1;
     }
-    return 1;
   }
 
   Future<int> _getUserVehicleCount() async {
