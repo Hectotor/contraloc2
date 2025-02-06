@@ -24,16 +24,17 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
   Future<void> _checkCurrentEntitlement() async {
     final customerInfo = await RevenueCatService.checkEntitlements();
-    if (customerInfo != null) {
+    if (customerInfo != null && mounted) {
+      final activeEntitlements = customerInfo.entitlements.active.keys;
       setState(() {
-        if (RevenueCatService.hasPremiumAccess(customerInfo)) {
-          _currentEntitlement = isMonthly
-              ? RevenueCatService.entitlementPremiumMonthly
-              : RevenueCatService.entitlementPremiumYearly;
-        } else if (RevenueCatService.hasProAccess(customerInfo)) {
-          _currentEntitlement = isMonthly
-              ? RevenueCatService.entitlementProMonthly
-              : RevenueCatService.entitlementProYearly;
+        if (activeEntitlements.contains('premium-monthly_access')) {
+          _currentEntitlement = 'premium-monthly_access';
+        } else if (activeEntitlements.contains('premium-yearly_access')) {
+          _currentEntitlement = 'premium-yearly_access';
+        } else if (activeEntitlements.contains('pro-monthly_access')) {
+          _currentEntitlement = 'pro-monthly_access';
+        } else if (activeEntitlements.contains('pro-yearly_access')) {
+          _currentEntitlement = 'pro-yearly_access';
         } else {
           _currentEntitlement = 'free';
         }
@@ -42,6 +43,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   }
 
   Future<void> _processSubscription(String plan) async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
@@ -52,18 +54,22 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         // Add this line to update Firestore
         await SubscriptionService.updateSubscriptionStatus();
 
+        if (!mounted) return;
         await _checkCurrentEntitlement();
         _showActivationPopup();
       }
     } catch (e) {
       print('❌ Erreur achat: $e');
+      if (!mounted) return;
       _showMessage('Erreur lors de l\'achat. Veuillez réessayer.', Colors.red);
     } finally {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
 
   void _showActivationPopup() {
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -130,6 +136,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
                   padding: const EdgeInsets.only(bottom: 20.0),
                   child: TextButton.icon(
                     onPressed: () {
+                      if (!mounted) return;
                       Navigator.push(
                         context,
                         MaterialPageRoute(

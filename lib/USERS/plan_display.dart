@@ -147,16 +147,13 @@ class PlanDisplayState extends State<PlanDisplay> {
   Widget _buildPlanCard(PlanData plan) {
     // Déterminer si le plan est actif en fonction de l'entitlement
     bool isActivePlan = false;
-    if (plan.title.contains("Premium")) {
-      isActivePlan = widget.currentEntitlement ==
-              RevenueCatService.entitlementPremiumMonthly ||
-          widget.currentEntitlement ==
-              RevenueCatService.entitlementPremiumYearly;
-    } else if (plan.title.contains("Pro")) {
-      isActivePlan = widget.currentEntitlement ==
-              RevenueCatService.entitlementProMonthly ||
-          widget.currentEntitlement == RevenueCatService.entitlementProYearly;
-    } else {
+    if (plan.title == "Offre Premium" || plan.title == "Offre Premium Annuel") {
+      isActivePlan = widget.currentEntitlement == 'premium-monthly_access' ||
+                    widget.currentEntitlement == 'premium-yearly_access';
+    } else if (plan.title == "Offre Pro" || plan.title == "Offre Pro Annuel") {
+      isActivePlan = widget.currentEntitlement == 'pro-monthly_access' ||
+                    widget.currentEntitlement == 'pro-yearly_access';
+    } else if (plan.title == "Offre Gratuite") {
       isActivePlan = widget.currentEntitlement == 'free';
     }
 
