@@ -35,8 +35,7 @@ class RevenueCatService {
   static String get entitlementPremiumYearly =>
       Platform.isIOS ? _premiumYearlyIOS : _premiumYearlyAndroid;
 
-  // Constantes pour l'offering et les packages
-  static const String OFFERING_ID = 'default'; // Changed from 'OFFRE'
+  // Constantes pour les packages
   static const String PACKAGE_PREMIUM_YEARLY = 'premium_yearly';
   static const String PACKAGE_PREMIUM_MONTHLY = 'premium_monthly';
   static const String PACKAGE_PRO_YEARLY = 'pro_yearly';
