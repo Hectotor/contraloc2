@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:convert';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -8,6 +10,22 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'pdf_signa_cachet.dart';
 import 'pdf_voiture.dart';
 import 'pdf_info_contact.dart';
+
+Future<pw.MemoryImage?> _loadImageFromFirebaseStorage(String logoUrl) async {
+  try {
+    // Télécharger les données de l'image
+    final Uint8List? logoBytes = await FirebaseStorage.instance
+        .refFromURL(logoUrl)
+        .getData();
+    
+    if (logoBytes != null) {
+      return pw.MemoryImage(logoBytes);
+    }
+  } catch (e) {
+    print("Erreur de chargement du logo depuis Firebase Storage : $e");
+  }
+  return null;
+}
 
 Future<String> generatePdf(
   Map<String, dynamic> data,
@@ -37,37 +55,100 @@ Future<String> generatePdf(
   String typeLocation,
   String prixLocation, {
   required String condition,
+  String? signatureBase64, // Nouveau paramètre optionnel
 }) async {
   final pdf = pw.Document();
 
-// Chargez les données des polices
+  // Chargez les données des polices
   final font = await rootBundle.load("assets/fonts/OpenSans-Regular.ttf");
   final boldData = await rootBundle.load("assets/fonts/OpenSans-Bold.ttf");
   final italicData = await rootBundle.load("assets/fonts/OpenSans-Italic.ttf");
   final scriptData = await rootBundle.load("assets/fonts/Pacifico-Regular.ttf");
 
-// Créez les objets `pw.Font`
+  // Créez les objets `pw.Font`
   final ttf = pw.Font.ttf(font);
-  final scriptFont = pw.Font.ttf(font);
-  final scriptdancing = pw.Font.ttf(scriptData); // Police Dancing Script
   final boldFont = pw.Font.ttf(boldData);
   final italicFont = pw.Font.ttf(italicData);
+  final scriptFont = pw.Font.ttf(scriptData);
 
-  // Charger le logo si disponible
-  pw.ImageProvider? logoImage;
+  // Charger le logo
+  pw.MemoryImage? logoImage;
   if (logoUrl.isNotEmpty) {
-    final logoBytes =
-        (await NetworkAssetBundle(Uri.parse(logoUrl)).load(logoUrl))
-            .buffer
-            .asUint8List();
-    // Compresser le logo
-    final compressedLogo = await FlutterImageCompress.compressWithList(
-      logoBytes,
-      minWidth: 800,
-      minHeight: 800,
-      quality: 75,
-    );
-    logoImage = pw.MemoryImage(compressedLogo);
+    try {
+      // Vérifier si c'est une URL Firebase Storage
+      if (logoUrl.startsWith('https://firebasestorage.googleapis.com')) {
+        logoImage = await _loadImageFromFirebaseStorage(logoUrl);
+      } else {
+        // Chemin local
+        final logoBytes = await File(logoUrl).readAsBytes();
+        logoImage = pw.MemoryImage(logoBytes);
+      }
+    } catch (e) {
+      print("Erreur de chargement du logo : $e");
+    }
+  }
+
+  // Convertir la signature base64 en image si disponible
+  pw.MemoryImage? signatureImage;
+  
+  // Nouvelle vérification pour data['signature_aller']
+  if (data.containsKey('signature_aller') && 
+      data['signature_aller'] is String && 
+      data['signature_aller'].isNotEmpty) {
+    try {
+      print('📝 Signature trouvée dans data[\'signature_aller\']');
+      final signatureBytes = base64Decode(data['signature_aller']);
+      signatureImage = pw.MemoryImage(signatureBytes);
+      signatureBase64 = data['signature_aller'];
+    } catch (e) {
+      print("❌ Erreur de chargement de la signature depuis data['signature_aller'] : $e");
+    }
+  }
+  
+  // Vérification originale pour 'signature'
+  if (data.containsKey('signature') && 
+      data['signature'] is Map && 
+      data['signature'].containsKey('base64') &&
+      data['signature']['base64'] is String &&
+      data['signature']['base64'].isNotEmpty) {
+    try {
+      print('📝 Signature trouvée dans data[\'signature\'][\'base64\']');
+      final signatureBytes = base64Decode(data['signature']['base64']);
+      signatureImage = pw.MemoryImage(signatureBytes);
+      signatureBase64 = data['signature']['base64'];
+    } catch (e) {
+      print("❌ Erreur de chargement de la signature depuis data['signature']['base64'] : $e");
+    }
+  }
+  
+  // Vérification originale
+  if (signatureBase64 != null && signatureBase64.isNotEmpty) {
+    try {
+      final signatureBytes = base64Decode(signatureBase64);
+      signatureImage = pw.MemoryImage(signatureBytes);
+    } catch (e) {
+      print("❌ Erreur de chargement de la signature : $e");
+    }
+  } else if (data.containsKey('signatureBase64') && 
+             data['signatureBase64'] is String && 
+             data['signatureBase64'].isNotEmpty) {
+    // Fallback pour l'ancienne méthode de passage de signature
+    try {
+      final signatureBytes = base64Decode(data['signatureBase64']);
+      signatureImage = pw.MemoryImage(signatureBytes);
+    } catch (e) {
+      print("❌ Erreur de chargement de la signature : $e");
+    }
+  }
+
+  // Convertir les photos de retour en bytes
+  List<Uint8List> photosRetourBytes = [];
+  for (var photoFile in photosRetour) {
+    try {
+      photosRetourBytes.add(await photoFile.readAsBytes());
+    } catch (e) {
+      print("Erreur de chargement d'une photo : $e");
+    }
   }
 
   // Convertir les dates en DateTime
@@ -111,23 +192,6 @@ Future<String> generatePdf(
     }
   }
 
-  // Charger les photos du véhicule au retour si disponibles
-  List<Uint8List> photosRetourBytes = [];
-  for (var photo in photosRetour) {
-    final photoBytes = await photo.readAsBytes();
-    // Compresser les photos
-    final compressedPhoto = await FlutterImageCompress.compressWithList(
-      photoBytes,
-      minWidth: 800,
-      minHeight: 800,
-      quality: 75,
-    );
-    photosRetourBytes.add(compressedPhoto);
-  }
-
-  // Redimensionner les images avant de les inclure dans le PDF
-
-  // Créer le document avec des pages multiples automatiquement
   pdf.addPage(
     pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
@@ -319,13 +383,14 @@ Future<String> generatePdf(
               adresse: adresse,
               telephone: telephone,
               siret: siret,
+              nom: data['nom'],
+              prenom: data['prenom'],
               boldFont: boldFont,
               italicFont: italicFont,
               scriptFont: scriptFont,
-              scriptdancing: scriptdancing,
-              nom: data['nom'],
-              prenom: data['prenom'],
+              scriptdancing: scriptFont,
               dateFinEffectif: dateFinEffectifData, // Ajout du paramètre
+              signatureImage: signatureImage, // Passer la signature
             ),
             pw.SizedBox(height: 80),
           ],

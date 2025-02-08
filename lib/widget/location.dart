@@ -1,3 +1,4 @@
+import 'dart:convert'; // Ajout de l'import pour base64Encode
 import 'package:ContraLoc/utils/pdf.dart';
 import 'package:ContraLoc/widget/MES%20CONTRATS/contrat_condition.dart';
 import 'package:path_provider/path_provider.dart';
@@ -69,6 +70,7 @@ class _LocationPageState extends State<LocationPage> {
   int _pourcentageEssence = 50; // Niveau d'essence par défaut
   bool _isLoading = false; // Add a state variable for loading
   bool _acceptedConditions = false; // Add a state variable for acceptance
+  String _signatureBase64 = ''; // Add a state variable for signature
 
   late final SignatureController _signatureController;
   final TextEditingController _prixLocationController = TextEditingController();
@@ -174,6 +176,11 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   Future<void> _validerContrat() async {
+    // Capture de la signature avant la validation
+    await _captureSignature();
+
+    print('Valeur de _signatureBase64 avant sauvegarde : $_signatureBase64');
+
     if (_typeLocation == "Payante" && _prixLocationController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -273,6 +280,7 @@ class _LocationPageState extends State<LocationPage> {
         'nettoyageExt': _nettoyageExtController.text,
         'carburantManquant': _carburantManquantController.text,
         'caution': _cautionController.text,
+        'signature_aller': _signatureBase64, // Modification ici
       });
 
       // Si un email client est disponible, générer et envoyer le PDF
@@ -351,10 +359,11 @@ class _LocationPageState extends State<LocationPage> {
             'commentaire': _commentaireController.text,
             'photos': vehiculeUrls,
             'signatureAller': signatureAller,
+            'signatureBase64': _signatureBase64, // Passer explicitement la signature base64
             'nettoyageInt': _nettoyageIntController.text,
             'nettoyageExt': _nettoyageExtController.text,
             'carburantManquant': _carburantManquantController.text,
-            'caution': _cautionController.text, // Ajouter cette ligne
+            'caution': _cautionController.text,
           },
           '', // dateFinEffectif
           '', // kilometrageRetour
@@ -382,6 +391,7 @@ class _LocationPageState extends State<LocationPage> {
           _typeLocation,
           vehicleData['prixLocation'] ?? '',
           condition: conditions, // seul paramètre nommé nécessaire
+          signatureBase64: _signatureBase64, // Ajouter le paramètre nommé
         );
 
         // Envoyer le PDF par email
@@ -420,6 +430,25 @@ class _LocationPageState extends State<LocationPage> {
       setState(() {
         _isLoading = false; // Set loading state to false
       });
+    }
+  }
+
+  Future<void> _captureSignature() async {
+    if (!_signatureController.isNotEmpty) {
+      print('Aucune signature dessinée');
+      return;
+    }
+
+    try {
+      final signatureBytes = await _signatureController.toPngBytes();
+      if (signatureBytes != null) {
+        setState(() {
+          _signatureBase64 = base64Encode(signatureBytes);
+          print('Signature capturée en base64');
+        });
+      }
+    } catch (e) {
+      print('Erreur lors de la capture de la signature : $e');
     }
   }
 
@@ -586,9 +615,14 @@ class _LocationPageState extends State<LocationPage> {
                       _acceptedConditions = accepted;
                     });
                   },
+                  onSignatureChanged: (String signature) {
+                    setState(() {
+                      _signatureBase64 = signature;
+                    });
+                  },
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 50),
                 Padding(
                   padding: const EdgeInsets.only(
                       bottom: 40.0), // Ajout d'un padding en bas

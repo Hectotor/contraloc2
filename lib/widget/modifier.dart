@@ -26,6 +26,8 @@ import 'MODIFICATION DE CONTRAT/info_loc.dart';
 import 'MODIFICATION DE CONTRAT/info_loc_retour.dart';
 import 'MODIFICATION DE CONTRAT/retour_loc.dart';
 import 'navigation.dart'; // Import the NavigationPage
+import 'MODIFICATION DE CONTRAT/cloturer_location.dart'; // Import the popup
+import 'MODIFICATION DE CONTRAT/retour_envoie_pdf.dart'; // Nouvelle importation
 
 class ModifierScreen extends StatefulWidget {
   final String contratId;
@@ -178,7 +180,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         allPhotosUrls.addAll(newUrls);
       }
 
-      // Mettre à jour Firestore
+      // Mettre à jour Firestore avec les informations de retour
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -191,8 +193,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
             ? _kilometrageRetourController.text
             : null,
         'photosRetourUrls': allPhotosUrls,
-        'status': 'restitue',
-        'dateRestitution': FieldValue.serverTimestamp(),
         // Ajouter ces trois champs
         'nettoyageInt': _nettoyageIntController.text,
         'nettoyageExt': _nettoyageExtController.text,
@@ -204,15 +204,19 @@ class _ModifierScreenState extends State<ModifierScreen> {
         Navigator.pop(context);
       }
 
-      // Afficher le message de succès et naviguer
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Contrat mis à jour avec succès !"),
-            backgroundColor: Colors.green,
-          ),
-        );
+      // Générer et envoyer le PDF
+      await RetourEnvoiePdf.genererEtEnvoyerPdfCloture(
+        context: context,
+        contratData: widget.data,
+        contratId: widget.contratId,
+        dateFinEffectif: _dateFinEffectifController.text,
+        kilometrageRetour: _kilometrageRetourController.text,
+        commentaireRetour: _commentaireRetourController.text,
+        photosRetour: _photosRetour,
+      );
 
+      // Naviguer vers la page principale
+      if (context.mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -462,7 +466,19 @@ class _ModifierScreenState extends State<ModifierScreen> {
                     ElevatedButton(
                       onPressed: _isUpdatingContrat
                           ? null
-                          : _updateContrat, // Disable button if updating
+                          : () {
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return CloturerLocationPopup(
+                                    onConfirm: _updateContrat,
+                                    onCancel: () {
+                                      // Optional: Add any specific cancel logic if needed
+                                    },
+                                  );
+                                },
+                              );
+                            }, // Disable button if updating
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF08004D), // Bleu nuit
                         minimumSize: const Size(double.infinity, 50),

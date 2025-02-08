@@ -60,9 +60,10 @@ class RevenueCatService {
     required String androidApiKey,
     required String iosApiKey,
   }) async {
-    await Purchases.setLogLevel(LogLevel.debug);
+    await Purchases.setLogLevel(LogLevel.verbose);
     final apiKey = Platform.isIOS ? iosApiKey : androidApiKey;
     await Purchases.configure(PurchasesConfiguration(apiKey));
+    print('🔑 RevenueCat initialisé avec la clé: ${apiKey.substring(0, 10)}...');
   }
 
   static Future<void> login(String userId) async {
@@ -156,30 +157,47 @@ class RevenueCatService {
         throw Exception('Plan non reconnu: $plan');
       }
 
-      print('🛒 Tentative d\'achat du produit: $productId');
-      print('📱 Plateforme: ${Platform.isIOS ? "iOS" : "Android"}');
-      print('💳 Méthode de paiement: $paymentMethod');
+      print('🛒 Détails de l\'achat :');
+      print('   📦 Plan: $plan');
+      print('   🕰️ Durée: ${isMonthly ? "Mensuel" : "Annuel"}');
+      print('   💳 Méthode de paiement: $paymentMethod');
+      print('   🆔 ID Produit: $productId');
+      print('   📱 Plateforme: ${Platform.isIOS ? "iOS" : "Android"}');
 
       // Récupérer le produit
       final products = await Purchases.getProducts([productId]);
+      
+      print('🔍 Produits récupérés :');
+      for (var product in products) {
+        print('   🏷️ Identifiant: ${product.identifier}');
+        print('   💰 Prix: ${product.price}');
+        print('   📝 Description: ${product.description}');
+      }
+
       if (products.isEmpty) {
+        print('❌ ERREUR : Aucun produit trouvé pour l\'ID $productId');
         throw Exception('Produit non trouvé: $productId');
       }
 
-      print('🎯 Achat du produit: ${products.first.identifier}');
+      print('🎯 Tentative d\'achat du produit: ${products.first.identifier}');
       final customerInfo = await Purchases.purchaseProduct(productId);
 
       print('✅ Achat réussi');
       print('📱 Entitlements actifs: ${customerInfo.entitlements.active.keys}');
       return customerInfo;
     } on PlatformException catch (e) {
+      print('❌ ERREUR DE PAIEMENT DÉTAILLÉE :');
+      print('   📝 Message: ${e.message}');
+      print('   🆔 Code: ${e.code}');
+      print('   📦 Détails: ${e.details}');
+
       // Si l'utilisateur annule l'achat, on retourne null sans erreur
       if (e.details != null && e.details?['userCancelled'] == true) {
         print('ℹ️ Achat annulé par l\'utilisateur');
         return null;
       }
-      // Pour les autres erreurs, on affiche l'erreur et on la relance
-      print('❌ Erreur lors de l\'achat: ${e.message}');
+      
+      // Pour les autres erreurs, on relance
       rethrow;
     }
   }

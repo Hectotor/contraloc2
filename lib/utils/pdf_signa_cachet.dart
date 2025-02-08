@@ -1,5 +1,10 @@
+//import 'dart:math';
+import 'dart:math';
+
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'dart:convert';
+//import 'package:signature/signature.dart'; // Import pour utiliser base64Decode
 
 class SignaCachetWidget {
   static pw.Widget build({
@@ -15,7 +20,14 @@ class SignaCachetWidget {
     required pw.Font italicFont,
     required pw.Font scriptdancing,
     required String? dateFinEffectif, // Ajout du paramètre
+    String? signatureBase64, // Ancien paramètre
+    pw.MemoryImage? signatureImage, // Nouveau paramètre
   }) {
+    // Log des informations de signature
+    print('🔑 Paramètres de signature reçus :');
+    print('📝 Signature Base64: ${signatureBase64 != null ? 'Présente (${signatureBase64.length} caractères)' : 'Absente'}');
+    print('🖼️ Signature Image: ${signatureImage != null ? 'Présente' : 'Absente'}');
+
     return pw.Container(
       width: double.infinity,
       padding: const pw.EdgeInsets.symmetric(vertical: 15, horizontal: 20),
@@ -56,7 +68,9 @@ class SignaCachetWidget {
                 scriptFont: scriptFont,
                 italicFont: italicFont,
                 scriptdancing: scriptdancing,
-                dateFinEffectif: dateFinEffectif, // Passage du paramètre
+                dateFinEffectif: dateFinEffectif,
+                signatureBase64: signatureBase64, // Passage de l'ancien paramètre
+                signatureImage: signatureImage, // Passage du nouveau paramètre
               ),
             ],
           ),
@@ -121,7 +135,9 @@ class SignaCachetWidget {
     required pw.Font scriptFont,
     required pw.Font italicFont,
     required pw.Font scriptdancing,
-    required String? dateFinEffectif, // Ajout du paramètre
+    required String? dateFinEffectif,
+    String? signatureBase64, // Ancien paramètre
+    pw.MemoryImage? signatureImage, // Nouveau paramètre
   }) {
     return pw.Container(
       width: 200,
@@ -152,10 +168,32 @@ class SignaCachetWidget {
                         style: pw.TextStyle(
                           fontSize: 14,
                           font: scriptdancing,
-                          //fontStyle: pw.FontStyle.italic,
-                          //fontWeight: pw.FontWeight.bold,
                         ),
                         textAlign: pw.TextAlign.center,
+                      ),
+                    // Modification ici pour être plus robuste
+                    if (signatureImage != null)
+                      pw.Container(
+                        width: 100,
+                        height: 50,
+                        child: pw.Image(
+                          signatureImage,
+                          fit: pw.BoxFit.contain,
+                        ),
+                      )
+                    else if (signatureBase64 != null && signatureBase64.isNotEmpty)
+                      pw.Container(
+                        width: 100,
+                        height: 50,
+                        child: _buildSignatureImage(signatureBase64),
+                      )
+                    else
+                      pw.Text(
+                        'Aucune signature',
+                        style: pw.TextStyle(
+                          color: PdfColors.grey,
+                          font: italicFont,
+                        ),
                       ),
                   ],
                 ),
@@ -204,14 +242,12 @@ class SignaCachetWidget {
                   ),
                 ),
               ),
-              pw.SizedBox(width: 8),
-              pw.Expanded(
-                child: pw.Text(
-                  'En cochant cette case, je reconnais avoir pris connaissance des termes et conditions de location',
-                  style: pw.TextStyle(
-                    fontSize: 8,
-                    font: scriptFont,
-                  ),
+              pw.SizedBox(width: 5),
+              pw.Text(
+                'Lu et approuvé',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  font: italicFont,
                 ),
               ),
             ],
@@ -219,5 +255,23 @@ class SignaCachetWidget {
         ],
       ),
     );
+  }
+
+  static pw.Widget _buildSignatureImage(String base64String) {
+    try {
+      print('🖊️ Construction de l\'image de signature');
+      print('📏 Longueur de la signature : ${base64String.length} caractères');
+      print('🔍 Début de la signature : ${base64String.substring(0, min(50, base64String.length))}...');
+      
+      return pw.Image(
+        pw.MemoryImage(
+          base64Decode(base64String),
+        ),
+        fit: pw.BoxFit.contain,
+      );
+    } catch (e) {
+      print('❌ Erreur lors de la construction de l\'image de signature : $e');
+      return pw.Text('Signature non disponible', style: pw.TextStyle(color: PdfColors.red));
+    }
   }
 }

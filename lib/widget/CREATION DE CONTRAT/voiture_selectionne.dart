@@ -20,7 +20,6 @@ class VoitureSelectionne extends StatelessWidget {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        print("Recherche du véhicule : ${immatriculation}"); // Debug log
 
         final vehiculeDoc = await firestore
             .collection('users')
@@ -29,9 +28,6 @@ class VoitureSelectionne extends StatelessWidget {
             .where('immatriculation', isEqualTo: immatriculation)
             .get();
 
-        print(
-            "Nombre de documents trouvés : ${vehiculeDoc.docs.length}"); // Debug log
-
         if (vehiculeDoc.docs.isNotEmpty) {
           final data = vehiculeDoc.docs.first.data();
           return data['photoVehiculeUrl'] as String?;
@@ -39,7 +35,7 @@ class VoitureSelectionne extends StatelessWidget {
       }
       return null;
     } catch (e) {
-      print("Erreur lors de la récupération de la photo : $e"); // Debug log
+      print("Erreur lors de la récupération de la photo : $e"); 
       return null;
     }
   }
@@ -87,7 +83,7 @@ class VoitureSelectionne extends StatelessWidget {
               }
               final photoUrl = snapshot.data!;
               return ClipRRect(
-                borderRadius: BorderRadius.circular(10), // Arrondir les bords
+                borderRadius: BorderRadius.circular(10), 
                 child: Image.network(
                   photoUrl,
                   width: 100,
