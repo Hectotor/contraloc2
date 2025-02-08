@@ -368,7 +368,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         widget.data['dateFinTheorique'] ?? '',
         widget.data['dateFinEffectif'] ?? '',
         widget.data['kilometrageDepart'] ?? '',
-        widget.data['pourcentageEssence']?.toString() ?? '0',
+        widget.data['pourcentageEssence'].toString() ?? '0',
         widget.data['typeLocation'] ?? '',
         vehicleData['prixLocation'] ?? '',
         condition: conditions, // Utiliser les conditions mises à jour
@@ -455,12 +455,13 @@ class _ModifierScreenState extends State<ModifierScreen> {
                     const SizedBox(height: 20),
                     const SizedBox(height: 10),
                     SignatureRetourWidget(
-                      nom: widget.data['nom'],
-                      prenom: widget.data['prenom'],
+                      nom: widget.data['nom'] ?? '',
+                      prenom: widget.data['prenom'] ?? '',
                       controller: _signatureRetourController,
                       accepted: true,
-                      onRetourAcceptedChanged:
-                          (bool value) {}, // Assuming the signature is accepted
+                      onRetourAcceptedChanged: (bool value) {
+                        print('🖊️ Signature de retour acceptée : $value');
+                      },
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
