@@ -28,6 +28,7 @@ Future<Map<String, String>> fetchRevenueCatKeys() async {
     return {
       'android': data['android_api_key'] ?? '',
       'ios': data['ios_api_key'] ?? '',
+      'stripe': data['stripe_api_key'] ?? '',
     };
   } catch (e) {
     print('❌ Erreur lors de la récupération des clés RevenueCat: $e');
