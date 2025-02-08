@@ -435,7 +435,7 @@ class PlanDisplayState extends State<PlanDisplay> {
     // Afficher un dialogue de chargement
     showDialog(
       context: context,
-      barrierDismissible: false, // L'utilisateur ne peut pas fermer le dialogue
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
           backgroundColor: Colors.transparent,
@@ -488,8 +488,11 @@ class PlanDisplayState extends State<PlanDisplay> {
         }
       }
 
-      final customerInfo =
-          await RevenueCatService.purchaseProduct(plan, widget.isMonthly);
+      final customerInfo = await RevenueCatService.purchaseProduct(
+        plan, 
+        widget.isMonthly, 
+        paymentMethod: method
+      );
 
       // Fermer le dialogue de chargement
       if (mounted) Navigator.of(context).pop();

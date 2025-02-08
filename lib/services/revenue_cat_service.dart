@@ -16,6 +16,12 @@ class RevenueCatService {
       'offre_contraloc:premium-monthly';
   static const String _premiumYearlyAndroid = 'offre_contraloc:premium-yearly';
 
+  // Identifiants Stripe
+  static const String _proMonthlyStripe = 'prod_RiISy7xcZzgFb5';
+  static const String _proYearlyStripe = 'prod_RiIT1QQFJjV5hR';
+  static const String _premiumMonthlyStripe = 'prod_RiIVqYAhJGzB0u';
+  static const String _premiumYearlyStripe = 'prod_RiIXsD22K4xehY';
+
   // Getters pour obtenir le bon ID selon la plateforme
   static String get entitlementProMonthly =>
       Platform.isIOS ? _proMonthlyIOS : _proMonthlyAndroid;
@@ -130,22 +136,30 @@ class RevenueCatService {
   }
 
   static Future<CustomerInfo?> purchaseProduct(
-      String plan, bool isMonthly) async {
+      String plan, bool isMonthly, {String? paymentMethod}) async {
     try {
       String productId;
 
       // Déterminer le bon ID de produit
       if (plan.contains("Premium")) {
-        productId =
-            isMonthly ? entitlementPremiumMonthly : entitlementPremiumYearly;
+        productId = isMonthly 
+          ? (paymentMethod == 'card' ? _premiumMonthlyStripe : 
+             Platform.isIOS ? _premiumMonthlyIOS : _premiumMonthlyAndroid)
+          : (paymentMethod == 'card' ? _premiumYearlyStripe : 
+             Platform.isIOS ? _premiumYearlyIOS : _premiumYearlyAndroid);
       } else if (plan.contains("Pro")) {
-        productId = isMonthly ? entitlementProMonthly : entitlementProYearly;
+        productId = isMonthly 
+          ? (paymentMethod == 'card' ? _proMonthlyStripe : 
+             Platform.isIOS ? _proMonthlyIOS : _proMonthlyAndroid)
+          : (paymentMethod == 'card' ? _proYearlyStripe : 
+             Platform.isIOS ? _proYearlyIOS : _proYearlyAndroid);
       } else {
         throw Exception('Plan non reconnu: $plan');
       }
 
       print('🛒 Tentative d\'achat du produit: $productId');
       print('📱 Plateforme: ${Platform.isIOS ? "iOS" : "Android"}');
+      print('💳 Méthode de paiement: $paymentMethod');
 
       // Récupérer le produit
       final products = await Purchases.getProducts([productId]);
@@ -153,7 +167,6 @@ class RevenueCatService {
         throw Exception('Produit non trouvé: $productId');
       }
 
-      // Achat direct du produit
       print('🎯 Achat du produit: ${products.first.identifier}');
       final customerInfo = await Purchases.purchaseProduct(productId);
 
