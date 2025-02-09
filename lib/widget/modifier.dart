@@ -368,7 +368,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         widget.data['dateFinTheorique'] ?? '',
         widget.data['dateFinEffectif'] ?? '',
         widget.data['kilometrageDepart'] ?? '',
-        widget.data['pourcentageEssence'].toString() ?? '0',
+        (widget.data['pourcentageEssence'] ?? '').toString(), // Modification ici
         widget.data['typeLocation'] ?? '',
         vehicleData['prixLocation'] ?? '',
         condition: conditions, // Utiliser les conditions mises à jour

@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../utils/pdf.dart';
 import '../CREATION DE CONTRAT/mail.dart';
+import '../MES CONTRATS/contrat_condition.dart';
 
 class RetourEnvoiePdf {
   static Future<void> genererEtEnvoyerPdfCloture({
@@ -44,7 +45,8 @@ class RetourEnvoiePdf {
       Map<String, dynamic> clientData = clientDoc.data() as Map<String, dynamic>? ?? {};
       Map<String, dynamic> contratDataComplete = contratDoc.data() as Map<String, dynamic>? ?? {};
 
-      String clientEmail = (clientData['email'] ?? '').toString();
+      String? clientEmail = clientData['email'] as String?;
+      clientEmail ??= '';
       String nomEntreprise = (clientData['nomEntreprise'] ?? 'Contraloc').toString();
       String adresse = (clientData['adresse'] ?? '').toString();
       String telephone = (clientData['telephone'] ?? '').toString();
@@ -61,9 +63,54 @@ class RetourEnvoiePdf {
       // Log pour le débogage
       print('Signature récupérée : ${signatureBase64 != null ? 'Présente' : 'Absente'}');
 
+      // Récupérer la signature aller
+      String? signatureAllerBase64;
+      
+
+      // FORCER signatureBase64
+      signatureBase64 = signatureAllerBase64;
+
+     
+      // Récupérer les données du véhicule
+      final vehicleDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('vehicules')
+          .where('immatriculation', isEqualTo: contratData['immatriculation'])
+          .get();
+
+      final vehicleData = vehicleDoc.docs.isNotEmpty 
+          ? vehicleDoc.docs.first.data() 
+          : {};
+
       // Générer le PDF de clôture
       final pdfPath = await generatePdf(
-        contratData,
+        {
+          'nom': (contratData['nom'] ?? '').toString(),
+          'prenom': (contratData['prenom'] ?? '').toString(),
+          'adresse': (contratData['adresse'] ?? '').toString(),
+          'telephone': (contratData['telephone'] ?? '').toString(),
+          'email': (contratData['email'] ?? '').toString(),
+          'numeroPermis': (contratData['numeroPermis'] ?? '').toString(),
+          'marque': (contratData['marque'] ?? '').toString(),
+          'modele': (contratData['modele'] ?? '').toString(),
+          'immatriculation': (contratData['immatriculation'] ?? '').toString(),
+          'commentaire': (contratData['commentaire'] ?? '').toString(),
+          'photos': contratData['photos'] ?? [],
+          'signatureAller': signatureAllerBase64,
+          'signatureBase64': signatureBase64,
+          
+          // Nouveaux champs ajoutés
+          'nettoyageInt': (contratData['nettoyageInt'] ?? '').toString(),
+          'nettoyageExt': (contratData['nettoyageExt'] ?? '').toString(),
+          'carburantManquant': (contratData['carburantManquant'] ?? '').toString(),
+          'caution': (contratData['caution'] ?? '').toString(),
+          
+          // Champs supplémentaires
+          'pourcentageEssence': (contratData['pourcentageEssence'] ?? '0').toString(),
+          'typeLocation': (contratData['typeLocation'] ?? '').toString(),
+          'conditions': (contratData['conditions'] ?? ContratModifier.defaultContract).toString(),
+        },
         dateFinEffectif,
         kilometrageRetour,
         commentaireRetour,
@@ -74,39 +121,40 @@ class RetourEnvoiePdf {
         telephone,
         siret,
         commentaireRetour,
-        (contratData['typeCarburant'] ?? '').toString(),
-        (contratData['boiteVitesses'] ?? '').toString(),
-        (contratData['vin'] ?? '').toString(),
-        (contratData['assuranceNom'] ?? '').toString(),
-        (contratData['assuranceNumero'] ?? '').toString(),
-        (contratData['franchise'] ?? '').toString(),
-        (contratData['kilometrageSupp'] ?? '').toString(),
-        (contratData['rayures'] ?? '').toString(),
+        (vehicleData['typeCarburant'] ?? contratData['typeCarburant'] ?? '').toString(),
+        (vehicleData['boiteVitesses'] ?? contratData['boiteVitesses'] ?? '').toString(),
+        (vehicleData['vin'] ?? contratData['vin'] ?? '').toString(),
+        (vehicleData['assuranceNom'] ?? contratData['assuranceNom'] ?? '').toString(),
+        (vehicleData['assuranceNumero'] ?? contratData['assuranceNumero'] ?? '').toString(),
+        (vehicleData['franchise'] ?? contratData['franchise'] ?? '').toString(),
+        (vehicleData['kilometrageSupp'] ?? contratData['kilometrageSupp'] ?? '').toString(),
+        (vehicleData['rayures'] ?? contratData['rayures'] ?? '').toString(),
         (contratData['dateDebut'] ?? '').toString(),
         (contratData['dateFinTheorique'] ?? '').toString(),
         dateFinEffectif,
         (contratData['kilometrageDepart'] ?? '').toString(),
-        (contratData['pourcentageEssence'] ?? '').toString(),
+        (contratData['pourcentageEssence'] ?? '0').toString(),
         (contratData['typeLocation'] ?? '').toString(),
-        (contratData['prixLocation'] ?? '').toString(),
-        condition: 'Clôture de location',
-        signatureBase64: signatureBase64, // Passer la signature
+        (vehicleData['prixLocation'] ?? contratData['prixLocation'] ?? '').toString(),
+        condition: (contratData['conditions'] ?? ContratModifier.defaultContract).toString(),
+        signatureBase64: signatureBase64,
+        
       );
 
       // Vérifier si un email est disponible avant d'envoyer
-      if (clientEmail.isEmpty) {
+      if ((contratData['email'] ?? '').toString().isEmpty) {
         throw Exception("Aucun email client n'a été trouvé");
       }
 
       // Envoyer le PDF par email
       await EmailService.sendEmailWithPdf(
         pdfPath: pdfPath,
-        email: clientEmail,
+        email: (contratData['email'] ?? '').toString(),
         marque: (contratData['marque'] ?? '').toString(),
         modele: (contratData['modele'] ?? '').toString(),
         context: context,
-        prenom: (clientData['prenom'] ?? '').toString(),
-        nom: (clientData['nom'] ?? '').toString(),
+        prenom: (contratData['prenom'] ?? '').toString(),
+        nom: (contratData['nom'] ?? '').toString(),
         nomEntreprise: nomEntreprise,
         adresse: adresse,
         telephone: telephone,
