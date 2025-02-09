@@ -65,8 +65,8 @@ class _ClientPageState extends State<ClientPage> {
 
       setState(() {
         final subscriptionId = doc.data()?['subscriptionId'] ?? 'free';
-        isPremiumUser = subscriptionId == 'premium-monthly' ||
-            subscriptionId == 'premium-yearly';
+        isPremiumUser = subscriptionId == 'premium-monthly_access' ||
+            subscriptionId == 'premium-yearly_access';
       });
     }
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:flutter/material.dart';
 import 'dart:io';
 
 class RevenueCatService {
@@ -199,6 +200,130 @@ class RevenueCatService {
       
       // Pour les autres erreurs, on relance
       rethrow;
+    }
+  }
+
+  // Nouvelle méthode pour gérer le processus complet d'abonnement
+  static Future<CustomerInfo?> processSubscription(
+    BuildContext context, {
+    required String plan,
+    required bool isMonthly,
+    String? paymentMethod,
+  }) async {
+    try {
+      // Montrer un indicateur de chargement
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
+      );
+
+      // Effectuer l'achat de l'abonnement
+      final customerInfo = await purchaseProduct(
+        plan, 
+        isMonthly, 
+        paymentMethod: paymentMethod
+      );
+
+      // Fermer le chargement
+      Navigator.of(context).pop();
+
+      // Si l'achat est réussi, afficher le popup de félicitations
+      if (customerInfo != null) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline, 
+                      color: Colors.green, 
+                      size: 80,
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Félicitations !', 
+                      style: TextStyle(
+                        fontSize: 24, 
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Votre abonnement ${plan.toLowerCase()} ${isMonthly ? 'mensuel' : 'annuel'} a été activé avec succès.',
+                      style: TextStyle(
+                        fontSize: 16, 
+                        color: Colors.black54
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                      ),
+                      child: const Text(
+                        'Continuer', 
+                        style: TextStyle(
+                          fontSize: 16, 
+                          color: Colors.white
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      }
+
+      return customerInfo;
+    } catch (e) {
+      // Fermer le chargement en cas d'erreur
+      Navigator.of(context).pop();
+
+      // Afficher un message d'erreur
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Erreur'),
+            content: Text('Une erreur est survenue lors de l\'abonnement : $e'),
+            actions: [
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+
+      return null;
     }
   }
 }

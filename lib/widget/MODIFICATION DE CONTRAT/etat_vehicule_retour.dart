@@ -42,8 +42,8 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
 
       setState(() {
         final subscriptionId = doc.data()?['subscriptionId'] ?? 'free';
-        isPremiumUser = subscriptionId == 'premium-monthly' ||
-            subscriptionId == 'premium-yearly';
+        isPremiumUser = subscriptionId == 'premium-monthly_access' ||
+            subscriptionId == 'premium-yearly_access';
       });
     }
   }

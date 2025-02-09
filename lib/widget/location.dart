@@ -179,8 +179,6 @@ class _LocationPageState extends State<LocationPage> {
     // Capture de la signature avant la validation
     await _captureSignature();
 
-    print('Valeur de _signatureBase64 avant sauvegarde : $_signatureBase64');
-
     if (_typeLocation == "Payante" && _prixLocationController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
