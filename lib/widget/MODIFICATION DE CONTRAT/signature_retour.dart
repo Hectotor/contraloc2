@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:signature/signature.dart';
 
@@ -7,6 +8,8 @@ class SignatureRetourWidget extends StatefulWidget {
   final SignatureController controller;
   final bool accepted;
   final ValueChanged<bool> onRetourAcceptedChanged;
+  final Function(String)? onSignatureCaptured;
+  final Function(String)? onSignatureChanged;
 
   const SignatureRetourWidget({
     Key? key,
@@ -15,6 +18,8 @@ class SignatureRetourWidget extends StatefulWidget {
     required this.controller,
     required this.accepted,
     required this.onRetourAcceptedChanged,
+    this.onSignatureCaptured,
+    this.onSignatureChanged,
   }) : super(key: key);
 
   @override
@@ -23,6 +28,30 @@ class SignatureRetourWidget extends StatefulWidget {
 
 class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
   bool _acceptedRetour = false;
+  String _base64Signature = '';
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(() {
+      if (widget.controller.isNotEmpty) {
+        _captureSignature();
+      }
+    });
+  }
+
+  Future<void> _captureSignature() async {
+    final signatureBytes = await widget.controller.toPngBytes();
+    if (signatureBytes != null) {
+      setState(() {
+        _base64Signature = base64Encode(signatureBytes);
+      });
+      
+      // Appel des callbacks
+      widget.onSignatureCaptured?.call(_base64Signature);
+      widget.onSignatureChanged?.call(_base64Signature);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

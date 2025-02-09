@@ -55,7 +55,8 @@ Future<String> generatePdf(
   String typeLocation,
   String prixLocation, {
   required String condition,
-  String? signatureBase64, // Nouveau paramètre optionnel
+  String? signatureBase64, // Signature aller
+  String? signatureRetourBase64, // Signature retour
 }) async {
   final pdf = pw.Document();
 
@@ -90,6 +91,7 @@ Future<String> generatePdf(
 
   // Convertir la signature base64 en image si disponible
   pw.MemoryImage? signatureImage;
+  pw.MemoryImage? signatureRetourImage;
   
   // Nouvelle vérification pour data['signature_aller']
   if (data.containsKey('signature_aller') && 
@@ -101,10 +103,24 @@ Future<String> generatePdf(
       signatureImage = pw.MemoryImage(signatureBytes);
       signatureBase64 = data['signature_aller'];
     } catch (e) {
-      print("❌ Erreur de chargement de la signature depuis data['signature_aller'] : $e");
+      print('❌ Erreur de décodage de la signature aller : $e');
     }
   }
-  
+
+  // Vérification pour la signature de retour
+  if (data.containsKey('signatureRetour') && 
+      data['signatureRetour'] is String && 
+      data['signatureRetour'].isNotEmpty) {
+    try {
+      print('📝 Signature de retour trouvée');
+      final signatureRetourBytes = base64Decode(data['signatureRetour']);
+      signatureRetourImage = pw.MemoryImage(signatureRetourBytes);
+      signatureRetourBase64 = data['signatureRetour'];
+    } catch (e) {
+      print('❌ Erreur de décodage de la signature de retour : $e');
+    }
+  }
+
   // Vérification originale pour 'signature'
   if (data.containsKey('signature') && 
       data['signature'] is Map && 
@@ -120,7 +136,7 @@ Future<String> generatePdf(
       print("❌ Erreur de chargement de la signature depuis data['signature']['base64'] : $e");
     }
   }
-  
+
   // Vérification originale
   if (signatureBase64 != null && signatureBase64.isNotEmpty) {
     try {
@@ -388,9 +404,9 @@ Future<String> generatePdf(
               boldFont: boldFont,
               italicFont: italicFont,
               scriptFont: scriptFont,
-              scriptdancing: scriptFont,
               dateFinEffectif: dateFinEffectifData, // Ajout du paramètre
               signatureImage: signatureImage, // Passer la signature
+              signatureRetourImage: signatureRetourImage, // Passer la signature de retour
             ),
             pw.SizedBox(height: 80),
           ],

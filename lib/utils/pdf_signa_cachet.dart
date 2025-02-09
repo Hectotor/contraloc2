@@ -18,15 +18,16 @@ class SignaCachetWidget {
     required pw.Font boldFont,
     required pw.Font scriptFont,
     required pw.Font italicFont,
-    required pw.Font scriptdancing,
     required String? dateFinEffectif, // Ajout du paramètre
     String? signatureBase64, // Ancien paramètre
     pw.MemoryImage? signatureImage, // Nouveau paramètre
+    pw.MemoryImage? signatureRetourImage, // Nouveau paramètre
   }) {
     // Log des informations de signature
     print('🔑 Paramètres de signature reçus :');
     print('📝 Signature Base64: ${signatureBase64 != null ? 'Présente (${signatureBase64.length} caractères)' : 'Absente'}');
     print('🖼️ Signature Image: ${signatureImage != null ? 'Présente' : 'Absente'}');
+    print('🖼️ Signature Retour Image: ${signatureRetourImage != null ? 'Présente' : 'Absente'}');
 
     return pw.Container(
       width: double.infinity,
@@ -67,10 +68,10 @@ class SignaCachetWidget {
                 boldFont: boldFont,
                 scriptFont: scriptFont,
                 italicFont: italicFont,
-                scriptdancing: scriptdancing,
                 dateFinEffectif: dateFinEffectif,
                 signatureBase64: signatureBase64, // Passage de l'ancien paramètre
                 signatureImage: signatureImage, // Passage du nouveau paramètre
+                signatureRetourImage: signatureRetourImage, // Passage du nouveau paramètre
               ),
             ],
           ),
@@ -134,10 +135,10 @@ class SignaCachetWidget {
     required pw.Font boldFont,
     required pw.Font scriptFont,
     required pw.Font italicFont,
-    required pw.Font scriptdancing,
     required String? dateFinEffectif,
-    String? signatureBase64, // Ancien paramètre
-    pw.MemoryImage? signatureImage, // Nouveau paramètre
+    String? signatureBase64,
+    pw.MemoryImage? signatureImage,
+    pw.MemoryImage? signatureRetourImage,
   }) {
     return pw.Container(
       width: 200,
@@ -166,8 +167,7 @@ class SignaCachetWidget {
                       pw.Text(
                         '$nom $prenom',
                         style: pw.TextStyle(
-                          fontSize: 14,
-                          font: scriptdancing,
+                          fontSize: 10,  
                         ),
                         textAlign: pw.TextAlign.center,
                       ),
@@ -186,14 +186,6 @@ class SignaCachetWidget {
                         width: 100,
                         height: 50,
                         child: _buildSignatureImage(signatureBase64),
-                      )
-                    else
-                      pw.Text(
-                        'Aucune signature',
-                        style: pw.TextStyle(
-                          color: PdfColors.grey,
-                          font: italicFont,
-                        ),
                       ),
                   ],
                 ),
@@ -213,9 +205,18 @@ class SignaCachetWidget {
                         '$nom $prenom',
                         style: pw.TextStyle(
                           fontSize: 14,
-                          font: scriptdancing,
                         ),
                         textAlign: pw.TextAlign.center,
+                      ),
+                    // Signature de retour
+                    if (signatureRetourImage != null)
+                      pw.Container(
+                        width: 100,
+                        height: 50,
+                        child: pw.Image(
+                          signatureRetourImage,
+                          fit: pw.BoxFit.contain,
+                        ),
                       ),
                   ],
                 ),

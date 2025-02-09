@@ -15,6 +15,7 @@ class RetourEnvoiePdf {
     required String kilometrageRetour,
     required String commentaireRetour,
     required List<File> photosRetour,
+    String? signatureRetourBase64,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -66,11 +67,29 @@ class RetourEnvoiePdf {
       // Récupérer la signature aller
       String? signatureAllerBase64;
       
+      // Essayer de récupérer la signature aller
+      if (contratData.containsKey('signature_aller') && 
+          contratData['signature_aller'] is String) {
+        signatureAllerBase64 = contratData['signature_aller'];
+      } else if (contratData.containsKey('signature') && 
+                 contratData['signature'] is Map && 
+                 contratData['signature']['base64'] is String) {
+        signatureAllerBase64 = contratData['signature']['base64'];
+      }
+
+      // Fallback sur signatureBase64
+      signatureAllerBase64 ??= signatureBase64;
 
       // FORCER signatureBase64
       signatureBase64 = signatureAllerBase64;
 
-     
+      print('📝 Signature aller récupérée : ${signatureAllerBase64 != null ? 'Présente (${signatureAllerBase64.length} caractères)' : 'Absente'}');
+
+      // Utiliser la signature de retour si fournie
+      signatureRetourBase64 ??= contratData['signature_retour'];
+
+      print('📝 Signature retour : ${signatureRetourBase64 != null ? 'Présente (${signatureRetourBase64.length} caractères)' : 'Absente'}');
+
       // Récupérer les données du véhicule
       final vehicleDoc = await FirebaseFirestore.instance
           .collection('users')
@@ -99,6 +118,7 @@ class RetourEnvoiePdf {
           'photos': contratData['photos'] ?? [],
           'signatureAller': signatureAllerBase64,
           'signatureBase64': signatureBase64,
+          'signatureRetour': signatureRetourBase64,
           
           // Nouveaux champs ajoutés
           'nettoyageInt': (contratData['nettoyageInt'] ?? '').toString(),
@@ -138,7 +158,7 @@ class RetourEnvoiePdf {
         (vehicleData['prixLocation'] ?? contratData['prixLocation'] ?? '').toString(),
         condition: (contratData['conditions'] ?? ContratModifier.defaultContract).toString(),
         signatureBase64: signatureBase64,
-        
+        signatureRetourBase64: signatureRetourBase64,
       );
 
       // Vérifier si un email est disponible avant d'envoyer
