@@ -302,13 +302,43 @@ class _ModifierScreenState extends State<ModifierScreen> {
   }
 
   Future<void> _generatePdf() async {
-    setState(() {
-      _isGeneratingPdf = true;
-    });
+    // Afficher un dialogue de chargement personnalisé
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Chargement(
+          message: "Génération du PDF en cours...",
+        );
+      },
+    );
 
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("Utilisateur non connecté");
+
+      // Récupérer le document du contrat
+      final contratDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('locations')
+          .doc(widget.contratId)
+          .get();
+
+      // Récupérer la signature de retour
+      String? signatureRetourBase64;
+      if (contratDoc.exists) {
+        Map<String, dynamic> contratData = contratDoc.data() as Map<String, dynamic>;
+        
+        // Essayer de récupérer la signature de retour
+        if (contratData.containsKey('signature_retour') && 
+            contratData['signature_retour'] is String) {
+          signatureRetourBase64 = contratData['signature_retour'];
+        }
+      }
+
+      // Log de débogage
+      print('📝 Signature de retour récupérée : ${signatureRetourBase64 != null ? 'Présente (${signatureRetourBase64.length} caractères)' : 'Absente'}');
 
       // Récupérer les données utilisateur
       final userDoc = await FirebaseFirestore.instance
@@ -318,13 +348,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
           .doc(user.uid)
           .get();
 
-      if (!userDoc.exists) {
-        throw Exception('Données utilisateur non trouvées');
-      }
+      final userData = userDoc.data() ?? {};
 
-      final userData = userDoc.data()!;
-
-      // Récupérer les données du véhicule depuis la collection de l'utilisateur
+      // Récupérer les données du véhicule
       final vehicleDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -332,29 +358,19 @@ class _ModifierScreenState extends State<ModifierScreen> {
           .where('immatriculation', isEqualTo: widget.data['immatriculation'])
           .get();
 
-      final vehicleData =
-          vehicleDoc.docs.isNotEmpty ? vehicleDoc.docs.first.data() : {};
+      final vehicleData = vehicleDoc.docs.isNotEmpty 
+          ? vehicleDoc.docs.first.data() 
+          : {};
 
-      // Récupérer les conditions mises à jour depuis Firestore
-      final conditionsDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('contrats')
-          .doc('userId')
-          .get();
-
-      final conditions =
-          conditionsDoc.exists && conditionsDoc.data()?['texte'] != null
-              ? conditionsDoc.data()!['texte']
-              : ContratModifier.defaultContract;
-
+      // Générer le PDF
       final pdfPath = await generatePdf(
         {
           ...widget.data,
           'nettoyageInt': _nettoyageIntController.text,
           'nettoyageExt': _nettoyageExtController.text,
           'carburantManquant': _carburantManquantController.text,
-          'caution': _cautionController.text, // Ajouter cette ligne
+          'caution': _cautionController.text,
+          'signatureRetour': signatureRetourBase64 ?? '',
         },
         widget.data['dateFinEffectif'] ?? '',
         widget.data['kilometrageRetour'] ?? '',
@@ -378,21 +394,32 @@ class _ModifierScreenState extends State<ModifierScreen> {
         widget.data['dateFinTheorique'] ?? '',
         widget.data['dateFinEffectif'] ?? '',
         widget.data['kilometrageDepart'] ?? '',
-        (widget.data['pourcentageEssence'] ?? '').toString(), // Modification ici
+        (widget.data['pourcentageEssence'] ?? '').toString(),
         widget.data['typeLocation'] ?? '',
         vehicleData['prixLocation'] ?? '',
-        condition: conditions, // Utiliser les conditions mises à jour
+        condition: (widget.data['conditions'] ?? ContratModifier.defaultContract).toString(),
+        signatureBase64: '',
+        signatureRetourBase64: signatureRetourBase64,
       );
 
+      // Fermer le dialogue de chargement
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+
+      // Ouvrir le PDF
       await OpenFilex.open(pdfPath);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erreur lors de la génération du PDF : $e")),
-      );
-    } finally {
-      setState(() {
-        _isGeneratingPdf = false;
-      });
+      // Gestion des erreurs
+      print('Erreur lors de la génération du PDF : $e');
+      
+      // Fermer le dialogue de chargement en cas d'erreur
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : ${e.toString()}')),
+        );
+      }
     }
   }
 

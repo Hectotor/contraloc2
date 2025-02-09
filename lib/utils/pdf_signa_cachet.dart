@@ -1,9 +1,9 @@
 //import 'dart:math';
-import 'dart:math';
+
 
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'dart:convert';
+
 //import 'package:signature/signature.dart'; // Import pour utiliser base64Decode
 
 class SignaCachetWidget {
@@ -167,7 +167,7 @@ class SignaCachetWidget {
                       pw.Text(
                         '$nom $prenom',
                         style: pw.TextStyle(
-                          fontSize: 10,  
+                          fontSize: 12,  
                         ),
                         textAlign: pw.TextAlign.center,
                       ),
@@ -181,12 +181,7 @@ class SignaCachetWidget {
                           fit: pw.BoxFit.contain,
                         ),
                       )
-                    else if (signatureBase64 != null && signatureBase64.isNotEmpty)
-                      pw.Container(
-                        width: 100,
-                        height: 50,
-                        child: _buildSignatureImage(signatureBase64),
-                      ),
+
                   ],
                 ),
               ),
@@ -204,7 +199,7 @@ class SignaCachetWidget {
                       pw.Text(
                         '$nom $prenom',
                         style: pw.TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                         textAlign: pw.TextAlign.center,
                       ),
@@ -258,21 +253,4 @@ class SignaCachetWidget {
     );
   }
 
-  static pw.Widget _buildSignatureImage(String base64String) {
-    try {
-      print('🖊️ Construction de l\'image de signature');
-      print('📏 Longueur de la signature : ${base64String.length} caractères');
-      print('🔍 Début de la signature : ${base64String.substring(0, min(50, base64String.length))}...');
-      
-      return pw.Image(
-        pw.MemoryImage(
-          base64Decode(base64String),
-        ),
-        fit: pw.BoxFit.contain,
-      );
-    } catch (e) {
-      print('❌ Erreur lors de la construction de l\'image de signature : $e');
-      return pw.Text('Signature non disponible', style: pw.TextStyle(color: PdfColors.red));
-    }
-  }
 }

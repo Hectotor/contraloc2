@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:ContraLoc/widget/chargement.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -17,8 +18,21 @@ class RetourEnvoiePdf {
     required List<File> photosRetour,
     String? signatureRetourBase64,
   }) async {
+    // Afficher un dialogue de chargement personnalisé
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Chargement(
+          message: "Préparation du PDF de clôture...",
+        );
+      },
+    );
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
+      // Fermer le dialogue de chargement
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Utilisateur non connecté")),
       );
@@ -64,28 +78,28 @@ class RetourEnvoiePdf {
       // Log pour le débogage
       print('Signature récupérée : ${signatureBase64 != null ? 'Présente' : 'Absente'}');
 
-      // Récupérer la signature aller
+      // Récupérer les signatures aller et retour
       String? signatureAllerBase64;
+      String? signatureRetourBase64;
       
-      // Essayer de récupérer la signature aller
-      if (contratData.containsKey('signature_aller') && 
-          contratData['signature_aller'] is String) {
-        signatureAllerBase64 = contratData['signature_aller'];
-      } else if (contratData.containsKey('signature') && 
-                 contratData['signature'] is Map && 
-                 contratData['signature']['base64'] is String) {
-        signatureAllerBase64 = contratData['signature']['base64'];
+      // Récupérer la signature aller
+      if (contratDoc.exists) {
+        // Essayer de récupérer la signature aller
+        if (contratDataComplete.containsKey('signature_aller') && 
+            contratDataComplete['signature_aller'] is String) {
+          signatureAllerBase64 = contratDataComplete['signature_aller'];
+        }
+        
+        // Essayer de récupérer la signature de retour
+        if (contratDataComplete.containsKey('signature_retour') && 
+            contratDataComplete['signature_retour'] is String) {
+          signatureRetourBase64 = contratDataComplete['signature_retour'];
+        }
       }
 
-      // Fallback sur signatureBase64
-      signatureAllerBase64 ??= signatureBase64;
-
+      // Log pour le débogage
       print('📝 Signature aller récupérée : ${signatureAllerBase64 != null ? 'Présente (${signatureAllerBase64.length} caractères)' : 'Absente'}');
-
-      // Utiliser la signature de retour si fournie
-      signatureRetourBase64 ??= contratData['signature_retour'];
-
-      print('📝 Signature retour : ${signatureRetourBase64 != null ? 'Présente (${signatureRetourBase64.length} caractères)' : 'Absente'}');
+      print('📝 Signature retour récupérée : ${signatureRetourBase64 != null ? 'Présente (${signatureRetourBase64.length} caractères)' : 'Absente'}');
 
       // Récupérer les données du véhicule
       final vehicleDoc = await FirebaseFirestore.instance
@@ -113,9 +127,9 @@ class RetourEnvoiePdf {
           'immatriculation': (contratData['immatriculation'] ?? '').toString(),
           'commentaire': (contratData['commentaire'] ?? '').toString(),
           'photos': contratData['photos'] ?? [],
-          'signatureAller': signatureAllerBase64,
-          'signatureBase64': signatureBase64,
-          'signatureRetour': signatureRetourBase64,
+          'signatureAller': signatureAllerBase64 ?? '',
+          'signatureBase64': signatureBase64 ?? '',
+          'signatureRetour': signatureRetourBase64 ?? '',
           
           // Nouveaux champs ajoutés
           'nettoyageInt': (contratData['nettoyageInt'] ?? '').toString(),
@@ -154,9 +168,14 @@ class RetourEnvoiePdf {
         (contratData['typeLocation'] ?? '').toString(),
         (vehicleData['prixLocation'] ?? contratData['prixLocation'] ?? '').toString(),
         condition: (contratData['conditions'] ?? ContratModifier.defaultContract).toString(),
-        signatureBase64: signatureBase64,
-        signatureRetourBase64: signatureRetourBase64,
+        signatureBase64: signatureBase64 ?? '',
+        signatureRetourBase64: signatureRetourBase64 ?? '',
       );
+
+      // Fermer le dialogue de chargement
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
 
       // Envoyer le PDF par email si un email est disponible
       if ((contratData['email'] ?? '').toString().isNotEmpty) {
@@ -198,6 +217,11 @@ class RetourEnvoiePdf {
       );
 
     } catch (e) {
+      // Fermer le dialogue de chargement en cas d'erreur
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+
       // Gestion des erreurs
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

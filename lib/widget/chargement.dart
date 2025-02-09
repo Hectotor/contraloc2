@@ -76,7 +76,7 @@ class _ChargementState extends State<Chargement> with SingleTickerProviderStateM
                       widget.message ?? "Veuillez patienter...",
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.w300,
                       ),
                       textAlign: TextAlign.center,

@@ -28,7 +28,6 @@ class SignatureRetourWidget extends StatefulWidget {
 
 class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
   bool _acceptedRetour = false;
-  String _base64Signature = '';
 
   @override
   void initState() {
@@ -43,13 +42,18 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
   Future<void> _captureSignature() async {
     final signatureBytes = await widget.controller.toPngBytes();
     if (signatureBytes != null) {
+      final base64Signature = base64Encode(signatureBytes);
+      
+      // Mettre à jour l'état local
       setState(() {
-        _base64Signature = base64Encode(signatureBytes);
       });
       
+      // Debug log unique
+      debugPrint('🖊️ Signature de retour capturée : ${base64Signature.isNotEmpty}');
+      
       // Appel des callbacks
-      widget.onSignatureCaptured?.call(_base64Signature);
-      widget.onSignatureChanged?.call(_base64Signature);
+      widget.onSignatureCaptured?.call(base64Signature);
+      widget.onSignatureChanged?.call(base64Signature);
     }
   }
 
@@ -63,12 +67,6 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
     if (!hasName) {
       return const SizedBox.shrink();
     }
-
-    print('🔍 SignatureRetourWidget - Paramètres reçus :');
-    print('Nom: ${widget.nom}');
-    print('Prénom: ${widget.prenom}');
-    print('Accepted: ${widget.accepted}');
-    print('_acceptedRetour: $_acceptedRetour');
 
     return Container(
       width: double.infinity,
