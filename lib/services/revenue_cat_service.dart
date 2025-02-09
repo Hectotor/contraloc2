@@ -23,18 +23,64 @@ class RevenueCatService {
   static const String _premiumMonthlyStripe = 'prod_RiIVqYAhJGzB0u';
   static const String _premiumYearlyStripe = 'prod_RiIXsD22K4xehY';
 
-  // Getters pour obtenir le bon ID selon la plateforme
-  static String get entitlementProMonthly =>
-      Platform.isIOS ? _proMonthlyIOS : _proMonthlyAndroid;
+  // Mapping complet des identifiants
+  static final Map<String, String> subscriptionIdMapping = {
+    // iOS Mappings
+    'PremiumMonthlySubscription': 'premium-monthly_access',
+    'PremiumYearlySubscription': 'premium-yearly_access',
+    'ProMonthlySubscription': 'pro-monthly_access',
+    'ProYearlySubscription': 'pro-yearly_access',
+    
+    // Android Mappings
+    'offre_contraloc:premium-monthly': 'premium-monthly_access',
+    'offre_contraloc:premium-yearly': 'premium-yearly_access',
+    'offre_contraloc:pro-monthly': 'pro-monthly_access',
+    'offre_contraloc:pro-yearly': 'pro-yearly_access',
+    
+    // Stripe Mappings
+    'prod_RiIVqYAhJGzB0u': 'premium-monthly_access',
+    'prod_RiIXsD22K4xehY': 'premium-yearly_access',
+    'prod_RiISy7xcZzgFb5': 'pro-monthly_access',
+    'prod_RiIT1QQFJjV5hR': 'pro-yearly_access',
+  };
 
-  static String get entitlementProYearly =>
-      Platform.isIOS ? _proYearlyIOS : _proYearlyAndroid;
+  // Méthode de mapping générique
+  static String mapSubscriptionId(String originalId) {
+    return subscriptionIdMapping[originalId] ?? originalId;
+  }
 
-  static String get entitlementPremiumMonthly =>
-      Platform.isIOS ? _premiumMonthlyIOS : _premiumMonthlyAndroid;
+  // Méthode inverse pour obtenir l'ID original
+  static String? getOriginalId(String mappedId) {
+    return subscriptionIdMapping.keys.firstWhere(
+      (key) => subscriptionIdMapping[key] == mappedId, 
+      orElse: () => mappedId
+    );
+  }
 
-  static String get entitlementPremiumYearly =>
-      Platform.isIOS ? _premiumYearlyIOS : _premiumYearlyAndroid;
+  // Getters pour obtenir le bon ID selon la plateforme, incluant Stripe
+  static String get entitlementProMonthly {
+    if (Platform.isIOS) return mapSubscriptionId(_proMonthlyIOS);
+    if (Platform.isAndroid) return mapSubscriptionId(_proMonthlyAndroid);
+    return mapSubscriptionId(_proMonthlyStripe);
+  }
+
+  static String get entitlementProYearly {
+    if (Platform.isIOS) return mapSubscriptionId(_proYearlyIOS);
+    if (Platform.isAndroid) return mapSubscriptionId(_proYearlyAndroid);
+    return mapSubscriptionId(_proYearlyStripe);
+  }
+
+  static String get entitlementPremiumMonthly {
+    if (Platform.isIOS) return mapSubscriptionId(_premiumMonthlyIOS);
+    if (Platform.isAndroid) return mapSubscriptionId(_premiumMonthlyAndroid);
+    return mapSubscriptionId(_premiumMonthlyStripe);
+  }
+
+  static String get entitlementPremiumYearly {
+    if (Platform.isIOS) return mapSubscriptionId(_premiumYearlyIOS);
+    if (Platform.isAndroid) return mapSubscriptionId(_premiumYearlyAndroid);
+    return mapSubscriptionId(_premiumYearlyStripe);
+  }
 
   // Constantes pour les packages
   static const String PACKAGE_PREMIUM_YEARLY = 'premium_yearly';
@@ -120,28 +166,32 @@ class RevenueCatService {
   }
 
   static bool hasProAccess(CustomerInfo customerInfo) {
-    return customerInfo.entitlements.active
-            .containsKey(entitlementProMonthly) ||
-        customerInfo.entitlements.active.containsKey(entitlementProYearly);
+    return customerInfo.entitlements.active.keys
+      .map(mapSubscriptionId)
+      .any((id) => id.contains('pro-'));
   }
 
   static bool hasPremiumAccess(CustomerInfo customerInfo) {
-    return customerInfo.entitlements.active
-            .containsKey(entitlementPremiumMonthly) ||
-        customerInfo.entitlements.active.containsKey(entitlementPremiumYearly);
+    return customerInfo.entitlements.active.keys
+      .map(mapSubscriptionId)
+      .any((id) => id.contains('premium-'));
   }
 
   static bool isYearlyPlan(CustomerInfo customerInfo) {
-    return customerInfo.entitlements.active.containsKey(entitlementProYearly) ||
-        customerInfo.entitlements.active.containsKey(entitlementPremiumYearly);
+    return customerInfo.entitlements.active.keys
+      .map(mapSubscriptionId)
+      .any((id) => id.contains('yearly'));
   }
 
   static Future<CustomerInfo?> purchaseProduct(
-      String plan, bool isMonthly, {String? paymentMethod}) async {
+    String plan, 
+    bool isMonthly, 
+    {String? paymentMethod}
+  ) async {
     try {
       String productId;
 
-      // Déterminer le bon ID de produit
+      // Déterminer le bon ID de produit avec mapping
       if (plan.contains("Premium")) {
         productId = isMonthly 
           ? (paymentMethod == 'card' ? _premiumMonthlyStripe : 
@@ -158,12 +208,13 @@ class RevenueCatService {
         throw Exception('Plan non reconnu: $plan');
       }
 
+      // Log avec ID mappé
       print('🛒 Détails de l\'achat :');
       print('   📦 Plan: $plan');
       print('   🕰️ Durée: ${isMonthly ? "Mensuel" : "Annuel"}');
       print('   💳 Méthode de paiement: $paymentMethod');
-      print('   🆔 ID Produit: $productId');
-      print('   📱 Plateforme: ${Platform.isIOS ? "iOS" : "Android"}');
+      print('   🆔 ID Produit Original: $productId');
+      print('   🔄 ID Produit Mappé: ${mapSubscriptionId(productId)}');
 
       // Récupérer le produit
       final products = await Purchases.getProducts([productId]);
@@ -185,6 +236,10 @@ class RevenueCatService {
 
       print('✅ Achat réussi');
       print('📱 Entitlements actifs: ${customerInfo.entitlements.active.keys}');
+      print('📱 Entitlements mappés: ${
+        customerInfo.entitlements.active.keys.map(mapSubscriptionId).toSet()
+      }');
+
       return customerInfo;
     } on PlatformException catch (e) {
       print('❌ ERREUR DE PAIEMENT DÉTAILLÉE :');
@@ -203,7 +258,7 @@ class RevenueCatService {
     }
   }
 
-  // Nouvelle méthode pour gérer le processus complet d'abonnement
+  ///////////// Nouvelle méthode pour gérer le processus complet d'abonnement
   static Future<CustomerInfo?> processSubscription(
     BuildContext context, {
     required String plan,
