@@ -74,7 +74,17 @@ class _SignatureWidgetState extends State<SignatureWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Signature de Location',
+            () {
+              if (widget.nom != null && widget.prenom != null) {
+                return 'Signature de ${widget.prenom} ${widget.nom}'.trim();
+              } else if (widget.nom != null) {
+                return 'Signature de ${widget.nom}'.trim();
+              } else if (widget.prenom != null) {
+                return 'Signature de ${widget.prenom}'.trim();
+              } else {
+                return 'Signature de Location';
+              }
+            }(),
             style: TextStyle(
               fontSize: 16, 
               fontWeight: FontWeight.bold,
@@ -99,7 +109,7 @@ class _SignatureWidgetState extends State<SignatureWidget> {
               ),
               Expanded(
                 child: Text(
-                  'Je reconnais avoir pris connaissance des termes et conditions de location',
+                  "Je reconnais avoir pris connaissance des termes et conditions de location.",
                   style: TextStyle(
                     color: _accepted ? Colors.black87 : Colors.grey,
                     fontSize: 14,

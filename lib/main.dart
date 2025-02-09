@@ -11,9 +11,6 @@ import 'package:purchases_flutter/purchases_flutter.dart'; // Import RevenueCat
 import 'package:flutter/services.dart'; // Import SystemChrome
 import 'screens/splash_screen.dart';
 
-// Supprimez ces lignes:
-// const String androidApiKey = 'YOUR_ANDROID_API_KEY';
-// const String iosApiKey = 'YOUR_IOS_API_KEY';
 
 Future<Map<String, String>> fetchRevenueCatKeys() async {
   try {
