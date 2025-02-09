@@ -80,9 +80,6 @@ class RetourEnvoiePdf {
       // Fallback sur signatureBase64
       signatureAllerBase64 ??= signatureBase64;
 
-      // FORCER signatureBase64
-      signatureBase64 = signatureAllerBase64;
-
       print('📝 Signature aller récupérée : ${signatureAllerBase64 != null ? 'Présente (${signatureAllerBase64.length} caractères)' : 'Absente'}');
 
       // Utiliser la signature de retour si fournie
@@ -161,25 +158,24 @@ class RetourEnvoiePdf {
         signatureRetourBase64: signatureRetourBase64,
       );
 
-      // Vérifier si un email est disponible avant d'envoyer
-      if ((contratData['email'] ?? '').toString().isEmpty) {
-        throw Exception("Aucun email client n'a été trouvé");
+      // Envoyer le PDF par email si un email est disponible
+      if ((contratData['email'] ?? '').toString().isNotEmpty) {
+        await EmailService.sendEmailWithPdf(
+          pdfPath: pdfPath,
+          email: (contratData['email'] ?? '').toString(),
+          marque: (contratData['marque'] ?? '').toString(),
+          modele: (contratData['modele'] ?? '').toString(),
+          context: context,
+          prenom: (contratData['prenom'] ?? '').toString(),
+          nom: (contratData['nom'] ?? '').toString(),
+          nomEntreprise: nomEntreprise,
+          adresse: adresse,
+          telephone: telephone,
+          logoUrl: logoUrl,
+        );
+      } else {
+        print("Aucun email client n'a été trouvé. Pas d'envoi de PDF.");
       }
-
-      // Envoyer le PDF par email
-      await EmailService.sendEmailWithPdf(
-        pdfPath: pdfPath,
-        email: (contratData['email'] ?? '').toString(),
-        marque: (contratData['marque'] ?? '').toString(),
-        modele: (contratData['modele'] ?? '').toString(),
-        context: context,
-        prenom: (contratData['prenom'] ?? '').toString(),
-        nom: (contratData['nom'] ?? '').toString(),
-        nomEntreprise: nomEntreprise,
-        adresse: adresse,
-        telephone: telephone,
-        logoUrl: logoUrl,
-      );
 
       // Mise à jour du statut du contrat
       await FirebaseFirestore.instance
@@ -196,7 +192,7 @@ class RetourEnvoiePdf {
       // Afficher un message de succès
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Contrat clôturé et PDF envoyé avec succès !"),
+          content: Text("Contrat clôturé"),
           backgroundColor: Colors.green,
         ),
       );

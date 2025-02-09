@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -180,6 +181,13 @@ class _ModifierScreenState extends State<ModifierScreen> {
         allPhotosUrls.addAll(newUrls);
       }
 
+      // Convertir la signature de retour en base64
+      String? signatureRetourBase64;
+      if (_signatureRetourController.isNotEmpty) {
+        final signatureBytes = await _signatureRetourController.toPngBytes();
+        signatureRetourBase64 = base64Encode(signatureBytes!);
+      }
+
       // Mettre à jour Firestore avec les informations de retour
       await FirebaseFirestore.instance
           .collection('users')
@@ -197,6 +205,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'nettoyageInt': _nettoyageIntController.text,
         'nettoyageExt': _nettoyageExtController.text,
         'carburantManquant': _carburantManquantController.text,
+        // Ajouter la signature de retour
+        'signature_retour': signatureRetourBase64,
       });
 
       // Fermer le dialogue de chargement
