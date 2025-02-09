@@ -57,6 +57,7 @@ Future<String> generatePdf(
   required String condition,
   String? signatureBase64, // Signature aller
   String? signatureRetourBase64, // Signature retour
+  String? signatureAllerBase64, // Nouvelle signature aller
 }) async {
   final pdf = pw.Document();
 
@@ -89,36 +90,47 @@ Future<String> generatePdf(
     }
   }
 
+  // Fonctions utilitaires pour décoder les signatures
+  pw.MemoryImage? _decodeBase64Signature(String? base64String) {
+    if (base64String == null || base64String.isEmpty) {
+      return null;
+    }
+    
+    try {
+      // Supprimer les en-têtes de données base64 si présents
+      final base64Clean = base64String.contains(',') 
+          ? base64String.split(',').last 
+          : base64String;
+      
+      // Décoder la chaîne base64
+      final Uint8List bytes = base64Decode(base64Clean);
+      
+      // Créer et retourner un MemoryImage
+      return pw.MemoryImage(bytes);
+    } catch (e) {
+      print('Erreur de conversion base64 en image : $e');
+      return null;
+    }
+  }
+
   // Convertir la signature base64 en image si disponible
   pw.MemoryImage? signatureImage;
   pw.MemoryImage? signatureRetourImage;
-  
+
   // Nouvelle vérification pour data['signature_aller']
   if (data.containsKey('signature_aller') && 
       data['signature_aller'] is String && 
       data['signature_aller'].isNotEmpty) {
-    try {
-      print('📝 Signature trouvée dans data[\'signature_aller\']');
-      final signatureBytes = base64Decode(data['signature_aller']);
-      signatureImage = pw.MemoryImage(signatureBytes);
-      signatureBase64 = data['signature_aller'];
-    } catch (e) {
-      print('❌ Erreur de décodage de la signature aller : $e');
-    }
+    signatureImage = _decodeBase64Signature(data['signature_aller']);
+    signatureBase64 = data['signature_aller'];
   }
 
   // Vérification pour la signature de retour
   if (data.containsKey('signatureRetour') && 
       data['signatureRetour'] is String && 
       data['signatureRetour'].isNotEmpty) {
-    try {
-      print('📝 Signature de retour trouvée');
-      final signatureRetourBytes = base64Decode(data['signatureRetour']);
-      signatureRetourImage = pw.MemoryImage(signatureRetourBytes);
-      signatureRetourBase64 = data['signatureRetour'];
-    } catch (e) {
-      print('❌ Erreur de décodage de la signature de retour : $e');
-    }
+    signatureRetourImage = _decodeBase64Signature(data['signatureRetour']);
+    signatureRetourBase64 = data['signatureRetour'];
   }
 
   // Vérification originale pour 'signature'
@@ -127,34 +139,38 @@ Future<String> generatePdf(
       data['signature'].containsKey('base64') &&
       data['signature']['base64'] is String &&
       data['signature']['base64'].isNotEmpty) {
-    try {
-      print('📝 Signature trouvée dans data[\'signature\'][\'base64\']');
-      final signatureBytes = base64Decode(data['signature']['base64']);
-      signatureImage = pw.MemoryImage(signatureBytes);
-      signatureBase64 = data['signature']['base64'];
-    } catch (e) {
-      print("❌ Erreur de chargement de la signature depuis data['signature']['base64'] : $e");
-    }
+    signatureImage = _decodeBase64Signature(data['signature']['base64']);
+    signatureBase64 = data['signature']['base64'];
   }
 
   // Vérification originale
   if (signatureBase64 != null && signatureBase64.isNotEmpty) {
-    try {
-      final signatureBytes = base64Decode(signatureBase64);
-      signatureImage = pw.MemoryImage(signatureBytes);
-    } catch (e) {
-      print("❌ Erreur de chargement de la signature : $e");
-    }
+    signatureImage = _decodeBase64Signature(signatureBase64);
   } else if (data.containsKey('signatureBase64') && 
              data['signatureBase64'] is String && 
              data['signatureBase64'].isNotEmpty) {
-    // Fallback pour l'ancienne méthode de passage de signature
-    try {
-      final signatureBytes = base64Decode(data['signatureBase64']);
-      signatureImage = pw.MemoryImage(signatureBytes);
-    } catch (e) {
-      print("❌ Erreur de chargement de la signature : $e");
-    }
+    signatureImage = _decodeBase64Signature(data['signatureBase64']);
+  }
+
+  // Vérification pour la signature aller
+  if (data.containsKey('signatureAller') && 
+      data['signatureAller'] is String && 
+      data['signatureAller'].isNotEmpty) {
+    signatureImage = _decodeBase64Signature(data['signatureAller']);
+    signatureBase64 = data['signatureAller'];
+  }
+
+  // Nouvelle vérification pour signatureAllerBase64
+  if (signatureAllerBase64 != null && signatureAllerBase64.isNotEmpty) {
+    signatureImage = _decodeBase64Signature(signatureAllerBase64);
+    signatureBase64 = signatureAllerBase64;
+  }
+
+  // Vérification pour la signature de retour
+  if (data.containsKey('signatureRetourBase64') && 
+      data['signatureRetourBase64'] is String && 
+      data['signatureRetourBase64'].isNotEmpty) {
+    signatureRetourImage = _decodeBase64Signature(data['signatureRetourBase64']);
   }
 
   // Convertir les photos de retour en bytes

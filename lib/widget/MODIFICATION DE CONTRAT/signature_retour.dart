@@ -47,10 +47,7 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
       // Mettre à jour l'état local
       setState(() {
       });
-      
-      // Debug log unique
-      debugPrint('🖊️ Signature de retour capturée : ${base64Signature.isNotEmpty}');
-      
+
       // Appel des callbacks
       widget.onSignatureCaptured?.call(base64Signature);
       widget.onSignatureChanged?.call(base64Signature);

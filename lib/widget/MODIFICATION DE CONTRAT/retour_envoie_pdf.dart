@@ -170,6 +170,7 @@ class RetourEnvoiePdf {
         condition: (contratData['conditions'] ?? ContratModifier.defaultContract).toString(),
         signatureBase64: signatureBase64 ?? '',
         signatureRetourBase64: signatureRetourBase64 ?? '',
+        signatureAllerBase64: signatureAllerBase64 ?? '',
       );
 
       // Fermer le dialogue de chargement

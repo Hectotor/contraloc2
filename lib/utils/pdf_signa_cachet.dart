@@ -1,10 +1,9 @@
 //import 'dart:math';
 
-
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-
-//import 'package:signature/signature.dart'; // Import pour utiliser base64Decode
 
 class SignaCachetWidget {
   static pw.Widget build({
@@ -80,6 +79,29 @@ class SignaCachetWidget {
     );
   }
 
+  // Nouvelle méthode statique pour convertir base64 en MemoryImage
+  static pw.MemoryImage? base64ToMemoryImage(String? base64String) {
+    if (base64String == null || base64String.isEmpty) {
+      return null;
+    }
+    
+    try {
+      // Supprimer les en-têtes de données base64 si présents
+      final base64Clean = base64String.contains(',') 
+          ? base64String.split(',').last 
+          : base64String;
+      
+      // Décoder la chaîne base64
+      final Uint8List bytes = base64Decode(base64Clean);
+      
+      // Créer et retourner un MemoryImage
+      return pw.MemoryImage(bytes);
+    } catch (e) {
+      print('Erreur de conversion base64 en image : $e');
+      return null;
+    }
+  }
+
   static pw.Widget _buildCachet({
     required pw.ImageProvider? logoImage,
     required String nomEntreprise,
@@ -140,6 +162,9 @@ class SignaCachetWidget {
     pw.MemoryImage? signatureImage,
     pw.MemoryImage? signatureRetourImage,
   }) {
+    // Convertir les signatures base64 en images si nécessaire
+    signatureImage ??= base64ToMemoryImage(signatureBase64);
+    
     return pw.Container(
       width: 200,
       padding: const pw.EdgeInsets.all(16.0),
@@ -171,7 +196,7 @@ class SignaCachetWidget {
                         ),
                         textAlign: pw.TextAlign.center,
                       ),
-                    // Modification ici pour être plus robuste
+                    // Modification pour gérer les signatures
                     if (signatureImage != null)
                       pw.Container(
                         width: 100,
@@ -181,7 +206,6 @@ class SignaCachetWidget {
                           fit: pw.BoxFit.contain,
                         ),
                       )
-
                   ],
                 ),
               ),
@@ -203,7 +227,7 @@ class SignaCachetWidget {
                         ),
                         textAlign: pw.TextAlign.center,
                       ),
-                    // Signature de retour
+                    // Modification pour gérer les signatures de retour
                     if (signatureRetourImage != null)
                       pw.Container(
                         width: 100,
@@ -212,7 +236,7 @@ class SignaCachetWidget {
                           signatureRetourImage,
                           fit: pw.BoxFit.contain,
                         ),
-                      ),
+                      )
                   ],
                 ),
               ),
