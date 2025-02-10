@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:ContraLoc/services/revenue_cat_service.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -484,6 +483,14 @@ class PlanDisplayState extends State<PlanDisplay> {
           throw PlatformException(
             code: 'apple_pay_not_available',
             message: 'Apple Pay n\'est pas disponible sur cet appareil',
+          );
+        }
+      } else if (method == 'google_pay' && Platform.isAndroid) {
+        final canUseGooglePay = await Purchases.canMakePayments();
+        if (!canUseGooglePay) {
+          throw PlatformException(
+            code: 'google_pay_not_available',
+            message: 'Google Pay n\'est pas disponible sur cet appareil',
           );
         }
       }

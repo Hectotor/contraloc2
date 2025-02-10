@@ -89,18 +89,24 @@ class RevenueCatService {
   static const String PACKAGE_PRO_MONTHLY = 'pro_monthly';
 
   // Identifiants des produits par plateforme
-  static final Map<String, String> productIds = Platform.isIOS
-      ? {
-          PACKAGE_PRO_MONTHLY: _proMonthlyIOS,
-          PACKAGE_PRO_YEARLY: _proYearlyIOS,
-          PACKAGE_PREMIUM_MONTHLY: _premiumMonthlyIOS,
-          PACKAGE_PREMIUM_YEARLY: _premiumYearlyIOS,
-        }
-      : {
-          PACKAGE_PRO_MONTHLY: _proMonthlyAndroid,
-          PACKAGE_PRO_YEARLY: _proYearlyAndroid,
-          PACKAGE_PREMIUM_MONTHLY: _premiumMonthlyAndroid,
-          PACKAGE_PREMIUM_YEARLY: _premiumYearlyAndroid,
+  static final Map<String, String> productIds = {
+          // iOS Products
+          'ios_pro_monthly': _proMonthlyIOS,
+          'ios_pro_yearly': _proYearlyIOS,
+          'ios_premium_monthly': _premiumMonthlyIOS,
+          'ios_premium_yearly': _premiumYearlyIOS,
+          
+          // Android Products
+          'android_pro_monthly': _proMonthlyAndroid,
+          'android_pro_yearly': _proYearlyAndroid,
+          'android_premium_monthly': _premiumMonthlyAndroid,
+          'android_premium_yearly': _premiumYearlyAndroid,
+          
+          // Stripe Products
+          'stripe_pro_monthly': _proMonthlyStripe,
+          'stripe_pro_yearly': _proYearlyStripe,
+          'stripe_premium_monthly': _premiumMonthlyStripe,
+          'stripe_premium_yearly': _premiumYearlyStripe,
         };
 
   static Future<void> initialize({
