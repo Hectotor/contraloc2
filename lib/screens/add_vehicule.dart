@@ -293,7 +293,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       print("Erreur lors de l'enregistrement du véhicule : $e");
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erreur lors de l'enregistrement : $e")),
+          SnackBar(content: Text("Impossible d'enregistrer le véhicule. Vérifiez que les champs suivants sont remplis : Marque, Modèle, Immatriculation")),
         );
       }
     } finally {
