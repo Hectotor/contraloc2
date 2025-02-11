@@ -11,6 +11,7 @@ import '../widget/enregistrer_vehicule.dart';
 import '../widget/add_pho_car_atte.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter/cupertino.dart';
+import '../ajouter_vehicule/check_vehicle_limit.dart';
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
@@ -229,12 +230,18 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     }
   }
 
+  // Méthodes supprimées car déplacées dans check_vehicle_limit.dart
+
   Future<void> _saveVehicule() async {
+    // Vérifier la limite de véhicules avant de sauvegarder
+    final vehicleLimitChecker = VehicleLimitChecker(context);
+    final canAddVehicle = await vehicleLimitChecker.checkVehicleLimit();
+    if (!canAddVehicle) return;
+
     if (!_formKey.currentState!.validate()) {
       print("Validation échouée. Certains champs requis sont manquants.");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Veuillez remplir tous les champs requis")),
+        const SnackBar(content: Text("Veuillez remplir tous les champs requis")),
       );
       return;
     }
