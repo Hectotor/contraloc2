@@ -1,11 +1,15 @@
 import 'dart:io';
 import 'package:ContraLoc/services/revenue_cat_service.dart';
+import 'package:ContraLoc/services/subscription_service.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PlanData {
   final String title;
@@ -88,7 +92,6 @@ class PlanData {
   ];
 }
 
-// Remplacer "class PlanDisplay extends StatelessWidget" par:
 class PlanDisplay extends StatefulWidget {
   final bool isMonthly;
   final String currentEntitlement;
@@ -109,15 +112,73 @@ class PlanDisplay extends StatefulWidget {
 
 class PlanDisplayState extends State<PlanDisplay> {
   bool isProcessing = false;
+  Map<String, bool> activePlans = {};
 
   @override
   void initState() {
     super.initState();
+    _checkActivePlans();
   }
 
   @override
   void dispose() {
     super.dispose();
+  }
+
+  Future<void> _checkActivePlans() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('authentification')
+            .doc(user.uid)
+            .get();
+
+        if (userDoc.exists && mounted) {
+          String? cb_subscription = userDoc.data()?['cb_subscription'];
+          String? subscription_id = userDoc.data()?['subscriptionId'];
+          print(' Firebase cb_subscription: $cb_subscription');
+          print(' Firebase subscriptionId: $subscription_id');
+
+          setState(() {
+            // Reset all plans to false first
+            activePlans.clear();
+            activePlans["Offre Premium"] = false;
+            activePlans["Offre Premium Annuel"] = false;
+            activePlans["Offre Pro"] = false;
+            activePlans["Offre Pro Annuel"] = false;
+            activePlans["Offre Gratuite"] = false;
+
+            // On prend l'abonnement le plus élevé entre les deux sources
+            bool isPremiumMonthly = cb_subscription == 'premium-monthly_access' || subscription_id == 'premium-monthly_access';
+            bool isPremiumYearly = cb_subscription == 'premium-yearly_access' || subscription_id == 'premium-yearly_access';
+            bool isProMonthly = cb_subscription == 'pro-monthly_access' || subscription_id == 'pro-monthly_access';
+            bool isProYearly = cb_subscription == 'pro-yearly_access' || subscription_id == 'pro-yearly_access';
+
+            // Set only the active plan to true
+            if (isPremiumMonthly) {
+              activePlans["Offre Premium"] = true;
+            } 
+            else if (isPremiumYearly) {
+              activePlans["Offre Premium Annuel"] = true;
+            }
+            else if (isProMonthly) {
+              activePlans["Offre Pro"] = true;
+            }
+            else if (isProYearly) {
+              activePlans["Offre Pro Annuel"] = true;
+            }
+            else {
+              activePlans["Offre Gratuite"] = true;
+            }
+          });
+        }
+      } catch (e) {
+        print('Erreur lors de la vérification des plans: $e');
+      }
+    }
   }
 
   Widget _buildFeatureRow(Map<String, dynamic> feature) {
@@ -144,17 +205,7 @@ class PlanDisplayState extends State<PlanDisplay> {
   }
 
   Widget _buildPlanCard(PlanData plan) {
-    // Déterminer si le plan est actif en fonction de l'entitlement
-    bool isActivePlan = false;
-    if (plan.title == "Offre Premium" || plan.title == "Offre Premium Annuel") {
-      isActivePlan = widget.currentEntitlement == 'premium-monthly_access' ||
-                    widget.currentEntitlement == 'premium-yearly_access';
-    } else if (plan.title == "Offre Pro" || plan.title == "Offre Pro Annuel") {
-      isActivePlan = widget.currentEntitlement == 'pro-monthly_access' ||
-                    widget.currentEntitlement == 'pro-yearly_access';
-    } else if (plan.title == "Offre Gratuite") {
-      isActivePlan = widget.currentEntitlement == 'free';
-    }
+    bool isActivePlan = activePlans[plan.title] ?? false;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 0),
@@ -320,7 +371,61 @@ class PlanDisplayState extends State<PlanDisplay> {
     );
   }
 
+  void _handleStripePayment(String planTitle, bool isMonthly) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Construire l'URL Stripe avec les metadata utilisateur
+    String baseUrl;
+    if (planTitle.contains("Premium")) {
+      baseUrl = isMonthly
+          ? "https://buy.stripe.com/9AQ7wl1pKc8J41O28b"  // Premium mensuel
+          : "https://buy.stripe.com/aEUcQFb0kc8Jbug5kk";  // Premium annuel
+    } else {
+      baseUrl = isMonthly
+          ? "https://buy.stripe.com/test_7sIdUq09F3wW0pi8ww"  // Pro mensuel
+          : "https://buy.stripe.com/28o9EtgkEa0BaqcfZ0";      // Pro annuel
+    }
+
+    try {
+      // Créer l'URL avec les paramètres
+      final uri = Uri.parse(baseUrl).replace(
+        queryParameters: {
+          'client_reference_id': user.uid,
+        },
+      );
+
+      // Ouvrir le lien dans le navigateur externe
+      if (!await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+        webViewConfiguration: const WebViewConfiguration(
+          enableJavaScript: true,
+          enableDomStorage: true,
+        ),
+      )) {
+        print('❌ Erreur lors de l\'ouverture du lien: ${uri.toString()}');
+      } else {
+        print('✅ Lien Stripe ouvert: ${uri.toString()}');
+        
+        // Vérifier périodiquement le statut de l'abonnement
+        Timer.periodic(Duration(seconds: 5), (timer) async {
+          await _checkActivePlans();
+          
+          // Arrêter la vérification après 5 minutes
+          if (timer.tick >= 60) {
+            timer.cancel();
+          }
+        });
+      }
+    } catch (e) {
+      print('❌ Exception lors de l\'ouverture du lien: $e');
+    }
+  }
+
   Widget _buildPaymentDialog(String plan) {
+    bool isMonthly = !plan.toLowerCase().contains("annuel");
+    
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Stack(
@@ -370,24 +475,93 @@ class PlanDisplayState extends State<PlanDisplay> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                if (Platform.isIOS) ...[
+                if (Platform.isIOS)
                   _buildPaymentButton(
                     icon: Icons.apple,
                     title: "Apple Pay",
-                    onTap: () => _processPayment(plan, 'apple_pay'),
+                    onTap: () async {
+                      try {
+                        // Vérifier si Apple Pay est disponible
+                        final canUseApplePay = await Purchases.canMakePayments();
+                        if (!canUseApplePay) {
+                          throw PlatformException(
+                            code: 'apple_pay_not_available',
+                            message: 'Apple Pay n\'est pas disponible sur cet appareil',
+                          );
+                        }
+                        
+                        // Fermer le dialogue de paiement
+                        Navigator.pop(context);
+                        
+                        // Effectuer le paiement via RevenueCat
+                        await _processPayment(plan);
+                      } catch (e) {
+                        // Afficher l'erreur
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Erreur'),
+                            content: Text(e.toString()),
+                            actions: [
+                              TextButton(
+                                child: const Text('OK'),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    },
                   ),
-                ] else if (Platform.isAndroid) ...[
+                if (Platform.isAndroid)
                   _buildPaymentButton(
                     icon: Icons.payment,
                     title: "Google Pay",
-                    onTap: () => _processPayment(plan, 'google_pay'),
+                    onTap: () async {
+                      try {
+                        // Vérifier si Google Pay est disponible
+                        final canUseGooglePay = await Purchases.canMakePayments();
+                        if (!canUseGooglePay) {
+                          throw PlatformException(
+                            code: 'google_pay_not_available',
+                            message: 'Google Pay n\'est pas disponible sur cet appareil',
+                          );
+                        }
+                        
+                        // Fermer le dialogue de paiement
+                        Navigator.pop(context);
+                        
+                        // Effectuer le paiement via RevenueCat
+                        await _processPayment(plan);
+                      } catch (e) {
+                        // Afficher l'erreur
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Erreur'),
+                            content: Text(e.toString()),
+                            actions: [
+                              TextButton(
+                                child: const Text('OK'),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    },
                   ),
-                ],
                 const SizedBox(height: 12),
                 _buildPaymentButton(
                   icon: Icons.credit_card,
                   title: "Carte bancaire",
-                  onTap: () => _processPayment(plan, 'card'),
+                  onTap: () {
+                    // Fermer le dialogue de paiement
+                    Navigator.pop(context);
+                    
+                    // Rediriger vers Stripe
+                    _handleStripePayment(plan, isMonthly);
+                  },
                 ),
                 const SizedBox(height: 24),
                 TextButton(
@@ -400,138 +574,144 @@ class PlanDisplayState extends State<PlanDisplay> {
                     ),
                   ),
                   child: const Text(
-                    "Annuler",
+                    'Annuler',
                     style: TextStyle(
                       color: Colors.grey,
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          if (isProcessing)
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              ),
-            ),
         ],
       ),
     );
   }
 
-  Future<void> _processPayment(String plan, String method) async {
-    if (!mounted) return;
-
-    // Afficher un dialogue de chargement
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.all(30),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(Color(0xFF08004D)),
-                    strokeWidth: 3,
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    "Traitement en cours...",
-                    style: TextStyle(
-                      color: Color(0xFF08004D),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-
+  Future<void> _processPayment(String plan) async {
     try {
-      setState(() => isProcessing = true);
-
-      // Fermer le popup de méthode de paiement
-      Navigator.of(context).pop();
-
-      if (method == 'apple_pay' && Platform.isIOS) {
-        final canUseApplePay = await Purchases.canMakePayments();
-        if (!canUseApplePay) {
-          throw PlatformException(
-            code: 'apple_pay_not_available',
-            message: 'Apple Pay n\'est pas disponible sur cet appareil',
+      // Montrer un indicateur de chargement
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(
+            child: CircularProgressIndicator(),
           );
-        }
-      } else if (method == 'google_pay' && Platform.isAndroid) {
-        final canUseGooglePay = await Purchases.canMakePayments();
-        if (!canUseGooglePay) {
-          throw PlatformException(
-            code: 'google_pay_not_available',
-            message: 'Google Pay n\'est pas disponible sur cet appareil',
-          );
-        }
-      }
+        },
+      );
 
       final customerInfo = await RevenueCatService.purchaseProduct(
         plan, 
-        widget.isMonthly, 
-        paymentMethod: method
+        !plan.toLowerCase().contains("annuel")
       );
 
-      // Fermer le dialogue de chargement
-      if (mounted) Navigator.of(context).pop();
+      // Fermer l'indicateur de chargement
+      Navigator.of(context).pop();
 
-      if (mounted && customerInfo != null) {
-        widget.onSubscribe(plan);
+      if (customerInfo != null) {
+        // D'abord mettre à jour les données dans Firestore
+        print('👤 Mise à jour du statut dans Firestore...');
+        await SubscriptionService.updateSubscriptionStatus();
+        print('✅ Firestore mis à jour');
+
+        // Ensuite vérifier les plans pour l'affichage
+        print('🔄 Actualisation de l\'affichage...');
+        await _checkActivePlans();
+        print('✅ Affichage actualisé');
+
+        // Afficher le dialogue de succès
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.check_circle_outline,
+                      color: Colors.green,
+                      size: 80,
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Félicitations !',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Votre abonnement a été activé avec succès.',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.black54,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 30,
+                          vertical: 12,
+                        ),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text(
+                        'Continuer',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
       }
     } catch (e) {
-      // Fermer le dialogue de chargement en cas d'erreur
-      if (mounted) Navigator.of(context).pop();
+      // Fermer l'indicateur de chargement s'il est affiché
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
 
-      print('❌ Erreur paiement: $e');
-      if (mounted) {
-        _showError(e.toString());
-      }
-    } finally {
-      if (mounted) {
-        setState(() => isProcessing = false);
-      }
+      // Afficher l'erreur
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Erreur'),
+            content: Text('Une erreur est survenue lors du paiement : $e'),
+            actions: [
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          );
+        },
+      );
     }
   }
 
-  void _showError(String message) {
-    if (!mounted) return;
-    Navigator.of(context).pop(); // Utiliser Navigator.of(context)
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
 
   // Modifier la méthode _handleSubscription pour afficher le dialogue
   Future<void> _handleSubscription(String plan) async {

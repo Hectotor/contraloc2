@@ -9,9 +9,20 @@ class SubscriptionService {
 
     try {
       print('🔄 Début de mise à jour du statut d\'abonnement...');
+      
+      // Vérifier le statut dans RevenueCat
       final customerInfo = await RevenueCatService.checkEntitlements();
-      if (customerInfo == null) {
-        print('❌ Pas d\'informations client RevenueCat');
+      if (customerInfo == null || customerInfo.entitlements.active.isEmpty) {
+        print('❌ Pas d\'abonnement RevenueCat actif');
+        // Mettre à jour le statut comme gratuit si pas d'abonnement
+        await updateFirestoreSubscription(
+          user.uid,
+          'free',
+          false,
+          1,  // Limite de base pour compte gratuit
+          10,  // Limite de contrats pour compte gratuit
+        );
+        print('✨ Statut mis à jour vers compte gratuit');
         return;
       }
 
@@ -47,6 +58,9 @@ class SubscriptionService {
       }
 
       print('📱 Mise à jour avec subscriptionId: $subscriptionId');
+      print('📱 Statut actif: $isActive');
+      print('📱 Nombre de véhicules: $numberOfCars');
+      print('📱 Limite de contrats: $limiteContrat');
 
       await updateFirestoreSubscription(
         user.uid,
@@ -91,4 +105,5 @@ class SubscriptionService {
       throw e;
     }
   }
+
 }

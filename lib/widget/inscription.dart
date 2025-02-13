@@ -129,6 +129,10 @@ class _InscriptionPageState extends State<InscriptionPage> {
         'isSubscriptionActive': false,
         'numberOfCars': 1,
         'limiteContrat': 10,
+        // Ajout des nouveaux champs
+        'cb_subscription': 'free',
+        'cb_nb_car': 1,
+        'cb_limite_contrat': 10,
       });
 
       setState(() {

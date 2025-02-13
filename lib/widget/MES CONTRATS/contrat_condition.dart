@@ -89,21 +89,29 @@ class _ContratModifierState extends State<ContratModifier> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Correction du chemin en s'inspirant de client.dart
         final doc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .collection('authentification')
-            .doc(user.uid) // Utiliser user.uid au lieu de 'userId'
+            .doc(user.uid)
             .get();
 
-        setState(() {
-          final subscriptionId = doc.data()?['subscriptionId'] ?? 'free';
-          isPremiumUser = subscriptionId == 'premium-monthly_access' ||
-              subscriptionId == 'premium-yearly_access';
-          print('Status Premium: $isPremiumUser'); // Pour le débogage
-          print('SubscriptionId: $subscriptionId'); // Pour le débogage
-        });
+        if (doc.exists) {
+          final data = doc.data() ?? {};
+          final subscriptionId = data['subscriptionId'] ?? 'free';
+          final cb_subscription = data['cb_subscription'] ?? 'free';
+
+          setState(() {
+            // L'utilisateur est premium si l'un des deux abonnements est premium
+            isPremiumUser = subscriptionId == 'premium-monthly_access' ||
+                subscriptionId == 'premium-yearly_access' ||
+                cb_subscription == 'premium-monthly_access' ||
+                cb_subscription == 'premium-yearly_access';
+            print('Status Premium: $isPremiumUser');
+            print('SubscriptionId: $subscriptionId');
+            print('CB Subscription: $cb_subscription');
+          });
+        }
       }
     } catch (e) {
       print('Erreur lors de la vérification du statut Premium: $e');

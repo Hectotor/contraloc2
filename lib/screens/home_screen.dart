@@ -70,87 +70,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<int> _getUserSubscriptionLimit() async {
-    try {
-      final customerInfo = await Purchases.getCustomerInfo();
-      if (customerInfo.entitlements.active.isNotEmpty) {
-        final entitlement = customerInfo.entitlements.active.values.first;
-        if (entitlement.identifier.contains('premium-monthly_access') ||
-            entitlement.identifier.contains('premium-yearly_access')) {
-          return 999;
-        } else if (entitlement.identifier.contains('pro-monthly_access') ||
-            entitlement.identifier.contains('pro-yearly_access')) {
-          return 5;
-        }
-      }
-      return 1;
-    } catch (e) {
-      print('❌ Erreur vérification limite: $e');
-      return 1;
-    }
-  }
-
-  Future<int> _getUserVehicleCount() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('vehicules')
-          .get();
-      return querySnapshot.docs.length;
-    }
-    return 0;
-  }
-
-  Future<void> _showSubscriptionLimitDialog() async {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: const Text(
-            "Limite d'abonnement atteinte",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF08004D),
-            ),
-          ),
-          content: const Text(
-            "Votre abonnement ne permet pas d'accéder à plus de véhicules. Vous pouvez soit mettre à jour votre abonnement, soit supprimer des véhicules.",
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.black87,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (context) => const AbonnementScreen()),
-                );
-              },
-              child: const Text(
-                "Mettre à jour l'abonnement",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF08004D),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<bool> _checkMonthlyContractLimit() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -161,7 +80,22 @@ class _HomeScreenState extends State<HomeScreen> {
           .collection('authentification')
           .doc(user.uid)
           .get();
-      final limiteContrat = userDoc.data()?['limiteContrat'] ?? 4;
+
+      final cb_limite_contrat = userDoc.data()?['cb_limite_contrat'] ?? 10;
+      
+      int limiteContrat = 10; // Limite par défaut
+      
+      // Si cb_limite_contrat est 999, on garde cette limite illimitée
+      if (cb_limite_contrat == 999) {
+        limiteContrat = 999;
+      } else {
+        // Si cb_limite_contrat est 10, on vérifie limiteContrat
+        final limiteContratTemp = userDoc.data()?['limiteContrat'] ?? 10;
+        // Si limiteContrat est 999, on prend 999, sinon on garde 10
+        if (limiteContratTemp == 999) {
+          limiteContrat = 999;
+        }
+      }
 
       // Calculer le début et la fin du mois en cours
       final now = DateTime.now();
@@ -368,15 +302,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         if (!canCreateContract) {
                           _showLimitReachedDialog();
-                          return;
-                        }
-
-                        final subscriptionLimit =
-                            await _getUserSubscriptionLimit();
-                        final vehicleCount = await _getUserVehicleCount();
-
-                        if (vehicleCount > subscriptionLimit) {
-                          await _showSubscriptionLimitDialog();
                           return;
                         }
 

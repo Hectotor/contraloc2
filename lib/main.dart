@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:ContraLoc/firebase_options.dart';
 import 'package:ContraLoc/services/revenue_cat_service.dart';
-import 'package:ContraLoc/services/subscription_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -10,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'package:purchases_flutter/purchases_flutter.dart'; // Import RevenueCat
 import 'package:flutter/services.dart'; // Import SystemChrome
 import 'screens/splash_screen.dart';
+import 'package:ContraLoc/services/subscription_service.dart'; // Import SubscriptionService
 
 
 Future<Map<String, String>> fetchRevenueCatKeys() async {
@@ -25,7 +25,6 @@ Future<Map<String, String>> fetchRevenueCatKeys() async {
     return {
       'android': data['android_api_key'] ?? '',
       'ios': data['ios_api_key'] ?? '',
-      'stripe': data['stripe_api_key'] ?? '',
     };
   } catch (e) {
     print('❌ Erreur lors de la récupération des clés RevenueCat: $e');
@@ -59,14 +58,14 @@ Future<void> main() async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
       try {
-        final customerInfo = await Purchases.getCustomerInfo();
-        if (customerInfo.originalAppUserId != currentUser.uid) {
-          await Purchases.logIn(currentUser.uid);
-        }
-        // Add this line to update subscription status on app start
+        await Purchases.logIn(currentUser.uid);
+        
+        // Vérifier et mettre à jour le statut d'abonnement
+        print('👤 Chargement des données utilisateur...');
         await SubscriptionService.updateSubscriptionStatus();
+        
       } catch (e) {
-        print('❌ Erreur synchronisation RevenueCat: $e');
+        print('❌ Erreur vérification statut: $e');
       }
     }
 

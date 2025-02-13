@@ -14,55 +14,115 @@ class VehicleLimitChecker {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
+        return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          title: Row(
-            children: [
-              Icon(Icons.warning_rounded, color: Color(0xFF08004D), size: 30),
-              SizedBox(width: 10),
-              Text(
-                'Limite Atteinte',
-                style: TextStyle(
-                  color: Color(0xFF08004D),
-                  fontWeight: FontWeight.bold,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  spreadRadius: 5,
+                  blurRadius: 7,
+                  offset: Offset(0, 3),
                 ),
-              ),
-            ],
-          ),
-          content: Text(
-            "Vous avez atteint la limite de véhicules pour votre abonnement. "
-            "Passez à un abonnement supérieur pour ajouter plus de véhicules.",
-            style: TextStyle(color: Colors.black87),
-            textAlign: TextAlign.center,
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(
-                'Voir les Abonnements',
-                style: TextStyle(color: Color(0xFF08004D)),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop(); // Fermer le dialog
-                // Naviguer vers l'écran des abonnements
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AbonnementScreen()),
-                );
-              },
+              ],
             ),
-            TextButton(
-              child: Text(
-                'Fermer',
-                style: TextStyle(color: Colors.red),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF08004D).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.car_rental,
+                    color: Color(0xFF08004D),
+                    size: 40,
+                  ),
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'Limite de Véhicules Atteinte',
+                  style: TextStyle(
+                    color: Color(0xFF08004D),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 15),
+                Text(
+                  "Vous avez atteint la limite de véhicules pour votre abonnement actuel.",
+                  style: TextStyle(
+                    color: Colors.black87,
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 10),
+                Text(
+                  "Passez à un abonnement supérieur pour gérer plus de véhicules !",
+                  style: TextStyle(
+                    color: Colors.black54,
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 25),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      ),
+                      child: Text(
+                        'Plus tard',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => AbonnementScreen()),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF08004D),
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: Text(
+                        'Voir les Offres',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );
@@ -89,13 +149,18 @@ class VehicleLimitChecker {
         .get();
     
     final subscriptionId = userDoc.data()?['subscriptionId'] ?? 'free';
+    final cb_subscription = userDoc.data()?['cb_subscription'] ?? 'free';
     
     int vehicleLimit = 1; // Par défaut, abonnement gratuit
     if (subscriptionId == 'pro-monthly_access' || 
-        subscriptionId == 'pro-yearly_access') {
+        subscriptionId == 'pro-yearly_access' ||
+        cb_subscription == 'pro-monthly_access' || 
+        cb_subscription == 'pro-yearly_access') {
       vehicleLimit = 5;
     } else if (subscriptionId == 'premium-monthly_access' || 
-               subscriptionId == 'premium-yearly_access') {
+               subscriptionId == 'premium-yearly_access' ||
+               cb_subscription == 'premium-monthly_access' || 
+               cb_subscription == 'premium-yearly_access') {
       vehicleLimit = 999;
     }
 

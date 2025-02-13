@@ -13,15 +13,8 @@ class RevenueCatService {
   // Identifiants Android
   static const String _proMonthlyAndroid = 'offre_contraloc:pro-monthly';
   static const String _proYearlyAndroid = 'offre_contraloc:pro-yearly';
-  static const String _premiumMonthlyAndroid =
-      'offre_contraloc:premium-monthly';
+  static const String _premiumMonthlyAndroid = 'offre_contraloc:premium-monthly';
   static const String _premiumYearlyAndroid = 'offre_contraloc:premium-yearly';
-
-  // Identifiants Stripe
-  static const String _proMonthlyStripe = 'prod_RiISy7xcZzgFb5';
-  static const String _proYearlyStripe = 'prod_RiIT1QQFJjV5hR';
-  static const String _premiumMonthlyStripe = 'prod_RiIVqYAhJGzB0u';
-  static const String _premiumYearlyStripe = 'prod_RiIXsD22K4xehY';
 
   // Mapping complet des identifiants
   static final Map<String, String> subscriptionIdMapping = {
@@ -36,12 +29,6 @@ class RevenueCatService {
     'offre_contraloc:premium-yearly': 'premium-yearly_access',
     'offre_contraloc:pro-monthly': 'pro-monthly_access',
     'offre_contraloc:pro-yearly': 'pro-yearly_access',
-    
-    // Stripe Mappings
-    'prod_RiIVqYAhJGzB0u': 'premium-monthly_access',
-    'prod_RiIXsD22K4xehY': 'premium-yearly_access',
-    'prod_RiISy7xcZzgFb5': 'pro-monthly_access',
-    'prod_RiIT1QQFJjV5hR': 'pro-yearly_access',
   };
 
   // Méthode de mapping générique
@@ -57,29 +44,25 @@ class RevenueCatService {
     );
   }
 
-  // Getters pour obtenir le bon ID selon la plateforme, incluant Stripe
+  // Getters pour obtenir le bon ID selon la plateforme
   static String get entitlementProMonthly {
     if (Platform.isIOS) return mapSubscriptionId(_proMonthlyIOS);
-    if (Platform.isAndroid) return mapSubscriptionId(_proMonthlyAndroid);
-    return mapSubscriptionId(_proMonthlyStripe);
+    return mapSubscriptionId(_proMonthlyAndroid);
   }
 
   static String get entitlementProYearly {
     if (Platform.isIOS) return mapSubscriptionId(_proYearlyIOS);
-    if (Platform.isAndroid) return mapSubscriptionId(_proYearlyAndroid);
-    return mapSubscriptionId(_proYearlyStripe);
+    return mapSubscriptionId(_proYearlyAndroid);
   }
 
   static String get entitlementPremiumMonthly {
     if (Platform.isIOS) return mapSubscriptionId(_premiumMonthlyIOS);
-    if (Platform.isAndroid) return mapSubscriptionId(_premiumMonthlyAndroid);
-    return mapSubscriptionId(_premiumMonthlyStripe);
+    return mapSubscriptionId(_premiumMonthlyAndroid);
   }
 
   static String get entitlementPremiumYearly {
     if (Platform.isIOS) return mapSubscriptionId(_premiumYearlyIOS);
-    if (Platform.isAndroid) return mapSubscriptionId(_premiumYearlyAndroid);
-    return mapSubscriptionId(_premiumYearlyStripe);
+    return mapSubscriptionId(_premiumYearlyAndroid);
   }
 
   // Constantes pour les packages
@@ -90,24 +73,18 @@ class RevenueCatService {
 
   // Identifiants des produits par plateforme
   static final Map<String, String> productIds = {
-          // iOS Products
-          'ios_pro_monthly': _proMonthlyIOS,
-          'ios_pro_yearly': _proYearlyIOS,
-          'ios_premium_monthly': _premiumMonthlyIOS,
-          'ios_premium_yearly': _premiumYearlyIOS,
-          
-          // Android Products
-          'android_pro_monthly': _proMonthlyAndroid,
-          'android_pro_yearly': _proYearlyAndroid,
-          'android_premium_monthly': _premiumMonthlyAndroid,
-          'android_premium_yearly': _premiumYearlyAndroid,
-          
-          // Stripe Products
-          'stripe_pro_monthly': _proMonthlyStripe,
-          'stripe_pro_yearly': _proYearlyStripe,
-          'stripe_premium_monthly': _premiumMonthlyStripe,
-          'stripe_premium_yearly': _premiumYearlyStripe,
-        };
+    // iOS Products
+    'ios_pro_monthly': _proMonthlyIOS,
+    'ios_pro_yearly': _proYearlyIOS,
+    'ios_premium_monthly': _premiumMonthlyIOS,
+    'ios_premium_yearly': _premiumYearlyIOS,
+    
+    // Android Products
+    'android_pro_monthly': _proMonthlyAndroid,
+    'android_pro_yearly': _proYearlyAndroid,
+    'android_premium_monthly': _premiumMonthlyAndroid,
+    'android_premium_yearly': _premiumYearlyAndroid,
+  };
 
   static Future<void> initialize({
     required String androidApiKey,
@@ -142,8 +119,7 @@ class RevenueCatService {
       final customerInfo = await Purchases.getCustomerInfo();
       final activeEntitlements = customerInfo.entitlements.active.keys;
 
-      print(
-          '📱 État RevenueCat: ${activeEntitlements.length} abonnement(s) actif(s)');
+      print('📱 État RevenueCat: ${activeEntitlements.length} abonnement(s) actif(s)');
       print('📱 Entitlements actifs: $activeEntitlements');
 
       // Si plusieurs abonnements sont actifs, prioriser Premium sur Pro
@@ -160,8 +136,7 @@ class RevenueCatService {
             (key, _) => !key.contains('pro'),
           );
         }
-        print(
-            '📱 Après priorisation: ${customerInfo.entitlements.active.keys}');
+        print('📱 Après priorisation: ${customerInfo.entitlements.active.keys}');
       }
 
       return customerInfo;
@@ -191,8 +166,7 @@ class RevenueCatService {
 
   static Future<CustomerInfo?> purchaseProduct(
     String plan, 
-    bool isMonthly, 
-    {String? paymentMethod}
+    bool isMonthly
   ) async {
     try {
       String productId;
@@ -200,16 +174,12 @@ class RevenueCatService {
       // Déterminer le bon ID de produit avec mapping
       if (plan.contains("Premium")) {
         productId = isMonthly 
-          ? (paymentMethod == 'card' ? _premiumMonthlyStripe : 
-             Platform.isIOS ? _premiumMonthlyIOS : _premiumMonthlyAndroid)
-          : (paymentMethod == 'card' ? _premiumYearlyStripe : 
-             Platform.isIOS ? _premiumYearlyIOS : _premiumYearlyAndroid);
+          ? (Platform.isIOS ? _premiumMonthlyIOS : _premiumMonthlyAndroid)
+          : (Platform.isIOS ? _premiumYearlyIOS : _premiumYearlyAndroid);
       } else if (plan.contains("Pro")) {
         productId = isMonthly 
-          ? (paymentMethod == 'card' ? _proMonthlyStripe : 
-             Platform.isIOS ? _proMonthlyIOS : _proMonthlyAndroid)
-          : (paymentMethod == 'card' ? _proYearlyStripe : 
-             Platform.isIOS ? _proYearlyIOS : _proYearlyAndroid);
+          ? (Platform.isIOS ? _proMonthlyIOS : _proMonthlyAndroid)
+          : (Platform.isIOS ? _proYearlyIOS : _proYearlyAndroid);
       } else {
         throw Exception('Plan non reconnu: $plan');
       }
@@ -218,7 +188,6 @@ class RevenueCatService {
       print('🛒 Détails de l\'achat :');
       print('   📦 Plan: $plan');
       print('   🕰️ Durée: ${isMonthly ? "Mensuel" : "Annuel"}');
-      print('   💳 Méthode de paiement: $paymentMethod');
       print('   🆔 ID Produit Original: $productId');
       print('   🔄 ID Produit Mappé: ${mapSubscriptionId(productId)}');
 
@@ -264,12 +233,10 @@ class RevenueCatService {
     }
   }
 
-  ///////////// Nouvelle méthode pour gérer le processus complet d'abonnement
   static Future<CustomerInfo?> processSubscription(
     BuildContext context, {
     required String plan,
     required bool isMonthly,
-    String? paymentMethod,
   }) async {
     try {
       // Montrer un indicateur de chargement
@@ -284,11 +251,7 @@ class RevenueCatService {
       );
 
       // Effectuer l'achat de l'abonnement
-      final customerInfo = await purchaseProduct(
-        plan, 
-        isMonthly, 
-        paymentMethod: paymentMethod
-      );
+      final customerInfo = await purchaseProduct(plan, isMonthly);
 
       // Fermer le chargement
       Navigator.of(context).pop();

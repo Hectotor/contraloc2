@@ -40,11 +40,19 @@ class _EtatVehiculeState extends State<EtatVehicule> {
           .doc(user.uid)
           .get();
 
-      setState(() {
-        final subscriptionId = doc.data()?['subscriptionId'] ?? 'free';
-        isPremiumUser = subscriptionId == 'premium-monthly_access' ||
-            subscriptionId == 'premium-yearly_access';
-      });
+      if (doc.exists) {
+        final data = doc.data() ?? {};
+        final subscriptionId = data['subscriptionId'] ?? 'free';
+        final cb_subscription = data['cb_subscription'] ?? 'free';
+
+        setState(() {
+          // L'utilisateur est premium si l'un des deux abonnements est premium
+          isPremiumUser = subscriptionId == 'premium-monthly_access' ||
+              subscriptionId == 'premium-yearly_access' ||
+              cb_subscription == 'premium-monthly_access' ||
+              cb_subscription == 'premium-yearly_access';
+        });
+      }
     }
   }
 
