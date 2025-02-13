@@ -472,6 +472,16 @@ class _UserScreenState extends State<UserScreen> {
                       ),
                       const SizedBox(
                           height: 5), // Marge supplémentaire tout en bas
+                      Padding(
+                        padding: const EdgeInsets.only(top: 20, bottom: 10),
+                        child: Text(
+                          'Version 1.0.6',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
