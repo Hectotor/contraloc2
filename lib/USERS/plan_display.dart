@@ -384,7 +384,7 @@ class PlanDisplayState extends State<PlanDisplay> {
           : "https://buy.stripe.com/aEUcQFb0kc8Jbug5kk";  // Premium annuel
     } else {
       baseUrl = isMonthly
-          ? "https://buy.stripe.com/test_7sIdUq09F3wW0pi8ww"  // Pro mensuel
+          ? "https://buy.stripe.com/6oE4k92tOdcN8i4145"  // Pro mensuel
           : "https://buy.stripe.com/28o9EtgkEa0BaqcfZ0";      // Pro annuel
     }
 
