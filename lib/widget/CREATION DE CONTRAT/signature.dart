@@ -6,8 +6,8 @@ class SignatureWidget extends StatefulWidget {
   final String? nom;
   final String? prenom;
   final SignatureController controller;
+  final bool accepted;
   final ValueChanged<bool> onAcceptedChanged;
-  final Function(String)? onSignatureCaptured;
   final Function(String)? onSignatureChanged;
 
   const SignatureWidget({
@@ -15,8 +15,8 @@ class SignatureWidget extends StatefulWidget {
     this.nom,
     this.prenom,
     required this.controller,
+    required this.accepted,
     required this.onAcceptedChanged,
-    this.onSignatureCaptured,
     this.onSignatureChanged,
   }) : super(key: key);
 
@@ -25,9 +25,6 @@ class SignatureWidget extends StatefulWidget {
 }
 
 class _SignatureWidgetState extends State<SignatureWidget> {
-  bool _accepted = false;
-  String _base64Signature = '';
-
   @override
   void initState() {
     super.initState();
@@ -41,13 +38,8 @@ class _SignatureWidgetState extends State<SignatureWidget> {
   Future<void> _captureSignature() async {
     final signatureBytes = await widget.controller.toPngBytes();
     if (signatureBytes != null) {
-      setState(() {
-        _base64Signature = base64Encode(signatureBytes);
-      });
-      
-      // Appel des callbacks
-      widget.onSignatureCaptured?.call(_base64Signature);
-      widget.onSignatureChanged?.call(_base64Signature);
+      final base64Signature = base64Encode(signatureBytes);
+      widget.onSignatureChanged?.call(base64Signature);
     }
   }
 
@@ -74,17 +66,7 @@ class _SignatureWidgetState extends State<SignatureWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            () {
-              if (widget.nom != null && widget.prenom != null) {
-                return 'Signature de ${widget.prenom} ${widget.nom}'.trim();
-              } else if (widget.nom != null) {
-                return 'Signature de ${widget.nom}'.trim();
-              } else if (widget.prenom != null) {
-                return 'Signature de ${widget.prenom}'.trim();
-              } else {
-                return 'Signature de Location';
-              }
-            }(),
+            'Signature de Location',
             style: TextStyle(
               fontSize: 16, 
               fontWeight: FontWeight.bold,
@@ -95,12 +77,9 @@ class _SignatureWidgetState extends State<SignatureWidget> {
           Row(
             children: [
               Checkbox(
-                value: _accepted,
+                value: widget.accepted,
                 onChanged: (bool? value) {
-                  setState(() {
-                    _accepted = value ?? false;
-                  });
-                  widget.onAcceptedChanged(_accepted);
+                  widget.onAcceptedChanged(value ?? false);
                 },
                 activeColor: const Color(0xFF08004D),
                 shape: RoundedRectangleBorder(
@@ -111,14 +90,14 @@ class _SignatureWidgetState extends State<SignatureWidget> {
                 child: Text(
                   "Je reconnais avoir pris connaissance des termes et conditions de location.",
                   style: TextStyle(
-                    color: _accepted ? Colors.black87 : Colors.grey,
+                    color: widget.accepted ? Colors.black87 : Colors.grey,
                     fontSize: 14,
                   ),
                 ),
               ),
             ],
           ),
-          if (_accepted) ...[
+          if (widget.accepted) ...[
             const SizedBox(height: 10),
             Container(
               width: double.infinity,
@@ -152,9 +131,6 @@ class _SignatureWidgetState extends State<SignatureWidget> {
                     child: GestureDetector(
                       onTap: () {
                         widget.controller.clear();
-                        setState(() {
-                          _base64Signature = '';
-                        });
                       },
                       child: Container(
                         decoration: BoxDecoration(

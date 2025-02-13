@@ -36,6 +36,87 @@ class RevenueCatService {
     return subscriptionIdMapping[originalId] ?? originalId;
   }
 
+  // Méthode pour obtenir l'ID de produit correct
+  static String getProductId(String plan, bool isMonthly) {
+    print('🔍 Sélection du produit :');
+    print('   📦 Plan: $plan');
+    print('   🕰️ Durée: ${isMonthly ? "Mensuel" : "Annuel"}');
+
+    if (Platform.isAndroid) {
+      if (plan.contains("Premium")) {
+        return isMonthly 
+          ? _premiumMonthlyAndroid 
+          : _premiumYearlyAndroid;
+      } else if (plan.contains("Pro")) {
+        return isMonthly 
+          ? _proMonthlyAndroid 
+          : _proYearlyAndroid;
+      }
+    } else {
+      if (plan.contains("Premium")) {
+        return isMonthly 
+          ? _premiumMonthlyIOS 
+          : _premiumYearlyIOS;
+      } else if (plan.contains("Pro")) {
+        return isMonthly 
+          ? _proMonthlyIOS 
+          : _proYearlyIOS;
+      }
+    }
+
+    print('❌ Aucun produit trouvé pour le plan: $plan');
+    return 'free';
+  }
+
+  // Méthode de débogage pour lister les produits
+  static Future<void> debugListProducts() async {
+    try {
+      print('🔍 Débogage des produits disponibles');
+      
+      // Liste de tous les IDs de produits
+      final allProductIds = [
+        _proMonthlyIOS, _proYearlyIOS, 
+        _premiumMonthlyIOS, _premiumYearlyIOS,
+        _proMonthlyAndroid, _proYearlyAndroid,
+        _premiumMonthlyAndroid, _premiumYearlyAndroid
+      ];
+
+      print('📋 IDs de produits recherchés : $allProductIds');
+      
+      final products = await Purchases.getProducts(allProductIds);
+      
+      if (products.isEmpty) {
+        print('❌ Aucun produit trouvé !');
+        return;
+      }
+
+      print('✅ Nombre de produits trouvés : ${products.length}');
+      
+      for (var product in products) {
+        print('🏷️ Identifiant: ${product.identifier}');
+        print('💰 Prix: ${product.price}');
+        print('📝 Description: ${product.description}');
+        print('🔑 Mapped Entitlement: ${mapSubscriptionId(product.identifier)}');
+        print('---');
+      }
+
+      // Vérification des offres
+      final offerings = await Purchases.getOfferings();
+      print('📦 Offerings disponibles : ${offerings.all.keys}');
+      
+      offerings.all.forEach((key, offering) {
+        print('- Offering: $key');
+        offering.availablePackages.forEach((package) {
+          print('  📦 Package: ${package.identifier}');
+          print('  🆔 Product ID: ${package.storeProduct.identifier}');
+        });
+      });
+
+    } catch (e) {
+      print('❌ Erreur lors de la récupération des produits : $e');
+    }
+  }
+
   // Méthode inverse pour obtenir l'ID original
   static String? getOriginalId(String mappedId) {
     return subscriptionIdMapping.keys.firstWhere(
@@ -169,66 +250,61 @@ class RevenueCatService {
     bool isMonthly
   ) async {
     try {
-      String productId;
-
-      // Déterminer le bon ID de produit avec mapping
-      if (plan.contains("Premium")) {
-        productId = isMonthly 
-          ? (Platform.isIOS ? _premiumMonthlyIOS : _premiumMonthlyAndroid)
-          : (Platform.isIOS ? _premiumYearlyIOS : _premiumYearlyAndroid);
-      } else if (plan.contains("Pro")) {
-        productId = isMonthly 
-          ? (Platform.isIOS ? _proMonthlyIOS : _proMonthlyAndroid)
-          : (Platform.isIOS ? _proYearlyIOS : _proYearlyAndroid);
-      } else {
-        throw Exception('Plan non reconnu: $plan');
-      }
-
-      // Log avec ID mappé
+      // Obtenir l'ID de produit correct
+      final productId = getProductId(plan, isMonthly);
+      
       print('🛒 Détails de l\'achat :');
       print('   📦 Plan: $plan');
       print('   🕰️ Durée: ${isMonthly ? "Mensuel" : "Annuel"}');
-      print('   🆔 ID Produit Original: $productId');
-      print('   🔄 ID Produit Mappé: ${mapSubscriptionId(productId)}');
+      print('   🆔 ID Produit: $productId');
+      print('   🔄 ID Entitlement: ${mapSubscriptionId(productId)}');
 
-      // Récupérer le produit
-      final products = await Purchases.getProducts([productId]);
+      // Récupérer les offres
+      final offerings = await Purchases.getOfferings();
       
-      print('🔍 Produits récupérés :');
-      for (var product in products) {
-        print('   🏷️ Identifiant: ${product.identifier}');
-        print('   💰 Prix: ${product.price}');
-        print('   📝 Description: ${product.description}');
+      // Trouver le package correspondant
+      Package? package;
+      for (var offering in offerings.all.values) {
+        try {
+          package = offering.availablePackages.firstWhere(
+            (pkg) => pkg.storeProduct.identifier == productId
+          );
+          break;
+        } catch (e) {
+          // Aucun package correspondant dans cet offering
+          print('ℹ️ Aucun package trouvé dans cet offering');
+          continue;
+        }
       }
 
-      if (products.isEmpty) {
-        print('❌ ERREUR : Aucun produit trouvé pour l\'ID $productId');
-        throw Exception('Produit non trouvé: $productId');
+      if (package == null) {
+        print('❌ Aucun package trouvé pour l\'ID : $productId');
+        throw Exception('Package non trouvé');
       }
 
-      print('🎯 Tentative d\'achat du produit: ${products.first.identifier}');
-      final customerInfo = await Purchases.purchaseProduct(productId);
-
+      // Effectuer l'achat avec le package non nullable
+      final customerInfo = await Purchases.purchasePackage(package);
+      
       print('✅ Achat réussi');
       print('📱 Entitlements actifs: ${customerInfo.entitlements.active.keys}');
-      print('📱 Entitlements mappés: ${
-        customerInfo.entitlements.active.keys.map(mapSubscriptionId).toSet()
-      }');
-
+      
       return customerInfo;
     } on PlatformException catch (e) {
-      print('❌ ERREUR DE PAIEMENT DÉTAILLÉE :');
-      print('   📝 Message: ${e.message}');
-      print('   🆔 Code: ${e.code}');
-      print('   📦 Détails: ${e.details}');
-
-      // Si l'utilisateur annule l'achat, on retourne null sans erreur
-      if (e.details != null && e.details?['userCancelled'] == true) {
+      // Gestion spécifique de l'annulation par l'utilisateur
+      if (e.details?['userCancelled'] == true) {
         print('ℹ️ Achat annulé par l\'utilisateur');
         return null;
       }
+
+      // Autres erreurs de plateforme
+      print('❌ Erreur de plateforme lors de l\'achat : ${e.message}');
+      print('   🆔 Code d\'erreur: ${e.code}');
+      print('   📝 Détails: ${e.details}');
       
-      // Pour les autres erreurs, on relance
+      rethrow;
+    } catch (e) {
+      // Gestion des autres types d'erreurs
+      print('❌ Erreur lors de l\'achat : $e');
       rethrow;
     }
   }

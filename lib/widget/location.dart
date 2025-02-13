@@ -71,6 +71,7 @@ class _LocationPageState extends State<LocationPage> {
   bool _isLoading = false; // Add a state variable for loading
   bool _acceptedConditions = false; // Add a state variable for acceptance
   String _signatureBase64 = ''; // Add a state variable for signature
+  bool _isSigning = false;
 
   late final SignatureController _signatureController;
   final TextEditingController _prixLocationController = TextEditingController();
@@ -528,6 +529,7 @@ class _LocationPageState extends State<LocationPage> {
       body: Stack(
         children: [
           SingleChildScrollView(
+            physics: _isSigning ? const NeverScrollableScrollPhysics() : null,
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -608,14 +610,16 @@ class _LocationPageState extends State<LocationPage> {
                   nom: widget.nom,
                   prenom: widget.prenom,
                   controller: _signatureController,
-                  onAcceptedChanged: (bool accepted) {
+                  accepted: _acceptedConditions,
+                  onAcceptedChanged: (bool value) {
                     setState(() {
-                      _acceptedConditions = accepted;
+                      _acceptedConditions = value;
                     });
                   },
                   onSignatureChanged: (String signature) {
                     setState(() {
                       _signatureBase64 = signature;
+                      _isSigning = _signatureController.isNotEmpty;
                     });
                   },
                 ),

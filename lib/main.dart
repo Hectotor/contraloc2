@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io'; 
 import 'package:ContraLoc/firebase_options.dart';
 import 'package:ContraLoc/services/revenue_cat_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -50,6 +51,18 @@ Future<void> main() async {
 
   try {
     final apiKeys = await fetchRevenueCatKeys();
+    
+    // Configuration par plateforme
+    if (Platform.isAndroid) {
+      await Purchases.configure(
+        PurchasesConfiguration(apiKeys['android']!)
+      );
+    } else if (Platform.isIOS) {
+      await Purchases.configure(
+        PurchasesConfiguration(apiKeys['ios']!)
+      );
+    }
+    
     await RevenueCatService.initialize(
       androidApiKey: apiKeys['android']!,
       iosApiKey: apiKeys['ios']!,

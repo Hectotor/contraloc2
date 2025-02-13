@@ -1,5 +1,6 @@
 import 'package:ContraLoc/services/subscription_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import '../services/revenue_cat_service.dart';
 import 'question_user.dart';
 import 'plan_display.dart';
@@ -61,6 +62,15 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     } catch (e) {
       print('❌ Erreur achat: $e');
       if (!mounted) return;
+      if (e is PlatformException &&
+          e.code == '1' &&
+          e.details?['userCancelled'] == true) {
+        _showMessage(
+          'Annulation', 
+          Colors.orange, // Couleur orange pour une annulation
+        );
+        return; // Sort de la fonction sans autre traitement
+      }
       _showMessage('Erreur lors de l\'achat. Veuillez réessayer.', Colors.red);
     } finally {
       if (!mounted) return;
