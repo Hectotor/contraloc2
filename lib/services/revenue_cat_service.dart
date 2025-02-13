@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:ContraLoc/widget/chargement.dart';
 
 class RevenueCatService {
   // Identifiants iOS
@@ -38,9 +39,9 @@ class RevenueCatService {
 
   // Méthode pour obtenir l'ID de produit correct
   static String getProductId(String plan, bool isMonthly) {
-    print('🔍 Sélection du produit :');
-    print('   📦 Plan: $plan');
-    print('   🕰️ Durée: ${isMonthly ? "Mensuel" : "Annuel"}');
+    print(' Sélection du produit :');
+    print('   Plan: $plan');
+    print('   Durée: ${isMonthly ? "Mensuel" : "Annuel"}');
 
     if (Platform.isAndroid) {
       if (plan.contains("Premium")) {
@@ -64,14 +65,14 @@ class RevenueCatService {
       }
     }
 
-    print('❌ Aucun produit trouvé pour le plan: $plan');
+    print(' Aucun produit trouvé pour le plan: $plan');
     return 'free';
   }
 
   // Méthode de débogage pour lister les produits
   static Future<void> debugListProducts() async {
     try {
-      print('🔍 Débogage des produits disponibles');
+      print(' Débogage des produits disponibles');
       
       // Liste de tous les IDs de produits
       final allProductIds = [
@@ -81,39 +82,39 @@ class RevenueCatService {
         _premiumMonthlyAndroid, _premiumYearlyAndroid
       ];
 
-      print('📋 IDs de produits recherchés : $allProductIds');
+      print(' IDs de produits recherchés : $allProductIds');
       
       final products = await Purchases.getProducts(allProductIds);
       
       if (products.isEmpty) {
-        print('❌ Aucun produit trouvé !');
+        print(' Aucun produit trouvé !');
         return;
       }
 
-      print('✅ Nombre de produits trouvés : ${products.length}');
+      print(' Nombre de produits trouvés : ${products.length}');
       
       for (var product in products) {
-        print('🏷️ Identifiant: ${product.identifier}');
-        print('💰 Prix: ${product.price}');
-        print('📝 Description: ${product.description}');
-        print('🔑 Mapped Entitlement: ${mapSubscriptionId(product.identifier)}');
+        print(' Identifiant: ${product.identifier}');
+        print(' Prix: ${product.price}');
+        print(' Description: ${product.description}');
+        print(' Mapped Entitlement: ${mapSubscriptionId(product.identifier)}');
         print('---');
       }
 
       // Vérification des offres
       final offerings = await Purchases.getOfferings();
-      print('📦 Offerings disponibles : ${offerings.all.keys}');
+      print(' Offerings disponibles : ${offerings.all.keys}');
       
       offerings.all.forEach((key, offering) {
         print('- Offering: $key');
         offering.availablePackages.forEach((package) {
-          print('  📦 Package: ${package.identifier}');
-          print('  🆔 Product ID: ${package.storeProduct.identifier}');
+          print('  Package: ${package.identifier}');
+          print('  Product ID: ${package.storeProduct.identifier}');
         });
       });
 
     } catch (e) {
-      print('❌ Erreur lors de la récupération des produits : $e');
+      print(' Erreur lors de la récupération des produits : $e');
     }
   }
 
@@ -174,24 +175,24 @@ class RevenueCatService {
     await Purchases.setLogLevel(LogLevel.verbose);
     final apiKey = Platform.isIOS ? iosApiKey : androidApiKey;
     await Purchases.configure(PurchasesConfiguration(apiKey));
-    print('🔑 RevenueCat initialisé avec la clé: ${apiKey.substring(0, 10)}...');
+    print(' RevenueCat initialisé avec la clé: ${apiKey.substring(0, 10)}...');
   }
 
   static Future<void> login(String userId) async {
     try {
       await Purchases.logIn(userId);
-      print('✅ RevenueCat login réussi pour: $userId');
+      print(' RevenueCat login réussi pour: $userId');
     } catch (e) {
-      print('❌ Erreur RevenueCat login: $e');
+      print(' Erreur RevenueCat login: $e');
     }
   }
 
   static Future<void> logout() async {
     try {
       await Purchases.logOut();
-      print('✅ RevenueCat logout réussi');
+      print(' RevenueCat logout réussi');
     } catch (e) {
-      print('❌ Erreur RevenueCat logout: $e');
+      print(' Erreur RevenueCat logout: $e');
     }
   }
 
@@ -200,8 +201,8 @@ class RevenueCatService {
       final customerInfo = await Purchases.getCustomerInfo();
       final activeEntitlements = customerInfo.entitlements.active.keys;
 
-      print('📱 État RevenueCat: ${activeEntitlements.length} abonnement(s) actif(s)');
-      print('📱 Entitlements actifs: $activeEntitlements');
+      print(' État RevenueCat: ${activeEntitlements.length} abonnement(s) actif(s)');
+      print(' Entitlements actifs: $activeEntitlements');
 
       // Si plusieurs abonnements sont actifs, prioriser Premium sur Pro
       if (activeEntitlements.length > 1) {
@@ -217,12 +218,12 @@ class RevenueCatService {
             (key, _) => !key.contains('pro'),
           );
         }
-        print('📱 Après priorisation: ${customerInfo.entitlements.active.keys}');
+        print(' Après priorisation: ${customerInfo.entitlements.active.keys}');
       }
 
       return customerInfo;
     } catch (e) {
-      print('❌ Erreur vérification entitlements: $e');
+      print(' Erreur vérification entitlements: $e');
       return null;
     }
   }
@@ -253,11 +254,11 @@ class RevenueCatService {
       // Obtenir l'ID de produit correct
       final productId = getProductId(plan, isMonthly);
       
-      print('🛒 Détails de l\'achat :');
-      print('   📦 Plan: $plan');
-      print('   🕰️ Durée: ${isMonthly ? "Mensuel" : "Annuel"}');
-      print('   🆔 ID Produit: $productId');
-      print('   🔄 ID Entitlement: ${mapSubscriptionId(productId)}');
+      print(' Détails de l\'achat :');
+      print('   Plan: $plan');
+      print('   Durée: ${isMonthly ? "Mensuel" : "Annuel"}');
+      print('   ID Produit: $productId');
+      print('   ID Entitlement: ${mapSubscriptionId(productId)}');
 
       // Récupérer les offres
       final offerings = await Purchases.getOfferings();
@@ -272,39 +273,39 @@ class RevenueCatService {
           break;
         } catch (e) {
           // Aucun package correspondant dans cet offering
-          print('ℹ️ Aucun package trouvé dans cet offering');
+          print(' Aucun package trouvé dans cet offering');
           continue;
         }
       }
 
       if (package == null) {
-        print('❌ Aucun package trouvé pour l\'ID : $productId');
+        print(' Aucun package trouvé pour l\'ID : $productId');
         throw Exception('Package non trouvé');
       }
 
       // Effectuer l'achat avec le package non nullable
       final customerInfo = await Purchases.purchasePackage(package);
       
-      print('✅ Achat réussi');
-      print('📱 Entitlements actifs: ${customerInfo.entitlements.active.keys}');
+      print(' Achat réussi');
+      print(' Entitlements actifs: ${customerInfo.entitlements.active.keys}');
       
       return customerInfo;
     } on PlatformException catch (e) {
       // Gestion spécifique de l'annulation par l'utilisateur
       if (e.details?['userCancelled'] == true) {
-        print('ℹ️ Achat annulé par l\'utilisateur');
+        print(' Achat annulé par l\'utilisateur');
         return null;
       }
 
       // Autres erreurs de plateforme
-      print('❌ Erreur de plateforme lors de l\'achat : ${e.message}');
-      print('   🆔 Code d\'erreur: ${e.code}');
-      print('   📝 Détails: ${e.details}');
+      print(' Erreur de plateforme lors de l\'achat : ${e.message}');
+      print('   Code d\'erreur: ${e.code}');
+      print('   Détails: ${e.details}');
       
       rethrow;
     } catch (e) {
       // Gestion des autres types d'erreurs
-      print('❌ Erreur lors de l\'achat : $e');
+      print(' Erreur lors de l\'achat : $e');
       rethrow;
     }
   }
@@ -315,21 +316,17 @@ class RevenueCatService {
     required bool isMonthly,
   }) async {
     try {
-      // Montrer un indicateur de chargement
+      // Afficher le dialogue de chargement personnalisé
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        },
+        builder: (BuildContext context) => const Chargement(),
       );
 
       // Effectuer l'achat de l'abonnement
       final customerInfo = await purchaseProduct(plan, isMonthly);
 
-      // Fermer le chargement
+      // Fermer le dialogue de chargement
       Navigator.of(context).pop();
 
       // Si l'achat est réussi, afficher le popup de félicitations
@@ -401,7 +398,7 @@ class RevenueCatService {
 
       return customerInfo;
     } catch (e) {
-      // Fermer le chargement en cas d'erreur
+      // Fermer le dialogue de chargement en cas d'erreur
       Navigator.of(context).pop();
 
       // Afficher un message d'erreur

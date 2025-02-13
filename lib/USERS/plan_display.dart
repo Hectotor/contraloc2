@@ -10,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:ContraLoc/widget/chargement.dart';
 
 class PlanData {
   final String title;
@@ -264,7 +265,7 @@ class PlanDisplayState extends State<PlanDisplay> {
           const SizedBox(height: 16),
           if (plan.title == "Offre Gratuite" && !isActivePlan)
             Text(
-              'Veuillez utiliser le bouton\n"Gérer mon abonnement"',
+              '',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.grey[600],
@@ -591,15 +592,11 @@ class PlanDisplayState extends State<PlanDisplay> {
 
   Future<void> _processPayment(String plan) async {
     try {
-      // Montrer un indicateur de chargement
+      // Afficher le dialogue de chargement personnalisé
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        },
+        builder: (BuildContext context) => const Chargement(),
       );
 
       final customerInfo = await RevenueCatService.purchaseProduct(
@@ -607,7 +604,7 @@ class PlanDisplayState extends State<PlanDisplay> {
         !plan.toLowerCase().contains("annuel")
       );
 
-      // Fermer l'indicateur de chargement
+      // Fermer le dialogue de chargement
       Navigator.of(context).pop();
 
       if (customerInfo != null) {
