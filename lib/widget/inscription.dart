@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
+import '../services/revenue_cat_service.dart'; // Import RevenueCat Service
 
 // Définition de UpperCaseTextFormatter
 class UpperCaseTextFormatter extends TextInputFormatter {
@@ -108,38 +109,44 @@ class _InscriptionPageState extends State<InscriptionPage> {
         password: password,
       );
 
-      await userCredential.user!.sendEmailVerification();
+      if (userCredential.user != null) {
+        // Identifier l'utilisateur avec RevenueCat
+        await RevenueCatService.login(userCredential.user!.uid);
 
-      // Save user information to Firestore with authentification subcollection
-      await _firestore
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .collection('authentification')
-          .doc(userCredential.user!.uid)
-          .set({
-        'nomEntreprise': _nomEntrepriseController.text
-            .trim()
-            .toUpperCase(), // Convert to uppercase
-        'prenom': prenom, // Utiliser le prénom formaté
-        'nom': nom, // Utiliser le nom formaté
-        'adresse': _adresseController.text.trim(),
-        'email': email,
-        'telephone': _telephoneController.text.trim(),
-        'subscriptionId': 'free',
-        'isSubscriptionActive': false,
-        'numberOfCars': 1,
-        'limiteContrat': 10,
-        // Ajout des nouveaux champs
-        'cb_subscription': 'free',
-        'cb_nb_car': 1,
-        'cb_limite_contrat': 10,
-      });
+        // Créer le document utilisateur dans Firestore
+        await userCredential.user!.sendEmailVerification();
 
-      setState(() {
-        _isLoading = false; // Stop loading
-      });
+        // Save user information to Firestore with authentification subcollection
+        await _firestore
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .collection('authentification')
+            .doc(userCredential.user!.uid)
+            .set({
+          'nomEntreprise': _nomEntrepriseController.text
+              .trim()
+              .toUpperCase(), // Convert to uppercase
+          'prenom': prenom, // Utiliser le prénom formaté
+          'nom': nom, // Utiliser le nom formaté
+          'adresse': _adresseController.text.trim(),
+          'email': email,
+          'telephone': _telephoneController.text.trim(),
+          'subscriptionId': 'free',
+          'isSubscriptionActive': false,
+          'numberOfCars': 1,
+          'limiteContrat': 10,
+          // Ajout des nouveaux champs
+          'cb_subscription': 'free',
+          'cb_nb_car': 1,
+          'cb_limite_contrat': 10,
+        });
 
-      _showSuccessDialog(); // Affiche le popup au lieu du Fluttertoast
+        setState(() {
+          _isLoading = false; // Stop loading
+        });
+
+        _showSuccessDialog(); // Affiche le popup au lieu du Fluttertoast
+      }
     } catch (e) {
       Fluttertoast.showToast(msg: "Erreur : ${e.toString()}");
       setState(() {

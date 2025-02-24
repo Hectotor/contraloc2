@@ -44,6 +44,18 @@ Future<void> main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('✅ Firebase initialisé avec succès');
+
+    // Vérifier si un utilisateur est déjà connecté et l'identifier avec RevenueCat
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      try {
+        await RevenueCatService.login(currentUser.uid);
+        print('✅ Utilisateur identifié avec RevenueCat: ${currentUser.uid}');
+      } catch (e) {
+        print('⚠️ Erreur identification RevenueCat: $e');
+      }
+    }
+
   } catch (e) {
     print('❌ Erreur initialisation Firebase: $e');
     return;
@@ -107,9 +119,13 @@ class MyApp extends StatelessWidget {
           builder: (context, orientation) {
             return MaterialApp(
               title: 'Contraloc',
+              debugShowCheckedModeBanner: false,
               theme: ThemeData(
                 primarySwatch: Colors.blue,
                 fontFamily: 'OpenSans',
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                hoverColor: Colors.transparent,
               ),
               localizationsDelegates: const [
                 GlobalMaterialLocalizations.delegate,
@@ -120,7 +136,6 @@ class MyApp extends StatelessWidget {
                 Locale('fr', 'FR'),
               ],
               home: SplashScreen(),
-              debugShowCheckedModeBanner: false,
               builder: (context, child) {
                 return ScrollConfiguration(
                   behavior: ScrollBehavior().copyWith(

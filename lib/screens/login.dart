@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import '../services/revenue_cat_service.dart';
 import '../widget/inscription.dart'; // Import de la page d'inscription
 import '../widget/navigation.dart'; // Import de la page de navigation
 
@@ -47,6 +48,16 @@ class _LoginPageState extends State<LoginPage> {
         password: password,
       );
 
+      // Identifier l'utilisateur avec RevenueCat
+      if (userCredential.user != null) {
+        await RevenueCatService.login(userCredential.user!.uid);
+        
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const NavigationPage()),
+        );
+      }
+
       // Synchroniser l'ID utilisateur avec RevenueCat
       if (userCredential.user != null) {
         try {
@@ -61,11 +72,6 @@ class _LoginPageState extends State<LoginPage> {
           // Continuer malgré l'erreur car l'utilisateur est déjà connecté
         }
       }
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const NavigationPage()),
-      );
     } catch (e) {
       _showErrorToast("Erreur : ${_getFriendlyErrorMessage(e.toString())}");
     }
