@@ -168,35 +168,69 @@ class RevenueCatService {
     'android_premium_yearly': _premiumYearlyAndroid,
   };
 
+  static bool _isInitialized = false;
+
   static Future<void> initialize({
     required String androidApiKey,
     required String iosApiKey,
   }) async {
-    await Purchases.setLogLevel(LogLevel.verbose);
-    final apiKey = Platform.isIOS ? iosApiKey : androidApiKey;
-    await Purchases.configure(PurchasesConfiguration(apiKey));
-    print(' RevenueCat initialisé avec la clé: ${apiKey.substring(0, 10)}...');
+    if (_isInitialized) {
+      print(' RevenueCat déjà initialisé');
+      return;
+    }
+
+    try {
+      await Purchases.setLogLevel(LogLevel.verbose);
+      
+      // Configuration par plateforme
+      if (Platform.isAndroid) {
+        await Purchases.configure(
+          PurchasesConfiguration(androidApiKey)
+        );
+      } else if (Platform.isIOS) {
+        await Purchases.configure(
+          PurchasesConfiguration(iosApiKey)
+        );
+      }
+      
+      _isInitialized = true;
+      print(' RevenueCat initialisé avec succès');
+    } catch (e) {
+      print(' ❌ Erreur lors de l\'initialisation de RevenueCat: $e');
+      rethrow;
+    }
+  }
+
+  static Future<void> ensureInitialized() async {
+    if (!_isInitialized) {
+      throw Exception('RevenueCat n\'est pas initialisé. Appelez initialize() d\'abord.');
+    }
   }
 
   static Future<void> login(String userId) async {
+    await ensureInitialized();
     try {
       await Purchases.logIn(userId);
       print(' RevenueCat login réussi pour: $userId');
     } catch (e) {
       print(' Erreur RevenueCat login: $e');
+      rethrow;
     }
   }
 
   static Future<void> logout() async {
+    await ensureInitialized();
     try {
       await Purchases.logOut();
       print(' RevenueCat logout réussi');
     } catch (e) {
       print(' Erreur RevenueCat logout: $e');
+      rethrow;
     }
   }
 
   static Future<CustomerInfo?> checkEntitlements() async {
+    await ensureInitialized();
     try {
       final customerInfo = await Purchases.getCustomerInfo();
       final activeEntitlements = customerInfo.entitlements.active.keys;
@@ -250,6 +284,7 @@ class RevenueCatService {
     String plan, 
     bool isMonthly
   ) async {
+    await ensureInitialized();
     try {
       // Obtenir l'ID de produit correct
       final productId = getProductId(plan, isMonthly);
@@ -315,6 +350,7 @@ class RevenueCatService {
     required String plan,
     required bool isMonthly,
   }) async {
+    await ensureInitialized();
     try {
       // Afficher le dialogue de chargement personnalisé
       showDialog(

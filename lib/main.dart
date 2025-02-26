@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io'; 
 import 'package:ContraLoc/firebase_options.dart';
 import 'package:ContraLoc/services/revenue_cat_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
-import 'package:purchases_flutter/purchases_flutter.dart'; // Import RevenueCat
 import 'package:flutter/services.dart'; // Import SystemChrome
 import 'screens/splash_screen.dart';
 import 'package:ContraLoc/services/subscription_service.dart'; // Import SubscriptionService
@@ -40,64 +38,40 @@ Future<void> main() async {
   ImageCache().maximumSizeBytes = 50 * 1024 * 1024; // 50MB
 
   try {
+    // 1. Initialiser Firebase
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('✅ Firebase initialisé avec succès');
 
-    // Vérifier si un utilisateur est déjà connecté et l'identifier avec RevenueCat
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser != null) {
-      try {
-        await RevenueCatService.login(currentUser.uid);
-        print('✅ Utilisateur identifié avec RevenueCat: ${currentUser.uid}');
-      } catch (e) {
-        print('⚠️ Erreur identification RevenueCat: $e');
-      }
-    }
-
-  } catch (e) {
-    print('❌ Erreur initialisation Firebase: $e');
-    return;
-  }
-
-  try {
+    // 2. Récupérer les clés RevenueCat
     final apiKeys = await fetchRevenueCatKeys();
     
-    // Configuration par plateforme
-    if (Platform.isAndroid) {
-      await Purchases.configure(
-        PurchasesConfiguration(apiKeys['android']!)
-      );
-    } else if (Platform.isIOS) {
-      await Purchases.configure(
-        PurchasesConfiguration(apiKeys['ios']!)
-      );
-    }
-    
+    // 3. Initialiser RevenueCat
     await RevenueCatService.initialize(
       androidApiKey: apiKeys['android']!,
       iosApiKey: apiKeys['ios']!,
     );
 
+    // 4. Gérer l'utilisateur courant
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
       try {
-        await Purchases.logIn(currentUser.uid);
+        // 5. Login RevenueCat
+        await RevenueCatService.login(currentUser.uid);
         
-        // Vérifier et mettre à jour le statut d'abonnement
+        // 6. Mettre à jour le statut d'abonnement
         print('👤 Chargement des données utilisateur...');
         await SubscriptionService.updateSubscriptionStatus();
-        
       } catch (e) {
-        print('❌ Erreur vérification statut: $e');
+        print('⚠️ Erreur lors de la configuration utilisateur: $e');
+        // Continue l'exécution même en cas d'erreur
       }
     }
 
-    print('✅ RevenueCat configuré avec succès');
   } catch (e) {
-    print('❌ Erreur configuration RevenueCat: $e');
-    return;
+    print('❌ Erreur fatale lors de l\'initialisation: $e');
+    return; // Arrêter l'application en cas d'erreur critique
   }
 
   SystemChrome.setPreferredOrientations([
