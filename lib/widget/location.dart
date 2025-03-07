@@ -35,6 +35,7 @@ class LocationPage extends StatefulWidget {
   final File? permisRecto;
   final File? permisVerso;
   final String? numeroPermis;
+  final String? contratId;
 
   const LocationPage({
     Key? key,
@@ -49,6 +50,7 @@ class LocationPage extends StatefulWidget {
     this.permisRecto,
     this.permisVerso,
     this.numeroPermis,
+    this.contratId,
   }) : super(key: key);
 
   @override
@@ -222,7 +224,7 @@ class _LocationPageState extends State<LocationPage> {
       List<String> vehiculeUrls = [];
 
       // Générer un ID unique pour le contrat
-      final contratId = _firestore
+      final contratId = widget.contratId ?? _firestore
           .collection('users')
           .doc(user.uid)
           .collection('locations')
@@ -270,7 +272,46 @@ class _LocationPageState extends State<LocationPage> {
         'pourcentageEssence': _pourcentageEssence,
         'commentaire': _commentaireController.text,
         'photos': vehiculeUrls,
-        'status': 'en_cours', // Modifier 'en cours' en 'en_cours'
+        'status': (() {
+          // Par défaut, le statut est 'en_cours'
+          String status = 'en_cours';
+          
+          if (_dateDebutController.text.isNotEmpty) {
+            try {
+              final now = DateTime.now();
+              final parsedDate = DateFormat('EEEE d MMMM à HH:mm', 'fr_FR').parse(_dateDebutController.text);
+              
+              // Ajouter l'année actuelle à la date parsée
+              final dateWithCurrentYear = DateTime(
+                now.year,
+                parsedDate.month,
+                parsedDate.day,
+                parsedDate.hour,
+                parsedDate.minute,
+              );
+              
+              // Si le mois est déjà passé cette année, on ajoute un an
+              final dateToCompare = dateWithCurrentYear.isBefore(now) && 
+                                   parsedDate.month < now.month ? 
+                                   DateTime(now.year + 1, parsedDate.month, parsedDate.day, 
+                                           parsedDate.hour, parsedDate.minute) : 
+                                   dateWithCurrentYear;
+              
+              // On met 'réservé' uniquement si la date est dans le futur
+              // et que ce n'est pas aujourd'hui
+              if (dateToCompare.isAfter(now) && 
+                  !(dateToCompare.year == now.year && 
+                    dateToCompare.month == now.month && 
+                    dateToCompare.day == now.day)) {
+                status = 'réservé';
+              }
+            } catch (e) {
+              print('Erreur parsing: $e');
+            }
+          }
+          
+          return status;
+        })(),
         'dateCreation':
             FieldValue.serverTimestamp(), // Ajouter la date de création
         'numeroPermis': widget.numeroPermis ??

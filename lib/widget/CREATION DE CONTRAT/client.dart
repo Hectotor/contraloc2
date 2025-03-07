@@ -23,12 +23,14 @@ class ClientPage extends StatefulWidget {
   final String marque;
   final String modele;
   final String immatriculation;
+  final String? contratId;
 
   const ClientPage({
     Key? key,
     required this.marque,
     required this.modele,
     required this.immatriculation,
+    this.contratId,
   }) : super(key: key);
 
   @override
@@ -266,6 +268,7 @@ class _ClientPageState extends State<ClientPage> {
               permisVerso: _permisVerso,
               numeroPermis:
                   _numeroPermisController.text, // Ajout de numeroPermis
+              contratId: widget.contratId, // Ajout de contratId
             ),
           ),
         );

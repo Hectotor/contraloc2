@@ -315,6 +315,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               .doc(vehicle.id)
                               .get();
 
+                          // Vérifier si le widget est toujours monté avant de naviguer
+                          if (!mounted) return;
+
                           if (doc.exists) {
                             Navigator.push(
                               context,

@@ -63,6 +63,20 @@ class FirestoreService {
         .get();
   }
 
+ static Stream<QuerySnapshot> getReservedContrats(String status) {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return Stream.empty();
+
+    // Index composite utilisé ici
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('locations')
+        .where('status', isEqualTo: 'réservé')
+        .orderBy('dateCreation', descending: true)
+        .snapshots();
+  }
+
   static Future<QuerySnapshot> getMonthlyContrats() {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) throw Exception("Utilisateur non connecté");
