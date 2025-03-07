@@ -5,10 +5,9 @@ import 'package:intl/intl.dart';
 class CreateContrat {
   static Widget buildDateField(String label, TextEditingController controller,
       bool isStartDate, BuildContext context, Function selectDateTime) {
-    if (isStartDate) {
+    if (isStartDate && controller.text.isEmpty) {
       final now = DateTime.now();
-      final formattedNow =
-          DateFormat('EEEE d MMMM à HH:mm', 'fr_FR').format(now);
+      final formattedNow = DateFormat('EEEE d MMMM à HH:mm', 'fr_FR').format(now);
       controller.text = formattedNow;
     }
     return Padding(

@@ -541,6 +541,13 @@ class _LocationPageState extends State<LocationPage> {
                   firestore: _firestore,
                 ),
                 const SizedBox(height: 40),
+              Center(
+                child: Text(
+                  'Véhicule réservé pour le: ${_dateDebutController.text}',
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                ),
+              ),
+                const SizedBox(height: 20),
                 CreateContrat.buildDateField("Date de début",
                     _dateDebutController, true, context, _selectDateTime),
                 CreateContrat.buildDateField(

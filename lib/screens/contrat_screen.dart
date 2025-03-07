@@ -104,6 +104,15 @@ class _ContratScreenState extends State<ContratScreen>
                     });
                   }),
                   const SizedBox(width: 8), // Add this line
+                  _buildTabButton("Réservations", _showCalendar, () {
+                    setState(() {
+                      _showEnCours = false;
+                      _showRestitues = false;
+                      _showContrat = false;
+                      _showCalendar = true; // Add this line
+                    });
+                  }),
+                  const SizedBox(width: 8), // Add this line
                   _buildTabButton("Contrat", _showContrat, () {
                     setState(() {
                       _showEnCours = false;
@@ -112,15 +121,7 @@ class _ContratScreenState extends State<ContratScreen>
                       _showCalendar = false; // Add this line
                     });
                   }),
-                  const SizedBox(width: 8), // Add this line
-                  _buildTabButton("Calendrier", _showCalendar, () {
-                    setState(() {
-                      _showEnCours = false;
-                      _showRestitues = false;
-                      _showContrat = false;
-                      _showCalendar = true; // Add this line
-                    });
-                  }),
+
                 ],
               ),
             ),

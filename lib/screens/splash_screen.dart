@@ -17,7 +17,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _navigateToNextPage() async {
     // Attente de 1.5 secondes
-    await Future.delayed(const Duration(milliseconds: 3000));
+    await Future.delayed(const Duration(milliseconds: 2000));
 
     // Vérification de l'utilisateur Firebase
     User? user = FirebaseAuth.instance.currentUser;
