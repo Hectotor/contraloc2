@@ -667,7 +667,11 @@ class _LocationPageState extends State<LocationPage> {
                   onSignatureChanged: (String signature) {
                     setState(() {
                       _signatureBase64 = signature;
-                      _isSigning = _signatureController.isNotEmpty;
+                    });
+                  },
+                  onSigningStatusChanged: (bool isSigning) {
+                    setState(() {
+                      _isSigning = isSigning;
                     });
                   },
                 ),

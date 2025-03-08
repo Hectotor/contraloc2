@@ -9,6 +9,7 @@ class SignatureWidget extends StatefulWidget {
   final bool accepted;
   final ValueChanged<bool> onAcceptedChanged;
   final Function(String)? onSignatureChanged;
+  final Function(bool)? onSigningStatusChanged;
 
   const SignatureWidget({
     Key? key,
@@ -18,6 +19,7 @@ class SignatureWidget extends StatefulWidget {
     required this.accepted,
     required this.onAcceptedChanged,
     this.onSignatureChanged,
+    this.onSigningStatusChanged,
   }) : super(key: key);
 
   @override
@@ -118,11 +120,15 @@ class _SignatureWidgetState extends State<SignatureWidget> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(13),
-                    child: Signature(
-                      controller: widget.controller,
-                      height: 250,
-                      backgroundColor: Colors.white,
-                      width: double.infinity,
+                    child: GestureDetector(
+                      onPanStart: (_) => widget.onSigningStatusChanged?.call(true),
+                      onPanEnd: (_) => widget.onSigningStatusChanged?.call(false),
+                      child: Signature(
+                        controller: widget.controller,
+                        height: 250,
+                        backgroundColor: Colors.white,
+                        width: double.infinity,
+                      ),
                     ),
                   ),
                   Positioned(
