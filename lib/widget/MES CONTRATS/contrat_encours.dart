@@ -116,17 +116,19 @@ class ContratEnCours extends StatelessWidget {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
                               color: Colors.grey[200],
-                              image: photoUrl != null && photoUrl.isNotEmpty
-                                  ? DecorationImage(
-                                      image: NetworkImage(photoUrl),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null,
                             ),
-                            child: photoUrl == null || photoUrl.isEmpty
-                                ? const Icon(Icons.directions_car,
-                                    size: 50, color: Colors.grey)
-                                : null,
+                            child: (photoUrl != null && photoUrl.isNotEmpty)
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(12), // Arrondi des bords
+                                    child: Image.network(
+                                      photoUrl,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                : ClipRRect(
+                                    borderRadius: BorderRadius.circular(12), // Arrondi des bords
+                                    child: const Icon(Icons.directions_car, size: 50, color: Colors.grey),
+                                  ),
                           ),
                           const SizedBox(
                               width: 16), // Espacement entre image et texte

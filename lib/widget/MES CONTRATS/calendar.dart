@@ -2,6 +2,7 @@ import 'package:ContraLoc/widget/CREATION%20DE%20CONTRAT/client.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ContraLoc/services/firestore_service.dart';
+import 'package:intl/intl.dart'; // Ajoutez cette ligne en haut de votre fichier
 
 
 class CalendarScreen extends StatelessWidget {
@@ -77,17 +78,19 @@ class CalendarScreen extends StatelessWidget {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
                               color: Colors.grey[200],
-                              image: photoUrl != null && photoUrl.isNotEmpty
-                                  ? DecorationImage(
-                                      image: NetworkImage(photoUrl),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null,
                             ),
-                            child: photoUrl == null || photoUrl.isEmpty
-                                ? const Icon(Icons.directions_car,
-                                    size: 50, color: Colors.grey)
-                                : null,
+                            child: (photoUrl != null && photoUrl.isNotEmpty)
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(12), // Arrondi des bords
+                                    child: Image.network(
+                                      photoUrl,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                : ClipRRect(
+                                    borderRadius: BorderRadius.circular(12), // Arrondi des bords
+                                    child: const Icon(Icons.directions_car, size: 50, color: Colors.grey),
+                                  ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -106,11 +109,16 @@ class CalendarScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  "Date de création : ${data['dateDebut'] ?? ''}",
+                                  "Date de réservation : ${data['dateReservation'] != null ? DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format((data['dateReservation'] as Timestamp).toDate()) : ''}",
                                   style: TextStyle(
-                                    fontSize:
-                                        MediaQuery.of(context).size.width *
-                                            0.035,
+                                    fontSize: MediaQuery.of(context).size.width * 0.035,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                Text(
+                                  "Date de fin théorique : ${data['dateFinTheorique'] }",
+                                  style: TextStyle(
+                                    fontSize: MediaQuery.of(context).size.width * 0.035,
                                     color: Colors.grey[600],
                                   ),
                                 ),

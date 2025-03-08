@@ -312,6 +312,38 @@ class _LocationPageState extends State<LocationPage> {
           
           return status;
         })(),
+        'dateReservation': (() {
+          if (_dateDebutController.text.isNotEmpty) {
+            try {
+              final now = DateTime.now();
+              final parsedDate = DateFormat('EEEE d MMMM à HH:mm', 'fr_FR').parse(_dateDebutController.text);
+              
+              final dateWithCurrentYear = DateTime(
+                now.year,
+                parsedDate.month,
+                parsedDate.day,
+                parsedDate.hour,
+                parsedDate.minute,
+              );
+              
+              final dateToCompare = dateWithCurrentYear.isBefore(now) && 
+                                   parsedDate.month < now.month ? 
+                                   DateTime(now.year + 1, parsedDate.month, parsedDate.day, 
+                                           parsedDate.hour, parsedDate.minute) : 
+                                   dateWithCurrentYear;
+              
+              if (dateToCompare.isAfter(now) && 
+                  !(dateToCompare.year == now.year && 
+                    dateToCompare.month == now.month && 
+                    dateToCompare.day == now.day)) {
+                return Timestamp.fromDate(dateToCompare);
+              }
+            } catch (e) {
+              print('Erreur parsing dateReservation: $e');
+            }
+          }
+          return null;
+        })(),
         'dateCreation':
             FieldValue.serverTimestamp(), // Ajouter la date de création
         'numeroPermis': widget.numeroPermis ??
@@ -581,14 +613,14 @@ class _LocationPageState extends State<LocationPage> {
                   immatriculation: widget.immatriculation,
                   firestore: _firestore,
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 30),
               Center(
                 child: Text(
                   'Véhicule réservé pour le: ${_dateDebutController.text}',
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900),
                 ),
               ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 30),
                 CreateContrat.buildDateField("Date de début",
                     _dateDebutController, true, context, _selectDateTime),
                 CreateContrat.buildDateField(
