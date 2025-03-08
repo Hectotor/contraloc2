@@ -244,15 +244,19 @@ Future<String> generatePdf(
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                if (logoImage != null)
-                  pw.ClipRRect(
-                    horizontalRadius: 8,
-                    verticalRadius: 8,
-                    child: pw.Container(
-                      height: 50,
-                      child: pw.Image(logoImage, fit: pw.BoxFit.contain),
-                    ),
-                  ),
+                pw.Container(
+                  width: 50,
+                  child: logoImage != null
+                    ? pw.ClipRRect(
+                        horizontalRadius: 8,
+                        verticalRadius: 8,
+                        child: pw.Container(
+                          height: 50,
+                          child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+                        ),
+                      )
+                    : pw.Container(),
+                ),
                 pw.Column(
                   children: [
                     pw.Text('CONTRAT DE LOCATION',
@@ -271,7 +275,7 @@ Future<String> generatePdf(
                         textAlign: pw.TextAlign.center),
                   ],
                 ),
-                pw.SizedBox(width: 50),
+                pw.Container(width: 50),
               ],
             ),
             pw.SizedBox(height: 30),
@@ -477,11 +481,52 @@ Future<String> generatePdf(
 
 // Méthodes de calcul intégrées
 DateTime? tryParseDate(String date) {
+  print('Tentative de parsing de la date: "$date"');
   try {
-    return DateTime.parse(date);
+    if (date.isEmpty) return null;
+
+    // Format: "jour de la semaine jour mois à heure:minute"
+    // Ex: "samedi 8 mars à 21:18"
+    final regex = RegExp(r'.*?(\d+)\s+([\wé]+)\s+à\s+(\d+):(\d+)');
+    final match = regex.firstMatch(date);
+    
+    if (match != null) {
+      final jour = int.parse(match.group(1)!);
+      final mois = _convertirMois(match.group(2)!);
+      final heure = int.parse(match.group(3)!);
+      final minute = int.parse(match.group(4)!);
+      
+      if (mois != null) {
+        // Utiliser l'année courante car elle n'est pas dans le format
+        final maintenant = DateTime.now();
+        return DateTime(maintenant.year, mois, jour, heure, minute);
+      }
+    }
+    
+    return null;
   } catch (e) {
+    print('Erreur de parsing finale: $e');
     return null;
   }
+}
+
+int? _convertirMois(String mois) {
+  final moisMap = {
+    'janvier': 1,
+    'février': 2, 'fevrier': 2,
+    'mars': 3,
+    'avril': 4,
+    'mai': 5,
+    'juin': 6,
+    'juillet': 7,
+    'août': 8, 'aout': 8,
+    'septembre': 9,
+    'octobre': 10,
+    'novembre': 11,
+    'décembre': 12, 'decembre': 12,
+  };
+  
+  return moisMap[mois.toLowerCase()];
 }
 
 int? calculateDurationInDays(DateTime? start, DateTime? end) {
