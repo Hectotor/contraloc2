@@ -275,7 +275,6 @@ class _LocationPageState extends State<LocationPage> {
         'status': (() {
           // Par défaut, le statut est 'en_cours'
           String status = 'en_cours';
-          
           if (_dateDebutController.text.isNotEmpty) {
             try {
               final now = DateTime.now();
@@ -614,12 +613,51 @@ class _LocationPageState extends State<LocationPage> {
                   firestore: _firestore,
                 ),
                 const SizedBox(height: 30),
-              Center(
-                child: Text(
-                  'Véhicule réservé pour le: ${_dateDebutController.text}',
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900),
+                Center(
+                  child: (() {
+                    String dateText = _dateDebutController.text;
+                    if (dateText.isEmpty) {
+                      return SizedBox.shrink(); // Ne rien afficher si le champ est vide
+                    }
+
+                    try {
+                      final now = DateTime.now();
+                      final parsedDate = DateFormat('EEEE d MMMM à HH:mm', 'fr_FR').parse(dateText);
+                      
+                      // Ajouter l'année actuelle à la date parsée
+                      final dateWithCurrentYear = DateTime(
+                        now.year,
+                        parsedDate.month,
+                        parsedDate.day,
+                        parsedDate.hour,
+                        parsedDate.minute,
+                      );
+                      
+                      // Si le mois est déjà passé cette année, on ajoute un an
+                      final dateToCompare = dateWithCurrentYear.isBefore(now) && 
+                                           parsedDate.month < now.month ? 
+                                           DateTime(now.year + 1, parsedDate.month, parsedDate.day, 
+                                                   parsedDate.hour, parsedDate.minute) : 
+                                           dateWithCurrentYear;
+                      
+                      // On met 'réservé' uniquement si la date est dans le futur
+                      // et que ce n'est pas aujourd'hui
+                      if (dateToCompare.isAfter(now) && 
+                          !(dateToCompare.year == now.year && 
+                            dateToCompare.month == now.month && 
+                            dateToCompare.day == now.day)) {
+                        return Text(
+                          'Véhicule réservé pour le: ${dateText}',
+                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900),
+                        );
+                      } else {
+                        return SizedBox.shrink(); // Ne rien afficher si la condition n'est pas remplie
+                      }
+                    } catch (e) {
+                      return SizedBox.shrink(); // Ne rien afficher en cas d'erreur de parsing
+                    }
+                  }()),
                 ),
-              ),
                 const SizedBox(height: 30),
                 CreateContrat.buildDateField("Date de début",
                     _dateDebutController, true, context, _selectDateTime),

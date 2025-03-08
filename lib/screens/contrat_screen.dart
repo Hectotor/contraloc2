@@ -126,37 +126,6 @@ class _ContratScreenState extends State<ContratScreen>
               ),
             ),
           ),
-          if (!_showContrat) ...[
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(15),
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: "Rechercher par nom, immatriculation...",
-                    hintStyle: TextStyle(color: Colors.grey[400]),
-                    prefixIcon:
-                        const Icon(Icons.search, color: Color(0xFF08004D)),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 16),
-                  ),
-                  onChanged: (value) => setState(() {}),
-                ),
-              ),
-            ),
-          ],
           Expanded(
             child: _showContrat
                 ? ContratModifier()
