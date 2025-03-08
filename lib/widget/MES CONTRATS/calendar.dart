@@ -268,25 +268,109 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                             Text(
                                               "${data['nom'] ?? ''} ${data['prenom'] ?? ''}",
                                               style: const TextStyle(
-                                                fontSize: 18,
                                                 fontWeight: FontWeight.bold,
+                                                fontSize: 16,
                                                 color: Color(0xFF08004D),
                                               ),
                                             ),
                                             const SizedBox(height: 8),
-                                            _buildInfoRow(
-                                              Icons.calendar_today,
-                                              "Réservé pour le :\n${_formatDate(data['dateReservation'])}",
+                                            Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Icon(Icons.calendar_today, 
+                                                  size: 16,
+                                                  color: Color(0xFF08004D),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        "Réservé pour le",
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          color: Colors.grey[700],
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        _formatDate(data['dateReservation']),
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight: FontWeight.w500,
+                                                          color: Colors.grey[900],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                             const SizedBox(height: 4),
-                                            _buildInfoRow(
-                                              Icons.event_available,
-                                              "Fin : ${data['dateFinTheorique']}",
+                                            Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Icon(Icons.event_available, 
+                                                  size: 16,
+                                                  color: Color(0xFF08004D),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        "Date de fin",
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          color: Colors.grey[700],
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        "${data['dateFinTheorique']}",
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight: FontWeight.w500,
+                                                          color: Colors.grey[900],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                             const SizedBox(height: 4),
-                                            _buildInfoRow(
-                                              Icons.directions_car,
-                                              data['immatriculation'] ?? '',
+                                            Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Icon(Icons.directions_car_filled, 
+                                                  size: 16,
+                                                  color: Color(0xFF08004D),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        "Immatriculation",
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          color: Colors.grey[700],
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        "${data['immatriculation'] ?? ''}",
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight: FontWeight.w500,
+                                                          color: Colors.grey[900],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
@@ -327,32 +411,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String text) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 3),
-          child: Icon(
-            icon,
-            size: 16,
-            color: Colors.grey[600],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[700],
-              height: 1.4,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   String _formatDate(dynamic timestamp) {
     if (timestamp == null) return '';

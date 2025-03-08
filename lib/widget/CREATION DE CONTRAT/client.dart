@@ -436,8 +436,13 @@ class _ClientPageState extends State<ClientPage> {
                 () {}); // Déclenche la reconstruction du widget pour mettre à jour l'erreur
           }
         },
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF08004D),
+        ),
         decoration: InputDecoration(
           labelText: label,
+          labelStyle: const TextStyle(color: Colors.grey),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -459,8 +464,13 @@ class _ClientPageState extends State<ClientPage> {
         controller: _adresseController,
         textCapitalization:
             TextCapitalization.words, // Ajout de la capitalisation
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF08004D),
+        ),
         decoration: InputDecoration(
           labelText: "Adresse",
+          labelStyle: const TextStyle(color: Colors.grey),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),
