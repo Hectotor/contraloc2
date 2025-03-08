@@ -53,6 +53,9 @@ class _ClientPageState extends State<ClientPage> {
   void initState() {
     super.initState();
     _checkPremiumStatus();
+    if (widget.contratId != null) {
+      _loadClientData();
+    }
   }
 
   Future<void> _checkPremiumStatus() async {
@@ -78,6 +81,34 @@ class _ClientPageState extends State<ClientPage> {
               cb_subscription == 'premium-yearly_access';
         });
       }
+    }
+  }
+
+  Future<void> _loadClientData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && widget.contratId != null) {
+        final contratDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('locations')
+            .doc(widget.contratId)
+            .get();
+
+        if (contratDoc.exists) {
+          final data = contratDoc.data()!;
+          setState(() {
+            _nomController.text = data['nom'] ?? '';
+            _prenomController.text = data['prenom'] ?? '';
+            _adresseController.text = data['adresse'] ?? '';
+            _telephoneController.text = data['telephone'] ?? '';
+            _emailController.text = data['email'] ?? '';
+            _numeroPermisController.text = data['numeroPermis'] ?? '';
+          });
+        }
+      }
+    } catch (e) {
+      print('Erreur lors du chargement des données client: $e');
     }
   }
 
