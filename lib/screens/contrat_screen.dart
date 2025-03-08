@@ -104,7 +104,7 @@ class _ContratScreenState extends State<ContratScreen>
                     });
                   }),
                   const SizedBox(width: 8), // Add this line
-                  _buildTabButton("Réservations", _showCalendar, () {
+                  _buildTabButton("Réservés", _showCalendar, () {
                     setState(() {
                       _showEnCours = false;
                       _showRestitues = false;

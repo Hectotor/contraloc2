@@ -128,7 +128,7 @@ class VehicleLimitChecker {
     );
   }
 
-  Future<bool> checkVehicleLimit() async {
+  Future<bool> checkVehicleLimit({bool isUpdating = false, bool isVehicleUpdate = false}) async {
     final user = _auth.currentUser;
     if (user == null) return false;
 
@@ -140,6 +140,9 @@ class VehicleLimitChecker {
         .get();
     final currentVehicleCount = vehiclesSnapshot.docs.length;
 
+    // Si c'est une mise à jour, ne pas vérifier la limite
+    if (isUpdating || isVehicleUpdate) return true;
+
     // Récupérer la limite de l'abonnement
     final userDoc = await _firestore
         .collection('users')
@@ -147,10 +150,8 @@ class VehicleLimitChecker {
         .collection('authentification')
         .doc(user.uid)
         .get();
-    
     final subscriptionId = userDoc.data()?['subscriptionId'] ?? 'free';
     final cb_subscription = userDoc.data()?['cb_subscription'] ?? 'free';
-    
     int vehicleLimit = 1; // Par défaut, abonnement gratuit
     if (subscriptionId == 'pro-monthly_access' || 
         subscriptionId == 'pro-yearly_access' ||

@@ -63,7 +63,7 @@ class FirestoreService {
         .get();
   }
 
- static Stream<QuerySnapshot> getReservedContrats(String status) {
+  static Stream<QuerySnapshot> getReservedContrats(String status) {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return Stream.empty();
 
@@ -105,5 +105,17 @@ class FirestoreService {
       print('Erreur lors du comptage des contrats mensuels: $e');
       return 0;
     }
+  }
+
+  static Future<void> deleteReservedContrat(String contratId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) throw Exception("Utilisateur non connecté");
+
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('locations')
+        .doc(contratId)
+        .delete();
   }
 }

@@ -218,12 +218,15 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       }
 
       // Mettre à jour les URLs dans vehicleData
-      if (newUrls['vehicule'] != null)
+      if (newUrls['vehicule'] != null) {
         widget.vehicleData?['photoVehiculeUrl'] = newUrls['vehicule'];
-      if (newUrls['carte_grise'] != null)
+      }
+      if (newUrls['carte_grise'] != null) {
         widget.vehicleData?['photoCarteGriseUrl'] = newUrls['carte_grise'];
-      if (newUrls['assurance'] != null)
+      }
+      if (newUrls['assurance'] != null) {
         widget.vehicleData?['photoAssuranceUrl'] = newUrls['assurance'];
+      }
     } catch (e) {
       print('Erreur lors du déplacement des fichiers: $e');
       throw Exception('Erreur lors du déplacement des photos: $e');
@@ -235,7 +238,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   Future<void> _saveVehicule() async {
     // Vérifier la limite de véhicules avant de sauvegarder
     final vehicleLimitChecker = VehicleLimitChecker(context);
-    final canAddVehicle = await vehicleLimitChecker.checkVehicleLimit();
+    final canAddVehicle = await vehicleLimitChecker.checkVehicleLimit(isUpdating: widget.vehicleId != null);
     if (!canAddVehicle) return;
 
     if (!_formKey.currentState!.validate()) {

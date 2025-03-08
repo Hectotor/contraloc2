@@ -58,6 +58,86 @@ class CalendarScreen extends StatelessWidget {
                       ),
                     );
                   },
+                  onLongPress: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return Dialog(
+                          backgroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.warning_rounded,
+                                  color: Colors.red,
+                                  size: 60,
+                                ),
+                                const SizedBox(height: 20),
+                                const Text(
+                                  'Suppression',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                const Text(
+                                  'Êtes-vous sûr de vouloir supprimer cette réservation ?',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                                const SizedBox(height: 20),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text(
+                                          'Annuler',
+                                          style: TextStyle(
+                                            color: Color(0xFF08004D),
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          FirestoreService.deleteReservedContrat(contrat.id);
+                                          Navigator.pop(context);
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          padding: const EdgeInsets.symmetric(vertical: 15),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Supprimer',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
                   child: Card(
                     elevation: 4,
                     margin: EdgeInsets.symmetric(
@@ -130,6 +210,15 @@ class CalendarScreen extends StatelessWidget {
                                             0.035,
                                     color: Colors.grey[600],
                                   ),
+                                ),
+                                Text(
+                                  "(Appuie long pour modifier)",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
                               ],
                             ),
