@@ -14,6 +14,7 @@ class PdfVoitureWidget {
     required String dateFinEffectifData,
     required String kilometrageDepart,
     required String kilometrageRetour,
+    required String kilometrageSupp,
     required String typeLocation,
     required String pourcentageEssence,
     required int dureeTheorique,
@@ -56,6 +57,7 @@ class PdfVoitureWidget {
               dateFinEffectifData,
               kilometrageDepart,
               kilometrageRetour,
+              kilometrageSupp,
               typeLocation,
               pourcentageEssence,
               dureeTheorique,
@@ -121,6 +123,7 @@ class PdfVoitureWidget {
       String dateFinEffectifData,
       String kilometrageDepart,
       String kilometrageRetour,
+      String kilometrageSupp,
       String typeLocation,
       String pourcentageEssence,
       int dureeTheorique,
@@ -134,78 +137,160 @@ class PdfVoitureWidget {
       String carburantManquant,
       String caution, // Ajouter ce paramètre
       pw.Font ttf) {
+    double calculateKmSupp() {
+      if (typeLocation == "Gratuite") return 0.0;
+      try {
+        double kmDepart = double.parse(kilometrageDepart);
+        double kmRetour = double.parse(kilometrageRetour);
+        double prixKmSupp = double.parse(kilometrageSupp);
+        return (kmRetour - kmDepart) * prixKmSupp;
+      } catch (e) {
+        return 0.0;
+      }
+    }
+
     return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start, // Ensure left alignment
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text('Date de début: ${dateDebut.isEmpty ? '' : dateDebut}',
-            style: pw.TextStyle(font: ttf)),
-        pw.Text(
-            'Date de fin théorique: ${dateFinTheorique.isEmpty ? '' : dateFinTheorique}',
-            style: pw.TextStyle(font: ttf)),
-        pw.Text(
-            'Date de fin effectif: ${dateFinEffectifData.isEmpty ? '' : dateFinEffectifData}',
-            style: pw.TextStyle(font: ttf)),
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        // Dates and Duration section
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text('Kilométrage de départ: $kilometrageDepart',
+            pw.Text('Date de début: ${dateDebut.isEmpty ? '' : dateDebut}',
                 style: pw.TextStyle(font: ttf)),
-            pw.Text('Kilométrage de retour: $kilometrageRetour',
+            pw.Text('Date de fin théorique: ${dateFinTheorique.isEmpty ? '' : dateFinTheorique}',
                 style: pw.TextStyle(font: ttf)),
-            pw.Text('Niveau d\'essence: $pourcentageEssence%',
+            pw.Text('Date de fin effectif: ${dateFinEffectifData.isEmpty ? '' : dateFinEffectifData}',
                 style: pw.TextStyle(font: ttf)),
+            pw.SizedBox(height: 5),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Durée théorique: $dureeTheorique jours',
+                    style: pw.TextStyle(font: ttf)),
+                pw.Text('Durée effective: $dureeEffectif jours',
+                    style: pw.TextStyle(font: ttf)),
+              ],
+            ),
+            pw.SizedBox(height: 10),
           ],
         ),
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+
+        // Location Type and Basic Info
+        pw.Column(
           children: [
-            pw.Text('Type de location: $typeLocation',
-                style: pw.TextStyle(font: ttf)),
-            pw.Text('Prix Rayures/élement: $prixRayures €',
-                style: pw.TextStyle(font: ttf)), // Added line
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Type de location: $typeLocation',
+                    style: pw.TextStyle(font: ttf)),
+                pw.Text('Caution: $caution €',
+                    style: pw.TextStyle(font: ttf)),
+              ],
+            ),
+            pw.SizedBox(height: 10),
           ],
         ),
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+
+        // Kilométrage section
+        pw.Column(
           children: [
-            pw.Text('Durée théorique: $dureeTheorique jours',
-                style: pw.TextStyle(font: ttf)),
-            pw.Text('Durée effective: $dureeEffectif jours',
-                style: pw.TextStyle(font: ttf)),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Kilométrage de départ: $kilometrageDepart',
+                    style: pw.TextStyle(font: ttf)),
+                pw.Text('Kilométrage de retour: $kilometrageRetour',
+                    style: pw.TextStyle(font: ttf)),
+              ],
+            ),
+            pw.SizedBox(height: 5),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Prix Km supp: $kilometrageSupp €/km',
+                    style: pw.TextStyle(font: ttf)),
+                if (typeLocation != "Gratuite")
+                  pw.Text('Coût total km supp: ${calculateKmSupp().toStringAsFixed(2)} €',
+                      style: pw.TextStyle(font: ttf)),
+              ],
+            ),
+            pw.SizedBox(height: 10),
           ],
         ),
+
+        // État du véhicule
+        pw.Column(
+          children: [
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Niveau d\'essence: $pourcentageEssence%',
+                    style: pw.TextStyle(font: ttf)),
+                pw.Text('Prix Rayures/élement: $prixRayures €',
+                    style: pw.TextStyle(font: ttf)),
+              ],
+            ),
+            pw.SizedBox(height: 10),
+          ],
+        ),
+
+        // Frais additionnels
+        pw.Column(
+          children: [
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Frais de nettoyage intérieur: $nettoyageInt €',
+                    style: pw.TextStyle(font: ttf)),
+                pw.Text('Frais de nettoyage extérieur: $nettoyageExt €',
+                    style: pw.TextStyle(font: ttf)),
+              ],
+            ),
+            pw.SizedBox(height: 5),
+            pw.Column(
+              children: [
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.start,
+                  children: [
+                    pw.Text('Carburant manquant: $carburantManquant €',
+                        style: pw.TextStyle(font: ttf)),
+                  ],
+                ),
+                pw.SizedBox(height: 10),
+              ],
+            ),
+          ],
+        ),
+
+        // Prix et coûts (conditionnelle)
         if (typeLocation != "Gratuite") ...[
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          pw.Column(
             children: [
-              pw.Text('Montant journalier: $prixLocation €',
-                  style: pw.TextStyle(font: ttf)),
-              pw.Text(
-                  'Coût total théorique: ${coutTotalTheorique?.isNaN ?? true ? '0.0' : coutTotalTheorique.toString()} €',
-                  style: pw.TextStyle(font: ttf)),
-              pw.Text(
-                  'Coût effectif: ${coutTotal?.isNaN ?? true ? '0.0' : coutTotal.toString()} €',
-                  style: pw.TextStyle(font: ttf)),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Montant journalier: $prixLocation €',
+                      style: pw.TextStyle(font: ttf)),
+                  pw.Text('Coût total théorique: ${coutTotalTheorique?.isNaN ?? true ? '0.0' : coutTotalTheorique.toString()} €',
+                      style: pw.TextStyle(font: ttf)),
+                ],
+              ),
+              pw.SizedBox(height: 5),
+              pw.Column(
+                children: [
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.start,
+                    children: [
+                      pw.Text('Coût total effectif: ${coutTotal?.isNaN ?? true ? '0.0' : coutTotal.toString()} €',
+                          style: pw.TextStyle(font: ttf)),
+                    ],
+                  ),
+                ],
+              ),
             ],
           ),
         ],
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            pw.Text('Frais de nettoyage intérieur: $nettoyageInt €',
-                style: pw.TextStyle(font: ttf)),
-            pw.Text('Frais de nettoyage extérieur: $nettoyageExt €',
-                style: pw.TextStyle(font: ttf)),
-          ],
-        ),
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            pw.Text('Carburant manquant: $carburantManquant €',
-                style: pw.TextStyle(font: ttf)),
-            pw.Text('Caution: $caution €', style: pw.TextStyle(font: ttf)),
-          ],
-        ),
       ],
     );
   }

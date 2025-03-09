@@ -116,7 +116,7 @@ class RetourLoc extends StatelessWidget {
               if (data['kilometrageDepart'] != null &&
                   data['kilometrageDepart'].isNotEmpty &&
                   intValue < int.parse(data['kilometrageDepart'])) {
-                return "Le kilométrage de retour ne peut pas être inférieur au kilométrage de départ";
+                return "Ne peut pas être inférieur au kilométrage de départ";
               }
             }
             return null;

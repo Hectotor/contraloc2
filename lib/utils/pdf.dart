@@ -302,6 +302,7 @@ Future<String> generatePdf(
               dateFinEffectifData: dateFinEffectifData,
               kilometrageDepart: kilometrageDepart,
               kilometrageRetour: kilometrageRetour,
+              kilometrageSupp: kilometrageSupp,
               typeLocation: typeLocation,
               pourcentageEssence: pourcentageEssence,
               dureeTheorique: dureeTheorique,
