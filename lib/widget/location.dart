@@ -82,6 +82,18 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _carburantManquantController =
       TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
+  final TextEditingController _kilometrageSuppController =
+      TextEditingController();
+  final TextEditingController _vinController = TextEditingController();
+  final TextEditingController _assuranceNomController = TextEditingController();
+  final TextEditingController _assuranceNumeroController =
+      TextEditingController();
+  final TextEditingController _franchiseController = TextEditingController();
+  final TextEditingController _rayuresController = TextEditingController();
+  final TextEditingController _typeCarburantController = TextEditingController();
+  final TextEditingController _boiteVitessesController = TextEditingController();
+
+
 
   @override
   void initState() {
@@ -115,9 +127,16 @@ class _LocationPageState extends State<LocationPage> {
           _prixLocationController.text = vehicleData['prixLocation'] ?? '';
           _nettoyageIntController.text = vehicleData['nettoyageInt'] ?? '';
           _nettoyageExtController.text = vehicleData['nettoyageExt'] ?? '';
-          _carburantManquantController.text =
-              vehicleData['carburantManquant'] ?? '';
+          _carburantManquantController.text = vehicleData['carburantManquant'] ?? '';
           _cautionController.text = vehicleData['caution'] ?? '';
+          _kilometrageSuppController.text = vehicleData['kilometrageSupp'] ?? '';
+          _vinController.text = vehicleData['vin'] ?? '';
+          _assuranceNomController.text = vehicleData['assuranceNom'] ?? '';
+          _assuranceNumeroController.text = vehicleData['assuranceNumero'] ?? '';
+          _franchiseController.text = vehicleData['franchise'] ?? '';
+          _rayuresController.text = vehicleData['rayures'] ?? '';
+          _typeCarburantController.text = vehicleData['typeCarburant'] ?? '';
+          _boiteVitessesController.text = vehicleData['boiteVitesses'] ?? '';
         });
       }
     }
@@ -354,6 +373,15 @@ class _LocationPageState extends State<LocationPage> {
         'carburantManquant': _carburantManquantController.text,
         'caution': _cautionController.text,
         'signature_aller': _signatureBase64, // Modification ici
+        'kilometrageSupp': _kilometrageSuppController.text,
+        'typeCarburant':  _typeCarburantController.text,
+        'boiteVitesses':  _boiteVitessesController.text,
+        'vin': _vinController.text,
+        'assuranceNom': _assuranceNomController.text,
+        'assuranceNumero': _assuranceNumeroController.text,
+        'franchise': _franchiseController.text,
+        'rayures': _rayuresController.text,
+        'prixLocation': _prixLocationController.text,
       });
 
       // Si un email client est disponible, générer et envoyer le PDF
@@ -437,6 +465,14 @@ class _LocationPageState extends State<LocationPage> {
             'nettoyageExt': _nettoyageExtController.text,
             'carburantManquant': _carburantManquantController.text,
             'caution': _cautionController.text,
+            'typeCarburant': _typeCarburantController.text,
+            'boiteVitesses': _boiteVitessesController.text,
+            'vin': _vinController.text,
+            'assuranceNom': _assuranceNomController.text,
+            'assuranceNumero': _assuranceNumeroController.text,
+            'franchise': _franchiseController.text,
+            'rayures': _rayuresController.text,
+            'kilometrageSupp': _kilometrageSuppController.text,
           },
           '', // dateFinEffectif
           '', // kilometrageRetour
@@ -448,14 +484,13 @@ class _LocationPageState extends State<LocationPage> {
           telephoneEntreprise, // déjà passé comme paramètre positionnel
           siretEntreprise, // déjà passé comme paramètre positionnel
           '', // commentaireRetourData
-          vehicleData['typeCarburant'] ?? '',
-          vehicleData['boiteVitesses'] ?? '',
-          vehicleData['vin'] ?? '',
-          vehicleData['assuranceNom'] ?? '',
-          vehicleData['assuranceNumero'] ?? '',
-          vehicleData['franchise'] ?? '',
-          vehicleData['kilometrageSupp'] ?? '',
-          vehicleData['rayures'] ?? '',
+          _typeCarburantController.text,
+          _boiteVitessesController.text,
+          _vinController.text,
+          _assuranceNomController.text,
+          _assuranceNumeroController.text,
+          _franchiseController.text,
+          _rayuresController.text,
           _dateDebutController.text,
           _dateFinTheoriqueController.text,
           '', // dateFinEffectifData
@@ -463,6 +498,7 @@ class _LocationPageState extends State<LocationPage> {
           _pourcentageEssence.toString(),
           _typeLocation,
           vehicleData['prixLocation'] ?? '',
+          _kilometrageSuppController.text,
           condition: conditions, // seul paramètre nommé nécessaire
           signatureBase64: _signatureBase64, // Ajouter le paramètre nommé
         );
