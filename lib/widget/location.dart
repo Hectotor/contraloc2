@@ -92,6 +92,7 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _rayuresController = TextEditingController();
   final TextEditingController _typeCarburantController = TextEditingController();
   final TextEditingController _boiteVitessesController = TextEditingController();
+  final TextEditingController _typeLocationController = TextEditingController();
 
 
 
@@ -137,6 +138,7 @@ class _LocationPageState extends State<LocationPage> {
           _rayuresController.text = vehicleData['rayures'] ?? '';
           _typeCarburantController.text = vehicleData['typeCarburant'] ?? '';
           _boiteVitessesController.text = vehicleData['boiteVitesses'] ?? '';
+          _typeLocationController.text = vehicleData['typeLocation'] ?? '';
         });
       }
     }
@@ -496,7 +498,7 @@ class _LocationPageState extends State<LocationPage> {
           '', // dateFinEffectifData
           _kilometrageDepartController.text,
           _pourcentageEssence.toString(),
-          _typeLocation,
+          _typeLocationController.text,
           vehicleData['prixLocation'] ?? '',
           _kilometrageSuppController.text,
           condition: conditions, // seul paramètre nommé nécessaire

@@ -59,6 +59,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       TextEditingController();
   final TextEditingController _nettoyageIntController = TextEditingController();
   final TextEditingController _nettoyageExtController = TextEditingController();
+  
 
   String _typeCarburant = "Essence"; // Initialize with a valid value
   String _boiteVitesses = "Manuelle"; // Initialize with a valid value

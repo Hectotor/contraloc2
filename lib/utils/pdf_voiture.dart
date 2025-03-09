@@ -158,8 +158,10 @@ class PdfVoitureWidget {
           children: [
             pw.Text('Date de début: ${dateDebut.isEmpty ? '' : dateDebut}',
                 style: pw.TextStyle(font: ttf)),
+                pw.SizedBox(height: 5),
             pw.Text('Date de fin théorique: ${dateFinTheorique.isEmpty ? '' : dateFinTheorique}',
                 style: pw.TextStyle(font: ttf)),
+                pw.SizedBox(height: 5),
             pw.Text('Date de fin effectif: ${dateFinEffectifData.isEmpty ? '' : dateFinEffectifData}',
                 style: pw.TextStyle(font: ttf)),
             pw.SizedBox(height: 5),
@@ -183,7 +185,7 @@ class PdfVoitureWidget {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text('Type de location: $typeLocation',
-                    style: pw.TextStyle(font: ttf)),
+                    style: pw.TextStyle(font: ttf, fontWeight: pw.FontWeight.bold)),
                 pw.Text('Caution: $caution €',
                     style: pw.TextStyle(font: ttf)),
               ],
@@ -208,8 +210,9 @@ class PdfVoitureWidget {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Prix Km supp: $kilometrageSupp €/km',
-                    style: pw.TextStyle(font: ttf)),
+                if (typeLocation != "Gratuite")
+                  pw.Text('Prix Km supp: $kilometrageSupp €/km',
+                      style: pw.TextStyle(font: ttf)),
                 if (typeLocation != "Gratuite")
                   pw.Text('Coût total km supp: ${calculateKmSupp().toStringAsFixed(2)} €',
                       style: pw.TextStyle(font: ttf)),
