@@ -376,23 +376,27 @@ class PlanDisplayState extends State<PlanDisplay> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Construire l'URL Stripe avec les metadata utilisateur
-    String baseUrl;
-    if (planTitle.contains("Premium")) {
-      baseUrl = isMonthly
-          ? "https://buy.stripe.com/9AQ7wl1pKc8J41O28b"  // Premium mensuel
-          : "https://buy.stripe.com/aEUcQFb0kc8Jbug5kk";  // Premium annuel
-    } else {
-      baseUrl = isMonthly
-          ? "https://buy.stripe.com/6oE4k92tOdcN8i4145"  // Pro mensuel
-          : "https://buy.stripe.com/28o9EtgkEa0BaqcfZ0";      // Pro annuel
-    }
-
     try {
+      // S'assurer que l'utilisateur est identifié dans RevenueCat
+      await RevenueCatService.login(user.uid);
+      
+      // Construire l'URL Stripe avec les metadata utilisateur
+      String baseUrl;
+      if (planTitle.contains("Premium")) {
+        baseUrl = isMonthly
+            ? "https://buy.stripe.com/9AQ7wl1pKc8J41O28b"  // Premium mensuel
+            : "https://buy.stripe.com/aEUcQFb0kc8Jbug5kk";  // Premium annuel
+      } else {
+        baseUrl = isMonthly
+            ? "https://buy.stripe.com/6oE4k92tOdcN8i4145"  // Pro mensuel
+            : "https://buy.stripe.com/28o9EtgkEa0BaqcfZ0";      // Pro annuel
+      }
+
       // Créer l'URL avec les paramètres
       final uri = Uri.parse(baseUrl).replace(
         queryParameters: {
           'client_reference_id': user.uid,
+          'prefilled_email': user.email,  // Ajouter l'email si disponible
         },
       );
 
