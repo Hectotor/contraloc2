@@ -480,13 +480,12 @@ class PlanDisplayState extends State<PlanDisplay> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                if (Platform.isIOS)
+                /*if (Platform.isIOS)
                   _buildPaymentButton(
                     icon: Icons.apple,
                     title: "Apple Pay",
                     onTap: () async {
                       try {
-                        // Vérifier si Apple Pay est disponible
                         final canUseApplePay = await Purchases.canMakePayments();
                         if (!canUseApplePay) {
                           throw PlatformException(
@@ -494,14 +493,9 @@ class PlanDisplayState extends State<PlanDisplay> {
                             message: 'Apple Pay n\'est pas disponible sur cet appareil',
                           );
                         }
-                        
-                        // Fermer le dialogue de paiement
                         Navigator.pop(context);
-                        
-                        // Effectuer le paiement via RevenueCat
                         await _processPayment(plan);
                       } catch (e) {
-                        // Afficher l'erreur
                         showDialog(
                           context: context,
                           builder: (context) => AlertDialog(
@@ -524,7 +518,6 @@ class PlanDisplayState extends State<PlanDisplay> {
                     title: "Google Pay",
                     onTap: () async {
                       try {
-                        // Vérifier si Google Pay est disponible
                         final canUseGooglePay = await Purchases.canMakePayments();
                         if (!canUseGooglePay) {
                           throw PlatformException(
@@ -532,14 +525,9 @@ class PlanDisplayState extends State<PlanDisplay> {
                             message: 'Google Pay n\'est pas disponible sur cet appareil',
                           );
                         }
-                        
-                        // Fermer le dialogue de paiement
                         Navigator.pop(context);
-                        
-                        // Effectuer le paiement via RevenueCat
                         await _processPayment(plan);
                       } catch (e) {
-                        // Afficher l'erreur
                         showDialog(
                           context: context,
                           builder: (context) => AlertDialog(
@@ -555,16 +543,12 @@ class PlanDisplayState extends State<PlanDisplay> {
                         );
                       }
                     },
-                  ),
-                const SizedBox(height: 12),
+                  ),*/
                 _buildPaymentButton(
                   icon: Icons.credit_card,
                   title: "Carte bancaire",
                   onTap: () {
-                    // Fermer le dialogue de paiement
                     Navigator.pop(context);
-                    
-                    // Rediriger vers Stripe
                     _handleStripePayment(plan, isMonthly);
                   },
                 ),
