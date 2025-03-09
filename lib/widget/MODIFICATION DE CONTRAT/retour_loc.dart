@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart'; // Importer la bibliothèque Intl pour utiliser DateFormat
 
 class RetourLoc extends StatelessWidget {
   final TextEditingController dateFinEffectifController;
   final TextEditingController kilometrageRetourController;
   final Map<String, dynamic> data;
   final Future<void> Function(TextEditingController) selectDateTime;
+  final DateTime dateDebut;
 
   const RetourLoc({
     Key? key,
@@ -13,10 +15,14 @@ class RetourLoc extends StatelessWidget {
     required this.kilometrageRetourController,
     required this.data,
     required this.selectDateTime,
+    required this.dateDebut,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Initialiser le contrôleur de date avec la date du jour
+    dateFinEffectifController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -32,7 +38,7 @@ class RetourLoc extends StatelessWidget {
             final pickedDate = await showDatePicker(
               context: context,
               initialDate: DateTime.now(),
-              firstDate: DateTime(2000),
+              firstDate: dateDebut, // Date de début comme première date sélectionnable
               lastDate: DateTime(2100),
               locale: const Locale('fr', 'FR'),
               builder: (context, child) {
@@ -70,7 +76,16 @@ class RetourLoc extends StatelessWidget {
                 },
               );
               if (pickedTime != null) {
-                selectDateTime(dateFinEffectifController);
+                final dateTime = DateTime(
+                  pickedDate.year,
+                  pickedDate.month,
+                  pickedDate.day,
+                  pickedTime.hour,
+                  pickedTime.minute,
+                );
+                final formattedDateTime =
+                    DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(dateTime);
+                dateFinEffectifController.text = formattedDateTime;
               }
             }
           },

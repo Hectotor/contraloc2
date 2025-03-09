@@ -84,36 +84,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
   }
 
   Future<void> _selectDateTime(TextEditingController controller) async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      locale: const Locale('fr', 'FR'), // Set locale to French
-    );
-    if (pickedDate != null) {
-      final pickedTime = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.now(),
-      );
-      if (pickedTime != null) {
-        final dateTime = DateTime(
-          pickedDate.year,
-          pickedDate.month,
-          pickedDate.day,
-          pickedTime.hour,
-          pickedTime.minute,
-        );
-        final formattedDateTime = DateFormat('EEEE d MMMM à HH:mm', 'fr_FR')
-            .format(dateTime); // Use the specified format
-        setState(() {
-          controller.text = formattedDateTime;
-        });
-      }
-    }
+    // Suppression de la logique de sélection de date et d'heure
   }
 
-  // Nouvelle méthode pour télécharger les photos avec index
   Future<List<String>> _uploadPhotos(List<File> photos) async {
     List<String> urls = [];
     int startIndex = _photosRetourUrls
@@ -260,7 +233,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
     });
   }
 
-  // Modifier la méthode _showFullScreenImages pour utiliser les URLs
   void _showFullScreenImages(
       BuildContext context, List<dynamic> images, int initialIndex) {
     Navigator.push(
@@ -423,6 +395,29 @@ class _ModifierScreenState extends State<ModifierScreen> {
     }
   }
 
+  DateTime _parseDateWithFallback(String dateStr) {
+    try {
+      // Essayer d'abord le nouveau format avec l'année
+      return DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(dateStr);
+    } catch (e) {
+      // Si ça échoue, essayer l'ancien format et ajouter l'année courante
+      try {
+        DateTime parsedDate = DateFormat('EEEE d MMMM à HH:mm', 'fr_FR').parse(dateStr);
+        // Ajouter l'année courante
+        return DateTime(
+          DateTime.now().year,
+          parsedDate.month,
+          parsedDate.day,
+          parsedDate.hour,
+          parsedDate.minute,
+        );
+      } catch (e) {
+        // Si tout échoue, retourner la date actuelle
+        return DateTime.now();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -479,6 +474,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                       kilometrageRetourController: _kilometrageRetourController,
                       data: widget.data,
                       selectDateTime: _selectDateTime,
+                      dateDebut: _parseDateWithFallback(widget.data['dateDebut']),
                     ),
                     const SizedBox(height: 20),
                     EtatVehiculeRetour(

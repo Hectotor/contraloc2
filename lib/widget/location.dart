@@ -92,6 +92,9 @@ class _LocationPageState extends State<LocationPage> {
       exportBackgroundColor: Colors.white,
     );
 
+    // Initialiser la date de début avec l'année
+    _dateDebutController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
+
     // Récupérer le prix de location depuis les données du véhicule
     _fetchVehicleData();
   }
@@ -169,8 +172,7 @@ class _LocationPageState extends State<LocationPage> {
           pickedTime.hour,
           pickedTime.minute,
         );
-        final formattedDateTime =
-            DateFormat('EEEE d MMMM à HH:mm', 'fr_FR').format(dateTime);
+        final formattedDateTime = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(dateTime);
         setState(() {
           controller.text = formattedDateTime;
         });
@@ -278,7 +280,7 @@ class _LocationPageState extends State<LocationPage> {
           if (_dateDebutController.text.isNotEmpty) {
             try {
               final now = DateTime.now();
-              final parsedDate = DateFormat('EEEE d MMMM à HH:mm', 'fr_FR').parse(_dateDebutController.text);
+              final parsedDate = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(_dateDebutController.text);
               
               // Ajouter l'année actuelle à la date parsée
               final dateWithCurrentYear = DateTime(
@@ -315,7 +317,7 @@ class _LocationPageState extends State<LocationPage> {
           if (_dateDebutController.text.isNotEmpty) {
             try {
               final now = DateTime.now();
-              final parsedDate = DateFormat('EEEE d MMMM à HH:mm', 'fr_FR').parse(_dateDebutController.text);
+              final parsedDate = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(_dateDebutController.text);
               
               final dateWithCurrentYear = DateTime(
                 now.year,
@@ -616,13 +618,14 @@ class _LocationPageState extends State<LocationPage> {
                 Center(
                   child: (() {
                     String dateText = _dateDebutController.text;
+                    print('dateText: $dateText'); // Afficher la valeur de dateText avant le parsing
                     if (dateText.isEmpty) {
                       return SizedBox.shrink(); // Ne rien afficher si le champ est vide
                     }
 
                     try {
                       final now = DateTime.now();
-                      final parsedDate = DateFormat('EEEE d MMMM à HH:mm', 'fr_FR').parse(dateText);
+                      final parsedDate = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(dateText);
                       
                       // Ajouter l'année actuelle à la date parsée
                       final dateWithCurrentYear = DateTime(
@@ -647,13 +650,14 @@ class _LocationPageState extends State<LocationPage> {
                             dateToCompare.month == now.month && 
                             dateToCompare.day == now.day)) {
                         return Text(
-                          'Véhicule réservé pour le: ${dateText}',
+                          'Véhicule réservé pour le: $dateText',
                           style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900),
                         );
                       } else {
                         return SizedBox.shrink(); // Ne rien afficher si la condition n'est pas remplie
                       }
                     } catch (e) {
+                      print('Erreur de parsing de la date: $e');
                       return SizedBox.shrink(); // Ne rien afficher en cas d'erreur de parsing
                     }
                   }()),
