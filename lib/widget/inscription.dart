@@ -17,6 +17,21 @@ class UpperCaseTextFormatter extends TextInputFormatter {
   }
 }
 
+// Définition de CapitalizeFirstLetterFormatter
+class CapitalizeFirstLetterFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) return newValue;
+    
+    return TextEditingValue(
+      text: newValue.text[0].toUpperCase() + 
+            (newValue.text.length > 1 ? newValue.text.substring(1).toLowerCase() : ''),
+      selection: newValue.selection,
+    );
+  }
+}
+
 class InscriptionPage extends StatefulWidget {
   const InscriptionPage({Key? key}) : super(key: key);
 
@@ -282,12 +297,14 @@ class _InscriptionPageState extends State<InscriptionPage> {
                           "Prénom",
                           _prenomController,
                           true,
+                          inputFormatters: [CapitalizeFirstLetterFormatter()],
                           icon: Icons.person,
                         ),
                         _buildTextField(
                           "Nom",
                           _nomController,
                           true,
+                          inputFormatters: [CapitalizeFirstLetterFormatter()],
                           icon: Icons.person_outline,
                         ),
                         _buildTextField(

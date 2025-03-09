@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/revenue_cat_service.dart';
 import '../widget/inscription.dart'; // Import de la page d'inscription
 import '../widget/navigation.dart'; // Import de la page de navigation
+import '../utils/welcome_mail.dart'; // Ajout de l'import pour WelcomeMail
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -52,14 +54,39 @@ class _LoginPageState extends State<LoginPage> {
       if (userCredential.user != null) {
         await RevenueCatService.login(userCredential.user!.uid);
         
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const NavigationPage()),
-        );
-      }
+        // Récupérer les données de l'utilisateur pour l'email de bienvenue
+        final userData = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .collection('authentification')
+            .doc(userCredential.user!.uid)
+            .get();
 
-      // Synchroniser l'ID utilisateur avec RevenueCat
-      if (userCredential.user != null) {
+        if (userData.exists) {
+          String? prenom = userData.data()?['prenom'];
+          String? nom = userData.data()?['nom'];
+          bool welcomeEmailSent = userData.data()?['welcomeEmailSent'] ?? false;
+          
+          // Envoyer l'email de bienvenue seulement si ce n'est pas déjà fait
+          if (!welcomeEmailSent && mounted) {
+            await WelcomeMail.sendWelcomeEmail(
+              email: email,
+              context: context,
+              prenom: prenom,
+              nom: nom,
+            );
+
+            // Marquer l'email comme envoyé
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(userCredential.user!.uid)
+                .collection('authentification')
+                .doc(userCredential.user!.uid)
+                .update({'welcomeEmailSent': true});
+          }
+        }
+
+        // Synchroniser l'ID utilisateur avec RevenueCat
         try {
           final customerInfo = await Purchases.getCustomerInfo();
           if (customerInfo.originalAppUserId != userCredential.user!.uid) {
@@ -70,6 +97,13 @@ class _LoginPageState extends State<LoginPage> {
         } catch (e) {
           print('⚠️ Erreur synchronisation RevenueCat: $e');
           // Continuer malgré l'erreur car l'utilisateur est déjà connecté
+        }
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const NavigationPage()),
+          );
         }
       }
     } catch (e) {
@@ -249,7 +283,7 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 children: const [
                   Text(
-                    "Fabriqué en France 🇫🇷",
+                    "Fabriqué en France ",
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey,
