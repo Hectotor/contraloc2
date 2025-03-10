@@ -141,14 +141,23 @@ class PdfVoitureWidget {
       String caution, // Ajouter ce paramètre
       pw.Font ttf) {
     double calculateKmSupp() {
-      if (typeLocation == "Gratuite") return 0.0;
       try {
         double kmDepart = double.parse(kilometrageDepart);
+        double kmAutorise = double.parse(kilometrageAutorise);
         double kmRetour = double.parse(kilometrageRetour);
         double prixKmSupp = double.parse(kilometrageSupp);
-        return (kmRetour - kmDepart) * prixKmSupp;
+        
+        // Calculer la distance maximale autorisée
+        double distanceMax = kmDepart + kmAutorise;
+        
+        // Si le kilométrage de retour dépasse la distance maximale, calculer le coût supplémentaire
+        if (kmRetour > distanceMax) {
+          return (kmRetour - distanceMax) * prixKmSupp;
+        } else {
+          return 0.0; // Pas de coût supplémentaire si dans la limite
+        }
       } catch (e) {
-        return 0.0;
+        return 0.0; // Gestion des erreurs
       }
     }
 
@@ -215,10 +224,8 @@ class PdfVoitureWidget {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                if (typeLocation != "Gratuite")
                   pw.Text('Prix Km supp: $kilometrageSupp €/km',
                       style: pw.TextStyle(font: ttf)),
-                if (typeLocation != "Gratuite")
                   pw.Text('Coût total km supp: ${calculateKmSupp().toStringAsFixed(2)} €',
                       style: pw.TextStyle(font: ttf)),
               ],
