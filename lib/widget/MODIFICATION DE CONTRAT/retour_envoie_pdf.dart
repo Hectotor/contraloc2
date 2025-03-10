@@ -101,6 +101,18 @@ class RetourEnvoiePdf {
       print('📝 Signature aller récupérée : ${signatureAllerBase64 != null ? 'Présente (${signatureAllerBase64.length} caractères)' : 'Absente'}');
       print('📝 Signature retour récupérée : ${signatureRetourBase64 != null ? 'Présente (${signatureRetourBase64.length} caractères)' : 'Absente'}');
 
+      // Récupérer les données du véhicule
+      final vehicleDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('vehicules')
+          .where('immatriculation', isEqualTo: contratData['immatriculation'])
+          .get();
+
+      final vehicleData = vehicleDoc.docs.isNotEmpty 
+          ? vehicleDoc.docs.first.data() 
+          : {};
+
       // Générer le PDF de clôture
       final pdfPath = await generatePdf(
         {
@@ -140,22 +152,21 @@ class RetourEnvoiePdf {
         telephone,
         siret,
         commentaireRetour,
-        (contratData['typeCarburant'] ?? '').toString(),
-        (contratData['boiteVitesses'] ?? '').toString(),
-        (contratData['vin'] ?? '').toString(),
-        (contratData['assuranceNom'] ?? '').toString(),
-        (contratData['assuranceNumero'] ?? '').toString(),
-        (contratData['franchise'] ?? '').toString(),
-        (contratData['kilometrageSupp'] ?? '').toString(),
-        (contratData['rayures'] ?? '').toString(),
+        (vehicleData['typeCarburant'] ?? contratData['typeCarburant'] ?? '').toString(),
+        (vehicleData['boiteVitesses'] ?? contratData['boiteVitesses'] ?? '').toString(),
+        (vehicleData['vin'] ?? contratData['vin'] ?? '').toString(),
+        (vehicleData['assuranceNom'] ?? contratData['assuranceNom'] ?? '').toString(),
+        (vehicleData['assuranceNumero'] ?? contratData['assuranceNumero'] ?? '').toString(),
+        (vehicleData['franchise'] ?? contratData['franchise'] ?? '').toString(),
+        (vehicleData['kilometrageSupp'] ?? contratData['kilometrageSupp'] ?? '').toString(),
+        (vehicleData['rayures'] ?? contratData['rayures'] ?? '').toString(),
         (contratData['dateDebut'] ?? '').toString(),
         (contratData['dateFinTheorique'] ?? '').toString(),
         dateFinEffectif,
         (contratData['kilometrageDepart'] ?? '').toString(),
         (contratData['pourcentageEssence'] ?? '0').toString(),
         (contratData['typeLocation'] ?? '').toString(),
-        (contratData['prixLocation'] ?? '').toString(),
-        (contratData['kilometrageAutorise'] ?? '').toString(),
+        (vehicleData['prixLocation'] ?? contratData['prixLocation'] ?? '').toString(),
         condition: (contratData['conditions'] ?? ContratModifier.defaultContract).toString(),
         signatureBase64: signatureBase64 ?? '',
         signatureRetourBase64: signatureRetourBase64 ?? '',

@@ -81,8 +81,7 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _nettoyageExtController = TextEditingController();
   final TextEditingController _carburantManquantController =
       TextEditingController();
-  final TextEditingController _kilometrageAutoriseController =
-      TextEditingController();
+  final TextEditingController _kilometrageAutoriseController = TextEditingController();
   final TextEditingController _kilometrageSuppController =
       TextEditingController();
   final TextEditingController _vinController = TextEditingController();
@@ -95,6 +94,9 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _boiteVitessesController = TextEditingController();
   final TextEditingController _typeLocationController = TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
+  
+
+
 
   @override
   void initState() {
@@ -130,7 +132,7 @@ class _LocationPageState extends State<LocationPage> {
           _nettoyageExtController.text = vehicleData['nettoyageExt'] ?? '';
           _carburantManquantController.text = vehicleData['carburantManquant'] ?? '';
           _kilometrageAutoriseController.text = vehicleData['kilometrageAutorise'] ?? '';
-          _cautionController.text = vehicleData['caution'] ?? '';
+          _kilometrageSuppController.text = vehicleData['kilometrageSupp'] ?? '';
           _vinController.text = vehicleData['vin'] ?? '';
           _assuranceNomController.text = vehicleData['assuranceNom'] ?? '';
           _assuranceNumeroController.text = vehicleData['assuranceNumero'] ?? '';
@@ -417,15 +419,6 @@ class _LocationPageState extends State<LocationPage> {
         print('SIRET: $siretEntreprise');
 
         // Récupérer les données du véhicule depuis la collection de l'utilisateur
-        final vehicleDoc = await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('vehicules')
-            .where('immatriculation', isEqualTo: widget.immatriculation)
-            .get();
-
-        final vehicleData =
-            vehicleDoc.docs.isNotEmpty ? vehicleDoc.docs.first.data() : {};
 
         // Récupérer les conditions depuis la collection 'users'
         final conditionsDoc = await _firestore
@@ -467,7 +460,6 @@ class _LocationPageState extends State<LocationPage> {
             'nettoyageInt': _nettoyageIntController.text,
             'nettoyageExt': _nettoyageExtController.text,
             'carburantManquant': _carburantManquantController.text,
-            'kilometrageAutorise': _kilometrageAutoriseController.text,
             'caution': _cautionController.text,
             'typeCarburant': _typeCarburantController.text,
             'boiteVitesses': _boiteVitessesController.text,
@@ -477,6 +469,7 @@ class _LocationPageState extends State<LocationPage> {
             'franchise': _franchiseController.text,
             'rayures': _rayuresController.text,
             'kilometrageSupp': _kilometrageSuppController.text,
+            'kilometrageAutorise': _kilometrageAutoriseController.text,
           },
           '', // dateFinEffectif
           '', // kilometrageRetour
@@ -501,9 +494,8 @@ class _LocationPageState extends State<LocationPage> {
           _kilometrageDepartController.text,
           _pourcentageEssence.toString(),
           _typeLocationController.text,
-          vehicleData['prixLocation'] ?? '',
+          _prixLocationController.text,
           _kilometrageSuppController.text,
-          _kilometrageAutoriseController.text,
           condition: conditions, // seul paramètre nommé nécessaire
           signatureBase64: _signatureBase64, // Ajouter le paramètre nommé
         );

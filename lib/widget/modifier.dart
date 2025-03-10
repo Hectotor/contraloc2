@@ -369,7 +369,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
         (widget.data['pourcentageEssence'] ?? '').toString(),
         widget.data['typeLocation'] ?? '',
         widget.data['prixLocation'] ?? vehicleData['prixLocation'] ?? '',
-        widget.data['kilometrageAutorise'] ?? vehicleData['kilometrageAutorise'] ?? '',
         condition: (widget.data['conditions'] ?? ContratModifier.defaultContract).toString(),
         signatureBase64: '',
         signatureRetourBase64: signatureRetourBase64,
