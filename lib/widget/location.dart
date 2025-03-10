@@ -496,6 +496,7 @@ class _LocationPageState extends State<LocationPage> {
           _typeLocationController.text,
           _prixLocationController.text,
           _kilometrageSuppController.text,
+          _kilometrageAutoriseController.text,
           condition: conditions, // seul paramètre nommé nécessaire
           signatureBase64: _signatureBase64, // Ajouter le paramètre nommé
         );

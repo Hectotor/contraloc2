@@ -64,6 +64,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
   final TextEditingController _carburantManquantController =
       TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
+  
 
   @override
   void initState() {
@@ -354,18 +355,19 @@ class _ModifierScreenState extends State<ModifierScreen> {
         userData['telephone'] ?? '',
         userData['siret'] ?? '',
         widget.data['commentaireRetour'] ?? '',
-        widget.data['typeCarburant'] ?? vehicleData['typeCarburant'] ?? '',
-        widget.data['boiteVitesses'] ?? vehicleData['boiteVitesses'] ?? '',
-        widget.data['vin'] ?? vehicleData['vin'] ?? '',
-        widget.data['assuranceNom'] ?? vehicleData['assuranceNom'] ?? '',
-        widget.data['assuranceNumero'] ?? vehicleData['assuranceNumero'] ?? '',
-        widget.data['franchise'] ?? vehicleData['franchise'] ?? '',
-        widget.data['kilometrageSupp'] ?? vehicleData['kilometrageSupp'] ?? '',
-        widget.data['rayures'] ?? vehicleData['rayures'] ?? '',
+        widget.data['typeCarburant'] ??'',
+        widget.data['boiteVitesses'] ??'',
+        widget.data['vin'] ??'',
+        widget.data['assuranceNom'] ??'',
+        widget.data['assuranceNumero'] ??'',
+        widget.data['franchise'] ??'',
+        widget.data['kilometrageSupp'] ??'',
+        widget.data['rayures'] ??'',
         widget.data['dateDebut'] ?? '',
         widget.data['dateFinTheorique'] ?? '',
         widget.data['dateFinEffectif'] ?? '',
         widget.data['kilometrageDepart'] ?? '',
+        widget.data['kilometrageAutorise'] ?? '',
         (widget.data['pourcentageEssence'] ?? '').toString(),
         widget.data['typeLocation'] ?? '',
         widget.data['prixLocation'] ?? vehicleData['prixLocation'] ?? '',

@@ -51,6 +51,7 @@ Future<String> generatePdf(
   String dateFinTheorique,
   String dateFinEffectifData,
   String kilometrageDepart,
+  String kilometrageAutorise,
   String pourcentageEssence,
   String typeLocation,
   String prixLocation, {
@@ -301,6 +302,7 @@ Future<String> generatePdf(
               dateFinTheorique: dateFinTheorique,
               dateFinEffectifData: dateFinEffectifData,
               kilometrageDepart: kilometrageDepart,
+              kilometrageAutorise: kilometrageAutorise,
               kilometrageRetour: kilometrageRetour,
               kilometrageSupp: kilometrageSupp,
               typeLocation: typeLocation,
