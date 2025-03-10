@@ -15,6 +15,7 @@ class PdfVoitureWidget {
     required String kilometrageDepart,
     required String kilometrageRetour,
     required String kilometrageSupp,
+    required String kilometrageAutorise,
     required String typeLocation,
     required String pourcentageEssence,
     required int dureeTheorique,
@@ -58,6 +59,7 @@ class PdfVoitureWidget {
               kilometrageDepart,
               kilometrageRetour,
               kilometrageSupp,
+              kilometrageAutorise,
               typeLocation,
               pourcentageEssence,
               dureeTheorique,
@@ -69,7 +71,7 @@ class PdfVoitureWidget {
               data['nettoyageInt'] ?? '',
               data['nettoyageExt'] ?? '',
               data['carburantManquant'] ?? '',
-              data['caution'] ?? '', // Ajouter ce paramètre
+              data['caution'] ?? '',
               ttf),
         ],
       ),
@@ -124,6 +126,7 @@ class PdfVoitureWidget {
       String kilometrageDepart,
       String kilometrageRetour,
       String kilometrageSupp,
+      String kilometrageAutorise,
       String typeLocation,
       String pourcentageEssence,
       int dureeTheorique,
@@ -135,7 +138,7 @@ class PdfVoitureWidget {
       String nettoyageInt,
       String nettoyageExt,
       String carburantManquant,
-      String caution, // Ajouter ce paramètre
+      String caution,
       pw.Font ttf) {
     double calculateKmSupp() {
       if (typeLocation == "Gratuite") return 0.0;
@@ -210,14 +213,22 @@ class PdfVoitureWidget {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
+                pw.Text('Kilométrage Autorisé: $kilometrageAutorise km',
+                    style: pw.TextStyle(font: ttf)),
                 if (typeLocation != "Gratuite")
                   pw.Text('Prix Km supp: $kilometrageSupp €/km',
                       style: pw.TextStyle(font: ttf)),
-                if (typeLocation != "Gratuite")
-                  pw.Text('Coût total km supp: ${calculateKmSupp().toStringAsFixed(2)} €',
-                      style: pw.TextStyle(font: ttf)),
               ],
             ),
+            pw.SizedBox(height: 5),
+            if (typeLocation != "Gratuite")
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Coût total km supp: ${calculateKmSupp().toStringAsFixed(2)} €',
+                      style: pw.TextStyle(font: ttf)),
+                ],
+              ),
             pw.SizedBox(height: 10),
           ],
         ),

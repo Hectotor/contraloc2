@@ -81,7 +81,8 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _nettoyageExtController = TextEditingController();
   final TextEditingController _carburantManquantController =
       TextEditingController();
-  final TextEditingController _cautionController = TextEditingController();
+  final TextEditingController _kilometrageAutoriseController =
+      TextEditingController();
   final TextEditingController _kilometrageSuppController =
       TextEditingController();
   final TextEditingController _vinController = TextEditingController();
@@ -93,8 +94,7 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _typeCarburantController = TextEditingController();
   final TextEditingController _boiteVitessesController = TextEditingController();
   final TextEditingController _typeLocationController = TextEditingController();
-
-
+  final TextEditingController _cautionController = TextEditingController();
 
   @override
   void initState() {
@@ -129,8 +129,8 @@ class _LocationPageState extends State<LocationPage> {
           _nettoyageIntController.text = vehicleData['nettoyageInt'] ?? '';
           _nettoyageExtController.text = vehicleData['nettoyageExt'] ?? '';
           _carburantManquantController.text = vehicleData['carburantManquant'] ?? '';
+          _kilometrageAutoriseController.text = vehicleData['kilometrageAutorise'] ?? '';
           _cautionController.text = vehicleData['caution'] ?? '';
-          _kilometrageSuppController.text = vehicleData['kilometrageSupp'] ?? '';
           _vinController.text = vehicleData['vin'] ?? '';
           _assuranceNomController.text = vehicleData['assuranceNom'] ?? '';
           _assuranceNumeroController.text = vehicleData['assuranceNumero'] ?? '';
@@ -373,6 +373,7 @@ class _LocationPageState extends State<LocationPage> {
         'nettoyageInt': _nettoyageIntController.text,
         'nettoyageExt': _nettoyageExtController.text,
         'carburantManquant': _carburantManquantController.text,
+        'kilometrageAutorise': _kilometrageAutoriseController.text,
         'caution': _cautionController.text,
         'signature_aller': _signatureBase64, // Modification ici
         'kilometrageSupp': _kilometrageSuppController.text,
@@ -466,6 +467,7 @@ class _LocationPageState extends State<LocationPage> {
             'nettoyageInt': _nettoyageIntController.text,
             'nettoyageExt': _nettoyageExtController.text,
             'carburantManquant': _carburantManquantController.text,
+            'kilometrageAutorise': _kilometrageAutoriseController.text,
             'caution': _cautionController.text,
             'typeCarburant': _typeCarburantController.text,
             'boiteVitesses': _boiteVitessesController.text,
@@ -501,6 +503,7 @@ class _LocationPageState extends State<LocationPage> {
           _typeLocationController.text,
           vehicleData['prixLocation'] ?? '',
           _kilometrageSuppController.text,
+          _kilometrageAutoriseController.text,
           condition: conditions, // seul paramètre nommé nécessaire
           signatureBase64: _signatureBase64, // Ajouter le paramètre nommé
         );
@@ -716,8 +719,8 @@ class _LocationPageState extends State<LocationPage> {
                       FilteringTextInputFormatter.digitsOnly,
                     ]),
                 CreateContrat.buildTextField(
-                  "Caution (€)",
-                  _cautionController,
+                  "Kilométrage Autorisé (km)",
+                  _kilometrageAutoriseController,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 ),

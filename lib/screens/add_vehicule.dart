@@ -46,6 +46,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       TextEditingController();
   final TextEditingController _vinController = TextEditingController();
   final TextEditingController _prixLocationController = TextEditingController();
+  final TextEditingController _cautionController = TextEditingController();
   final TextEditingController _franchiseController = TextEditingController();
   final TextEditingController _kilometrageSuppController =
       TextEditingController();
@@ -80,6 +81,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
           widget.vehicleData!['immatriculation'] ?? '';
       _vinController.text = widget.vehicleData!['vin'] ?? '';
       _prixLocationController.text = widget.vehicleData!['prixLocation'] ?? '';
+      _cautionController.text = widget.vehicleData!['caution'] ?? '';
       _franchiseController.text = widget.vehicleData!['franchise'] ?? '';
       _kilometrageSuppController.text =
           widget.vehicleData!['kilometrageSupp'] ?? '';
@@ -353,6 +355,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       'typeCarburant': _typeCarburant,
       'boiteVitesses': _boiteVitesses,
       'prixLocation': _prixLocationController.text,
+      'caution': _cautionController.text,
       'franchise': _franchiseController.text,
       'kilometrageSupp': _kilometrageSuppController.text,
       'rayures': _rayuresController.text,
@@ -414,6 +417,15 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                   _buildTextField(
                     "Prix de location par jour (€)",
                     _prixLocationController,
+                    keyboardType:
+                        TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                    ],
+                  ),
+                  _buildTextField(
+                    "Caution (€)",
+                    _cautionController,
                     keyboardType:
                         TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
@@ -533,6 +545,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
 
     if ([
       "Prix de location par jour (€)",
+      "Caution (€)",
       "Franchise (€)",
       "Kilométrage supplémentaire (€)",
       "Rayures par élément (€)",
