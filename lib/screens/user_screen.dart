@@ -11,6 +11,7 @@ import '../USERS/question_user.dart'; // Import the question user screen
 import '../USERS/abonnement_screen.dart'; // Add this import
 import '../USERS/supprimer_compte.dart'; // Import du fichier supprimer_compte.dart
 import '../USERS/contrat_condition.dart'; // Correct import for the contrat condition screen
+import '../USERS/collaborateurs_screen.dart.dart'; // Import du fichier collaborateurs.dart
 
 class UserScreen extends StatefulWidget {
   const UserScreen({Key? key}) : super(key: key);
@@ -406,6 +407,35 @@ class _UserScreenState extends State<UserScreen> {
                             const SizedBox(width: 10),
                             const Text(
                               "Mettre à jour",
+                              style: TextStyle(color: Colors.white, fontSize: 18),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CollaborateursScreen(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F056B), // Bleu nuit
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.group, color: Colors.white),
+                            const SizedBox(width: 10),
+                            const Text(
+                              "Mes Collaborateurs",
                               style: TextStyle(color: Colors.white, fontSize: 18),
                             ),
                           ],
