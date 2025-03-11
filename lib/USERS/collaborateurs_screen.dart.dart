@@ -4,6 +4,7 @@ import 'dart:math'; // Importer la bibliothèque mathématique pour Random
 import 'pop_add_colab.dart'; // Importer le nouveau fichier pop_add_colab.dart
 import 'package:cloud_firestore/cloud_firestore.dart'; // Importer la bibliothèque Firestore
 import 'package:intl/intl.dart'; // Importer le package intl pour le formatage de la date
+import '../widget/chargement.dart'; // Importer le widget de chargement
 
 User? currentUser = FirebaseAuth.instance.currentUser; // Récupérer l'utilisateur actuel
 
@@ -237,13 +238,27 @@ class CollaborateursScreenState extends State<CollaborateursScreen> {
                                           ),
                                         ),
                                         onPressed: () {
+                                          // Afficher l'écran de chargement
+                                          showDialog(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (BuildContext context) {
+                                              return const Chargement(message: "Suppression en cours...");
+                                            },
+                                          );
+
                                           FirebaseFirestore.instance
                                               .collection('users')
                                               .doc(currentUser!.uid)
                                               .collection('collaborateur')
                                               .doc(doc.id)
-                                              .delete();
-                                          Navigator.of(context).pop();
+                                              .delete().then((_) {
+                                                // Attendre 3 secondes avant de fermer le popup
+                                                Future.delayed(const Duration(seconds: 3), () {
+                                                  Navigator.of(context).pop(); // Fermer l'écran de chargement
+                                                  Navigator.of(context).pop(); // Fermer le popup de confirmation
+                                                });
+                                              });
                                         },
                                       ),
                                     ],

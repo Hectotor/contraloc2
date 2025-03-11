@@ -237,10 +237,11 @@ class _PopAddColabDialogState extends State<PopAddColabDialog> {
                   });
               }
 
-              // Fermer l'écran de chargement
-              Navigator.of(context).pop();
-              // Fermer le popup
-              Navigator.of(context).pop();
+              // Afficher l'écran de chargement pendant 3 secondes
+              Future.delayed(const Duration(seconds: 3), () {
+                Navigator.of(context).pop(); // Fermer l'écran de chargement
+                Navigator.of(context).pop(); // Fermer le popup de confirmation
+              });
             } catch (e) {
               // Fermer l'écran de chargement en cas d'erreur
               Navigator.of(context).pop();
