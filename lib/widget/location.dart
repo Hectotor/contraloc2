@@ -684,7 +684,8 @@ class _LocationPageState extends State<LocationPage> {
                             dateToCompare.month == now.month && 
                             dateToCompare.day == now.day)) {
                         return Text(
-                          'Véhicule réservé pour le: $dateText',
+                          textAlign: TextAlign.center,
+                          'Véhicule réservé pour le:\n$dateText',
                           style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900),
                         );
                       } else {

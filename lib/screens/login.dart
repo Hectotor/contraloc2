@@ -20,6 +20,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _showPassword = false; // Ajout de la variable pour gérer la visibilité
+  String? _errorMessage; // Nouvelle variable pour stocker le message d'erreur
 
   // Méthode pour valider l'email
   bool _isValidEmail(String email) {
@@ -107,7 +108,9 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
     } catch (e) {
-      _showErrorToast("Erreur : ${_getFriendlyErrorMessage(e.toString())}");
+      setState(() {
+        _errorMessage = _getFriendlyErrorMessage(e.toString());
+      });
     }
   }
 
@@ -180,7 +183,7 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   // Titre de bienvenue
                   const Text(
-                    "Bienvenue sur\nContraloc",
+                    "Bienvenue sur\nContraLoc",
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 32,
@@ -233,6 +236,11 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 20),
 
+                  // Afficher le message d'erreur si nécessaire
+                  if (_errorMessage != null)
+                    Text(_errorMessage ?? '', style: const TextStyle(color: Colors.red)),
+                  const SizedBox(height: 10),
+
                   // Bouton Connexion
                   ElevatedButton(
                     onPressed: _login,
@@ -283,7 +291,7 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 children: const [
                   Text(
-                    "Fabriqué en France ",
+                    "Fabriqué en France 🇫🇷 ",
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey,

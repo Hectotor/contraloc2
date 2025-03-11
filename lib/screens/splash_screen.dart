@@ -44,7 +44,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _navigateToNextPage() async {
-    await Future.delayed(const Duration(milliseconds: 4000));
+    await Future.delayed(const Duration(milliseconds: 5000));
     User? user = FirebaseAuth.instance.currentUser;
     if (!mounted) return;
     Navigator.pushReplacement(

@@ -398,24 +398,40 @@ class _UserScreenState extends State<UserScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text(
-                          "Mettre à jour",
-                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.update, color: Colors.white),
+                            const SizedBox(width: 10),
+                            const Text(
+                              "Mettre à jour",
+                              style: TextStyle(color: Colors.white, fontSize: 18),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 50),
                       ElevatedButton(
-                        onPressed: _resetPassword,
+                        onPressed: () {
+                          // TODO: Implement the functionality for customizing the rental contract
+                        },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange, // Couleur différente
+                          backgroundColor: Colors.blue,
                           minimumSize: const Size(double.infinity, 50),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text(
-                          "Modifier mon mot de passe",
-                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.edit, color: Colors.white),
+                            const SizedBox(width: 10),
+                            const Text(
+                              "Personnaliser le contrat location",
+                              style: TextStyle(color: Colors.white, fontSize: 18),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -429,15 +445,44 @@ class _UserScreenState extends State<UserScreen> {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
+                          backgroundColor: Colors.green,
                           minimumSize: const Size(double.infinity, 50),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text(
-                          "Gérer mon Abonnement",
-                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.subscriptions, color: Colors.white),
+                            const SizedBox(width: 10),
+                            const Text(
+                              "Gérer mon Abonnement",
+                              style: TextStyle(color: Colors.white, fontSize: 18),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 50),
+                      ElevatedButton(
+                        onPressed: _resetPassword,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.lock, color: Colors.white),
+                            const SizedBox(width: 10),
+                            const Text(
+                              "Modifier mon mot de passe",
+                              style: TextStyle(color: Colors.white, fontSize: 18),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -457,25 +502,25 @@ class _UserScreenState extends State<UserScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text(
-                          "Supprimer mon compte",
-                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.delete, color: Colors.white),
+                            const SizedBox(width: 10),
+                            const Text(
+                              "Supprimer mon compte",
+                              style: TextStyle(color: Colors.white, fontSize: 18),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(
                           height: 100), // Augmentation de la marge en bas
-                      const Text(
-                        "Depuis 2020 - Contraloc.fr",
-                        style:
-                            TextStyle(fontSize: 16, color: Color(0xFF0F056B)),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(
-                          height: 5), // Marge supplémentaire tout en bas
                       Padding(
                         padding: const EdgeInsets.only(top: 20, bottom: 10),
                         child: Text(
-                          'Version 1.0.9',
+                          textAlign: TextAlign.center,
+                          'Version 1.0.9\nFabriqué en France 🇫🇷\nDepuis 2020 - Contraloc.fr',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 12,
