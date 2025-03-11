@@ -1,6 +1,6 @@
 import 'dart:convert'; // Ajout de l'import pour base64Encode
 import 'package:ContraLoc/utils/pdf.dart';
-import 'package:ContraLoc/widget/MES%20CONTRATS/contrat_condition.dart';
+import 'package:ContraLoc/USERS/contrat_condition.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:signature/signature.dart';
 import '../widget/navigation.dart';

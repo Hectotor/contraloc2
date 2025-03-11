@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../USERS/abonnement_screen.dart';
+import 'abonnement_screen.dart';
 
 class ContratModifier extends StatefulWidget {
   // Rendre defaultContract accessible
@@ -246,6 +246,28 @@ class _ContratModifierState extends State<ContratModifier> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          "Modifier le Contrat",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
+        ),
+        backgroundColor: const Color(0xFF08004D),
+        iconTheme: const IconThemeData(
+            color: Colors.white), // Icon color for back button
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.keyboard_hide, color: Colors.white),
+            onPressed: () {
+              FocusScope.of(context).unfocus();
+            },
+          ),
+        ],
+      ),
       body: Container(
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
@@ -270,35 +292,13 @@ class _ContratModifierState extends State<ContratModifier> {
                 child: Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
                         color: const Color(0xFF08004D),
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(20),
                           topRight: Radius.circular(20),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.description, color: Colors.white),
-                          const SizedBox(width: 10),
-                          const Text(
-                            'Modifier le contrat',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const Spacer(),
-                          IconButton(
-                            icon: const Icon(Icons.keyboard_hide,
-                                color: Colors.white),
-                            onPressed: () {
-                              FocusScope.of(context).unfocus();
-                            },
-                          ),
-                        ],
                       ),
                     ),
                     Expanded(

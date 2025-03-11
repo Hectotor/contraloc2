@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../utils/pdf.dart';
 import '../CREATION DE CONTRAT/mail.dart';
-import '../MES CONTRATS/contrat_condition.dart';
+import '../../USERS/contrat_condition.dart';
 
 class RetourEnvoiePdf {
   static Future<void> genererEtEnvoyerPdfCloture({

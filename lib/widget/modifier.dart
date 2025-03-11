@@ -19,7 +19,7 @@ import 'MODIFICATION DE CONTRAT/etat_vehicule_retour.dart';
 import 'MODIFICATION DE CONTRAT/commentaire_retour.dart';
 
 import '../utils/pdf.dart';
-import 'MES CONTRATS/contrat_condition.dart';
+import '../USERS/contrat_condition.dart';
 import 'chargement.dart'; // Import the new chargement.dart file
 
 import 'MODIFICATION DE CONTRAT/supp_contrat.dart';

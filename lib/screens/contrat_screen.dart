@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../widget/MES CONTRATS/contrat_condition.dart'; // Import de l'écran de modification
+import '../USERS/contrat_condition.dart'; // Import de l'écran de modification
 import '../widget/MES CONTRATS/contrat_encours.dart';
 import '../widget/MES CONTRATS/contrat_restitues.dart';
 import '../widget/MES CONTRATS/calendar.dart'; // Add this line
