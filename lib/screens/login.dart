@@ -45,72 +45,132 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     try {
+      setState(() {
+        _errorMessage = null;
+      });
+
       // Connexion Firebase
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Identifier l'utilisateur avec RevenueCat
       if (userCredential.user != null) {
-        await RevenueCatService.login(userCredential.user!.uid);
-        
-        // Récupérer les données de l'utilisateur pour l'email de bienvenue
-        final userData = await FirebaseFirestore.instance
+        // Vérifier si l'utilisateur est un collaborateur
+        print('👤 Vérification du rôle utilisateur...');
+        final userDoc = await FirebaseFirestore.instance
             .collection('users')
-            .doc(userCredential.user!.uid)
-            .collection('authentification')
             .doc(userCredential.user!.uid)
             .get();
 
-        if (userData.exists) {
-          String? prenom = userData.data()?['prenom'];
-          String? nom = userData.data()?['nom'];
-          bool welcomeEmailSent = userData.data()?['welcomeEmailSent'] ?? false;
+        if (userDoc.exists) {
+          final userData = userDoc.data();
+          print('📄 Données utilisateur: ${userData.toString()}');
           
-          // Envoyer l'email de bienvenue seulement si ce n'est pas déjà fait
-          if (!welcomeEmailSent && mounted) {
-            await WelcomeMail.sendWelcomeEmail(
-              email: email,
-              context: context,
-              prenom: prenom,
-              nom: nom,
-            );
+          if (userData != null) {
+            // Synchroniser avec RevenueCat
+            await RevenueCatService.login(userCredential.user!.uid);
 
-            // Marquer l'email comme envoyé
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(userCredential.user!.uid)
-                .collection('authentification')
-                .doc(userCredential.user!.uid)
-                .update({'welcomeEmailSent': true});
+            if (userData['role'] == 'collaborateur') {
+              print('👥 Utilisateur identifié comme collaborateur');
+              String? adminId = userData['adminId'];
+              if (adminId == null) {
+                print('❌ Erreur: ID admin manquant pour le collaborateur');
+                throw Exception("Configuration du compte collaborateur invalide");
+              }
+              print('🔑 ID Admin: $adminId');
+              
+              // Vérifier si le collaborateur existe dans la collection authentification de l'admin
+              final collaboratorDoc = await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(adminId)
+                  .collection('authentification')
+                  .doc(userData['id'])
+                  .get();
+
+              if (!collaboratorDoc.exists) {
+                print('❌ Erreur: Compte collaborateur non trouvé dans la collection admin');
+                throw Exception("Compte collaborateur non trouvé");
+              }
+              print('✅ Compte collaborateur vérifié avec succès');
+              print('📊 Données collaborateur: ${collaboratorDoc.data()}');
+            } else {
+              print('👤 Utilisateur identifié comme admin');
+              // Pour les admins seulement : vérifier l'email de bienvenue
+              final adminAuthData = await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(userCredential.user!.uid)
+                  .collection('authentification')
+                  .doc(userCredential.user!.uid)
+                  .get();
+
+              if (adminAuthData.exists) {
+                final adminData = adminAuthData.data();
+                if (adminData != null) {
+                  String? prenom = adminData['prenom'];
+                  String? nom = adminData['nom'];
+                  bool welcomeEmailSent = adminData['welcomeEmailSent'] ?? false;
+                  
+                  // Envoyer l'email de bienvenue seulement si ce n'est pas déjà fait
+                  if (!welcomeEmailSent && mounted) {
+                    await WelcomeMail.sendWelcomeEmail(
+                      email: email,
+                      context: context,
+                      prenom: prenom,
+                      nom: nom,
+                    );
+
+                    // Marquer l'email comme envoyé
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(userCredential.user!.uid)
+                        .collection('authentification')
+                        .doc(userCredential.user!.uid)
+                        .update({'welcomeEmailSent': true});
+                  }
+                }
+              }
+            }
+
+            // Synchroniser l'ID utilisateur avec RevenueCat
+            try {
+              final customerInfo = await Purchases.getCustomerInfo();
+              if (customerInfo.originalAppUserId != userCredential.user!.uid) {
+                await Purchases.logOut();
+                await Purchases.logIn(userCredential.user!.uid);
+              }
+              print('✅ ID utilisateur RevenueCat synchronisé après connexion');
+            } catch (e) {
+              print('⚠️ Erreur synchronisation RevenueCat: $e');
+              // Continuer malgré l'erreur car l'utilisateur est déjà connecté
+            }
+
+            // S'assurer que toutes les vérifications sont terminées avant de naviguer
+            if (mounted) {
+              print('🔄 Navigation vers la page principale...');
+              await Future.delayed(Duration.zero); // Attendre le prochain frame
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const NavigationPage()),
+                (route) => false, // Supprimer toutes les routes précédentes
+              );
+              print('✅ Navigation terminée');
+            }
+          } else {
+            print('❌ Erreur: Données utilisateur invalides');
+            throw Exception("Données utilisateur invalides");
           }
-        }
-
-        // Synchroniser l'ID utilisateur avec RevenueCat
-        try {
-          final customerInfo = await Purchases.getCustomerInfo();
-          if (customerInfo.originalAppUserId != userCredential.user!.uid) {
-            await Purchases.logOut();
-            await Purchases.logIn(userCredential.user!.uid);
-          }
-          print('✅ ID utilisateur RevenueCat synchronisé après connexion');
-        } catch (e) {
-          print('⚠️ Erreur synchronisation RevenueCat: $e');
-          // Continuer malgré l'erreur car l'utilisateur est déjà connecté
-        }
-
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const NavigationPage()),
-          );
+        } else {
+          print('⚠️ Document utilisateur non trouvé');
+          throw Exception("Compte utilisateur non trouvé");
         }
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = _getFriendlyErrorMessage(e.toString());
-      });
+      print('❌ Erreur lors de la connexion: $e');
+      if (mounted) {
+        setState(() {
+          _errorMessage = _getFriendlyErrorMessage(e.toString());
+        });
+      }
     }
   }
 
@@ -291,7 +351,7 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 children: const [
                   Text(
-                    "Fabriqué en France 🇫🇷 ",
+                    "Fabriqué en France ",
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey,

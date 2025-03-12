@@ -64,7 +64,45 @@ class _ModifierScreenState extends State<ModifierScreen> {
   final TextEditingController _carburantManquantController =
       TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
-  
+
+  Future<Map<String, dynamic>?> _getCollaborateurPermissions() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    try {
+      // Vérifier si l'utilisateur est un collaborateur
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final userData = userDoc.data();
+      if (userData != null && userData['role'] == 'collaborateur') {
+        final adminId = userData['adminId'];
+
+        // Récupérer les permissions du collaborateur
+        final collabDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(adminId)
+            .collection('authentification')
+            .doc(user.uid)
+            .get();
+
+        final collabData = collabDoc.data();
+        if (collabData != null && collabData['permissions'] != null) {
+          print('👥 Permissions collaborateur trouvées');
+          return {
+            'adminId': adminId,
+            'permissions': collabData['permissions'],
+          };
+        }
+      }
+      return null;
+    } catch (e) {
+      print('❌ Erreur récupération permissions : $e');
+      return null;
+    }
+  }
 
   @override
   void initState() {
@@ -90,21 +128,51 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
   Future<List<String>> _uploadPhotos(List<File> photos) async {
     List<String> urls = [];
-    int startIndex = _photosRetourUrls
-        .length; // Commence à partir du nombre de photos existantes
+    int startIndex = _photosRetourUrls.length;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       throw Exception("Utilisateur non connecté");
     }
-    for (var photo in photos) {
-      String fileName =
-          'retour_${DateTime.now().millisecondsSinceEpoch}_${startIndex + urls.length}.jpg';
-      Reference ref = FirebaseStorage.instance.ref().child(
-          'users/${user.uid}/locations/${widget.contratId}/photos_retour/$fileName');
 
-      await ref.putFile(photo);
-      String downloadUrl = await ref.getDownloadURL();
-      urls.add(downloadUrl);
+    // Vérifier les permissions du collaborateur
+    final collabInfo = await _getCollaborateurPermissions();
+
+    // Si c'est un collaborateur avec permission d'écriture, utiliser son propre ID
+    if (collabInfo != null && collabInfo['permissions']['ecriture'] == true) {
+      print('👥 Upload des photos en tant que collaborateur avec droits d\'écriture');
+      for (var photo in photos) {
+        String fileName = 'retour_${DateTime.now().millisecondsSinceEpoch}_${startIndex + urls.length}.jpg';
+        Reference ref = FirebaseStorage.instance.ref().child(
+            'users/${user.uid}/locations/${widget.contratId}/photos_retour/$fileName');
+
+        await ref.putFile(photo);
+        String downloadUrl = await ref.getDownloadURL();
+        urls.add(downloadUrl);
+      }
+    } else if (collabInfo != null) {
+      // Collaborateur sans permission d'écriture, utiliser l'ID de l'admin
+      print('👥 Upload des photos vers le compte admin (collaborateur sans droits d\'écriture)');
+      for (var photo in photos) {
+        String fileName = 'retour_${DateTime.now().millisecondsSinceEpoch}_${startIndex + urls.length}.jpg';
+        Reference ref = FirebaseStorage.instance.ref().child(
+            'users/${collabInfo['adminId']}/locations/${widget.contratId}/photos_retour/$fileName');
+
+        await ref.putFile(photo);
+        String downloadUrl = await ref.getDownloadURL();
+        urls.add(downloadUrl);
+      }
+    } else {
+      // Utilisateur normal
+      print('👤 Upload des photos en tant qu\'utilisateur normal');
+      for (var photo in photos) {
+        String fileName = 'retour_${DateTime.now().millisecondsSinceEpoch}_${startIndex + urls.length}.jpg';
+        Reference ref = FirebaseStorage.instance.ref().child(
+            'users/${user.uid}/locations/${widget.contratId}/photos_retour/$fileName');
+
+        await ref.putFile(photo);
+        String downloadUrl = await ref.getDownloadURL();
+        urls.add(downloadUrl);
+      }
     }
     return urls;
   }
@@ -116,6 +184,20 @@ class _ModifierScreenState extends State<ModifierScreen> {
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Utilisateur non connecté")),
+      );
+      return;
+    }
+
+    // Vérifier les permissions du collaborateur
+    final collabInfo = await _getCollaborateurPermissions();
+
+    // Si c'est un collaborateur sans permission d'écriture, bloquer la mise à jour
+    if (collabInfo != null && collabInfo['permissions']['ecriture'] != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Vous n'avez pas la permission de modifier ce contrat"),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -162,10 +244,13 @@ class _ModifierScreenState extends State<ModifierScreen> {
         signatureRetourBase64 = base64Encode(signatureBytes!);
       }
 
+      // Déterminer l'ID de l'utilisateur à utiliser (collaborateur avec droits ou admin)
+      String targetUserId = collabInfo != null ? collabInfo['adminId'] : user.uid;
+
       // Mettre à jour Firestore avec les informations de retour
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
+          .doc(targetUserId)
           .collection('locations')
           .doc(widget.contratId)
           .update({
@@ -175,11 +260,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
             ? _kilometrageRetourController.text
             : null,
         'photosRetourUrls': allPhotosUrls,
-        // Ajouter ces trois champs
         'nettoyageInt': _nettoyageIntController.text,
         'nettoyageExt': _nettoyageExtController.text,
         'carburantManquant': _carburantManquantController.text,
-        // Ajouter la signature de retour
         'signature_retour': signatureRetourBase64,
       });
 
@@ -302,9 +385,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
       String? signatureRetourBase64;
       if (contratDoc.exists) {
         Map<String, dynamic> contratData = contratDoc.data() as Map<String, dynamic>;
-        
+
         // Essayer de récupérer la signature de retour
-        if (contratData.containsKey('signature_retour') && 
+        if (contratData.containsKey('signature_retour') &&
             contratData['signature_retour'] is String) {
           signatureRetourBase64 = contratData['signature_retour'];
         }
@@ -331,8 +414,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
           .where('immatriculation', isEqualTo: widget.data['immatriculation'])
           .get();
 
-      final vehicleData = vehicleDoc.docs.isNotEmpty 
-          ? vehicleDoc.docs.first.data() 
+      final vehicleData = vehicleDoc.docs.isNotEmpty
+          ? vehicleDoc.docs.first.data()
           : {};
 
       // Générer le PDF
@@ -355,14 +438,14 @@ class _ModifierScreenState extends State<ModifierScreen> {
         userData['telephone'] ?? '',
         userData['siret'] ?? '',
         widget.data['commentaireRetour'] ?? '',
-        widget.data['typeCarburant'] ??'',
-        widget.data['boiteVitesses'] ??'',
-        widget.data['vin'] ??'',
-        widget.data['assuranceNom'] ??'',
-        widget.data['assuranceNumero'] ??'',
-        widget.data['franchise'] ??'',
-        widget.data['kilometrageSupp'] ??'',
-        widget.data['rayures'] ??'',
+        widget.data['typeCarburant'] ?? '',
+        widget.data['boiteVitesses'] ?? '',
+        widget.data['vin'] ?? '',
+        widget.data['assuranceNom'] ?? '',
+        widget.data['assuranceNumero'] ?? '',
+        widget.data['franchise'] ?? '',
+        widget.data['kilometrageSupp'] ?? '',
+        widget.data['rayures'] ?? '',
         widget.data['dateDebut'] ?? '',
         widget.data['dateFinTheorique'] ?? '',
         widget.data['dateFinEffectif'] ?? '',
@@ -386,7 +469,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
     } catch (e) {
       // Gestion des erreurs
       print('Erreur lors de la génération du PDF : $e');
-      
+
       // Fermer le dialogue de chargement en cas d'erreur
       if (context.mounted) {
         Navigator.pop(context);

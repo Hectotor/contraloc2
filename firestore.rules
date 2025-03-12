@@ -1,28 +1,115 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permettre la lecture des clés API RevenueCat sans authentification
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function getCollaboratorData(adminId, collaboratorId) {
+      return get(/databases/$(database)/documents/users/$(adminId)/authentification/$(collaboratorId)).data;
+    }
+
+    function isCollaborator(userId) {
+      let userData = getUserData(userId);
+      return userData != null && userData.role == 'collaborateur';
+    }
+
+    function getAdminId(userId) {
+      let userData = getUserData(userId);
+      return userData != null ? userData.adminId : null;
+    }
+
+    function hasPermission(adminId, collaboratorId, permission) {
+      let collaboratorData = getCollaboratorData(adminId, collaboratorId);
+      return collaboratorData != null && 
+        collaboratorData.permissions != null && 
+        collaboratorData.permissions[permission] == true;
+    }
+
+    // Accès à la collection "users"
+    match /users/{userId} {
+      // Document utilisateur principal
+      allow read: if isAuthenticated() && (
+        isOwner(userId) || 
+        (isCollaborator(request.auth.uid) && getAdminId(request.auth.uid) == userId)
+      );
+      allow write: if isAuthenticated() && isOwner(userId);
+      
+      // Collection authentification des collaborateurs
+      match /authentification/{collaboratorId} {
+        allow read: if isAuthenticated() && (
+          isOwner(userId) || // Admin peut lire
+          request.auth.uid == collaboratorId // Collaborateur peut lire son propre document
+        );
+        allow write: if isAuthenticated() && isOwner(userId); // Seul l'admin peut modifier
+      }
+
+      // Collection véhicules
+      match /vehicules/{vehiculeId} {
+        allow read: if isAuthenticated() && (
+          isOwner(userId) || 
+          (isCollaborator(request.auth.uid) && getAdminId(request.auth.uid) == userId)
+        );
+        allow write: if isAuthenticated() && (
+          isOwner(userId) || 
+          (isCollaborator(request.auth.uid) && 
+           getAdminId(request.auth.uid) == userId && 
+           hasPermission(userId, request.auth.uid, 'ecriture'))
+        );
+        allow delete: if isAuthenticated() && (
+          isOwner(userId) || 
+          (isCollaborator(request.auth.uid) && 
+           getAdminId(request.auth.uid) == userId && 
+           hasPermission(userId, request.auth.uid, 'suppression'))
+        );
+      }
+
+      // Collection locations (contrats)
+      match /locations/{locationId} {
+        allow read: if isAuthenticated() && (
+          isOwner(userId) || 
+          (isCollaborator(request.auth.uid) && getAdminId(request.auth.uid) == userId)
+        );
+        allow write: if isAuthenticated() && (
+          isOwner(userId) || 
+          (isCollaborator(request.auth.uid) && 
+           getAdminId(request.auth.uid) == userId && 
+           hasPermission(userId, request.auth.uid, 'ecriture'))
+        );
+        allow delete: if isAuthenticated() && (
+          isOwner(userId) || 
+          (isCollaborator(request.auth.uid) && 
+           getAdminId(request.auth.uid) == userId && 
+           hasPermission(userId, request.auth.uid, 'suppression'))
+        );
+      }
+    }
+    
+    // Collections publiques
+    match /contactSettings/{document} {
+      allow read: if isAuthenticated();
+    }
+
+    match /admin/smtpSettings {
+      allow read: if isAuthenticated();
+    }
+
     match /api_keys/{docId} {
       allow read: if true;
       allow write: if false;
     }
-    
-    // Règles existantes pour les autres collections
-    match /users/{userId}/authentification/{docId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
 
-    match /users/{userId}/authentification/{authId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    match /contactSettings/{document=**} {
-      allow read: if request.auth != null;
-    }
-    
-    // Règle par défaut - refuser tout accès non explicitement autorisé
-    match /{document=**} {
-      allow read, write: if false;
+    match /contrats/{docId} {
+      allow read: if isAuthenticated();
     }
   }
 }

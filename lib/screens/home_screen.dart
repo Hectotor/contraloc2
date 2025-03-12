@@ -8,6 +8,8 @@ import 'dart:async'; // Import Timer
 import '../widget/delete_vehicule.dart';
 import '../widget/CREATION DE CONTRAT/client.dart'; // Assurez-vous que ce fichier est correctement importé
 import '../utils/animation.dart';
+import '../services/heritage_collab.dart'; // Import du nouveau service
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -29,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _deleteVehicule = DeleteVehicule(context);
     _loadUserData();
     _setupSubscriptionCheck();
+    _checkWritePermission();
   }
 
   void _setupSubscriptionCheck() {
@@ -48,21 +51,59 @@ class _HomeScreenState extends State<HomeScreen> {
         print('👤 Chargement des données utilisateur...');
         // Vérifier l'état de l'abonnement via RevenueCat
         final customerInfo = await Purchases.getCustomerInfo();
-        print(
-            '📱 État RevenueCat: ${customerInfo.entitlements.active.length} abonnement(s) actif(s)');
+        print('📱 État RevenueCat: ${customerInfo.entitlements.active.length} abonnement(s) actif(s)');
 
-        final userData = await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('authentification')
-            .doc(user.uid)
-            .get();
+        // Vérifier si l'utilisateur est un collaborateur
+        final userDoc = await _firestore.collection('users').doc(user.uid).get();
+        final userData = userDoc.data();
 
-        if (userData.exists && mounted) {
-          setState(() {
-            _prenom = userData.data()?['prenom'] ?? '';
-            _isUserDataLoaded = true;
-          });
+        if (userData != null && userData['role'] == 'collaborateur') {
+          print('👥 Utilisateur identifié comme collaborateur');
+          final adminId = userData['adminId'];
+
+          // Charger les données du collaborateur depuis le document de l'admin
+          final collaboratorData = await _firestore
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .where('uid', isEqualTo: user.uid)
+              .limit(1)
+              .get();
+
+          if (collaboratorData.docs.isNotEmpty) {
+            final collabDoc = collaboratorData.docs.first;
+            final collabId = collabDoc.id;  // C'est l'ID unique (lettre + 5 chiffres)
+
+            // Synchroniser les données avec l'admin en passant le uid
+            await HeritageCollabService.synchroniserDonneesAdmin(
+              collabId,
+              adminId,
+              user.uid  // uid du collaborateur
+            );
+
+            if (mounted) {
+              setState(() {
+                _prenom = collabDoc.data()['prenom'] ?? '';
+                _isUserDataLoaded = true;
+              });
+            }
+          }
+        } else {
+          print('👤 Utilisateur identifié comme admin');
+          // Pour les admins, charger depuis leur propre collection
+          final adminData = await _firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('authentification')
+              .doc(user.uid)
+              .get();
+
+          if (adminData.exists && mounted) {
+            setState(() {
+              _prenom = adminData.data()?['prenom'] ?? '';
+              _isUserDataLoaded = true;
+            });
+          }
         }
       } catch (e) {
         print('❌ Erreur chargement données: $e');
@@ -70,52 +111,91 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _checkWritePermission() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final userData = userDoc.data();
+
+      if (userData != null && userData['role'] == 'collaborateur') {
+        print('👥 Vérification des permissions du collaborateur');
+
+        if (mounted) {
+          setState(() {
+            // _canAddVehicle = canWrite;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            // _canAddVehicle = true; // Les admins peuvent toujours ajouter des véhicules
+          });
+        }
+      }
+    } catch (e) {
+      print('❌ Erreur vérification permissions: $e');
+    }
+  }
+
   Future<bool> _checkMonthlyContractLimit() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      // Récupérer la limite de contrats de l'utilisateur
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .get();
+      try {
+        // Vérifier si l'utilisateur est un collaborateur
+        final userDoc = await _firestore.collection('users').doc(user.uid).get();
+        final userData = userDoc.data();
 
-      final cb_limite_contrat = userDoc.data()?['cb_limite_contrat'] ?? 10;
-      
-      int limiteContrat = 10; // Limite par défaut
-      
-      // Si cb_limite_contrat est 999, on garde cette limite illimitée
-      if (cb_limite_contrat == 999) {
-        limiteContrat = 999;
-      } else {
-        // Si cb_limite_contrat est 10, on vérifie limiteContrat
-        final limiteContratTemp = userDoc.data()?['limiteContrat'] ?? 10;
-        // Si limiteContrat est 999, on prend 999, sinon on garde 10
-        if (limiteContratTemp == 999) {
-          limiteContrat = 999;
+        String targetUserId = user.uid;
+
+        if (userData != null && userData['role'] == 'collaborateur') {
+          targetUserId = userData['adminId'];
         }
+
+        // Récupérer la limite de contrats de l'utilisateur (admin ou collaborateur)
+        final limitDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(targetUserId)
+            .collection('authentification')
+            .doc(userData?['id'] ?? targetUserId)
+            .get();
+
+        final cb_limite_contrat = limitDoc.data()?['cb_limite_contrat'] ?? 10;
+        
+        int limiteContrat = 10; // Limite par défaut
+        
+        if (cb_limite_contrat == 999) {
+          limiteContrat = 999;
+        } else {
+          final limiteContratTemp = limitDoc.data()?['limiteContrat'] ?? 10;
+          if (limiteContratTemp == 999) {
+            limiteContrat = 999;
+          }
+        }
+
+        // Calculer le début et la fin du mois en cours
+        final now = DateTime.now();
+        final startOfMonth = DateTime(now.year, now.month, 1);
+        final endOfMonth = DateTime(now.year, now.month + 1, 0);
+
+        // Compter les contrats créés ce mois-ci
+        final querySnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(targetUserId)
+            .collection('locations')
+            .where('dateCreation', isGreaterThanOrEqualTo: startOfMonth)
+            .where('dateCreation', isLessThanOrEqualTo: endOfMonth)
+            .get();
+
+        final nombreContratsMois = querySnapshot.docs.length;
+        print('📊 Nombre de contrats ce mois: $nombreContratsMois sur $limiteContrat autorisés');
+
+        return nombreContratsMois < limiteContrat;
+      } catch (e) {
+        print('❌ Erreur vérification limite contrats: $e');
+        return false;
       }
-
-      // Calculer le début et la fin du mois en cours
-      final now = DateTime.now();
-      final startOfMonth = DateTime(now.year, now.month, 1);
-      final endOfMonth = DateTime(now.year, now.month + 1, 0);
-
-      // Compter les contrats créés ce mois-ci en utilisant la collection 'locations'
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('locations')
-          .where('dateCreation', isGreaterThanOrEqualTo: startOfMonth)
-          .where('dateCreation', isLessThanOrEqualTo: endOfMonth)
-          .get();
-
-      final nombreContratsMois = querySnapshot.docs.length;
-      print(
-          'Nombre de contrats ce mois: $nombreContratsMois sur $limiteContrat autorisés');
-
-      return nombreContratsMois < limiteContrat;
     }
     return false;
   }
@@ -173,6 +253,34 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Stream<QuerySnapshot> _getVehiclesStream() async* {
+    final user = _auth.currentUser;
+    if (user == null) {
+      yield* Stream.empty();
+      return;
+    }
+
+    // Récupérer les données de l'utilisateur
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final userData = userDoc.data();
+
+    if (userData != null && userData['role'] == 'collaborateur') {
+      print('👥 Chargement des véhicules depuis le compte admin');
+      yield* _firestore
+          .collection('users')
+          .doc(userData['adminId'])
+          .collection('vehicules')
+          .snapshots();
+    } else {
+      print('👤 Chargement des véhicules depuis le compte utilisateur');
+      yield* _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('vehicules')
+          .snapshots();
+    }
+  }
+
   @override
   void dispose() {
     super.dispose();
@@ -193,11 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore
-            .collection('users')
-            .doc(_auth.currentUser?.uid)
-            .collection('vehicules')
-            .snapshots(),
+        stream: _getVehiclesStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -305,12 +409,20 @@ class _HomeScreenState extends State<HomeScreen> {
                           return;
                         }
 
-                        // Modification ici : vérifier dans la sous-collection de l'utilisateur
+                        // Modification ici : vérifier dans la bonne collection selon le rôle
                         final user = FirebaseAuth.instance.currentUser;
                         if (user != null) {
+                          final userDoc = await _firestore.collection('users').doc(user.uid).get();
+                          final userData = userDoc.data();
+                          
+                          String targetUserId = user.uid;
+                          if (userData != null && userData['role'] == 'collaborateur') {
+                            targetUserId = userData['adminId'];
+                          }
+
                           final doc = await FirebaseFirestore.instance
                               .collection('users')
-                              .doc(user.uid)
+                              .doc(targetUserId)
                               .collection('vehicules')
                               .doc(vehicle.id)
                               .get();
@@ -432,7 +544,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
       ),
-      // Suppression du floatingActionButton
+      floatingActionButton: null,
     );
   }
 }

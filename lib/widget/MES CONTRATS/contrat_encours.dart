@@ -22,17 +22,43 @@ class _ContratEnCoursState extends State<ContratEnCours> {
       return _photoUrlCache[cacheKey];
     }
 
-    final vehiculeDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('vehicules')
-        .where('immatriculation', isEqualTo: immatriculation)
-        .get();
+    try {
+      // Vérifier si l'utilisateur est un collaborateur
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      
+      final userData = userDoc.data();
+      String targetUserId = userId;
 
-    if (vehiculeDoc.docs.isNotEmpty) {
-      final photoUrl = vehiculeDoc.docs.first.data()['photoVehiculeUrl'] as String?;
-      _photoUrlCache[cacheKey] = photoUrl;
-      return photoUrl;
+      if (userData != null && userData['role'] == 'collaborateur') {
+        print('👥 Récupération photo véhicule depuis le compte admin');
+        targetUserId = userData['adminId'];
+      } else {
+        print('👤 Récupération photo véhicule depuis le compte utilisateur');
+      }
+
+      // Vérifier si le véhicule existe dans la collection de l'utilisateur cible
+      final vehiculeQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(targetUserId)
+          .collection('vehicules')
+          .where('immatriculation', isEqualTo: immatriculation)
+          .limit(1)
+          .get();
+
+      if (vehiculeQuery.docs.isNotEmpty) {
+        final photoUrl = vehiculeQuery.docs.first.data()['photoVehiculeUrl'] as String?;
+        if (photoUrl != null) {
+          print('✅ Photo véhicule trouvée');
+          _photoUrlCache[cacheKey] = photoUrl;
+          return photoUrl;
+        }
+      }
+      print('⚠️ Aucune photo trouvée pour le véhicule $immatriculation');
+    } catch (e) {
+      print('❌ Erreur récupération photo véhicule: $e');
     }
     return null;
   }
@@ -146,7 +172,7 @@ class _ContratEnCoursState extends State<ContratEnCours> {
                     final data = contrat.data() as Map<String, dynamic>;
 
                     return FutureBuilder<String?>(
-                      future: _getVehiclePhotoUrl(contrat['userId'], data['immatriculation']),
+                      future: _getVehiclePhotoUrl(data['adminId'] ?? contrat['userId'], data['immatriculation']),
                       builder: (context, snapshot) {
                         final photoUrl = snapshot.data;
 

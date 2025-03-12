@@ -71,6 +71,50 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   bool _isLoading = false;
   final Dio dio = Dio();
 
+  Future<bool> _checkCollaboratorPermissions() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+
+    try {
+      // Vérifier si l'utilisateur est un collaborateur
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final userData = userDoc.data();
+
+      if (userData != null && userData['role'] == 'collaborateur') {
+        final String adminId = userData['adminId'];
+        final String collaboratorId = userData['id'];
+
+        // Vérifier les permissions dans le document du collaborateur
+        final collaboratorDoc = await _firestore
+            .collection('users')
+            .doc(adminId)
+            .collection('authentification')
+            .doc(collaboratorId)
+            .get();
+
+        final permissions = collaboratorDoc.data()?['permissions'] ?? {};
+        final bool canWrite = permissions['ecriture'] ?? false;
+
+        if (!canWrite) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Vous n\'avez pas la permission de modifier les véhicules'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return false;
+        }
+        return true;
+      }
+      return true; // Si ce n'est pas un collaborateur, autoriser l'accès
+    } catch (e) {
+      print('❌ Erreur vérification permissions: $e');
+      return false;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -129,8 +173,23 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     }
   }
 
-  Future<String?> _uploadImageToStorage(
-      File imageFile, String imageType) async {
+  Future<String> _getTargetUserId() async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("User not authenticated");
+
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final userData = userDoc.data();
+
+    if (userData != null && userData['role'] == 'collaborateur') {
+      print(' Sauvegarde dans le compte admin');
+      return userData['adminId'];
+    } else {
+      print(' Sauvegarde dans le compte utilisateur');
+      return user.uid;
+    }
+  }
+
+  Future<String?> _uploadImageToStorage(File imageFile, String imageType) async {
     try {
       final compressedImage = await FlutterImageCompress.compressWithFile(
         imageFile.absolute.path,
@@ -143,17 +202,12 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
         throw Exception('Image compression failed');
       }
 
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception("User not authenticated");
-      }
-
-      final fileName =
-          '${imageType}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final targetUserId = await _getTargetUserId();
+      final fileName = '${imageType}_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
       // Nouvelle structure : directement après l'immatriculation
       final storageRef = FirebaseStorage.instance.ref().child(
-          'users/${user.uid}/vehicules/${_immatriculationController.text}/$fileName');
+          'users/${targetUserId}/vehicules/${_immatriculationController.text}/$fileName');
 
       // Create temporary file for compressed image
       final tempDir = await getTemporaryDirectory();
@@ -165,18 +219,15 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
 
       return await storageRef.getDownloadURL();
     } catch (e) {
-      print('Image upload error: $e');
+      print(' Erreur upload image: $e');
       rethrow;
     }
   }
 
-  // Removed unused method _getUserSubscriptionLimit
-
   Future<void> _moveStorageFiles(String oldImmat, String newImmat) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
     try {
+      final targetUserId = await _getTargetUserId();
+
       // Structure des URLs des photos
       final oldPhotos = {
         'vehicule': widget.vehicleData?['photoVehiculeUrl'],
@@ -190,8 +241,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
         String? oldUrl = entry.value;
         if (oldUrl != null && oldUrl.isNotEmpty) {
           // Créer un nouveau nom de fichier
-          final fileName =
-              '${entry.key}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          final fileName = '${entry.key}_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
           // Télécharger l'image depuis l'URL
           final response = await dio.get(oldUrl,
@@ -201,174 +251,148 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
           // Créer une nouvelle référence dans le storage
           final newRef = FirebaseStorage.instance
               .ref()
-              .child('users/${user.uid}/vehicules/$newImmat/$fileName');
+              .child('users/${targetUserId}/vehicules/$newImmat/$fileName');
 
-          // Upload le fichier
+          // Upload the new file
           await newRef.putData(imageBytes);
-
-          // Obtenir la nouvelle URL
           final newUrl = await newRef.getDownloadURL();
           newUrls[entry.key] = newUrl;
 
-          // Supprimer l'ancien fichier
-          try {
-            final oldRef = FirebaseStorage.instance.refFromURL(oldUrl);
-            await oldRef.delete();
-          } catch (e) {
-            print('Erreur lors de la suppression de l\'ancien fichier: $e');
+          // Delete the old file if it exists
+          if (oldUrl.contains('firebase')) {
+            try {
+              final oldRef = FirebaseStorage.instance
+                  .ref()
+                  .child('users/${targetUserId}/vehicules/$oldImmat/${entry.key}');
+              await oldRef.delete();
+            } catch (e) {
+              print('Warning: Could not delete old file: $e');
+            }
           }
         }
       }
 
-      // Mettre à jour les URLs dans vehicleData
-      if (newUrls['vehicule'] != null) {
-        widget.vehicleData?['photoVehiculeUrl'] = newUrls['vehicule'];
-      }
-      if (newUrls['carte_grise'] != null) {
-        widget.vehicleData?['photoCarteGriseUrl'] = newUrls['carte_grise'];
-      }
-      if (newUrls['assurance'] != null) {
-        widget.vehicleData?['photoAssuranceUrl'] = newUrls['assurance'];
+      // Update the vehicle document with new URLs
+      if (newUrls.isNotEmpty) {
+        await _firestore
+            .collection('users')
+            .doc(targetUserId)
+            .collection('vehicules')
+            .doc(widget.vehicleId)
+            .update({
+          if (newUrls['vehicule'] != null)
+            'photoVehiculeUrl': newUrls['vehicule'],
+          if (newUrls['carte_grise'] != null)
+            'photoCarteGriseUrl': newUrls['carte_grise'],
+          if (newUrls['assurance'] != null)
+            'photoAssuranceUrl': newUrls['assurance'],
+        });
       }
     } catch (e) {
-      print('Erreur lors du déplacement des fichiers: $e');
-      throw Exception('Erreur lors du déplacement des photos: $e');
+      print(' Erreur déplacement fichiers: $e');
+      rethrow;
     }
   }
 
-  // Méthodes supprimées car déplacées dans check_vehicle_limit.dart
-
   Future<void> _saveVehicule() async {
+    // Vérifier les permissions si c'est un collaborateur
+    final hasPermission = await _checkCollaboratorPermissions();
+    if (!hasPermission) return;
+
     // Vérifier la limite de véhicules avant de sauvegarder
     final vehicleLimitChecker = VehicleLimitChecker(context);
     final canAddVehicle = await vehicleLimitChecker.checkVehicleLimit(isUpdating: widget.vehicleId != null);
     if (!canAddVehicle) return;
 
-    if (!_formKey.currentState!.validate()) {
-      print("Validation échouée. Certains champs requis sont manquants.");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez remplir tous les champs requis")),
-      );
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      final user = _auth.currentUser;
-      if (user == null) throw Exception("User not authenticated");
+      final targetUserId = await _getTargetUserId();
+      
+      // Upload images if they exist
+      String? photoVehiculeUrl;
+      String? photoCarteGriseUrl;
+      String? photoAssuranceUrl;
 
-      // Si c'est une modification et que l'immatriculation a changé
-      if (widget.vehicleId != null &&
-          widget.vehicleId != _immatriculationController.text) {
-        // 1. Déplacer les fichiers dans le storage
-        await _moveStorageFiles(
-          widget.vehicleId!,
-          _immatriculationController.text,
-        );
+      if (_carPhoto != null) {
+        photoVehiculeUrl = await _uploadImageToStorage(File(_carPhoto!.path), 'car');
+      }
+      if (_carteGrisePhoto != null) {
+        photoCarteGriseUrl = await _uploadImageToStorage(File(_carteGrisePhoto!.path), 'carteGrise');
+      }
+      if (_assurancePhoto != null) {
+        photoAssuranceUrl = await _uploadImageToStorage(File(_assurancePhoto!.path), 'assurance');
+      }
 
-        // 2. Préparer les données du véhicule
-        final vehicleData = await _prepareVehicleData();
+      final vehicleData = {
+        'marque': _marqueController.text,
+        'modele': _modeleController.text,
+        'immatriculation': _immatriculationController.text,
+        'vin': _vinController.text,
+        'prixLocation': _prixLocationController.text,
+        'caution': _cautionController.text,
+        'franchise': _franchiseController.text,
+        'kilometrageSupp': _kilometrageSuppController.text,
+        'rayures': _rayuresController.text,
+        'assuranceNom': _assuranceNomController.text,
+        'assuranceNumero': _assuranceNumeroController.text,
+        'entretienDate': _entretienDateController.text,
+        'typeCarburant': _typeCarburant,
+        'boiteVitesses': _boiteVitesses,
+        'nettoyageInt': _nettoyageIntController.text,
+        'nettoyageExt': _nettoyageExtController.text,
+        'carburantManquant': _carburantManquantController.text,
+        'dateCreation': FieldValue.serverTimestamp(),
+      };
 
-        // 3. Créer le nouveau document
-        final newVehicleRef = _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('vehicules')
-            .doc(_immatriculationController.text);
+      if (photoVehiculeUrl != null) {
+        vehicleData['photoVehiculeUrl'] = photoVehiculeUrl;
+      }
+      if (photoCarteGriseUrl != null) {
+        vehicleData['photoCarteGriseUrl'] = photoCarteGriseUrl;
+      }
+      if (photoAssuranceUrl != null) {
+        vehicleData['photoAssuranceUrl'] = photoAssuranceUrl;
+      }
 
-        // 4. Sauvegarder les données
-        await newVehicleRef.set(vehicleData);
-
-        // 5. Supprimer l'ancien document
+      if (widget.vehicleId != null) {
+        // Update existing vehicle
+        if (_immatriculationController.text != widget.vehicleData!['immatriculation']) {
+          await _moveStorageFiles(
+              widget.vehicleData!['immatriculation'], _immatriculationController.text);
+        }
         await _firestore
             .collection('users')
-            .doc(user.uid)
+            .doc(targetUserId)
             .collection('vehicules')
             .doc(widget.vehicleId)
-            .delete();
-
+            .update(vehicleData);
+        print(' Véhicule mis à jour avec succès');
         showEnregistrementPopup(context);
       } else {
-        // Cas normal : création ou modification sans changement d'immatriculation
-        final docId = widget.vehicleId ?? _immatriculationController.text;
-        final vehicleRef = _firestore
+        // Add new vehicle
+        await _firestore
             .collection('users')
-            .doc(user.uid)
+            .doc(targetUserId)
             .collection('vehicules')
-            .doc(docId);
-
-        final vehicleData = await _prepareVehicleData();
-        await vehicleRef.set(vehicleData, SetOptions(merge: true));
+            .add(vehicleData);
+        print(' Nouveau véhicule ajouté avec succès');
         showEnregistrementPopup(context);
       }
     } catch (e) {
-      print("Erreur lors de l'enregistrement du véhicule : $e");
-      if (context.mounted) {
+      print(' Erreur sauvegarde véhicule: $e');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Impossible d'enregistrer le véhicule. Vérifiez que les champs suivants sont remplis : Marque, Modèle, Immatriculation")),
+          SnackBar(content: Text('Erreur: $e')),
         );
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
-  }
-
-  // Nouvelle méthode pour préparer les données du véhicule
-  Future<Map<String, dynamic>> _prepareVehicleData() async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception("User not authenticated");
-
-    String? photoVoitureUrl;
-    String? photoCarteGriseUrl;
-    String? photoAssuranceUrl;
-
-    // Gestion des photos
-    if (_carPhoto != null && !_carPhoto!.path.startsWith('http')) {
-      photoVoitureUrl =
-          await _uploadImageToStorage(File(_carPhoto!.path), 'vehicule');
-    } else {
-      photoVoitureUrl = widget.vehicleData?['photoVehiculeUrl'];
-    }
-
-    if (_carteGrisePhoto != null &&
-        !_carteGrisePhoto!.path.startsWith('http')) {
-      photoCarteGriseUrl = await _uploadImageToStorage(
-          File(_carteGrisePhoto!.path), 'carte_grise');
-    } else {
-      photoCarteGriseUrl = widget.vehicleData?['photoCarteGriseUrl'];
-    }
-
-    if (_assurancePhoto != null && !_assurancePhoto!.path.startsWith('http')) {
-      photoAssuranceUrl =
-          await _uploadImageToStorage(File(_assurancePhoto!.path), 'assurance');
-    } else {
-      photoAssuranceUrl = widget.vehicleData?['photoAssuranceUrl'];
-    }
-
-    return {
-      'userId': user.uid,
-      'marque': _marqueController.text,
-      'modele': _modeleController.text,
-      'immatriculation': _immatriculationController.text,
-      'vin': _vinController.text,
-      'typeCarburant': _typeCarburant,
-      'boiteVitesses': _boiteVitesses,
-      'prixLocation': _prixLocationController.text,
-      'caution': _cautionController.text,
-      'franchise': _franchiseController.text,
-      'kilometrageSupp': _kilometrageSuppController.text,
-      'rayures': _rayuresController.text,
-      'assuranceNom': _assuranceNomController.text,
-      'assuranceNumero': _assuranceNumeroController.text,
-      'entretienDate': _entretienDateController.text,
-      'nettoyageInt': _nettoyageIntController.text,
-      'nettoyageExt': _nettoyageExtController.text,
-      'carburantManquant': _carburantManquantController.text,
-      'photoVehiculeUrl': photoVoitureUrl ?? '',
-      'photoCarteGriseUrl': photoCarteGriseUrl ?? '',
-      'photoAssuranceUrl': photoAssuranceUrl ?? '',
-    };
   }
 
   @override
@@ -510,12 +534,19 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF08004D),
                       minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
                     ),
-                    child: const Text("Enregistrer",
-                        style: TextStyle(color: Colors.white, fontSize: 20)),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          )
+                        : const Text(
+                            'Enregistrer',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                   const SizedBox(height: 40), // Ajout de la marge en bas
                 ],

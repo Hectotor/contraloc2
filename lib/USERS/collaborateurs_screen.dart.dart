@@ -67,7 +67,8 @@ class CollaborateursScreenState extends State<CollaborateursScreen> {
         stream: FirebaseFirestore.instance
             .collection('users')
             .doc(currentUser!.uid)
-            .collection('collaborateur')
+            .collection('authentification')
+            .where('role', isEqualTo: 'collaborateur')
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -250,7 +251,7 @@ class CollaborateursScreenState extends State<CollaborateursScreen> {
                                           FirebaseFirestore.instance
                                               .collection('users')
                                               .doc(currentUser!.uid)
-                                              .collection('collaborateur')
+                                              .collection('collaborateurs')
                                               .doc(doc.id)
                                               .delete().then((_) {
                                                 // Attendre 3 secondes avant de fermer le popup
