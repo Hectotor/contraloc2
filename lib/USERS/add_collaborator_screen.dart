@@ -16,8 +16,8 @@ class _AddCollaboratorScreenState extends State<AddCollaboratorScreen> {
   final _nomController = TextEditingController();
   final _prenomController = TextEditingController();
   bool _canRead = true;
-  bool _canWrite = false;
-  bool _canDelete = false;
+  bool _canWrite = true;  // Donner la permission d'écriture par défaut
+  bool _canDelete = true;  // Donner la permission de suppression par défaut
   bool _showPassword = false;  // Pour contrôler la visibilité du mot de passe
 
   Future<void> _addCollaborator() async {
@@ -211,12 +211,12 @@ class _AddCollaboratorScreenState extends State<AddCollaboratorScreen> {
               CheckboxListTile(
                 title: const Text('Écriture'),
                 value: _canWrite,
-                onChanged: (value) => setState(() => _canWrite = value ?? false),
+                onChanged: (value) => setState(() => _canWrite = value ?? true),
               ),
               CheckboxListTile(
                 title: const Text('Suppression'),
                 value: _canDelete,
-                onChanged: (value) => setState(() => _canDelete = value ?? false),
+                onChanged: (value) => setState(() => _canDelete = value ?? true),
               ),
               const SizedBox(height: 20),
               ElevatedButton(

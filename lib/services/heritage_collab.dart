@@ -90,8 +90,11 @@ class HeritageCollabService {
         },
 
         // Hériter les limites de l'admin
-        'cb_limite_contrat': adminData['cb_limite_contrat'],
-        'cb_nb_car': adminData['cb_nb_car'],
+        'limiteContrat': adminData['limiteContrat'] ?? 10,
+        'numberOfCars': adminData['numberOfCars'] ?? 1,
+        'subscriptionId': adminData['subscriptionId'],
+        'cb_limite_contrat': adminData['cb_limite_contrat'] ?? 10,
+        'cb_nb_car': adminData['cb_nb_car'] ?? 1,
         'cb_subscription': adminData['cb_subscription'],
         
         // Informations de l'entreprise

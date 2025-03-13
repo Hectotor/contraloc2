@@ -10,106 +10,63 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
+    function isCollaboratorOfAdmin(adminId) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.adminId == adminId;
     }
 
-    function getCollaboratorData(adminId, collaboratorId) {
-      return get(/databases/$(database)/documents/users/$(adminId)/authentification/$(collaboratorId)).data;
-    }
-
-    function isCollaborator(userId) {
-      let userData = getUserData(userId);
-      return userData != null && userData.role == 'collaborateur';
-    }
-
-    function getAdminId(userId) {
-      let userData = getUserData(userId);
-      return userData != null ? userData.adminId : null;
-    }
-
-    function hasPermission(adminId, collaboratorId, permission) {
-      let collaboratorData = getCollaboratorData(adminId, collaboratorId);
-      return collaboratorData != null && 
-        collaboratorData.permissions != null && 
-        collaboratorData.permissions[permission] == true;
-    }
-
-    // Accès à la collection "users"
+    // Accès à la collection "users" et ses sous-collections
     match /users/{userId} {
-      // Document utilisateur principal
-      allow read: if isAuthenticated() && (
-        isOwner(userId) || 
-        (isCollaborator(request.auth.uid) && getAdminId(request.auth.uid) == userId)
-      );
-      allow write: if isAuthenticated() && isOwner(userId);
+      // Règles pour le document utilisateur principal
+      allow read, write: if isAuthenticated() && isOwner(userId);
       
-      // Collection authentification des collaborateurs
-      match /authentification/{collaboratorId} {
-        allow read: if isAuthenticated() && (
-          isOwner(userId) || // Admin peut lire
-          request.auth.uid == collaboratorId // Collaborateur peut lire son propre document
-        );
-        allow write: if isAuthenticated() && isOwner(userId); // Seul l'admin peut modifier
-      }
-
-      // Collection véhicules
-      match /vehicules/{vehiculeId} {
-        allow read: if isAuthenticated() && (
-          isOwner(userId) || 
-          (isCollaborator(request.auth.uid) && getAdminId(request.auth.uid) == userId)
-        );
-        allow write: if isAuthenticated() && (
-          isOwner(userId) || 
-          (isCollaborator(request.auth.uid) && 
-           getAdminId(request.auth.uid) == userId && 
-           hasPermission(userId, request.auth.uid, 'ecriture'))
-        );
-        allow delete: if isAuthenticated() && (
-          isOwner(userId) || 
-          (isCollaborator(request.auth.uid) && 
-           getAdminId(request.auth.uid) == userId && 
-           hasPermission(userId, request.auth.uid, 'suppression'))
-        );
-      }
-
-      // Collection locations (contrats)
-      match /locations/{locationId} {
-        allow read: if isAuthenticated() && (
-          isOwner(userId) || 
-          (isCollaborator(request.auth.uid) && getAdminId(request.auth.uid) == userId)
-        );
-        allow write: if isAuthenticated() && (
-          isOwner(userId) || 
-          (isCollaborator(request.auth.uid) && 
-           getAdminId(request.auth.uid) == userId && 
-           hasPermission(userId, request.auth.uid, 'ecriture'))
-        );
-        allow delete: if isAuthenticated() && (
-          isOwner(userId) || 
-          (isCollaborator(request.auth.uid) && 
-           getAdminId(request.auth.uid) == userId && 
-           hasPermission(userId, request.auth.uid, 'suppression'))
-        );
+      // Règles pour la sous-collection "authentification"
+      match /authentification/{authId} {
+        allow read, write: if isAuthenticated() && isOwner(userId);
       }
     }
     
-    // Collections publiques
     match /contactSettings/{document} {
-      allow read: if isAuthenticated();
+      allow read: if request.auth != null;
     }
 
+    // Permettre l'accès à la collection vehicules
+    match /vehicules/{vehiculeId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Permettre l'accès aux contrats
+    match /locations/{locationId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Accès aux paramètres SMTP
     match /admin/smtpSettings {
       allow read: if isAuthenticated();
     }
 
+    // Accès aux données utilisateur et sous-collections
+    match /users/{userId}/{document=**} {
+      allow read, write: if isAuthenticated() && (
+        isOwner(userId) ||  // L'utilisateur peut accéder à ses propres données
+        isCollaboratorOfAdmin(userId)  // Le collaborateur peut accéder aux données de son admin
+      );
+    }
+
+    // Permettre l'accès à la collection authentification
+    match /authentification/{authId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Règles pour la collection contrats (conditions)
+    match /contrats/{docId} {
+      allow read: if isAuthenticated();
+    }
+
+    // Permettre la lecture des clés API RevenueCat sans authentification
     match /api_keys/{docId} {
       allow read: if true;
       allow write: if false;
-    }
-
-    match /contrats/{docId} {
-      allow read: if isAuthenticated();
     }
   }
 }

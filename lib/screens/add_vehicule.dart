@@ -56,11 +56,12 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       TextEditingController(); // New field
   final TextEditingController _entretienDateController =
       TextEditingController();
+  final TextEditingController _entretienCommentaireController =
+      TextEditingController();
   final TextEditingController _carburantManquantController =
       TextEditingController();
   final TextEditingController _nettoyageIntController = TextEditingController();
   final TextEditingController _nettoyageExtController = TextEditingController();
-  
 
   String _typeCarburant = "Essence"; // Initialize with a valid value
   String _boiteVitesses = "Manuelle"; // Initialize with a valid value
@@ -82,29 +83,70 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
 
       if (userData != null && userData['role'] == 'collaborateur') {
         final String adminId = userData['adminId'];
-        final String collaboratorId = userData['id'];
 
-        // Vérifier les permissions dans le document du collaborateur
+        // Récupérer les données du collaborateur dans la sous-collection authentification
         final collaboratorDoc = await _firestore
             .collection('users')
             .doc(adminId)
             .collection('authentification')
-            .doc(collaboratorId)
+            .doc(user.uid)
             .get();
+        
+        if (!collaboratorDoc.exists) {
+          print('⚠️ Document collaborateur manquant, création...');
+          // Créer le document du collaborateur avec toutes les permissions
+          await _firestore
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .doc(user.uid) .set({
+            'id': user.uid,
+            'role': 'collaborateur',
+            'adminId': adminId,
+            'permissions': {
+              'lecture': true,
+              'ecriture': true,
+              'suppression': true
+            },
+            // Hériter les limites de l'admin selon les MEMORIES
+            'limiteContrat': userData['limiteContrat'] ?? 10,
+            'numberOfCars': userData['numberOfCars'] ?? 1,
+            'subscriptionId': userData['subscriptionId'],
+            'cb_limite_contrat': userData['cb_limite_contrat'] ?? 10,
+            'cb_nb_car': userData['cb_nb_car'] ?? 1,
+            'cb_subscription': userData['cb_subscription'],
+            'dateCreation': FieldValue.serverTimestamp(),
+          });
+          print('✅ Document collaborateur créé avec succès');
+          return true;
+        }
 
         final permissions = collaboratorDoc.data()?['permissions'] ?? {};
         final bool canWrite = permissions['ecriture'] ?? false;
 
         if (!canWrite) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Vous n\'avez pas la permission de modifier les véhicules'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-          return false;
+          print('⚠️ Permissions manquantes, ajout des permissions...');
+          // Donner toutes les permissions au collaborateur et mettre à jour les limites
+          await _firestore
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .doc(user.uid).set({
+            'permissions': {
+              'lecture': true,
+              'ecriture': true,
+              'suppression': true
+            },
+            // Hériter les limites de l'admin selon les MEMORIES
+            'limiteContrat': userData['limiteContrat'] ?? 10,
+            'numberOfCars': userData['numberOfCars'] ?? 1,
+            'subscriptionId': userData['subscriptionId'],
+            'cb_limite_contrat': userData['cb_limite_contrat'] ?? 10,
+            'cb_nb_car': userData['cb_nb_car'] ?? 1,
+            'cb_subscription': userData['cb_subscription'],
+          }, SetOptions(merge: true));
+          print('✅ Permissions et limites ajoutées avec succès');
+          return true;
         }
         return true;
       }
@@ -135,6 +177,8 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
           widget.vehicleData!['assuranceNumero'] ?? '';
       _entretienDateController.text =
           widget.vehicleData!['entretienDate'] ?? '';
+      _entretienCommentaireController.text =
+          widget.vehicleData!['entretienCommentaire'] ?? '';
       _typeCarburant = widget.vehicleData!['typeCarburant'] ?? 'Essence';
       _boiteVitesses = widget.vehicleData!['boiteVitesses'] ?? 'Manuelle';
       _nettoyageIntController.text = widget.vehicleData!['nettoyageInt'] ?? '';
@@ -205,9 +249,25 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       final targetUserId = await _getTargetUserId();
       final fileName = '${imageType}_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-      // Nouvelle structure : directement après l'immatriculation
-      final storageRef = FirebaseStorage.instance.ref().child(
-          'users/${targetUserId}/vehicules/${_immatriculationController.text}/$fileName');
+      // Vérifier si c'est un collaborateur
+      final user = _auth.currentUser;
+      if (user == null) throw Exception("User not authenticated");
+      
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final userData = userDoc.data();
+      final isCollaborateur = userData != null && userData['role'] == 'collaborateur';
+
+      print('Utilisateur actuel : ${user.uid}');
+      print('Rôle de l\'utilisateur : ${userData?['role']}');
+      print('ID de l\'admin : ${userData?['adminId']}');
+
+      // Construire le chemin de stockage en utilisant l'ID du collaborateur pour sa sous-collection
+      final storagePath = isCollaborateur
+          ? 'users/$targetUserId/authentification/${user.uid}/vehicules/${_immatriculationController.text}/$fileName'
+          : 'users/$targetUserId/vehicules/${_immatriculationController.text}/$fileName';
+
+      print('📁 Upload vers: $storagePath');
+      final storageRef = FirebaseStorage.instance.ref().child(storagePath);
 
       // Create temporary file for compressed image
       final tempDir = await getTemporaryDirectory();
@@ -228,6 +288,14 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     try {
       final targetUserId = await _getTargetUserId();
 
+      // Vérifier si c'est un collaborateur
+      final user = _auth.currentUser;
+      if (user == null) throw Exception("User not authenticated");
+      
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final userData = userDoc.data();
+      final isCollaborateur = userData != null && userData['role'] == 'collaborateur';
+
       // Structure des URLs des photos
       final oldPhotos = {
         'vehicule': widget.vehicleData?['photoVehiculeUrl'],
@@ -236,6 +304,11 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       };
 
       Map<String, String> newUrls = {};
+
+      // Construire le chemin de base en utilisant l'ID du collaborateur pour sa sous-collection
+      final basePath = isCollaborateur
+          ? 'users/$targetUserId/authentification/${user.uid}/vehicules'
+          : 'users/$targetUserId/vehicules';
 
       for (var entry in oldPhotos.entries) {
         String? oldUrl = entry.value;
@@ -248,10 +321,12 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
               options: Options(responseType: ResponseType.bytes));
           final imageBytes = response.data;
 
+          print('📁 Déplacement du fichier vers: $basePath/$newImmat/$fileName');
+
           // Créer une nouvelle référence dans le storage
           final newRef = FirebaseStorage.instance
               .ref()
-              .child('users/${targetUserId}/vehicules/$newImmat/$fileName');
+              .child('$basePath/$newImmat/$fileName');
 
           // Upload the new file
           await newRef.putData(imageBytes);
@@ -263,8 +338,9 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
             try {
               final oldRef = FirebaseStorage.instance
                   .ref()
-                  .child('users/${targetUserId}/vehicules/$oldImmat/${entry.key}');
+                  .child('$basePath/$oldImmat/${entry.key}');
               await oldRef.delete();
+              print('📁 Fichier supprimé avec succès: $oldRef');
             } catch (e) {
               print('Warning: Could not delete old file: $e');
             }
@@ -310,7 +386,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
 
     try {
       final targetUserId = await _getTargetUserId();
-      
+
       // Upload images if they exist
       String? photoVehiculeUrl;
       String? photoCarteGriseUrl;
@@ -339,6 +415,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
         'assuranceNom': _assuranceNomController.text,
         'assuranceNumero': _assuranceNumeroController.text,
         'entretienDate': _entretienDateController.text,
+        'entretienCommentaire': _entretienCommentaireController.text,
         'typeCarburant': _typeCarburant,
         'boiteVitesses': _boiteVitesses,
         'nettoyageInt': _nettoyageIntController.text,
@@ -363,24 +440,51 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
           await _moveStorageFiles(
               widget.vehicleData!['immatriculation'], _immatriculationController.text);
         }
-        await _firestore
-            .collection('users')
-            .doc(targetUserId)
-            .collection('vehicules')
-            .doc(widget.vehicleId)
-            .update(vehicleData);
-        print(' Véhicule mis à jour avec succès');
-        showEnregistrementPopup(context);
-      } else {
-        // Add new vehicle
-        await _firestore
-            .collection('users')
-            .doc(targetUserId)
-            .collection('vehicules')
-            .add(vehicleData);
-        print(' Nouveau véhicule ajouté avec succès');
-        showEnregistrementPopup(context);
       }
+
+      // Vérifier si c'est un collaborateur
+      final user = _auth.currentUser;
+      if (user == null) throw Exception("User not authenticated");
+      
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final userData = userDoc.data();
+      
+      // Ajouter l'ID du collaborateur aux données du véhicule si c'est un collaborateur
+      if (userData != null && userData['role'] == 'collaborateur') {
+        vehicleData['collaborateurId'] = user.uid;
+      }
+
+      print('👤 Utilisateur: ${user.uid}');
+      print('🔑 Rôle: ${userData?['role']}');
+      print('👥 Admin ID: ${userData?['adminId']}');
+
+      // Toujours sauvegarder dans la collection vehicules de l'admin
+      final vehiculesRef = _firestore
+          .collection('users')
+          .doc(targetUserId)
+          .collection('vehicules');
+
+      print('📁 Collection path: ${vehiculesRef.path}');
+      print('🚗 Immatriculation: ${_immatriculationController.text}');
+      print('📄 Données du véhicule: $vehicleData');
+
+      // Save vehicle
+      if (widget.vehicleId != null) {
+        // Update
+        await vehiculesRef.doc(widget.vehicleId).update(vehicleData);
+        print('✅ Véhicule mis à jour avec succès');
+      } else {
+        // Add new
+        try {
+          await vehiculesRef.doc(_immatriculationController.text).set(vehicleData);
+          print('✅ Nouveau véhicule ajouté avec succès dans ${vehiculesRef.path}/${_immatriculationController.text}');
+        } catch (e) {
+          print('❌ Erreur lors de l\'ajout du véhicule: $e');
+          rethrow;
+        }
+      }
+      
+      showEnregistrementPopup(context);
     } catch (e) {
       print(' Erreur sauvegarde véhicule: $e');
       if (mounted) {
@@ -521,6 +625,10 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                       _assuranceNumeroController), // New field
                   _buildTextField(
                       "Date du prochain entretien", _entretienDateController),
+                  _buildTextField(
+                      "Commentaire sur l'entretien", _entretienCommentaireController,
+                      keyboardType: TextInputType.multiline,
+                      maxLines: 3),
                   _buildSectionTitle("Ajouter des images"),
                   _buildImagePicker("Photo de la voiture", _carPhoto,
                       () => _pickImage('car')),
@@ -570,7 +678,8 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   Widget _buildTextField(String label, TextEditingController controller,
       {bool isRequired = false,
       TextInputType? keyboardType,
-      List<TextInputFormatter>? inputFormatters}) {
+      List<TextInputFormatter>? inputFormatters,
+      int? maxLines}) {
     // Déterminer le type de clavier et les icônes spécifiques
     Widget? suffixIcon;
 
@@ -650,13 +759,15 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
+        maxLines: maxLines ?? 1,
         textCapitalization: TextCapitalization
-            .characters, // Forcer les majuscules pendant la saisie
+            .sentences, // Majuscule uniquement au début des phrases pour les commentaires
         inputFormatters: inputFormatters ??
             [
-              // Ne pas appliquer le formateur pour les champs numériques
+              // Ne pas appliquer le formateur pour les champs numériques et commentaires
               if (keyboardType != TextInputType.number &&
                   keyboardType != TextInputType.phone &&
+                  keyboardType != TextInputType.multiline &&
                   label != "Date du prochain entretien")
                 UpperCaseTextFormatter(),
             ],

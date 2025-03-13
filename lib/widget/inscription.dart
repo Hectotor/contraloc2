@@ -131,6 +131,17 @@ class _InscriptionPageState extends State<InscriptionPage> {
         // Créer le document utilisateur dans Firestore
         await userCredential.user!.sendEmailVerification();
 
+        // Créer le document principal dans users
+        await _firestore
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+          'role': 'admin',
+          'id': userCredential.user!.uid,
+          'email': email,
+          'dateCreation': FieldValue.serverTimestamp(),
+        });
+
         // Save user information to Firestore with authentification subcollection
         await _firestore
             .collection('users')
@@ -146,11 +157,19 @@ class _InscriptionPageState extends State<InscriptionPage> {
           'adresse': _adresseController.text.trim(),
           'email': email,
           'telephone': _telephoneController.text.trim(),
+          'role': 'admin',
+          'id': userCredential.user!.uid,
+          'dateCreation': FieldValue.serverTimestamp(),
+          'permissions': {
+            'lecture': true,
+            'ecriture': true,
+            'suppression': true
+          },
+          // Limites selon les MEMORIES
           'subscriptionId': 'free',
           'isSubscriptionActive': false,
           'numberOfCars': 1,
           'limiteContrat': 10,
-          // Ajout des nouveaux champs
           'cb_subscription': 'free',
           'cb_nb_car': 1,
           'cb_limite_contrat': 10,

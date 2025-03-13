@@ -12,6 +12,7 @@ import '../USERS/abonnement_screen.dart'; // Add this import
 import '../USERS/supprimer_compte.dart'; // Import du fichier supprimer_compte.dart
 import '../USERS/contrat_condition.dart'; // Correct import for the contrat condition screen
 import '../USERS/collaborateurs_screen.dart.dart'; // Import du fichier collaborateurs.dart
+import '../USERS/add_collaborator_screen.dart'; // Import du fichier add_collaborator_screen.dart
 
 class UserScreen extends StatefulWidget {
   const UserScreen({Key? key}) : super(key: key);
@@ -45,11 +46,15 @@ class _UserScreenState extends State<UserScreen> {
 
   bool _isUserDataLoaded = false; // Add a flag to check if user data is loaded
 
+  // Ajouter un champ pour stocker le rôle
+  String _userRole = '';
+
   @override
   void initState() {
     super.initState();
     currentUser = _auth.currentUser;
     if (currentUser != null) {
+      _loadUserRole();
       _loadUserData();
     } else {
       // Identifiant de test
@@ -65,40 +70,77 @@ class _UserScreenState extends State<UserScreen> {
 
   // Charger les données utilisateur depuis Firestore
   Future<void> _loadUserData() async {
-    if (_isUserDataLoaded) return; // Return if data is already loaded
+    if (_isUserDataLoaded) {
+      print('📝 Données déjà chargées, pas besoin de recharger');
+      return;
+    }
 
     try {
-      final docRef = _firestore
-          .collection('users')
-          .doc(currentUser!.uid)
-          .collection('authentification')
-          .doc(currentUser!.uid);
+      print('🔄 Début du chargement des données utilisateur');
+      
+      // Récupérer le document principal de l'utilisateur
+      final userDoc = await _firestore.collection('users').doc(currentUser!.uid).get();
+      if (!userDoc.exists) {
+        print('❌ Document utilisateur non trouvé');
+        return;
+      }
 
-      final doc = await docRef.get();
+      final userData = userDoc.data()!;
+      final String role = userData['role'] ?? '';
+      print('👤 Rôle utilisateur: $role');
 
-      if (doc.exists) {
-        final data = doc.data()!;
+      if (role == 'collaborateur') {
+        final String adminId = userData['adminId'] ?? '';
+        final String collaborateurId = userData['id'] ?? ''; // Utiliser l'ID unique du collaborateur
+        print('🔍 Chargement des données collaborateur (Admin ID: $adminId, Collab ID: $collaborateurId)');
+        
+        final collabDoc = await _firestore
+            .collection('users')
+            .doc(adminId)
+            .collection('authentification')
+            .doc(collaborateurId) // Utiliser l'ID unique du collaborateur
+            .get();
 
-        // Conserver l'état de l'abonnement dans les données utilisateur
+        if (collabDoc.exists) {
+          final collabData = collabDoc.data()!;
+          print('📄 Données collaborateur trouvées, mise à jour de l\'interface');
+          setState(() {
+            _logoUrl = collabData['logoUrl'];
+            _nomEntrepriseController.text = collabData['nomEntreprise'] ?? '';
+            _telephoneController.text = collabData['telephone'] ?? '';
+            _adresseController.text = collabData['adresse'] ?? '';
+            _siretController.text = collabData['siret'] ?? '';
+            _nomController.text = collabData['nom'] ?? '';
+            _prenomController.text = collabData['prenom'] ?? '';
+            _emailController.text = currentUser?.email ?? '';
+            _isUserDataLoaded = true;
+          });
+          print('✅ Interface mise à jour avec les données collaborateur');
+          print('📊 Données chargées: Entreprise=${_nomEntrepriseController.text}, Nom=${_nomController.text}, Prénom=${_prenomController.text}');
+        } else {
+          print('❌ Document collaborateur non trouvé dans la collection authentification');
+          print('🔍 Chemins vérifiés:');
+          print('- Document principal: /users/${currentUser!.uid}');
+          print('- Document auth: /users/$adminId/authentification/$collaborateurId');
+        }
+      } else {
+        print('🔍 Chargement des données administrateur');
         setState(() {
-          // Données de l'abonnement
-          isSubscriptionActive = data['isSubscriptionActive'] ?? false;
-          subscriptionId = data['subscriptionId'] ?? 'free';
-
-          // Autres données utilisateur
-          _nomEntrepriseController.text = data['nomEntreprise'] ?? '';
-          _nomController.text = data['nom'] ?? '';
-          _prenomController.text = data['prenom'] ?? '';
+          _logoUrl = userData['logoUrl'];
+          _nomEntrepriseController.text = userData['nomEntreprise'] ?? '';
+          _nomController.text = userData['nom'] ?? '';
+          _prenomController.text = userData['prenom'] ?? '';
           _emailController.text = currentUser?.email ?? '';
-          _telephoneController.text = data['telephone'] ?? '';
-          _adresseController.text = data['adresse'] ?? '';
-          _siretController.text = data['siret'] ?? '';
-          _logoUrl = data['logoUrl'] as String?;
-          _isUserDataLoaded = true; // Set the flag to true after loading data
+          _telephoneController.text = userData['telephone'] ?? '';
+          _adresseController.text = userData['adresse'] ?? '';
+          _siretController.text = userData['siret'] ?? '';
+          _isUserDataLoaded = true;
         });
+        print('✅ Interface mise à jour avec les données administrateur');
+        print('📊 Données chargées: Entreprise=${_nomEntrepriseController.text}, Nom=${_nomController.text}, Prénom=${_prenomController.text}');
       }
     } catch (e) {
-      print('DEBUG - Error loading user data: $e');
+      print('❌ Erreur lors du chargement des données: $e');
     }
   }
 
@@ -111,49 +153,93 @@ class _UserScreenState extends State<UserScreen> {
     });
 
     try {
-      // Utilisez le logoUrl existant si aucun nouveau logo n'est sélectionné
-      String? finalLogoUrl = _logoUrl;
+      print('🔄 Début de la mise à jour des données utilisateur');
+      
+      // Récupérer le rôle de l'utilisateur
+      final userDoc = await _firestore.collection('users').doc(currentUser!.uid).get();
+      if (!userDoc.exists) {
+        throw Exception('Document utilisateur non trouvé');
+      }
 
-      // Si un nouveau logo a été sélectionné, uploadez-le
+      final userData = userDoc.data()!;
+      final String role = userData['role'] ?? '';
+      print('👤 Rôle utilisateur: $role');
+
+      String? finalLogoUrl = _logoUrl;
       if (_logo != null) {
         finalLogoUrl = await _uploadLogoToStorage(File(_logo!.path));
       }
 
-      // Créer l'objet tampon avec le logo actuel
-      final Map<String, dynamic> tamponData = {
-        'logoUrl': finalLogoUrl, // Utilisez le logo final ici
-        'nomEntreprise': _nomEntrepriseController.text.trim(),
-        'adresse': _adresseController.text.trim(),
-        'telephone': _telephoneController.text.trim(),
-        'siret': _siretController.text.trim(),
-      };
+      if (role == 'collaborateur') {
+        print('📝 Mise à jour des données collaborateur');
+        final String adminId = userData['adminId'];
+        final String collaborateurId = userData['id'];
+        print('🔍 Mise à jour pour Admin ID: $adminId, Collab ID: $collaborateurId');
+        
+        // Pour un collaborateur, uniquement mettre à jour nom et prénom
+        await _firestore
+            .collection('users')
+            .doc(adminId)
+            .collection('authentification')
+            .doc(collaborateurId)
+            .update({
+              'nom': _nomController.text.trim(),
+              'prenom': _prenomController.text.trim(),
+              'lastUpdateDate': FieldValue.serverTimestamp(),
+            });
 
-      // Créer l'objet de données utilisateur complet
-      final Map<String, dynamic> userData = {
-        'nomEntreprise': _nomEntrepriseController.text.trim(),
-        'nom': _nomController.text.trim(),
-        'prenom': _prenomController.text.trim(),
-        'email': _emailController.text.trim(),
-        'telephone': _telephoneController.text.trim(),
-        'adresse': _adresseController.text.trim(),
-        'siret': _siretController.text.trim(),
-        'logoUrl': finalLogoUrl,
-        'tampon': tamponData, // Ajouter les données du tampon
-        'lastUpdateDate': FieldValue.serverTimestamp(),
-      };
+        // Mise à jour du document principal du collaborateur
+        await _firestore
+            .collection('users')
+            .doc(currentUser!.uid)
+            .update({
+              'adminId': adminId,
+              'role': 'collaborateur',
+              'id': collaborateurId
+            });
 
-      // Mettre à jour Firestore
-      await _firestore
-          .collection('users')
-          .doc(currentUser!.uid)
-          .collection('authentification')
-          .doc(currentUser!.uid)
-          .update(userData);
+        print('✅ Données collaborateur mises à jour aux deux endroits');
+
+      } else {
+        print('📝 Mise à jour des données administrateur');
+        // Pour un admin, mettre à jour toutes les informations
+        final Map<String, dynamic> tamponData = {
+          'logoUrl': finalLogoUrl,
+          'nomEntreprise': _nomEntrepriseController.text.trim(),
+          'adresse': _adresseController.text.trim(),
+          'telephone': _telephoneController.text.trim(),
+          'siret': _siretController.text.trim(),
+        };
+
+        final Map<String, dynamic> adminData = {
+          'nomEntreprise': _nomEntrepriseController.text.trim(),
+          'nom': _nomController.text.trim(),
+          'prenom': _prenomController.text.trim(),
+          'email': _emailController.text.trim(),
+          'telephone': _telephoneController.text.trim(),
+          'adresse': _adresseController.text.trim(),
+          'siret': _siretController.text.trim(),
+          'logoUrl': finalLogoUrl,
+          'tampon': tamponData,
+          'lastUpdateDate': FieldValue.serverTimestamp(),
+        };
+
+        await _firestore
+            .collection('users')
+            .doc(currentUser!.uid)
+            .update(adminData);
+
+        print('✅ Données administrateur mises à jour');
+      }
 
       setState(() {
         _logoUrl = finalLogoUrl;
         _isLoading = false;
+        _isUserDataLoaded = false; // Forcer le rechargement des données
       });
+
+      // Recharger les données pour s'assurer de la synchronisation
+      await _loadUserData();
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -164,6 +250,7 @@ class _UserScreenState extends State<UserScreen> {
         );
       }
     } catch (e) {
+      print('❌ Erreur lors de la mise à jour: $e');
       setState(() {
         _isLoading = false;
       });
@@ -198,7 +285,7 @@ class _UserScreenState extends State<UserScreen> {
       // Suppression de Purchases.logOut() ici, car nous ne voulons pas déconnecter RevenueCat
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const LoginPage()),
+        MaterialPageRoute(builder: (context) => LoginPage()),
         (route) => false,
       );
     } catch (e) {
@@ -293,6 +380,20 @@ class _UserScreenState extends State<UserScreen> {
     );
   }
 
+  // Nouvelle méthode pour charger le rôle de l'utilisateur
+  Future<void> _loadUserRole() async {
+    try {
+      final userDoc = await _firestore.collection('users').doc(currentUser!.uid).get();
+      if (userDoc.exists) {
+        setState(() {
+          _userRole = userDoc.data()?['role'] ?? '';
+        });
+      }
+    } catch (e) {
+      print('❌ Erreur lors du chargement du rôle: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -312,7 +413,7 @@ class _UserScreenState extends State<UserScreen> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const QuestionUser()),
+              MaterialPageRoute(builder: (context) => QuestionUser()),
             );
           },
         ),
@@ -476,7 +577,7 @@ class _UserScreenState extends State<UserScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const AbonnementScreen(),
+                              builder: (context) => AbonnementScreen(),
                             ),
                           );
                         },
@@ -500,6 +601,35 @@ class _UserScreenState extends State<UserScreen> {
                         ),
                       ),
                       const SizedBox(height: 50),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddCollaboratorScreen(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F056B), // Bleu nuit
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.group_add, color: Colors.white),
+                            const SizedBox(width: 10),
+                            const Text(
+                              "Ajouter un Collaborateur",
+                              style: TextStyle(color: Colors.white, fontSize: 18),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
                       ElevatedButton(
                         onPressed: _resetPassword,
                         style: ElevatedButton.styleFrom(
@@ -587,30 +717,46 @@ class _UserScreenState extends State<UserScreen> {
   Widget _buildTextField(
       String label, TextEditingController controller, bool isEditable,
       {bool isReadOnly = false, IconData? icon}) {
+    
+    // Désactiver les champs d'entreprise pour les collaborateurs
+    if (_userRole == 'collaborateur' && (
+        label == "Nom de l'entreprise" || 
+        label == "Téléphone" || 
+        label == "Adresse" || 
+        label == "Numéro SIRET")) {
+      isEditable = false;
+      isReadOnly = true;
+    }
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextFormField(
         controller: controller,
+        enabled: isEditable,
         readOnly: isReadOnly,
-        validator: isEditable
-            ? (value) =>
-                (value == null || value.isEmpty) ? "Ce champ est requis" : null
-            : null,
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Color(0xFF0F056B)),
-          prefixIcon: icon != null
-              ? Icon(icon, color: Colors.black.withOpacity(0.5))
-              : null,
+          prefixIcon: icon != null ? Icon(icon) : null,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF0F056B)),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFF08004D)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFF08004D)),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF0F056B)),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFF08004D), width: 2),
           ),
         ),
+        style: const TextStyle(fontSize: 16),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Ce champ est requis';
+          }
+          return null;
+        },
       ),
     );
   }

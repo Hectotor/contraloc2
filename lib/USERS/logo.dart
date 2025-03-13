@@ -92,7 +92,7 @@ class _LogoWidgetState extends State<LogoWidget> {
             width: 150,
             height: 150,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              shape: BoxShape.circle,
               border: Border.all(color: Colors.grey),
               image: _logo != null
                   ? DecorationImage(
@@ -115,6 +115,7 @@ class _LogoWidgetState extends State<LogoWidget> {
                       Text(
                         "Ajouter votre logo",
                         style: TextStyle(color: Colors.grey),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   )

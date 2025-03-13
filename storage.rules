@@ -1,138 +1,51 @@
 rules_version = '2';
-
-// Fonctions utilitaires pour vérifier les permissions
 service firebase.storage {
   match /b/{bucket}/o {
-    // Vérifier si l'utilisateur est authentifié
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Vérifier si l'utilisateur est le propriétaire
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
-    // Vérifier si l'utilisateur est un collaborateur
-    function isCollaborator(userId) {
-      return get(/databases/(default)/documents/users/$(userId)).data.role == 'collaborateur';
-    }
-
-    // Récupérer l'ID de l'admin pour un collaborateur
-    function getAdminId(userId) {
-      return get(/databases/(default)/documents/users/$(userId)).data.adminId;
-    }
-
-    // Récupérer l'ID unique du collaborateur
-    function getCollaboratorId(userId) {
-      return get(/databases/(default)/documents/users/$(userId)).data.id;
-    }
-
-    // Vérifier si le collaborateur a la permission spécifiée
-    function hasPermission(userId, permission) {
-      let adminId = getAdminId(userId);
-      let collaboratorId = getCollaboratorId(userId);
-      return get(/databases/(default)/documents/users/$(adminId)/authentification/$(collaboratorId))
-        .data.permissions[permission] == true;
-    }
-
-    // Vérifier si le fichier est une image et respecte la taille limite
-    function isValidImage() {
-      return request.resource.size <= 5 * 1024 * 1024 // 5MB max
-          && request.resource.contentType.matches('image/.*');
-    }
-
-    // Règles pour les fichiers des véhicules
+    // Règles pour les fichiers des véhicules (admin)
     match /users/{userId}/vehicules/{immatriculation}/{fileName} {
-      // Lecture des photos
-      allow read: if isAuthenticated() && (
-        isOwner(userId) || 
-        (isCollaborator(request.auth.uid) && 
-         getAdminId(request.auth.uid) == userId && 
-         hasPermission(request.auth.uid, 'lecture'))
-      );
-
-      // Upload de nouvelles photos
-      allow create: if isAuthenticated() && 
-        isValidImage() && (
-          isOwner(userId) || 
-          (isCollaborator(request.auth.uid) && 
-           getAdminId(request.auth.uid) == userId && 
-           hasPermission(request.auth.uid, 'ecriture'))
-        );
-
-      // Modification des photos existantes
-      allow update: if isAuthenticated() && 
-        isValidImage() && (
-          isOwner(userId) || 
-          (isCollaborator(request.auth.uid) && 
-           getAdminId(request.auth.uid) == userId && 
-           hasPermission(request.auth.uid, 'ecriture'))
-        );
-
-      // Suppression des photos
-      allow delete: if isAuthenticated() && (
-        isOwner(userId) || 
-        (isCollaborator(request.auth.uid) && 
-         getAdminId(request.auth.uid) == userId && 
-         hasPermission(request.auth.uid, 'suppression'))
-      );
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow create, delete: if isAuthenticated() 
+                           && isOwner(userId)
+                           && request.resource.size < 5 * 1024 * 1024
+                           && request.resource.contentType.matches('image/.*');
     }
 
-    // Règles pour les contrats
-    match /contrats/{userId}/{allPaths=**} {
-      allow read: if isAuthenticated() && (
-        isOwner(userId) || 
-        (isCollaborator(request.auth.uid) && 
-         getAdminId(request.auth.uid) == userId && 
-         hasPermission(request.auth.uid, 'lecture'))
-      );
-      
-      allow write: if isAuthenticated() && (
-        isOwner(userId) || 
-        (isCollaborator(request.auth.uid) && 
-         getAdminId(request.auth.uid) == userId && 
-         hasPermission(request.auth.uid, 'ecriture'))
-      );
-    }
-
-    // Règles pour les données utilisateur
-    match /users/{userId}/{allPaths=**} {
-      allow read, write: if isAuthenticated() && isOwner(userId);
-    }
-
-    // Règles pour les locations
-    match /users/{userId}/locations/{locationId} {
-      allow read: if isAuthenticated() && (
-        isOwner(userId) || 
-        (isCollaborator(request.auth.uid) && 
-         getAdminId(request.auth.uid) == userId && 
-         hasPermission(request.auth.uid, 'lecture'))
-      );
-      
-      allow update: if isAuthenticated() && (
-        isOwner(userId) || 
-        (isCollaborator(request.auth.uid) && 
-         getAdminId(request.auth.uid) == userId && 
-         hasPermission(request.auth.uid, 'ecriture'))
-      );
+    // Règles pour les fichiers des véhicules (collaborateurs)
+    match /users/{adminId}/authentification/{userId}/vehicules/{immatriculation}/{fileName} {
+      allow read, create, update, delete: if isAuthenticated() 
+                                          && isOwner(userId)
+                                          && request.resource.size < 5 * 1024 * 1024
+                                          && request.resource.contentType.matches('image/.*');
     }
     
-    // Règles pour les contrats utilisateur
+    match /contrats/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    match /users/{userId}/locations/{locationId} {
+      // Autoriser la lecture si l'utilisateur est connecté et propriétaire du document
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Autoriser la mise à jour si l'utilisateur est connecté et propriétaire du document
+      allow update: if request.auth != null && request.auth.uid == userId;
+    }
+    
     match /users/{userId}/contrats/{fileName} {
-      allow read: if isAuthenticated() && (
-        isOwner(userId) || 
-        (isCollaborator(request.auth.uid) && 
-         getAdminId(request.auth.uid) == userId && 
-         hasPermission(request.auth.uid, 'lecture'))
-      );
-      
-      allow write: if isAuthenticated() && (
-        isOwner(userId) || 
-        (isCollaborator(request.auth.uid) && 
-         getAdminId(request.auth.uid) == userId && 
-         hasPermission(request.auth.uid, 'ecriture'))
-      );
+      // Autoriser la lecture si l'utilisateur est connecté et propriétaire du document
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Autoriser l'écriture si l'utilisateur est connecté et propriétaire du document
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

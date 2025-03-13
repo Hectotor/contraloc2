@@ -36,27 +36,72 @@ class VehicleLimitChecker {
         return true;
       }
 
+      // Vérifier si c'est un admin ou un collaborateur
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) throw Exception("User not authenticated");
+      
+      final currentUserDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+      final currentUserData = currentUserDoc.data();
+      final isCollaborateur = currentUserData?['role'] == 'collaborateur';
+
       // Récupérer la limite de véhicules de l'utilisateur
-      final userDoc = await _firestore
-          .collection('users')
-          .doc(targetUserId)
-          .collection('authentification')
-          .doc(targetUserId)
-          .get();
-
-      final cb_limite_vehicule = userDoc.data()?['cb_limite_vehicule'] ?? 2;
-      int limiteVehicule = 2; // Limite par défaut
-
-      // Si cb_limite_vehicule est 999, on garde cette limite illimitée
-      if (cb_limite_vehicule == 999) {
-        limiteVehicule = 999;
+      DocumentSnapshot<Map<String, dynamic>> userDoc;
+      if (isCollaborateur) {
+        // Pour un collaborateur, lire les données de l'admin dans authentification
+        userDoc = await _firestore
+            .collection('users')
+            .doc(targetUserId)
+            .collection('authentification')
+            .doc(targetUserId)
+            .get();
       } else {
-        // Si cb_limite_vehicule est 2, on vérifie limiteVehicule
-        final limiteVehiculeTemp = userDoc.data()?['limiteVehicule'] ?? 2;
-        // Si limiteVehicule est 999, on prend 999, sinon on garde 2
-        if (limiteVehiculeTemp == 999) {
-          limiteVehicule = 999;
+        // Pour un admin, lire directement dans son document
+        userDoc = await _firestore
+            .collection('users')
+            .doc(targetUserId)
+            .get();
+      }
+
+      final userData = userDoc.data();
+      if (userData == null) {
+        print('❌ Données utilisateur non trouvées');
+        return false;
+      }
+      
+      // Fonction utilitaire pour récupérer les valeurs entières de manière sécurisée
+      int getIntValue(dynamic value, int defaultValue) {
+        if (value == null) return defaultValue;
+        if (value is int) return value;
+        if (value is String) {
+          final parsed = int.tryParse(value);
+          if (parsed != null) return parsed;
         }
+        return defaultValue;
+      }
+
+      // Récupérer les deux valeurs de limite de manière sécurisée
+      final numberOfCars = getIntValue(userData['numberOfCars'], 1);
+      final cb_nb_car = getIntValue(userData['cb_nb_car'], 1);
+      
+      print('🔍 Valeurs brutes - numberOfCars: $numberOfCars, cb_nb_car: $cb_nb_car');
+      
+      // Déterminer la limite finale selon la logique des MEMORIES
+      int limiteVehicule;
+      
+      // 1. Vérifier numberOfCars en premier
+      if (numberOfCars > 1 || numberOfCars == 999) {
+        print('✅ Utilisation de numberOfCars: $numberOfCars');
+        limiteVehicule = numberOfCars;
+      }
+      // 2. Si numberOfCars est 1, vérifier cb_nb_car
+      else if (cb_nb_car > 1 || cb_nb_car == 999) {
+        print('✅ Utilisation de cb_nb_car: $cb_nb_car');
+        limiteVehicule = cb_nb_car;
+      }
+      // 3. Si les deux sont à 1, garder 1
+      else {
+        print('ℹ️ Les deux limites sont à 1, utilisation de la limite par défaut');
+        limiteVehicule = 1;
       }
 
       // Compter le nombre de véhicules actuels

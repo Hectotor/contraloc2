@@ -53,55 +53,50 @@ class DeleteVehicule {
         );
       }
 
-      // Récupérer d'abord le document du véhicule
+      // Vérifier si l'utilisateur est un collaborateur
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final userData = userDoc.data();
+      final targetUserId = userData != null && userData['role'] == 'collaborateur'
+          ? userData['adminId']
+          : user.uid;
+
+      print('👤 Utilisateur: ${user.uid}');
+      print('🔑 Rôle: ${userData?['role']}');
+      print('👥 Admin ID: $targetUserId');
+      print('🚗 Immatriculation à supprimer: $immatriculationId');
+
+      // Récupérer le document du véhicule dans la collection de l'admin
       final vehicleDoc = await _firestore
           .collection('users')
-          .doc(user.uid)
+          .doc(targetUserId)
           .collection('vehicules')
           .doc(immatriculationId)
           .get();
 
+      print('📁 Recherche dans: users/$targetUserId/vehicules/$immatriculationId');
+
       if (!vehicleDoc.exists) {
-        // Si le document n'existe pas, essayer de le trouver par l'immatriculation
-        final querySnapshot = await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('vehicules')
-            .where('immatriculation', isEqualTo: immatriculationId)
-            .get();
-
-        if (querySnapshot.docs.isEmpty) {
-          if (context.mounted) {
-            Navigator.pop(context); // Fermer l'indicateur de chargement
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Véhicule non trouvé."),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-          return;
+        if (context.mounted) {
+          Navigator.pop(context); // Fermer l'indicateur de chargement
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Véhicule non trouvé."),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
-
-        // Utiliser le premier document trouvé
-        final vehicleData = querySnapshot.docs.first;
-
-        // Supprimer les photos
-        final data = vehicleData.data();
-        await _deleteVehiclePhotos(data);
-
-        // Supprimer le document
-        await vehicleData.reference.delete();
-      } else {
-        // Supprimer les photos
-        final data = vehicleDoc.data();
-        if (data != null) {
-          await _deleteVehiclePhotos(data);
-        }
-
-        // Supprimer le document
-        await vehicleDoc.reference.delete();
+        return;
       }
+
+      // Supprimer les photos
+      final data = vehicleDoc.data();
+      if (data != null) {
+        await _deleteVehiclePhotos(data);
+      }
+
+      // Supprimer le document
+      await vehicleDoc.reference.delete();
+      print('✅ Véhicule supprimé avec succès');
 
       if (context.mounted) {
         Navigator.pop(context); // Fermer l'indicateur de chargement
@@ -113,6 +108,7 @@ class DeleteVehicule {
         );
       }
     } catch (e) {
+      print('❌ Erreur lors de la suppression: $e');
       if (context.mounted) {
         Navigator.pop(context); // Fermer l'indicateur de chargement
         ScaffoldMessenger.of(context).showSnackBar(
