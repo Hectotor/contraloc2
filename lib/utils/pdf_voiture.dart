@@ -212,11 +212,9 @@ class PdfVoitureWidget {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Km de départ: $kilometrageDepart',
+                pw.Text('Km de départ: $kilometrageDepart km',
                     style: pw.TextStyle(font: ttf)),
-                pw.Text('Km autorisé: $kilometrageAutorise',
-                    style: pw.TextStyle(font: ttf)),
-                pw.Text('Km de retour: $kilometrageRetour',
+                pw.Text('Km de retour: $kilometrageRetour km',
                     style: pw.TextStyle(font: ttf)),
               ],
             ),
@@ -224,10 +222,18 @@ class PdfVoitureWidget {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                  pw.Text('Prix Km supp: $kilometrageSupp €/km',
-                      style: pw.TextStyle(font: ttf)),
-                  pw.Text('Coût total km supp: ${calculateKmSupp().toStringAsFixed(2)} €',
-                      style: pw.TextStyle(font: ttf)),
+                pw.Text('Distance autorisée: $kilometrageAutorise km',
+                    style: pw.TextStyle(font: ttf, fontWeight: pw.FontWeight.bold)),
+                pw.Text('Prix Km supp: $kilometrageSupp €/km',
+                    style: pw.TextStyle(font: ttf)),
+              ],
+            ),
+            pw.SizedBox(height: 5),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.end,
+              children: [
+                pw.Text('Coût total km supp: ${calculateKmSupp().toStringAsFixed(2)} €',
+                    style: pw.TextStyle(font: ttf, fontWeight: pw.FontWeight.bold)),
               ],
             ),
             pw.SizedBox(height: 5),

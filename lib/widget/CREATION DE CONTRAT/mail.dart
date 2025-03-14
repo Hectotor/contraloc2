@@ -18,11 +18,61 @@ class EmailService {
     String? adresse,
     String? telephone,
     String? logoUrl,
+    String? kilometrageAutorise,
   }) async {
     try {
       // Récupérer les données de l'utilisateur
       final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
+      if (user == null) {
+        throw Exception('Utilisateur non connecté');
+      }
+
+      // Vérifier le rôle et les permissions
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (!userDoc.exists) {
+        throw Exception('Données utilisateur non trouvées');
+      }
+
+      final role = userDoc.data()?['role'];
+      String? adminId = userDoc.data()?['adminId'];
+
+      // Si c'est un collaborateur, vérifier ses permissions
+      if (role == 'collaborateur') {
+        if (adminId == null) {
+          throw Exception('AdminId non trouvé pour le collaborateur');
+        }
+
+        final collabDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(adminId)
+            .collection('authentification')
+            .doc(user.uid)
+            .get();
+
+        if (!collabDoc.exists || !(collabDoc.data()?['permissions']?['lecture'] ?? false)) {
+          throw Exception('Permissions insuffisantes pour envoyer des emails');
+        }
+
+        // Récupérer les données de l'entreprise depuis le document de l'admin
+        final adminDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(adminId)
+            .collection('authentification')
+            .doc(adminId)
+            .get();
+
+        if (adminDoc.exists) {
+          nomEntreprise = adminDoc.data()?['nomEntreprise'] ?? 'Contraloc';
+          adresse = adminDoc.data()?['adresse'] ?? '';
+          telephone = adminDoc.data()?['telephone'] ?? '';
+          logoUrl = adminDoc.data()?['logoUrl'];
+        }
+      } else {
+        // Pour un admin, récupérer ses propres données
         final userData = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)

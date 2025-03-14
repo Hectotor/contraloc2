@@ -227,36 +227,6 @@ class _ClientPageState extends State<ClientPage> {
               const SizedBox(height: 20),
               ListTile(
                 leading:
-                    const Icon(Icons.photo_library, color: Color(0xFF08004D)),
-                title: const Text('Choisir depuis la galerie'),
-                onTap: () async {
-                  final pickedFile = await picker.pickImage(
-                    source: ImageSource.gallery,
-                    imageQuality: 70,
-                  );
-                  if (pickedFile != null) {
-                    final compressedImage =
-                        await FlutterImageCompress.compressWithFile(
-                      pickedFile.path,
-                      minWidth: 800,
-                      minHeight: 800,
-                      quality: 85,
-                    );
-                    if (compressedImage != null) {
-                      setState(() {
-                        if (isRecto) {
-                          _permisRecto = File(pickedFile.path);
-                        } else {
-                          _permisVerso = File(pickedFile.path);
-                        }
-                      });
-                    }
-                  }
-                  Navigator.of(context).pop();
-                },
-              ),
-              ListTile(
-                leading:
                     const Icon(Icons.photo_camera, color: Color(0xFF08004D)),
                 title: const Text('Prendre une photo'),
                 onTap: () async {
@@ -285,27 +255,37 @@ class _ClientPageState extends State<ClientPage> {
                   Navigator.of(context).pop();
                 },
               ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF08004D),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text(
-                    "Annuler",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+              ListTile(
+                leading:
+                    const Icon(Icons.photo_library, color: Color(0xFF08004D)),
+                title: const Text('Choisir depuis la galerie'),
+                onTap: () async {
+                  final pickedFile = await picker.pickImage(
+                    source: ImageSource.gallery,
+                    imageQuality: 70,
+                  );
+                  if (pickedFile != null) {
+                    final compressedImage =
+                        await FlutterImageCompress.compressWithFile(
+                      pickedFile.path,
+                      minWidth: 800,
+                      minHeight: 800,
+                      quality: 85,
+                    );
+                    if (compressedImage != null) {
+                      setState(() {
+                        if (isRecto) {
+                          _permisRecto = File(pickedFile.path);
+                        } else {
+                          _permisVerso = File(pickedFile.path);
+                        }
+                      });
+                    }
+                  }
+                  Navigator.of(context).pop();
+                },
               ),
+
             ],
           ),
         ),
