@@ -18,7 +18,6 @@ class EmailService {
     String? adresse,
     String? telephone,
     String? logoUrl,
-    String? kilometrageAutorise,
   }) async {
     try {
       // Récupérer les données de l'utilisateur
