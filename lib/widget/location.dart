@@ -397,25 +397,24 @@ class _LocationPageState extends State<LocationPage> {
 
       // Si un email client est disponible, générer et envoyer le PDF
       if (widget.email != null && widget.email!.isNotEmpty) {
-        // Récupérer les données utilisateur de manière plus robuste
-        final userDoc = await _firestore
+        // Récupérer les données de l'entreprise depuis le document de l'admin
+        final adminDoc = await _firestore
             .collection('users')
             .doc(targetUserId)
-            .collection('authentification')
-            .doc(FirebaseAuth.instance.currentUser?.uid)
             .get();
 
-        if (!userDoc.exists) {
-          throw Exception('Données utilisateur non trouvées');
+        if (!adminDoc.exists) {
+          throw Exception('Données administrateur non trouvées');
         }
 
-        final userData = userDoc.data()!;
+        final adminData = adminDoc.data()!;
 
         // S'assurer que toutes les données sont présentes
-        final nomEntreprise = userData['nomEntreprise'] ?? '';
-        final adresseEntreprise = userData['adresse'] ?? '';
-        final telephoneEntreprise = userData['telephone'] ?? '';
-        final siretEntreprise = userData['siret'] ?? '';
+        final nomEntreprise = adminData['nomEntreprise'] ?? '';
+        final adresseEntreprise = adminData['adresse'] ?? '';
+        final telephoneEntreprise = adminData['telephone'] ?? '';
+        final siretEntreprise = adminData['siret'] ?? '';
+        final logoUrl = adminData['logoUrl'] ?? '';
 
         // Debug print pour vérifier les données
         print('Données entreprise pour PDF:');
@@ -423,26 +422,27 @@ class _LocationPageState extends State<LocationPage> {
         print('Adresse: $adresseEntreprise');
         print('Téléphone: $telephoneEntreprise');
         print('SIRET: $siretEntreprise');
-
-        // Récupérer les données du véhicule depuis la collection de l'utilisateur
+        print('Logo: $logoUrl');
 
         // Récupérer les conditions depuis la collection 'users'
         final conditionsDoc = await _firestore
             .collection('users')
-            .doc(FirebaseAuth.instance.currentUser?.uid)
+            .doc(targetUserId)
             .collection('contrats')
-            .doc(FirebaseAuth.instance.currentUser?.uid)
+            .doc('userId')
             .get();
 
         String conditions = '';
         if (conditionsDoc.exists && conditionsDoc.data()?['texte'] != null) {
           conditions = conditionsDoc.data()?['texte'];
+          print('✅ Conditions personnalisées trouvées pour l\'admin');
         } else {
           // Utiliser les conditions par défaut si aucune condition personnalisée n'existe
           final defaultConditionsDoc =
               await _firestore.collection('contrats').doc('default').get();
           conditions = defaultConditionsDoc.data()?['texte'] ??
               ContratModifier.defaultContract;
+          print('⚠️ Conditions par défaut utilisées');
         }
 
         final signatureAller = await _signatureController.toPngBytes();
@@ -462,7 +462,7 @@ class _LocationPageState extends State<LocationPage> {
             'commentaire': _commentaireController.text,
             'photos': vehiculeUrls,
             'signatureAller': signatureAller,
-            'signatureBase64': _signatureBase64, // Passer explicitement la signature base64
+            'signatureBase64': _signatureBase64,
             'nettoyageInt': _nettoyageIntController.text,
             'nettoyageExt': _nettoyageExtController.text,
             'carburantManquant': _carburantManquantController.text,
@@ -476,16 +476,23 @@ class _LocationPageState extends State<LocationPage> {
             'rayures': _rayuresController.text,
             'kilometrageSupp': _kilometrageSuppController.text,
             'kilometrageAutorise': _kilometrageAutoriseController.text,
+            'typeLocation': _typeLocation,
+            'prixLocation': _prixLocationController.text,
+            'nomEntreprise': nomEntreprise,
+            'adresseEntreprise': adresseEntreprise,
+            'telephoneEntreprise': telephoneEntreprise,
+            'siretEntreprise': siretEntreprise,
+            'logoUrl': logoUrl,
           },
           '', // dateFinEffectif
           '', // kilometrageRetour
           '', // commentaireRetour
           [], // photosRetour
-          nomEntreprise, // déjà passé comme paramètre positionnel
-          userData['logoUrl'] ?? '',
-          adresseEntreprise, // déjà passé comme paramètre positionnel
-          telephoneEntreprise, // déjà passé comme paramètre positionnel
-          siretEntreprise, // déjà passé comme paramètre positionnel
+          nomEntreprise,
+          logoUrl,
+          adresseEntreprise,
+          telephoneEntreprise,
+          siretEntreprise,
           '', // commentaireRetourData
           _typeCarburantController.text,
           _boiteVitessesController.text,
@@ -493,18 +500,18 @@ class _LocationPageState extends State<LocationPage> {
           _assuranceNomController.text,
           _assuranceNumeroController.text,
           _franchiseController.text,
+          _kilometrageSuppController.text,
           _rayuresController.text,
           _dateDebutController.text,
           _dateFinTheoriqueController.text,
           '', // dateFinEffectifData
           _kilometrageDepartController.text,
-          _pourcentageEssence.toString(),
-          _typeLocationController.text,
-          _prixLocationController.text,
-          _kilometrageSuppController.text,
           _kilometrageAutoriseController.text,
-          condition: conditions, // seul paramètre nommé nécessaire
-          signatureBase64: _signatureBase64, // Ajouter le paramètre nommé
+          _pourcentageEssence.toString(),
+          _typeLocation,
+          _prixLocationController.text,
+          condition: conditions,
+          signatureBase64: _signatureBase64,
         );
 
         // Envoyer le PDF par email
@@ -516,8 +523,7 @@ class _LocationPageState extends State<LocationPage> {
           context: context,
           prenom: widget.prenom,
           nom: widget.nom,
-          nomEntreprise: userData['nomEntreprise'] ??
-              '', // Passer le nom de l'entreprise de l'utilisateur
+          nomEntreprise: nomEntreprise,
         );
       }
 
