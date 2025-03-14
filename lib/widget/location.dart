@@ -82,12 +82,10 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _carburantManquantController =
       TextEditingController();
   final TextEditingController _kilometrageAutoriseController = TextEditingController();
-  final TextEditingController _kilometrageSuppController =
-      TextEditingController();
+  final TextEditingController _kilometrageSuppController = TextEditingController();
   final TextEditingController _vinController = TextEditingController();
   final TextEditingController _assuranceNomController = TextEditingController();
-  final TextEditingController _assuranceNumeroController =
-      TextEditingController();
+  final TextEditingController _assuranceNumeroController = TextEditingController();
   final TextEditingController _franchiseController = TextEditingController();
   final TextEditingController _rayuresController = TextEditingController();
   final TextEditingController _typeCarburantController = TextEditingController();
@@ -114,92 +112,106 @@ class _LocationPageState extends State<LocationPage> {
     _fetchVehicleData();
   }
 
-  Future<void> _fetchVehicleData() async {
+  Future<String> _getTargetUserId() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final vehiculeDoc = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('vehicules')
-          .where('immatriculation', isEqualTo: widget.immatriculation)
-          .get();
+    if (user == null) return '';
 
-      if (vehiculeDoc.docs.isNotEmpty) {
-        final vehicleData = vehiculeDoc.docs.first.data();
-        setState(() {
-          _prixLocationController.text = vehicleData['prixLocation'] ?? '';
-          _nettoyageIntController.text = vehicleData['nettoyageInt'] ?? '';
-          _nettoyageExtController.text = vehicleData['nettoyageExt'] ?? '';
-          _carburantManquantController.text = vehicleData['carburantManquant'] ?? '';
-          _kilometrageAutoriseController.text = vehicleData['kilometrageAutorise'] ?? '';
-          _kilometrageSuppController.text = vehicleData['kilometrageSupp'] ?? '';
-          _vinController.text = vehicleData['vin'] ?? '';
-          _assuranceNomController.text = vehicleData['assuranceNom'] ?? '';
-          _assuranceNumeroController.text = vehicleData['assuranceNumero'] ?? '';
-          _franchiseController.text = vehicleData['franchise'] ?? '';
-          _rayuresController.text = vehicleData['rayures'] ?? '';
-          _typeCarburantController.text = vehicleData['typeCarburant'] ?? '';
-          _boiteVitessesController.text = vehicleData['boiteVitesses'] ?? '';
-          _typeLocationController.text = vehicleData['typeLocation'] ?? '';
-        });
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final userData = userDoc.data();
+    final targetUserId = userData != null && userData['role'] == 'collaborateur'
+        ? userData['adminId']
+        : user.uid;
+
+    print('👤 Données utilisateur: ${userData}');
+    print('👥 Utilisateur ${userData?['role']}, utilisation de l\'ID admin: $targetUserId');
+
+    if (userData != null && userData['role'] == 'collaborateur') {
+      await _ensureCollaboratorPermissions(user.uid, targetUserId, userData);
+    }
+
+    return targetUserId;
+  }
+
+  Future<void> _ensureCollaboratorPermissions(String userId, String adminId, Map<String, dynamic> userData) async {
+    final collabDoc = await _firestore
+        .collection('users')
+        .doc(adminId)
+        .collection('authentification')
+        .doc(userId)
+        .get();
+
+    final Map<String, dynamic> permissionsData = {
+      'id': userId,
+      'role': 'collaborateur',
+      'adminId': adminId,
+      'permissions': {
+        'lecture': true,
+        'ecriture': true,
+        'suppression': true
+      },
+      'limiteContrat': userData['limiteContrat'] ?? 10,
+      'numberOfCars': userData['numberOfCars'] ?? 1,
+      'subscriptionId': userData['subscriptionId'],
+      'cb_limite_contrat': userData['cb_limite_contrat'] ?? 10,
+      'cb_nb_car': userData['cb_nb_car'] ?? 1,
+      'cb_subscription': userData['cb_subscription'],
+    };
+
+    if (!collabDoc.exists) {
+      print('⚠️ Document collaborateur manquant, création...');
+      permissionsData['dateCreation'] = FieldValue.serverTimestamp();
+      await _firestore
+          .collection('users')
+          .doc(adminId)
+          .collection('authentification')
+          .doc(userId)
+          .set(permissionsData);
+      print('✅ Document collaborateur créé avec succès');
+    } else {
+      final permissions = collabDoc.data()?['permissions'] ?? {};
+      if (!(permissions['ecriture'] ?? false)) {
+        print('⚠️ Permissions manquantes, ajout des permissions...');
+        await _firestore
+            .collection('users')
+            .doc(adminId)
+            .collection('authentification')
+            .doc(userId)
+            .set(permissionsData, SetOptions(merge: true));
+        print('✅ Permissions ajoutées avec succès');
       }
     }
   }
 
-  Future<void> _selectDateTime(TextEditingController controller) async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      locale: const Locale('fr', 'FR'), // Set locale to French
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF08004D), // Couleur de sélection
-              onPrimary: Colors.white, // Couleur du texte sélectionné
-              surface: Colors.white, // Couleur de fond du calendrier
-              onSurface: Color(0xFF08004D), // Couleur du texte
-            ),
-            dialogBackgroundColor: Colors.white,
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (pickedDate != null) {
-      final pickedTime = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.now(),
-        builder: (context, child) {
-          return Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: const ColorScheme.light(
-                primary: Color(0xFF08004D), // Couleur des boutons et sélection
-                onPrimary: Colors.white, // Couleur du texte sélectionné
-                surface: Colors.white, // Couleur de fond
-                onSurface: Color(0xFF08004D), // Couleur du texte
-              ),
-              dialogBackgroundColor: Colors.white,
-            ),
-            child: child!,
-          );
-        },
-      );
-      if (pickedTime != null) {
-        final dateTime = DateTime(
-          pickedDate.year,
-          pickedDate.month,
-          pickedDate.day,
-          pickedTime.hour,
-          pickedTime.minute,
-        );
-        final formattedDateTime = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(dateTime);
-        setState(() {
-          controller.text = formattedDateTime;
-        });
-      }
+  Future<void> _fetchVehicleData() async {
+    final targetUserId = await _getTargetUserId();
+    if (targetUserId.isEmpty) return;
+
+    final vehiculeDoc = await _firestore
+        .collection('users')
+        .doc(targetUserId)
+        .collection('vehicules')
+        .where('immatriculation', isEqualTo: widget.immatriculation)
+        .get();
+
+    if (vehiculeDoc.docs.isNotEmpty) {
+      final vehicleData = vehiculeDoc.docs.first.data();
+      setState(() {
+        _prixLocationController.text = vehicleData['prixLocation']?.toString() ?? '';
+        _nettoyageIntController.text = vehicleData['nettoyageInt']?.toString() ?? '';
+        _nettoyageExtController.text = vehicleData['nettoyageExt']?.toString() ?? '';
+        _carburantManquantController.text = vehicleData['carburantManquant']?.toString() ?? '';
+        _kilometrageAutoriseController.text = vehicleData['kilometrageAutorise']?.toString() ?? '';
+        _kilometrageSuppController.text = vehicleData['kilometrageSupp']?.toString() ?? '';
+        _vinController.text = vehicleData['vin']?.toString() ?? '';
+        _assuranceNomController.text = vehicleData['assuranceNom']?.toString() ?? '';
+        _assuranceNumeroController.text = vehicleData['assuranceNumero']?.toString() ?? '';
+        _franchiseController.text = vehicleData['franchise']?.toString() ?? '';
+        _rayuresController.text = vehicleData['rayures']?.toString() ?? '';
+        _typeCarburantController.text = vehicleData['typeCarburant']?.toString() ?? '';
+        _boiteVitessesController.text = vehicleData['boiteVitesses']?.toString() ?? '';
+        _typeLocationController.text = vehicleData['typeLocation']?.toString() ?? '';
+        _cautionController.text = vehicleData['caution']?.toString() ?? '';
+      });
     }
   }
 
@@ -230,18 +242,12 @@ class _LocationPageState extends State<LocationPage> {
     }
 
     setState(() {
-      _isLoading = true; // Set loading state to true
+      _isLoading = true;
     });
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Vous devez être connecté pour créer un contrat")),
-        );
-        return;
-      }
+      final targetUserId = await _getTargetUserId();
+      if (targetUserId.isEmpty) return;
 
       // D'abord, uploader toutes les photos et obtenir les URLs
       String? permisRectoUrl;
@@ -251,7 +257,7 @@ class _LocationPageState extends State<LocationPage> {
       // Générer un ID unique pour le contrat
       final contratId = widget.contratId ?? _firestore
           .collection('users')
-          .doc(user.uid)
+          .doc(targetUserId)
           .collection('locations')
           .doc()
           .id;
@@ -275,11 +281,11 @@ class _LocationPageState extends State<LocationPage> {
       // Créer le contrat dans la collection de l'utilisateur
       await _firestore
           .collection('users')
-          .doc(user.uid)
+          .doc(targetUserId)
           .collection('locations')
           .doc(contratId)
           .set({
-        'userId': user.uid,
+        'userId': FirebaseAuth.instance.currentUser?.uid,
         'nom': widget.nom ?? '',
         'prenom': widget.prenom ?? '',
         'adresse': widget.adresse ?? '',
@@ -392,11 +398,11 @@ class _LocationPageState extends State<LocationPage> {
       // Si un email client est disponible, générer et envoyer le PDF
       if (widget.email != null && widget.email!.isNotEmpty) {
         // Récupérer les données utilisateur de manière plus robuste
-        final userDoc = await FirebaseFirestore.instance
+        final userDoc = await _firestore
             .collection('users')
-            .doc(user.uid)
+            .doc(targetUserId)
             .collection('authentification')
-            .doc(user.uid)
+            .doc(FirebaseAuth.instance.currentUser?.uid)
             .get();
 
         if (!userDoc.exists) {
@@ -423,9 +429,9 @@ class _LocationPageState extends State<LocationPage> {
         // Récupérer les conditions depuis la collection 'users'
         final conditionsDoc = await _firestore
             .collection('users')
-            .doc(user.uid)
+            .doc(FirebaseAuth.instance.currentUser?.uid)
             .collection('contrats')
-            .doc(user.uid)
+            .doc(FirebaseAuth.instance.currentUser?.uid)
             .get();
 
         String conditions = '';
@@ -614,6 +620,63 @@ class _LocationPageState extends State<LocationPage> {
     _signatureController.dispose();
     _prixLocationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectDateTime(TextEditingController controller) async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      locale: const Locale('fr', 'FR'), // Set locale to French
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF08004D), // Couleur de sélection
+              onPrimary: Colors.white, // Couleur du texte sélectionné
+              surface: Colors.white, // Couleur de fond du calendrier
+              onSurface: Color(0xFF08004D), // Couleur du texte
+            ),
+            dialogBackgroundColor: Colors.white,
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (pickedDate != null) {
+      final pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+        builder: (context, child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: Color(0xFF08004D), // Couleur des boutons et sélection
+                onPrimary: Colors.white, // Couleur du texte sélectionné
+                surface: Colors.white, // Couleur de fond
+                onSurface: Color(0xFF08004D), // Couleur du texte
+              ),
+              dialogBackgroundColor: Colors.white,
+            ),
+            child: child!,
+          );
+        },
+      );
+      if (pickedTime != null) {
+        final dateTime = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+        final formattedDateTime = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(dateTime);
+        setState(() {
+          controller.text = formattedDateTime;
+        });
+      }
+    }
   }
 
   @override
