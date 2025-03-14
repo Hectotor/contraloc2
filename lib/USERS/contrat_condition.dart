@@ -76,7 +76,8 @@ En cas d’échec de la résolution amiable, les litiges seront soumis aux tribu
 
 class _ContratModifierState extends State<ContratModifier> {
   final TextEditingController _controller = TextEditingController();
-  bool isPremiumUser = false; // Ajouter cette variable
+  bool _isPremiumUser = false; // Ajouter cette variable
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
@@ -86,43 +87,75 @@ class _ContratModifierState extends State<ContratModifier> {
   }
 
   Future<void> _checkPremiumStatus() async {
+    print('Début de _checkPremiumStatus');
     try {
       final user = FirebaseAuth.instance.currentUser;
+      print('User connecté: ${user?.uid}');
       if (user != null) {
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('authentification')
-            .doc(user.uid)
-            .get();
+        // Récupérer d'abord le document principal de l'utilisateur pour vérifier son rôle
+        print('Récupération du document utilisateur...');
+        final userDoc = await _firestore.collection('users').doc(user.uid).get();
+        final userData = userDoc.data();
+        print('Document utilisateur existe: ${userDoc.exists}');
+        print('Données utilisateur: $userData');
 
-        if (doc.exists) {
-          final data = doc.data() ?? {};
-          final subscriptionId = data['subscriptionId'] ?? 'free';
-          final cb_subscription = data['cb_subscription'] ?? 'free';
+        if (userData != null) {
+          String? adminId = userData['adminId'];
+          String role = userData['role'] ?? '';
+          print('Role trouvé: $role');
+          print('AdminId trouvé: $adminId');
+          DocumentSnapshot subscriptionDoc;
 
-          setState(() {
-            // L'utilisateur est premium si l'un des deux abonnements est premium
-            isPremiumUser = subscriptionId == 'premium-monthly_access' ||
-                subscriptionId == 'premium-yearly_access' ||
-                cb_subscription == 'premium-monthly_access' ||
-                cb_subscription == 'premium-yearly_access';
-            print('Status Premium: $isPremiumUser');
-            print('SubscriptionId: $subscriptionId');
-            print('CB Subscription: $cb_subscription');
-          });
+          if (role == 'collaborateur' && adminId != null) {
+            print('Récupération des données collaborateur depuis admin...');
+            String collaborateurId = userData['id'] ?? '';
+            print('ID Collaborateur: $collaborateurId');
+            // Pour un collaborateur, lire les données depuis la collection authentification de l'admin
+            subscriptionDoc = await _firestore
+                .collection('users')
+                .doc(adminId)
+                .collection('authentification')
+                .doc(collaborateurId)
+                .get();
+            print('Document collaborateur existe: ${subscriptionDoc.exists}');
+          } else {
+            print('Récupération des données admin...');
+            // Pour un admin, lire directement son document
+            subscriptionDoc = userDoc;
+          }
+
+          final subscriptionData = subscriptionDoc.data() as Map<String, dynamic>?;
+          print('Données abonnement: $subscriptionData');
+
+          if (subscriptionData != null) {
+            String subscriptionId = subscriptionData['subscriptionId'] ?? 'free';
+            String cb_subscription = subscriptionData['cb_subscription'] ?? 'free';
+            bool isPremiumUser = (subscriptionId != 'free' || cb_subscription != 'free');
+
+            setState(() {
+              _isPremiumUser = isPremiumUser;
+              print('=== Résultat final ===');
+              print('Status Premium: $isPremiumUser');
+              print('SubscriptionId: $subscriptionId');
+              print('CB Subscription: $cb_subscription');
+              print('Role: $role');
+              print('AdminId: $adminId');
+            });
+          }
         }
       }
-    } catch (e) {
-      print('Erreur lors de la vérification du statut Premium: $e');
+    } catch (e, stackTrace) {
+      print('Erreur lors de la vérification du statut premium: $e');
+      print('Stack trace: $stackTrace');
     }
+    print('Fin de _checkPremiumStatus');
   }
 
   Future<void> _loadContract() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final doc = await FirebaseFirestore.instance
+        final doc = await _firestore
             .collection('users')
             .doc(user.uid)
             .collection('contrats')
@@ -149,14 +182,14 @@ class _ContratModifierState extends State<ContratModifier> {
 
   // Modifier la méthode _saveContract
   Future<void> _saveContract() async {
-    if (!isPremiumUser) {
+    if (!_isPremiumUser) {
       _showPremiumDialog();
       return;
     }
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      await FirebaseFirestore.instance
+      await _firestore
           .collection('users')
           .doc(user.uid)
           .collection('contrats')
@@ -236,7 +269,7 @@ class _ContratModifierState extends State<ContratModifier> {
 
   // Ajouter cette méthode
   void _onTextFieldTap() {
-    if (!isPremiumUser) {
+    if (!_isPremiumUser) {
       _showPremiumDialog();
       // Masquer le clavier s'il est ouvert
       FocusScope.of(context).unfocus();
@@ -310,8 +343,8 @@ class _ContratModifierState extends State<ContratModifier> {
                           child: TextFormField(
                             controller: _controller,
                             maxLines: null,
-                            enabled: isPremiumUser,
-                            readOnly: !isPremiumUser, // Ajouter cette ligne
+                            enabled: _isPremiumUser,
+                            readOnly: !_isPremiumUser, // Ajouter cette ligne
                             style: const TextStyle(
                               fontFamily: 'Roboto', // Change font to Roboto
                               fontSize: 16,
@@ -320,7 +353,7 @@ class _ContratModifierState extends State<ContratModifier> {
                             ),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: isPremiumUser
+                              hintText: _isPremiumUser
                                   ? 'Le contenu du contrat...'
                                   : 'Abonnement Premium requis pour modifier le contrat',
                               hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -340,7 +373,7 @@ class _ContratModifierState extends State<ContratModifier> {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: isPremiumUser ? _resetContract : null,
+                      onPressed: _isPremiumUser ? _resetContract : null,
                       icon: const Icon(Icons.refresh, color: Colors.white),
                       label: const Text('Réinitialiser',
                           style: TextStyle(color: Colors.white)),
@@ -354,7 +387,7 @@ class _ContratModifierState extends State<ContratModifier> {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed:
-                          isPremiumUser ? _saveContract : _showPremiumDialog,
+                          _isPremiumUser ? _saveContract : _showPremiumDialog,
                       icon: const Icon(Icons.save, color: Colors.white),
                       label: const Text('Enregistrer',
                           style: TextStyle(color: Colors.white)),

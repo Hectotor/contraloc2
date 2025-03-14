@@ -80,7 +80,6 @@ class HeritageCollabService {
         'role': 'collaborateur',
         'uid': collaborateurUid,
         'adminId': adminId,
-        'dateCreation': FieldValue.serverTimestamp(),
         
         // Permissions selon les MEMORIES
         'permissions': {
