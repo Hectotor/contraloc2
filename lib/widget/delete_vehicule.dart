@@ -16,13 +16,26 @@ class DeleteVehicule {
 
     Map<String, dynamic>? vehicleData;
     if (immatriculationId != null) {
+      // Vérifier si l'utilisateur est un collaborateur
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final userData = userDoc.data();
+      final targetUserId = userData != null && userData['role'] == 'collaborateur'
+          ? userData['adminId']
+          : user.uid;
+
+      print('👤 Données utilisateur: ${userData}');
+      print('👥 Utilisateur ${userData?['role']}, utilisation de l\'ID admin: $targetUserId');
+      print('🚗 Récupération du véhicule: $immatriculationId dans users/$targetUserId/vehicules');
+
       final doc = await _firestore
           .collection('users')
-          .doc(user.uid)
+          .doc(targetUserId)
           .collection('vehicules')
           .doc(immatriculationId)
           .get();
+          
       vehicleData = doc.data();
+
     }
     if (context.mounted) {
       Navigator.push(

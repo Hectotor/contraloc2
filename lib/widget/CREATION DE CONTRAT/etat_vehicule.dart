@@ -33,25 +33,62 @@ class _EtatVehiculeState extends State<EtatVehicule> {
   Future<void> _checkPremiumStatus() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final doc = await FirebaseFirestore.instance
+      // 1. Vérifier si c'est un collaborateur
+      final userDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
           .doc(user.uid)
           .get();
 
-      if (doc.exists) {
-        final data = doc.data() ?? {};
-        final subscriptionId = data['subscriptionId'] ?? 'free';
-        final cb_subscription = data['cb_subscription'] ?? 'free';
+      if (!userDoc.exists) return;
+      
+      final userData = userDoc.data() ?? {};
+      final String role = userData['role'] ?? '';
+      
+      if (role == 'collaborateur') {
+        // Pour un collaborateur, on utilise les données de l'admin
+        final String adminId = userData['adminId'] ?? '';
+        final String collaborateurId = userData['id'] ?? '';
+        
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(adminId)
+            .collection('authentification')
+            .doc(collaborateurId)
+            .get();
+            
+        if (doc.exists) {
+          final data = doc.data() ?? {};
+          final subscriptionId = data['subscriptionId'] ?? 'free';
+          final cb_subscription = data['cb_subscription'] ?? 'free';
 
-        setState(() {
-          // L'utilisateur est premium si l'un des deux abonnements est premium
-          isPremiumUser = subscriptionId == 'premium-monthly_access' ||
-              subscriptionId == 'premium-yearly_access' ||
-              cb_subscription == 'premium-monthly_access' ||
-              cb_subscription == 'premium-yearly_access';
-        });
+          setState(() {
+            isPremiumUser = subscriptionId == 'premium-monthly_access' ||
+                subscriptionId == 'premium-yearly_access' ||
+                cb_subscription == 'premium-monthly_access' ||
+                cb_subscription == 'premium-yearly_access';
+          });
+        }
+      } else {
+        // Pour un admin, on garde la logique existante
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('authentification')
+            .doc(user.uid)
+            .get();
+
+        if (doc.exists) {
+          final data = doc.data() ?? {};
+          final subscriptionId = data['subscriptionId'] ?? 'free';
+          final cb_subscription = data['cb_subscription'] ?? 'free';
+
+          setState(() {
+            isPremiumUser = subscriptionId == 'premium-monthly_access' ||
+                subscriptionId == 'premium-yearly_access' ||
+                cb_subscription == 'premium-monthly_access' ||
+                cb_subscription == 'premium-yearly_access';
+          });
+        }
       }
     }
   }
@@ -110,6 +147,11 @@ class _EtatVehiculeState extends State<EtatVehicule> {
   }
 
   Future<void> _pickImage() async {
+    if (!isPremiumUser) {
+      _showPremiumDialog();
+      return;
+    }
+
     if (widget.photos.length >= 10) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
