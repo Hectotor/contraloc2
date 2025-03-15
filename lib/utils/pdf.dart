@@ -350,7 +350,7 @@ Future<String> generatePdf(
                 children: [
                   pw.Text('Commentaires:',
                       style: pw.TextStyle(
-                        fontSize: 15,
+                        fontSize: 12,
                         font: boldFont,
                         color: PdfColors.blue900,
                       )),

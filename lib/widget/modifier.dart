@@ -87,21 +87,62 @@ class _ModifierScreenState extends State<ModifierScreen> {
             .collection('users')
             .doc(adminId)
             .collection('authentification')
-            .doc(user.uid)
+            .doc(userData['id']) // Utiliser l'ID du collaborateur, pas son UID
             .get();
 
-        final collabData = collabDoc.data();
-        if (collabData != null && collabData['permissions'] != null) {
-          final permissions = collabData['permissions'];
-          print('📋 Permissions collaborateur:');
-          print('   - Lecture: ${permissions['lecture'] == true ? "✅" : "❌"}');
-          print('   - Écriture: ${permissions['ecriture'] == true ? "✅" : "❌"}');
-          return {
-            'adminId': adminId,
-            'permissions': permissions,
-          };
+        if (!collabDoc.exists) {
+          print('⚠️ Document collaborateur non trouvé, tentative avec UID...');
+          // Essayer avec l'UID comme fallback
+          final collabDocByUid = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .doc(user.uid)
+              .get();
+              
+          if (collabDocByUid.exists) {
+            final collabData = collabDocByUid.data();
+            if (collabData != null && collabData['permissions'] != null) {
+              final permissions = collabData['permissions'];
+              print('📋 Permissions collaborateur (via UID):');
+              print('   - Lecture: ${permissions['lecture'] == true ? "✅" : "❌"}');
+              print('   - Écriture: ${permissions['ecriture'] == true ? "✅" : "❌"}');
+              return {
+                'adminId': adminId,
+                'permissions': permissions,
+                'id': userData['id'] // Conserver l'ID pour les opérations futures
+              };
+            }
+          } else {
+            print('❌ Document collaborateur non trouvé même avec UID');
+            // Créer des permissions par défaut pour éviter les erreurs
+            return {
+              'adminId': adminId,
+              'permissions': {'lecture': true, 'ecriture': false, 'suppression': false},
+              'id': userData['id']
+            };
+          }
         } else {
-          print('❌ Aucune permission trouvée pour le collaborateur');
+          final collabData = collabDoc.data();
+          if (collabData != null && collabData['permissions'] != null) {
+            final permissions = collabData['permissions'];
+            print('📋 Permissions collaborateur:');
+            print('   - Lecture: ${permissions['lecture'] == true ? "✅" : "❌"}');
+            print('   - Écriture: ${permissions['ecriture'] == true ? "✅" : "❌"}');
+            return {
+              'adminId': adminId,
+              'permissions': permissions,
+              'id': userData['id']
+            };
+          } else {
+            print('❌ Aucune permission trouvée pour le collaborateur');
+            // Créer des permissions par défaut pour éviter les erreurs
+            return {
+              'adminId': adminId,
+              'permissions': {'lecture': true, 'ecriture': false, 'suppression': false},
+              'id': userData['id']
+            };
+          }
         }
       } else {
         print('👤 Utilisateur admin');
@@ -263,27 +304,67 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
       // Déterminer l'ID de l'utilisateur à utiliser (collaborateur avec droits ou admin)
       String targetUserId = collabInfo != null ? collabInfo['adminId'] : user.uid;
-      print('👤 Mise à jour pour l\'utilisateur: ${collabInfo != null ? 'Collaborateur (Admin ID)' : 'Admin'} - $targetUserId');
+      print('👤 Mise à jour pour l\'utilisateur: ${collabInfo != null ? 'Admin' : 'Utilisateur'} - $targetUserId');
 
-      // Mettre à jour Firestore avec les informations de retour
-      print('💾 Sauvegarde des données dans Firestore...');
-      await FirebaseFirestore.instance
+      // Vérifier si le document existe avant de le mettre à jour
+      final docRef = FirebaseFirestore.instance
           .collection('users')
           .doc(targetUserId)
           .collection('locations')
-          .doc(widget.contratId)
-          .update({
-        'dateFinEffectif': _dateFinEffectifController.text,
-        'commentaireRetour': _commentaireRetourController.text,
-        'kilometrageRetour': _kilometrageRetourController.text.isNotEmpty
-            ? _kilometrageRetourController.text
-            : null,
-        'photosRetourUrls': allPhotosUrls,
-        'nettoyageInt': _nettoyageIntController.text,
-        'nettoyageExt': _nettoyageExtController.text,
-        'carburantManquant': _carburantManquantController.text,
-        'signature_retour': signatureRetourBase64,
-      });
+          .doc(widget.contratId);
+          
+      final docSnapshot = await docRef.get();
+      
+      if (!docSnapshot.exists) {
+        print('⚠️ Document non trouvé, vérification des autres emplacements possibles...');
+        
+        // Vérifier si le document existe dans la collection de l'utilisateur actuel
+        final userDocRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('locations')
+            .doc(widget.contratId);
+            
+        final userDocSnapshot = await userDocRef.get();
+        
+        if (userDocSnapshot.exists) {
+          print('✅ Document trouvé dans la collection de l\'utilisateur actuel');
+          // Mettre à jour Firestore avec les informations de retour
+          print('💾 Sauvegarde des données dans Firestore (collection utilisateur)...');
+          await userDocRef.update({
+            'dateFinEffectif': _dateFinEffectifController.text,
+            'commentaireRetour': _commentaireRetourController.text,
+            'kilometrageRetour': _kilometrageRetourController.text.isNotEmpty
+                ? _kilometrageRetourController.text
+                : null,
+            'photosRetourUrls': allPhotosUrls,
+            'nettoyageInt': _nettoyageIntController.text,
+            'nettoyageExt': _nettoyageExtController.text,
+            'carburantManquant': _carburantManquantController.text,
+            'signature_retour': signatureRetourBase64,
+            'status': 'restitue', // Marquer comme restitué
+          });
+        } else {
+          throw Exception("Document non trouvé dans Firestore");
+        }
+      } else {
+        // Mettre à jour Firestore avec les informations de retour
+        print('💾 Sauvegarde des données dans Firestore...');
+        await docRef.update({
+          'dateFinEffectif': _dateFinEffectifController.text,
+          'commentaireRetour': _commentaireRetourController.text,
+          'kilometrageRetour': _kilometrageRetourController.text.isNotEmpty
+              ? _kilometrageRetourController.text
+              : null,
+          'photosRetourUrls': allPhotosUrls,
+          'nettoyageInt': _nettoyageIntController.text,
+          'nettoyageExt': _nettoyageExtController.text,
+          'carburantManquant': _carburantManquantController.text,
+          'signature_retour': signatureRetourBase64,
+          'status': 'restitue', // Marquer comme restitué
+        });
+      }
+      
       print('✅ Données sauvegardées avec succès');
 
       // Fermer le dialogue de chargement

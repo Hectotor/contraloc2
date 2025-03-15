@@ -44,27 +44,111 @@ class EmailService {
         if (adminId == null) {
           throw Exception('AdminId non trouvé pour le collaborateur');
         }
+        
+        print('👥 Utilisateur collaborateur détecté pour envoi d\'email');
+        print('   - Admin ID: $adminId');
+        
+        // Récupérer l'ID du collaborateur depuis son document principal
+        final collabId = userDoc.data()?['id'];
+        print('   - Collab ID: $collabId');
 
-        final collabDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(adminId)
-            .collection('authentification')
-            .doc(user.uid)
-            .get();
-
-        if (!collabDoc.exists || !(collabDoc.data()?['permissions']?['lecture'] ?? false)) {
+        // Vérifier les permissions du collaborateur - approche similaire à celle utilisée dans supp_contrat.dart
+        DocumentSnapshot? collabDoc;
+        Map<String, dynamic>? permissions;
+        
+        // 1. Essayer d'abord avec l'ID du collaborateur
+        if (collabId != null) {
+          print('🔍 Recherche du document collaborateur avec ID: $collabId');
+          final querySnapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .where('id', isEqualTo: collabId)
+              .limit(1)
+              .get();
+              
+          if (querySnapshot.docs.isNotEmpty) {
+            collabDoc = querySnapshot.docs.first;
+            print('✅ Document collaborateur trouvé avec ID');
+            
+            // ignore: unnecessary_cast
+            final collabData = collabDoc.data() as Map<String, dynamic>?;
+            if (collabData != null && collabData['permissions'] != null) {
+              permissions = collabData['permissions'];
+            }
+          } else {
+            print('❌ Document collaborateur non trouvé avec ID');
+          }
+        }
+        
+        // 2. Si aucun document n'est trouvé avec l'ID, essayer avec l'UID
+        if (permissions == null) {
+          print('🔍 Recherche du document collaborateur avec UID: ${user.uid}');
+          final collabDocByUid = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .doc(user.uid)
+              .get();
+              
+          if (collabDocByUid.exists) {
+            collabDoc = collabDocByUid;
+            print('✅ Document collaborateur trouvé avec UID');
+            
+            // ignore: unnecessary_cast
+            final collabData = collabDocByUid.data() as Map<String, dynamic>?;
+            if (collabData != null && collabData['permissions'] != null) {
+              permissions = collabData['permissions'];
+            }
+          } else {
+            print('❌ Document collaborateur non trouvé même avec UID');
+          }
+        }
+        
+        // Vérifier les permissions
+        if (permissions == null) {
+          print('❌ Aucune permission trouvée pour le collaborateur');
+          throw Exception('Permissions non trouvées pour envoyer des emails');
+        }
+        
+        print('📋 Permissions collaborateur:');
+        print('   - Lecture: ${permissions['lecture'] == true ? "✅" : "❌"}');
+        print('   - Écriture: ${permissions['ecriture'] == true ? "✅" : "❌"}');
+        
+        // Autoriser l'envoi d'email si le collaborateur a au moins la permission de lecture
+        if (!(permissions['lecture'] == true)) {
+          print('❌ Collaborateur sans permission de lecture');
           throw Exception('Permissions insuffisantes pour envoyer des emails');
         }
+        
+        print('✅ Collaborateur avec permission suffisante pour envoyer des emails');
 
         // Récupérer les données de l'entreprise depuis le document de l'admin
         final adminDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(adminId)
-            .collection('authentification')
-            .doc(adminId)
             .get();
-
-        if (adminDoc.exists) {
+            
+        if (!adminDoc.exists) {
+          print('⚠️ Document admin principal non trouvé, recherche dans authentification...');
+          // Essayer de trouver les données dans la collection authentification
+          final adminAuthDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .doc(adminId)
+              .get();
+              
+          if (adminAuthDoc.exists) {
+            print('✅ Document admin trouvé dans authentification');
+            nomEntreprise = adminAuthDoc.data()?['nomEntreprise'] ?? 'Contraloc';
+            adresse = adminAuthDoc.data()?['adresse'] ?? '';
+            telephone = adminAuthDoc.data()?['telephone'] ?? '';
+            logoUrl = adminAuthDoc.data()?['logoUrl'];
+          } else {
+            print('❌ Document admin non trouvé même dans authentification');
+          }
+        } else {
           nomEntreprise = adminDoc.data()?['nomEntreprise'] ?? 'Contraloc';
           adresse = adminDoc.data()?['adresse'] ?? '';
           telephone = adminDoc.data()?['telephone'] ?? '';

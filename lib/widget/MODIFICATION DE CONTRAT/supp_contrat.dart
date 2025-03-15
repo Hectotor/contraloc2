@@ -48,29 +48,76 @@ class SuppContrat {
 
       if (userData != null && userData['role'] == 'collaborateur') {
         final adminId = userData['adminId'];
+        final collabId = userData['id']; // Récupérer l'ID du collaborateur
         print('👥 Utilisateur collaborateur détecté');
         print('   - Admin ID: $adminId');
+        print('   - Collab ID: $collabId');
+        targetUserId = adminId;
 
-        // Vérifier les permissions du collaborateur
-        final collabDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(adminId)
-            .collection('authentification')
-            .doc(user.uid)
-            .get();
-
-        final collabData = collabDoc.data();
-        if (collabData != null && collabData['permissions'] != null) {
-          final permissions = collabData['permissions'];
+        // Vérifier les permissions du collaborateur en utilisant une approche similaire à _getCollaborateurPermissions()
+        DocumentSnapshot? collabDoc;
+        Map<String, dynamic>? permissions;
+        
+        // 1. Essayer d'abord avec l'ID du collaborateur
+        if (collabId != null) {
+          print('🔍 Recherche du document collaborateur avec ID: $collabId');
+          final querySnapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .where('id', isEqualTo: collabId)
+              .limit(1)
+              .get();
+              
+          if (querySnapshot.docs.isNotEmpty) {
+            collabDoc = querySnapshot.docs.first;
+            print('✅ Document collaborateur trouvé avec ID');
+            
+            // ignore: unnecessary_cast
+            Map<String, dynamic>? collabData = collabDoc.data() as Map<String, dynamic>?;
+            if (collabData != null && collabData['permissions'] != null) {
+              permissions = collabData['permissions'];
+            }
+          } else {
+            print('❌ Document collaborateur non trouvé avec ID');
+          }
+        }
+        
+        // 2. Si aucun document n'est trouvé avec l'ID, essayer avec l'UID
+        if (permissions == null) {
+          print('🔍 Recherche du document collaborateur avec UID: ${user.uid}');
+          final collabDocByUid = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .doc(user.uid)
+              .get();
+              
+          if (collabDocByUid.exists) {
+            collabDoc = collabDocByUid;
+            print('✅ Document collaborateur trouvé avec UID');
+            
+            // ignore: unnecessary_cast
+            Map<String, dynamic>? collabData = collabDocByUid.data() as Map<String, dynamic>?;
+            if (collabData != null && collabData['permissions'] != null) {
+              permissions = collabData['permissions'];
+            }
+          } else {
+            print('❌ Document collaborateur non trouvé même avec UID');
+          }
+        }
+        
+        // 3. Vérifier les permissions
+        if (permissions != null) {
           print('📋 Permissions collaborateur:');
           print('   - Lecture: ${permissions['lecture'] == true ? "✅" : "❌"}');
           print('   - Écriture: ${permissions['ecriture'] == true ? "✅" : "❌"}');
+          print('   - Suppression: ${permissions['suppression'] == true ? "✅" : "❌"}');
           
-          if (permissions['ecriture'] == true) {
-            print('✅ Collaborateur avec permission d\'écriture');
-            targetUserId = adminId;
+          if (permissions['suppression'] == true) {
+            print('✅ Collaborateur avec permission de suppression');
           } else {
-            print('❌ Collaborateur sans permission d\'écriture');
+            print('❌ Collaborateur sans permission de suppression');
             if (dialogContext != null && dialogContext!.mounted) {
               Navigator.pop(dialogContext!);
             }
@@ -161,9 +208,23 @@ class SuppContrat {
         Navigator.pop(dialogContext!);
       }
 
-      // Retourner à l'écran précédent
+      // Afficher un message de succès
       if (context.mounted) {
-        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Contrat supprimé avec succès'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        
+        // Retourner à l'écran précédent après un court délai pour permettre à l'utilisateur de voir le message
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (context.mounted) {
+            // Utiliser maybePop pour éviter les erreurs si nous sommes déjà à la racine
+            Navigator.of(context).maybePop();
+          }
+        });
       }
     } catch (e) {
       // Fermer le dialogue de chargement en cas d'erreur

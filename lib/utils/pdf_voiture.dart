@@ -1,5 +1,6 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:intl/intl.dart'; // Importer la bibliothèque Intl pour utiliser DateFormat
 
 class PdfVoitureWidget {
   static pw.Widget build({
@@ -27,54 +28,48 @@ class PdfVoitureWidget {
     required pw.Font boldFont,
     required pw.Font ttf,
   }) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(15),
-      decoration: pw.BoxDecoration(
-        color: PdfColors.grey100,
-        border: pw.Border.all(color: PdfColors.black),
-        borderRadius: pw.BorderRadius.circular(8),
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text('Conditions de la Location:',
-              style: pw.TextStyle(
-                fontSize: 15,
-                font: boldFont,
-                color: PdfColors.blue900,
-              )),
-          pw.Divider(color: PdfColors.black),
-          pw.SizedBox(height: 12),
-          pw.Text('Informations du Véhicule:',
-              style: pw.TextStyle(fontSize: 12, font: boldFont)),
-          _buildVehiculeInfo(data, typeCarburant, boiteVitesses, assuranceNom,
-              assuranceNumero, franchise, ttf),
-          pw.SizedBox(height: 12),
-          pw.Text('Détails de la Location:',
-              style: pw.TextStyle(fontSize: 12, font: boldFont)),
-          _buildLocationDetails(
-              dateDebut,
-              dateFinTheorique,
-              dateFinEffectifData,
-              kilometrageDepart,
-              kilometrageAutorise,
-              kilometrageRetour,
-              kilometrageSupp,
-              typeLocation,
-              pourcentageEssence,
-              dureeTheorique,
-              dureeEffectif,
-              prixLocation,
-              prixRayures,
-              coutTotalTheorique,
-              coutTotal,
-              data['nettoyageInt'] ?? '',
-              data['nettoyageExt'] ?? '',
-              data['carburantManquant'] ?? '',
-              data['caution'] ?? '', // Ajouter ce paramètre
-              ttf),
-        ],
-      ),
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text('INFORMATIONS DU VÉHICULE',
+            style: pw.TextStyle(
+              font: boldFont,
+              fontSize: 14,
+              color: PdfColors.blue900,
+            )),
+        pw.SizedBox(height: 5),
+        _buildVehiculeInfo(data, typeCarburant, boiteVitesses, assuranceNom,
+            assuranceNumero, franchise, ttf),
+        pw.SizedBox(height: 15),
+        pw.Text('INFORMATIONS DE LOCATION',
+            style: pw.TextStyle(
+              font: boldFont,
+              fontSize: 14,
+              color: PdfColors.blue900,
+            )),
+        pw.SizedBox(height: 5),
+        _buildLocationDetails(
+            dateDebut,
+            dateFinTheorique,
+            dateFinEffectifData,
+            kilometrageDepart,
+            kilometrageAutorise,
+            kilometrageRetour,
+            kilometrageSupp,
+            typeLocation,
+            pourcentageEssence,
+            dureeTheorique,
+            dureeEffectif,
+            prixLocation,
+            prixRayures,
+            coutTotalTheorique,
+            coutTotal,
+            data['nettoyageInt'] ?? '',
+            data['nettoyageExt'] ?? '',
+            data['carburantManquant'] ?? '',
+            data['caution'] ?? '',
+            ttf),
+      ],
     );
   }
 
@@ -138,173 +133,518 @@ class PdfVoitureWidget {
       String nettoyageInt,
       String nettoyageExt,
       String carburantManquant,
-      String caution, // Ajouter ce paramètre
+      String caution,
       pw.Font ttf) {
     double calculateKmSupp() {
       try {
-        double kmDepart = double.parse(kilometrageDepart);
-        double kmAutorise = double.parse(kilometrageAutorise);
-        double kmRetour = double.parse(kilometrageRetour);
-        double prixKmSupp = double.parse(kilometrageSupp);
-        
-        // Calculer la distance maximale autorisée
-        double distanceMax = kmDepart + kmAutorise;
-        
-        // Si le kilométrage de retour dépasse la distance maximale, calculer le coût supplémentaire
-        if (kmRetour > distanceMax) {
-          return (kmRetour - distanceMax) * prixKmSupp;
-        } else {
-          return 0.0; // Pas de coût supplémentaire si dans la limite
+        if (kilometrageRetour.isEmpty || kilometrageDepart.isEmpty || kilometrageAutorise.isEmpty || kilometrageSupp.isEmpty) {
+          return 0.0;
         }
+        
+        double kmRetour = double.parse(kilometrageRetour.replaceAll(' ', ''));
+        double kmDepart = double.parse(kilometrageDepart.replaceAll(' ', ''));
+        double kmAutorise = double.parse(kilometrageAutorise.replaceAll(' ', ''));
+        double prixKmSupp = double.parse(kilometrageSupp.replaceAll(' ', ''));
+        
+        double kmParcourus = kmRetour - kmDepart;
+        double kmSupplementaires = kmParcourus > kmAutorise ? kmParcourus - kmAutorise : 0;
+        
+        return kmSupplementaires * prixKmSupp;
       } catch (e) {
-        return 0.0; // Gestion des erreurs
+        return 0.0;
       }
     }
-
+    
+    double calculateKmParcourus() {
+      try {
+        if (kilometrageRetour.isEmpty || kilometrageDepart.isEmpty) {
+          return 0.0;
+        }
+        
+        double kmRetour = double.parse(kilometrageRetour.replaceAll(' ', ''));
+        double kmDepart = double.parse(kilometrageDepart.replaceAll(' ', ''));
+        
+        return kmRetour - kmDepart;
+      } catch (e) {
+        return 0.0;
+      }
+    }
+    
+    double calculateCoutTotalTheorique() {
+      try {
+        if (prixLocation.isEmpty || dateDebut.isEmpty || dateFinTheorique.isEmpty) {
+          return 0.0;
+        }
+        
+        // Convertir les dates en objets DateTime en gérant différents formats possibles
+        DateTime debut;
+        DateTime finTheorique;
+        
+        try {
+          // Essayer le format ISO (yyyy-MM-dd)
+          debut = DateTime.parse(dateDebut);
+          finTheorique = DateTime.parse(dateFinTheorique);
+        } catch (e) {
+          try {
+            // Essayer le format français (dd/MM/yyyy)
+            DateFormat dateFormat = DateFormat("dd/MM/yyyy");
+            debut = dateFormat.parse(dateDebut);
+            finTheorique = dateFormat.parse(dateFinTheorique);
+          } catch (e) {
+            try {
+              // Essayer le format avec jour de la semaine (ex: "samedi 15 mars 2025")
+              // Extraire les parties numériques de la date
+              RegExp regExp = RegExp(r'(\d+)\s+(\w+)\s+(\d+)');
+              
+              Match? matchDebut = regExp.firstMatch(dateDebut);
+              Match? matchFin = regExp.firstMatch(dateFinTheorique);
+              
+              if (matchDebut != null && matchFin != null) {
+                // Convertir le mois en numéro
+                Map<String, String> moisEnNumero = {
+                  'janvier': '01', 'février': '02', 'mars': '03', 'avril': '04',
+                  'mai': '05', 'juin': '06', 'juillet': '07', 'août': '08',
+                  'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12'
+                };
+                
+                String jourDebut = matchDebut.group(1) ?? '';
+                String moisDebutStr = matchDebut.group(2) ?? '';
+                String anneeDebut = matchDebut.group(3) ?? '';
+                
+                String jourFin = matchFin.group(1) ?? '';
+                String moisFinStr = matchFin.group(2) ?? '';
+                String anneeFin = matchFin.group(3) ?? '';
+                
+                String moisDebutNum = moisEnNumero[moisDebutStr.toLowerCase()] ?? '';
+                String moisFinNum = moisEnNumero[moisFinStr.toLowerCase()] ?? '';
+                
+                if (jourDebut.isNotEmpty && moisDebutNum.isNotEmpty && anneeDebut.isNotEmpty &&
+                    jourFin.isNotEmpty && moisFinNum.isNotEmpty && anneeFin.isNotEmpty) {
+                  // Formater en yyyy-MM-dd pour le parsing
+                  String dateDebutFormatee = '$anneeDebut-$moisDebutNum-${jourDebut.padLeft(2, '0')}';
+                  String dateFinFormatee = '$anneeFin-$moisFinNum-${jourFin.padLeft(2, '0')}';
+                  
+                  debut = DateTime.parse(dateDebutFormatee);
+                  finTheorique = DateTime.parse(dateFinFormatee);
+                } else {
+                  throw Exception('Format de date invalide');
+                }
+              } else {
+                throw Exception('Format de date non reconnu');
+              }
+            } catch (e) {
+              // Si aucun format ne fonctionne, utiliser dureeTheorique
+              if (prixLocation.isEmpty || dureeTheorique <= 0) {
+                return 0.0;
+              }
+              
+              double prixJournalier = double.parse(prixLocation.replaceAll(' ', ''));
+              return prixJournalier * dureeTheorique;
+            }
+          }
+        }
+        
+        // Calculer la différence en jours
+        int differenceEnJours = finTheorique.difference(debut).inDays;
+        
+        // Si la différence est négative ou nulle, utiliser dureeTheorique comme fallback
+        if (differenceEnJours <= 0) {
+          differenceEnJours = dureeTheorique;
+        }
+        
+        double prixJournalier = double.parse(prixLocation.replaceAll(' ', ''));
+        return prixJournalier * differenceEnJours;
+      } catch (e) {
+        // En cas d'erreur, utiliser dureeTheorique comme fallback
+        try {
+          if (prixLocation.isEmpty || dureeTheorique <= 0) {
+            return 0.0;
+          }
+          
+          double prixJournalier = double.parse(prixLocation.replaceAll(' ', ''));
+          return prixJournalier * dureeTheorique;
+        } catch (e) {
+          return 0.0;
+        }
+      }
+    }
+    
+    double calculateCoutTotalEffectif() {
+      try {
+        if (prixLocation.isEmpty || dateDebut.isEmpty || dateFinEffectifData.isEmpty) {
+          return 0.0;
+        }
+        
+        // Convertir les dates en objets DateTime en gérant différents formats possibles
+        DateTime debut;
+        DateTime finEffective;
+        
+        try {
+          // Essayer le format ISO (yyyy-MM-dd)
+          debut = DateTime.parse(dateDebut);
+          finEffective = DateTime.parse(dateFinEffectifData);
+        } catch (e) {
+          try {
+            // Essayer le format français (dd/MM/yyyy)
+            DateFormat dateFormat = DateFormat("dd/MM/yyyy");
+            debut = dateFormat.parse(dateDebut);
+            finEffective = dateFormat.parse(dateFinEffectifData);
+          } catch (e) {
+            try {
+              // Essayer le format avec jour de la semaine (ex: "samedi 15 mars 2025")
+              // Extraire les parties numériques de la date
+              RegExp regExp = RegExp(r'(\d+)\s+(\w+)\s+(\d+)');
+              
+              Match? matchDebut = regExp.firstMatch(dateDebut);
+              Match? matchFin = regExp.firstMatch(dateFinEffectifData);
+              
+              if (matchDebut != null && matchFin != null) {
+                // Convertir le mois en numéro
+                Map<String, String> moisEnNumero = {
+                  'janvier': '01', 'février': '02', 'mars': '03', 'avril': '04',
+                  'mai': '05', 'juin': '06', 'juillet': '07', 'août': '08',
+                  'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12'
+                };
+                
+                String jourDebut = matchDebut.group(1) ?? '';
+                String moisDebutStr = matchDebut.group(2) ?? '';
+                String anneeDebut = matchDebut.group(3) ?? '';
+                
+                String jourFin = matchFin.group(1) ?? '';
+                String moisFinStr = matchFin.group(2) ?? '';
+                String anneeFin = matchFin.group(3) ?? '';
+                
+                String moisDebutNum = moisEnNumero[moisDebutStr.toLowerCase()] ?? '';
+                String moisFinNum = moisEnNumero[moisFinStr.toLowerCase()] ?? '';
+                
+                if (jourDebut.isNotEmpty && moisDebutNum.isNotEmpty && anneeDebut.isNotEmpty &&
+                    jourFin.isNotEmpty && moisFinNum.isNotEmpty && anneeFin.isNotEmpty) {
+                  // Formater en yyyy-MM-dd pour le parsing
+                  String dateDebutFormatee = '$anneeDebut-$moisDebutNum-${jourDebut.padLeft(2, '0')}';
+                  String dateFinFormatee = '$anneeFin-$moisFinNum-${jourFin.padLeft(2, '0')}';
+                  
+                  debut = DateTime.parse(dateDebutFormatee);
+                  finEffective = DateTime.parse(dateFinFormatee);
+                } else {
+                  throw Exception('Format de date invalide');
+                }
+              } else {
+                throw Exception('Format de date non reconnu');
+              }
+            } catch (e) {
+              // Si aucun format ne fonctionne, utiliser dureeEffectif
+              if (prixLocation.isEmpty || dureeEffectif <= 0) {
+                return 0.0;
+              }
+              
+              double prixJournalier = double.parse(prixLocation.replaceAll(' ', ''));
+              return prixJournalier * dureeEffectif;
+            }
+          }
+        }
+        
+        // Calculer la différence en jours
+        int differenceEnJours = finEffective.difference(debut).inDays;
+        
+        // Si la différence est négative ou nulle, utiliser dureeEffectif comme fallback
+        if (differenceEnJours <= 0) {
+          differenceEnJours = dureeEffectif;
+        }
+        
+        double prixJournalier = double.parse(prixLocation.replaceAll(' ', ''));
+        return prixJournalier * differenceEnJours;
+      } catch (e) {
+        // En cas d'erreur, utiliser dureeEffectif comme fallback
+        try {
+          if (prixLocation.isEmpty || dureeEffectif <= 0) {
+            return 0.0;
+          }
+          
+          double prixJournalier = double.parse(prixLocation.replaceAll(' ', ''));
+          return prixJournalier * dureeEffectif;
+        } catch (e) {
+          return 0.0;
+        }
+      }
+    }
+    
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        // Dates and Duration section
-        pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text('Date de début: ${dateDebut.isEmpty ? '' : dateDebut}',
-                style: pw.TextStyle(font: ttf, fontSize: 10)),
-                pw.SizedBox(height: 5),
-            pw.Text('Date de fin théorique: ${dateFinTheorique.isEmpty ? '' : dateFinTheorique}',
-                style: pw.TextStyle(font: ttf, fontSize: 10)),
-                pw.SizedBox(height: 5),
-            pw.Text('Date de fin effectif: ${dateFinEffectifData.isEmpty ? '' : dateFinEffectifData}',
-                style: pw.TextStyle(font: ttf, fontSize: 10)),
-            pw.SizedBox(height: 5),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text('Durée théorique: $dureeTheorique jours',
-                    style: pw.TextStyle(font: ttf, fontSize: 10)),
-                pw.Text('Durée effective: $dureeEffectif jours',
-                    style: pw.TextStyle(font: ttf, fontSize: 10)),
-              ],
-            ),
-            pw.SizedBox(height: 5),
-          ],
+        // Informations générales
+        pw.Container(
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+          ),
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Type de location: $typeLocation',
+                    style: pw.TextStyle(
+                      font: ttf,
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                    )),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('', 
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 10)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Caution: $caution €',
+                      style: pw.TextStyle(font: ttf, fontSize: 10)),
+                ),
+              ),
+            ],
+          ),
         ),
+        pw.SizedBox(height: 5),
 
-        // Location Type and Basic Info
-        pw.Column(
-          children: [
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text('Type de location: $typeLocation',
-                    style: pw.TextStyle(font: ttf, fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                pw.Text('Caution: $caution €',
+        // Dates et durée
+        pw.Container(
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Date de début: ${dateDebut.isEmpty ? '' : dateDebut}',
                     style: pw.TextStyle(font: ttf, fontSize: 10)),
-              ],
-            ),
-            pw.SizedBox(height: 5),
-          ],
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('Date de fin théorique: ${dateFinTheorique.isEmpty ? '' : dateFinTheorique}',
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 10)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Date de fin effectif: ${dateFinEffectifData.isEmpty ? '' : dateFinEffectifData}',
+                      style: pw.TextStyle(font: ttf, fontSize: 10)),
+                ),
+              ),
+            ],
+          ),
         ),
+        pw.SizedBox(height: 5),
 
-        // Kilométrage section
-        pw.Column(
-          children: [
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text('Km de départ: $kilometrageDepart km',
+        // Coût de la location
+        pw.Container(
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+          ),
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Montant journalier: ${typeLocation == "Gratuite" ? "0" : "$prixLocation"} €',
                     style: pw.TextStyle(font: ttf, fontSize: 10)),
-                pw.Text('Km de retour: $kilometrageRetour km',
-                    style: pw.TextStyle(font: ttf, fontSize: 10)),
-              ],
-            ),
-            pw.SizedBox(height: 5),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text('Distance autorisée: $kilometrageAutorise km',
-                    style: pw.TextStyle(font: ttf, fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                pw.Text('Prix Km supp: $kilometrageSupp €/km',
-                    style: pw.TextStyle(font: ttf, fontSize: 10)),
-              ],
-            ),
-            pw.SizedBox(height: 5),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.end,
-              children: [
-                pw.Text('Coût total km supp: ${calculateKmSupp().toStringAsFixed(2)} €',
-                    style: pw.TextStyle(font: ttf, fontSize: 10, fontWeight: pw.FontWeight.bold)),
-              ],
-            ),
-            pw.SizedBox(height: 5),
-          ],
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('Coût total théorique: ${typeLocation == "Gratuite" ? "0" : calculateCoutTotalTheorique().toStringAsFixed(2)} €',
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 10)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Coût total effectif: ${typeLocation == "Gratuite" ? "0" : calculateCoutTotalEffectif().toStringAsFixed(2)} €',
+                      style: pw.TextStyle(font: ttf, fontSize: 10)),
+                ),
+              ),
+            ],
+          ),
         ),
+        pw.SizedBox(height: 5),
+
+        // Kilométrage ligne 1
+        pw.Container(
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Km de départ: $kilometrageDepart km',
+                    style: pw.TextStyle(font: ttf, fontSize: 10)),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('Km parcourus: ${calculateKmParcourus().toStringAsFixed(0)} km',
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 10)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Km de retour: $kilometrageRetour km',
+                      style: pw.TextStyle(font: ttf, fontSize: 10)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 3),
+        
+        // Kilométrage ligne 2
+        pw.Container(
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+          ),
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Distance autorisée: $kilometrageAutorise km',
+                    style: pw.TextStyle(font: ttf, fontSize: 10, fontWeight: pw.FontWeight.bold)),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('Prix Km supp: $kilometrageSupp €/km',
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 10)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Coût total km supp: ${calculateKmSupp().toStringAsFixed(2)} €',
+                      style: pw.TextStyle(font: ttf, fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 5),
 
         // État du véhicule
-        pw.Column(
-          children: [
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text('Niveau d\'essence: $pourcentageEssence%',
+        pw.Container(
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Niveau d\'essence: $pourcentageEssence%',
                     style: pw.TextStyle(font: ttf, fontSize: 10)),
-                pw.Text('Prix Rayures/élement: $prixRayures €',
-                    style: pw.TextStyle(font: ttf, fontSize: 10)),
-              ],
-            ),
-            pw.SizedBox(height: 5),
-          ],
-        ),
-
-        // Frais additionnels
-        pw.Column(
-          children: [
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text('Frais de nettoyage intérieur: $nettoyageInt €',
-                    style: pw.TextStyle(font: ttf, fontSize: 10)),
-                pw.Text('Frais de nettoyage extérieur: $nettoyageExt €',
-                    style: pw.TextStyle(font: ttf, fontSize: 10)),
-              ],
-            ),
-            pw.SizedBox(height: 5),
-            pw.Column(
-              children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.start,
-                  children: [
-                    pw.Text('Carburant manquant: $carburantManquant €',
-                        style: pw.TextStyle(font: ttf, fontSize: 10)),
-                  ],
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('', 
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 10)),
                 ),
-                pw.SizedBox(height: 5),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
+        pw.SizedBox(height: 5),
 
-        // Prix et coûts
-        pw.Column(
-          children: [
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text('Montant journalier: ${typeLocation == "Gratuite" ? "0" : "$prixLocation"} €',
+        // Frais supplémentaires
+        pw.Text('Frais supplémentaires (si applicable)',
+            style: pw.TextStyle(font: ttf, fontSize: 11, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 5),
+        
+        // Frais supplémentaires ligne 1
+        pw.Container(
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+          ),
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Frais de nettoyage intérieur: $nettoyageInt €',
                     style: pw.TextStyle(font: ttf, fontSize: 10)),
-                pw.Text('Coût total théorique: ${typeLocation == "Gratuite" ? "0" : (coutTotalTheorique?.isNaN ?? true ? '0.0' : coutTotalTheorique.toString())} €',
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('', 
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 10)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Frais de nettoyage extérieur: $nettoyageExt €',
+                      style: pw.TextStyle(font: ttf, fontSize: 10)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 3),
+        
+        // Frais supplémentaires ligne 2
+        pw.Container(
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Frais de carburant manquant: $carburantManquant €',
                     style: pw.TextStyle(font: ttf, fontSize: 10)),
-              ],
-            ),
-            pw.SizedBox(height: 5),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.start,
-              children: [
-                pw.Text('Coût total effectif: ${typeLocation == "Gratuite" ? "0" : (coutTotal?.isNaN ?? true ? '0.0' : coutTotal.toString())} €',
-                    style: pw.TextStyle(font: ttf, fontSize: 10)),
-              ],
-            ),
-          ],
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('', 
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 10)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Frais de rayures/dommages: $prixRayures €',
+                      style: pw.TextStyle(font: ttf, fontSize: 10)),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

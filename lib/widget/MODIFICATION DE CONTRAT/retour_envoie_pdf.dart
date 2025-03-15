@@ -60,38 +60,142 @@ class RetourEnvoiePdf {
         
         // Vérifier les permissions du collaborateur
         print('👥 Utilisateur collaborateur détecté, vérification des permissions...');
-        final collabDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(adminId)
-            .collection('authentification')
-            .doc(user.uid)
-            .get();
+        
+        // Récupérer l'ID du collaborateur depuis son document principal
+        final collabId = userData['id'];
+        print('   - Collab ID: $collabId');
+        print('   - Admin ID: $adminId');
 
-        final collabData = collabDoc.data();
-        if (collabData != null && collabData['permissions'] != null) {
-          if (collabData['permissions']['ecriture'] == true) {
-            print('✅ Collaborateur avec permission d\'écriture');
+        // Vérifier les permissions du collaborateur - approche similaire à celle utilisée dans supp_contrat.dart
+        DocumentSnapshot? collabDoc;
+        Map<String, dynamic>? permissions;
+        
+        // 1. Essayer d'abord avec l'ID du collaborateur
+        if (collabId != null) {
+          print('🔍 Recherche du document collaborateur avec ID: $collabId');
+          final querySnapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .where('id', isEqualTo: collabId)
+              .limit(1)
+              .get();
+              
+          if (querySnapshot.docs.isNotEmpty) {
+            collabDoc = querySnapshot.docs.first;
+            print('✅ Document collaborateur trouvé avec ID');
+            
+            // ignore: unnecessary_cast
+            final collabData = collabDoc.data() as Map<String, dynamic>?;
+            if (collabData != null && collabData['permissions'] != null) {
+              permissions = collabData['permissions'];
+            }
           } else {
-            print('❌ Collaborateur sans permission d\'écriture');
-            throw Exception("Vous n'avez pas la permission de générer des PDF");
+            print('❌ Document collaborateur non trouvé avec ID');
           }
         }
+        
+        // 2. Si aucun document n'est trouvé avec l'ID, essayer avec l'UID
+        if (permissions == null) {
+          print('🔍 Recherche du document collaborateur avec UID: ${user.uid}');
+          final collabDocByUid = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .doc(user.uid)
+              .get();
+              
+          if (collabDocByUid.exists) {
+            collabDoc = collabDocByUid;
+            print('✅ Document collaborateur trouvé avec UID');
+            
+            // ignore: unnecessary_cast
+            final collabData = collabDocByUid.data() as Map<String, dynamic>?;
+            if (collabData != null && collabData['permissions'] != null) {
+              permissions = collabData['permissions'];
+            }
+          } else {
+            print('❌ Document collaborateur non trouvé même avec UID');
+          }
+        }
+        
+        // Vérifier les permissions
+        if (permissions == null) {
+          print('❌ Aucune permission trouvée pour le collaborateur');
+          // Fermer le dialogue de chargement
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Permissions non trouvées pour générer le PDF"),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+        
+        print('📋 Permissions collaborateur:');
+        print('   - Lecture: ${permissions['lecture'] == true ? "✅" : "❌"}');
+        print('   - Écriture: ${permissions['ecriture'] == true ? "✅" : "❌"}');
+        
+        // Vérifier si le collaborateur a la permission d'écriture
+        if (!(permissions['ecriture'] == true)) {
+          print('❌ Collaborateur sans permission d\'écriture');
+          // Fermer le dialogue de chargement
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Vous n'avez pas la permission de générer des PDF"),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+        
+        print('✅ Collaborateur avec permission d\'écriture');
       } else {
         print('👤 Utilisateur admin');
       }
 
       // Récupérer les informations de l'entreprise depuis le document principal de l'admin
       print('📄 Récupération des données de l\'entreprise...');
-      DocumentSnapshot adminDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(targetUserId)
-          .get();
+      DocumentSnapshot adminDoc;
+      try {
+        adminDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(targetUserId)
+            .get();
 
-      if (!adminDoc.exists) {
-        throw Exception('Données administrateur non trouvées');
+        if (!adminDoc.exists) {
+          print('⚠️ Document admin principal non trouvé, recherche dans authentification...');
+          // Essayer de trouver les données dans la collection authentification
+          final adminAuthDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(targetUserId)
+              .collection('authentification')
+              .doc(targetUserId)
+              .get();
+              
+          if (adminAuthDoc.exists) {
+            adminDoc = adminAuthDoc;
+            print('✅ Document admin trouvé dans authentification');
+          } else {
+            print('❌ Document admin non trouvé même dans authentification');
+            throw Exception('Données administrateur non trouvées');
+          }
+        }
+      } catch (e) {
+        print('❌ Erreur lors de la récupération des données admin: $e');
+        
+        // Créer un DocumentSnapshot factice
+        adminDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc('default')
+            .get();
+            
+        print('⚠️ Utilisation des données par défaut pour l\'entreprise');
       }
 
-      final adminData = adminDoc.data() as Map<String, dynamic>;
+      final adminData = adminDoc.data() as Map<String, dynamic>? ?? {};
 
       // Récupérer les informations de l'entreprise
       String nomEntreprise = isCollaborateur ? adminData['nomEntreprise'] ?? 'Contraloc' : userData?['nomEntreprise'] ?? 'Contraloc';
@@ -235,22 +339,43 @@ class RetourEnvoiePdf {
       // Envoyer le PDF par email si un email est disponible
       if ((mergedData['email'] ?? '').toString().isNotEmpty) {
         print('📧 Envoi du PDF par email à ${mergedData['email']}...');
-        await EmailService.sendEmailWithPdf(
-          pdfPath: pdfPath,
-          email: (mergedData['email'] ?? '').toString(),
-          marque: (mergedData['marque'] ?? '').toString(),
-          modele: (mergedData['modele'] ?? '').toString(),
-          context: context,
-          prenom: (mergedData['prenom'] ?? '').toString(),
-          nom: (mergedData['nom'] ?? '').toString(),
-          nomEntreprise: nomEntreprise,
-          adresse: adresse,
-          telephone: telephone,
-          logoUrl: logoUrl,
-        );
-        print('✅ PDF envoyé avec succès');
+        try {
+          await EmailService.sendEmailWithPdf(
+            pdfPath: pdfPath,
+            email: (mergedData['email'] ?? '').toString(),
+            marque: (mergedData['marque'] ?? '').toString(),
+            modele: (mergedData['modele'] ?? '').toString(),
+            context: context,
+            prenom: (mergedData['prenom'] ?? '').toString(),
+            nom: (mergedData['nom'] ?? '').toString(),
+            nomEntreprise: nomEntreprise,
+            adresse: adresse,
+            telephone: telephone,
+            logoUrl: logoUrl,
+          );
+          print('✅ PDF envoyé avec succès');
+        } catch (e) {
+          print('⚠️ Erreur lors de l\'envoi du PDF par email: $e');
+          // Ne pas bloquer le processus de clôture en cas d'erreur d'envoi d'email
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Erreur lors de l'envoi de l'email: $e"),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
       } else {
-        print("❌ Aucun email client n'a été trouvé. Pas d'envoi de PDF.");
+        print("ℹ️ Aucun email client n'a été trouvé. Pas d'envoi de PDF.");
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Aucune adresse email disponible pour l'envoi du PDF"),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
 
       print('✨ Processus de clôture terminé avec succès');
