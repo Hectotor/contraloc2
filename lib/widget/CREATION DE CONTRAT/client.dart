@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'package:image_picker/image_picker.dart';
-import '../location.dart'; // Import de la page location
+import 'location.dart'; // Import de la page location
 import 'package:flutter/services.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:ContraLoc/USERS/abonnement_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'pop_choice_picture.dart';
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
@@ -203,94 +202,16 @@ class _ClientPageState extends State<ClientPage> {
   }
 
   Future<void> _pickImage(bool isRecto) async {
-    final picker = ImagePicker();
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.white, // Ajout du fond blanc
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Choisir une option",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF08004D),
-                ),
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                leading:
-                    const Icon(Icons.photo_camera, color: Color(0xFF08004D)),
-                title: const Text('Prendre une photo'),
-                onTap: () async {
-                  final pickedFile = await picker.pickImage(
-                    source: ImageSource.camera,
-                    imageQuality: 70,
-                  );
-                  if (pickedFile != null) {
-                    final compressedImage =
-                        await FlutterImageCompress.compressWithFile(
-                      pickedFile.path,
-                      minWidth: 800,
-                      minHeight: 800,
-                      quality: 85,
-                    );
-                    if (compressedImage != null) {
-                      setState(() {
-                        if (isRecto) {
-                          _permisRecto = File(pickedFile.path);
-                        } else {
-                          _permisVerso = File(pickedFile.path);
-                        }
-                      });
-                    }
-                  }
-                  Navigator.of(context).pop();
-                },
-              ),
-              ListTile(
-                leading:
-                    const Icon(Icons.photo_library, color: Color(0xFF08004D)),
-                title: const Text('Choisir depuis la galerie'),
-                onTap: () async {
-                  final pickedFile = await picker.pickImage(
-                    source: ImageSource.gallery,
-                    imageQuality: 70,
-                  );
-                  if (pickedFile != null) {
-                    final compressedImage =
-                        await FlutterImageCompress.compressWithFile(
-                      pickedFile.path,
-                      minWidth: 800,
-                      minHeight: 800,
-                      quality: 85,
-                    );
-                    if (compressedImage != null) {
-                      setState(() {
-                        if (isRecto) {
-                          _permisRecto = File(pickedFile.path);
-                        } else {
-                          _permisVerso = File(pickedFile.path);
-                        }
-                      });
-                    }
-                  }
-                  Navigator.of(context).pop();
-                },
-              ),
-
-            ],
-          ),
-        ),
-      ),
-    );
+    final selectedImage = await ImagePickerDialog.showImagePickerDialog(context);
+    if (selectedImage != null) {
+      setState(() {
+        if (isRecto) {
+          _permisRecto = selectedImage;
+        } else {
+          _permisVerso = selectedImage;
+        }
+      });
+    }
   }
 
   bool _isValidEmail(String email) {

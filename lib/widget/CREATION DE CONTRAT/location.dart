@@ -1,27 +1,23 @@
 import 'dart:convert'; // Ajout de l'import pour base64Encode
 import 'package:ContraLoc/utils/pdf.dart';
 import 'package:ContraLoc/USERS/contrat_condition.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:signature/signature.dart';
-import '../widget/navigation.dart';
+import '../navigation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'package:firebase_storage/firebase_storage.dart'; // Import Firebase Storage
-// ignore: depend_on_referenced_packages
 import 'package:intl/intl.dart'; // Import intl for date formatting
-import 'CREATION DE CONTRAT/etat_vehicule.dart';
-//import '../screens/contrat_screen.dart';
-import 'CREATION DE CONTRAT/commentaire.dart'; // Import the new commentaire.dart
-import 'chargement.dart'; // Import the new chargement.dart file
-import 'CREATION DE CONTRAT/signature.dart';
-import '../widget/CREATION DE CONTRAT/MAIL.DART';
-import 'CREATION DE CONTRAT/voiture_selectionne.dart'; // Import the new voiture_selectionne.dart file
-import 'CREATION DE CONTRAT/create_contrat.dart'; // Import the new create_contrat.dart file
-import 'CREATION DE CONTRAT/popup.dart'; // Import the new popup.dart file
-import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'etat_vehicule.dart';
+import 'commentaire.dart'; // Import the new commentaire.dart
+import '../chargement.dart'; // Import the new chargement.dart file
+import 'signature.dart';
+import 'MAIL.DART';
+import 'voiture_selectionne.dart'; // Import the new voiture_selectionne.dart file
+import 'create_contrat.dart'; // Import the new create_contrat.dart file
+import 'popup.dart'; // Import the new popup.dart file
 
 class LocationPage extends StatefulWidget {
   final String marque;
@@ -92,6 +88,9 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _boiteVitessesController = TextEditingController();
   final TextEditingController _typeLocationController = TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
+  final TextEditingController _commentaireRetourController = TextEditingController();
+  final TextEditingController _dateFinEffectifController = TextEditingController();
+  final TextEditingController _kilometrageRetourController = TextEditingController();
   
 
 
@@ -376,8 +375,7 @@ class _LocationPageState extends State<LocationPage> {
         })(),
         'dateCreation':
             FieldValue.serverTimestamp(), // Ajouter la date de création
-        'numeroPermis': widget.numeroPermis ??
-            '', // Assurez-vous que numeroPermis est bien stocké
+        'numeroPermis': widget.numeroPermis ??'', // Assurez-vous que numeroPermis est bien stocké
         'nettoyageInt': _nettoyageIntController.text,
         'nettoyageExt': _nettoyageExtController.text,
         'carburantManquant': _carburantManquantController.text,
@@ -484,16 +482,16 @@ class _LocationPageState extends State<LocationPage> {
             'siretEntreprise': siretEntreprise,
             'logoUrl': logoUrl,
           },
-          '', // dateFinEffectif
-          '', // kilometrageRetour
-          '', // commentaireRetour
+          _dateFinEffectifController.text, // dateFinEffectif
+          _kilometrageRetourController.text, // kilometrageRetour
+          _commentaireRetourController.text, // commentaireRetour
           [], // photosRetour
           nomEntreprise,
           logoUrl,
           adresseEntreprise,
           telephoneEntreprise,
           siretEntreprise,
-          '', // commentaireRetourData
+          _commentaireRetourController.text, // commentaireRetourData
           _typeCarburantController.text,
           _boiteVitessesController.text,
           _vinController.text,
@@ -504,7 +502,7 @@ class _LocationPageState extends State<LocationPage> {
           _rayuresController.text,
           _dateDebutController.text,
           _dateFinTheoriqueController.text,
-          '', // dateFinEffectifData
+          _dateFinEffectifController.text, // dateFinEffectifData
           _kilometrageDepartController.text,
           _kilometrageAutoriseController.text,
           _pourcentageEssence.toString(),
@@ -512,6 +510,7 @@ class _LocationPageState extends State<LocationPage> {
           _prixLocationController.text,
           condition: conditions,
           signatureBase64: _signatureBase64,
+          
         );
 
         // Envoyer le PDF par email
@@ -574,35 +573,20 @@ class _LocationPageState extends State<LocationPage> {
   Future<String> _compressAndUploadPhoto(
       File photo, String folder, String contratId) async {
     try {
-      final compressedImage = await FlutterImageCompress.compressWithFile(
-        photo.absolute.path,
-        minWidth: 800,
-        minHeight: 800,
-        quality: 85,
-      );
-
-      if (compressedImage != null) {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) {
-          throw Exception("Utilisateur non connecté");
-        }
-
-        String fileName =
-            '${folder}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        // Stocker dans le dossier de l'utilisateur
-        Reference ref = FirebaseStorage.instance
-            .ref()
-            .child('users/${user.uid}/locations/$contratId/$folder/$fileName');
-
-        // Create a temporary file for the compressed image
-        final tempDir = await getTemporaryDirectory();
-        final tempFile = File('${tempDir.path}/$fileName');
-        await tempFile.writeAsBytes(compressedImage);
-
-        await ref.putFile(tempFile);
-        return await ref.getDownloadURL();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception("Utilisateur non connecté");
       }
-      throw Exception("Image compression failed");
+
+      String fileName =
+          '${folder}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      // Stocker dans le dossier de l'utilisateur
+      Reference ref = FirebaseStorage.instance
+          .ref()
+          .child('users/${user.uid}/locations/$contratId/$folder/$fileName');
+
+      await ref.putFile(photo);
+      return await ref.getDownloadURL();
     } catch (e) {
       print('Erreur lors du traitement de l\'image : $e');
       rethrow;

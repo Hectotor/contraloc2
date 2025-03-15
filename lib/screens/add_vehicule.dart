@@ -8,7 +8,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path_provider/path_provider.dart';
 import '../widget/enregistrer_vehicule.dart';
-import '../widget/add_pho_car_atte.dart';
+import '../ajouter_vehicule/add_pho_car_atte.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter/cupertino.dart';
 import '../ajouter_vehicule/check_vehicle_limit.dart';
