@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'package:image_picker/image_picker.dart';
 import 'package:ContraLoc/USERS/abonnement_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ContraLoc/widget/CREATION DE CONTRAT/pop_choice_picture.dart';
 
 class EtatVehiculeRetour extends StatefulWidget {
   final List<File> photos;
@@ -33,25 +33,62 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
   Future<void> _checkPremiumStatus() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final doc = await FirebaseFirestore.instance
+      // 1. Vérifier si c'est un collaborateur
+      final userDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
           .doc(user.uid)
           .get();
 
-      if (doc.exists) {
-        final data = doc.data() ?? {};
-        final subscriptionId = data['subscriptionId'] ?? 'free';
-        final cb_subscription = data['cb_subscription'] ?? 'free';
+      if (!userDoc.exists) return;
+      
+      final userData = userDoc.data() ?? {};
+      final String role = userData['role'] ?? '';
+      
+      if (role == 'collaborateur') {
+        // Pour un collaborateur, on utilise les données de l'admin
+        final String adminId = userData['adminId'] ?? '';
+        final String collaborateurId = userData['id'] ?? '';
+        
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(adminId)
+            .collection('authentification')
+            .doc(collaborateurId)
+            .get();
+            
+        if (doc.exists) {
+          final data = doc.data() ?? {};
+          final subscriptionId = data['subscriptionId'] ?? 'free';
+          final cb_subscription = data['cb_subscription'] ?? 'free';
 
-        setState(() {
-          // L'utilisateur est premium si l'un des deux abonnements est premium
-          isPremiumUser = subscriptionId == 'premium-monthly_access' ||
-              subscriptionId == 'premium-yearly_access' ||
-              cb_subscription == 'premium-monthly_access' ||
-              cb_subscription == 'premium-yearly_access';
-        });
+          setState(() {
+            isPremiumUser = subscriptionId == 'premium-monthly_access' ||
+                subscriptionId == 'premium-yearly_access' ||
+                cb_subscription == 'premium-monthly_access' ||
+                cb_subscription == 'premium-yearly_access';
+          });
+        }
+      } else {
+        // Pour un admin, on garde la logique existante
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('authentification')
+            .doc(user.uid)
+            .get();
+
+        if (doc.exists) {
+          final data = doc.data() ?? {};
+          final subscriptionId = data['subscriptionId'] ?? 'free';
+          final cb_subscription = data['cb_subscription'] ?? 'free';
+
+          setState(() {
+            isPremiumUser = subscriptionId == 'premium-monthly_access' ||
+                subscriptionId == 'premium-yearly_access' ||
+                cb_subscription == 'premium-monthly_access' ||
+                cb_subscription == 'premium-yearly_access';
+          });
+        }
       }
     }
   }
@@ -110,6 +147,11 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
   }
 
   Future<void> _pickImage() async {
+    if (!isPremiumUser) {
+      _showPremiumDialog();
+      return;
+    }
+
     if (widget.photos.length >= 10) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -118,84 +160,17 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
       return;
     }
 
-    final picker = ImagePicker();
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.white, // Ajout du fond blanc
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Choisir une option",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF08004D),
-                ),
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                leading:
-                    const Icon(Icons.photo_library, color: Color(0xFF08004D)),
-                title: const Text('Choisir depuis la galerie'),
-                onTap: () async {
-                  final pickedFile = await picker.pickImage(
-                    source: ImageSource.gallery,
-                    imageQuality: 70,
-                  );
-                  if (pickedFile != null) {
-                    widget.onAddPhoto(File(pickedFile.path));
-                  }
-                  Navigator.of(context).pop();
-                },
-              ),
-              ListTile(
-                leading:
-                    const Icon(Icons.photo_camera, color: Color(0xFF08004D)),
-                title: const Text('Prendre une photo'),
-                onTap: () async {
-                  final pickedFile = await picker.pickImage(
-                    source: ImageSource.camera,
-                    imageQuality: 70,
-                  );
-                  if (pickedFile != null) {
-                    widget.onAddPhoto(File(pickedFile.path));
-                  }
-                  Navigator.of(context).pop();
-                },
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF08004D),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text(
-                    "Annuler",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final File? selectedImage = await ImagePickerDialog.showImagePickerDialog(
+      context,
+      imageQuality: 70,
+      compressWidth: 800,
+      compressHeight: 800,
+      compressQuality: 85,
     );
+
+    if (selectedImage != null) {
+      widget.onAddPhoto(selectedImage);
+    }
   }
 
   @override
@@ -220,63 +195,61 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
           icon: Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock,
               color: Colors.white),
           label: Text(
-            isPremiumUser
-                ? "Ajouter des photos"
-                : "Ajouter des photos (Premium)",
+            isPremiumUser ? "Ajouter des photos" : "Ajouter des photos",
             style: const TextStyle(color: Colors.white, fontSize: 18),
           ),
         ),
         const SizedBox(height: 10),
-        if (widget.photos.isNotEmpty && isPremiumUser) _buildPhotoScroll(),
+        if (widget.photos.isNotEmpty)
+          Container(
+            height: 120,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.grey[200],
+            ),
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: widget.photos.length,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          widget.photos[index],
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: () => widget.onRemovePhoto(index),
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
       ],
-    );
-  }
-
-  Widget _buildPhotoScroll() {
-    return SizedBox(
-      height: 250,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: widget.photos.length,
-        itemBuilder: (context, index) {
-          return Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.file(
-                    widget.photos[index],
-                    width: 200,
-                    height: 250,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 0,
-                right: 0,
-                child: GestureDetector(
-                  onTap: () {
-                    widget.onRemovePhoto(index);
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
     );
   }
 }
