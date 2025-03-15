@@ -7,11 +7,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path_provider/path_provider.dart';
-import '../widget/enregistrer_vehicule.dart';
-import '../ajouter_vehicule/add_pho_car_atte.dart';
+import '../ajouter_vehicule/enregistrer_vehicule.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter/cupertino.dart';
 import '../ajouter_vehicule/check_vehicle_limit.dart';
+import '../widget/CREATION DE CONTRAT/pop_choice_picture.dart';
+import '../widget/chargement.dart';
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
@@ -202,16 +203,21 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   }
 
   Future<void> _pickImage(String imageType) async {
-    final XFile? selectedImage =
-        await showImagePickerDialog(context, imageType);
+    final File? selectedImage = await ImagePickerDialog.showImagePickerDialog(
+      context,
+      imageQuality: 70,
+      compressWidth: 800,
+      compressHeight: 800,
+      compressQuality: 85,
+    );
     if (selectedImage != null) {
       setState(() {
         if (imageType == 'car') {
-          _carPhoto = selectedImage;
+          _carPhoto = XFile(selectedImage.path);
         } else if (imageType == 'carteGrise') {
-          _carteGrisePhoto = selectedImage;
+          _carteGrisePhoto = XFile(selectedImage.path);
         } else if (imageType == 'assurance') {
-          _assurancePhoto = selectedImage;
+          _assurancePhoto = XFile(selectedImage.path);
         }
       });
     }
@@ -643,18 +649,13 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                       backgroundColor: const Color(0xFF08004D),
                       minimumSize: const Size(double.infinity, 50),
                     ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          )
-                        : const Text(
-                            'Enregistrer',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.white,
-                            ),
-                          ),
+                    child: Text(
+                      'Enregistrer',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 40), // Ajout de la marge en bas
                 ],
@@ -662,14 +663,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
             ),
           ),
           if (_isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.5),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              ),
-            ),
+            const Chargement(message: "Enregistrement du véhicule en cours..."),
         ],
       ),
     );

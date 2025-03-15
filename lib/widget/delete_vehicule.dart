@@ -33,7 +33,7 @@ class DeleteVehicule {
           .collection('vehicules')
           .doc(immatriculationId)
           .get();
-          
+
       vehicleData = doc.data();
 
     }
@@ -204,27 +204,6 @@ class DeleteVehicule {
                   Navigator.pop(context);
                   _showDeleteConfirmationDialog(immatriculationId);
                 },
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF08004D),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text(
-                    "Annuler",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
               ),
             ],
           ),
