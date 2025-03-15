@@ -154,30 +154,32 @@ class RetourEnvoiePdf {
         print('👤 Utilisateur admin');
       }
 
-      // Récupérer les informations de l'entreprise depuis le document principal de l'admin
-      print('📄 Récupération des données de l\'entreprise...');
+      // Récupérer les informations de l'administrateur si c'est un collaborateur
       DocumentSnapshot adminDoc;
       try {
-        adminDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(targetUserId)
-            .get();
-
-        if (!adminDoc.exists) {
-          print('⚠️ Document admin principal non trouvé, recherche dans authentification...');
-          // Essayer de trouver les données dans la collection authentification
-          final adminAuthDoc = await FirebaseFirestore.instance
+        if (isCollaborateur && userData != null && userData['adminId'] != null) {
+          String adminId = userData['adminId'];
+          print('👤 Récupération des données de l\'administrateur pour le collaborateur...');
+          adminDoc = await FirebaseFirestore.instance
               .collection('users')
-              .doc(targetUserId)
-              .collection('authentification')
-              .doc(targetUserId)
+              .doc(adminId)
               .get();
               
-          if (adminAuthDoc.exists) {
-            adminDoc = adminAuthDoc;
-            print('✅ Document admin trouvé dans authentification');
+          if (!adminDoc.exists) {
+            print('❌ Document administrateur non trouvé');
+            throw Exception('Données administrateur non trouvées');
           } else {
-            print('❌ Document admin non trouvé même dans authentification');
+            print('✅ Document administrateur trouvé');
+          }
+        } else {
+          print('👤 Récupération des données de l\'utilisateur actuel...');
+          adminDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+              
+          if (!adminDoc.exists) {
+            print('❌ Document utilisateur non trouvé');
             throw Exception('Données administrateur non trouvées');
           }
         }
@@ -194,6 +196,9 @@ class RetourEnvoiePdf {
       }
 
       final adminData = adminDoc.data() as Map<String, dynamic>? ?? {};
+      
+      // Vérifier si les données de l'administrateur contiennent les informations nécessaires
+      print('🔍 Contenu de adminData: ${adminData.keys.toList()}');
 
       // Récupérer les informations de l'entreprise
       String nomEntreprise = isCollaborateur ? adminData['nomEntreprise'] ?? 'Contraloc' : userData?['nomEntreprise'] ?? 'Contraloc';
@@ -205,8 +210,11 @@ class RetourEnvoiePdf {
       print('🏢 Informations entreprise récupérées:');
       print('   - Nom: $nomEntreprise');
       print('   - SIRET: ${siret.isNotEmpty ? siret : "Non renseigné"}');
-      print('   - Logo: ${logoUrl.isNotEmpty ? "Présent" : "Non renseigné"}');
-
+      print('   - Logo: ${logoUrl.isNotEmpty ? "Présent ($logoUrl)" : "Non renseigné"}');
+      print('   - isCollaborateur: $isCollaborateur');
+      print('   - adminData: $adminData');
+      print('   - userData: $userData');
+      
       // Récupérer la signature du contrat
       print('📄 Récupération des données du contrat...');
       DocumentSnapshot contratDoc = await FirebaseFirestore.instance

@@ -7,18 +7,34 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter/services.dart' show NetworkAssetBundle, rootBundle;
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:http/http.dart' as http;
 import 'pdf_signa_cachet.dart';
 import 'pdf_voiture.dart';
 import 'pdf_info_contact.dart';
 
 Future<pw.MemoryImage?> _loadImageFromFirebaseStorage(String logoUrl) async {
   try {
-    // Télécharger les données de l'image
+    // Essayer d'abord de télécharger directement via HTTP, car l'URL contient déjà un token d'accès
+    try {
+      final response = await http.get(Uri.parse(logoUrl));
+      if (response.statusCode == 200) {
+        final logoBytes = response.bodyBytes;
+        if (logoBytes.isNotEmpty) {
+          print("Logo chargé avec succès via HTTP direct");
+          return pw.MemoryImage(logoBytes);
+        }
+      }
+    } catch (httpError) {
+      print("Échec du chargement du logo via HTTP direct : $httpError");
+    }
+    
+    // Si HTTP échoue, essayer via Firebase Storage
     final Uint8List? logoBytes = await FirebaseStorage.instance
         .refFromURL(logoUrl)
         .getData();
     
     if (logoBytes != null) {
+      print("Logo chargé avec succès via Firebase Storage");
       return pw.MemoryImage(logoBytes);
     }
   } catch (e) {
