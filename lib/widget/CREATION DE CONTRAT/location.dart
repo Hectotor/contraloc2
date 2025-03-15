@@ -115,69 +115,32 @@ class _LocationPageState extends State<LocationPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return '';
 
-    final userDoc = await _firestore.collection('users').doc(user.uid).get();
-    final userData = userDoc.data();
-    final targetUserId = userData != null && userData['role'] == 'collaborateur'
-        ? userData['adminId']
-        : user.uid;
-
-    print('👤 Données utilisateur: ${userData}');
-    print('👥 Utilisateur ${userData?['role']}, utilisation de l\'ID admin: $targetUserId');
-
-    if (userData != null && userData['role'] == 'collaborateur') {
-      await _ensureCollaboratorPermissions(user.uid, targetUserId, userData);
-    }
-
-    return targetUserId;
-  }
-
-  Future<void> _ensureCollaboratorPermissions(String userId, String adminId, Map<String, dynamic> userData) async {
-    final collabDoc = await _firestore
-        .collection('users')
-        .doc(adminId)
-        .collection('authentification')
-        .doc(userId)
-        .get();
-
-    final Map<String, dynamic> permissionsData = {
-      'id': userId,
-      'role': 'collaborateur',
-      'adminId': adminId,
-      'permissions': {
-        'lecture': true,
-        'ecriture': true,
-        'suppression': true
-      },
-      'limiteContrat': userData['limiteContrat'] ?? 10,
-      'numberOfCars': userData['numberOfCars'] ?? 1,
-      'subscriptionId': userData['subscriptionId'],
-      'cb_limite_contrat': userData['cb_limite_contrat'] ?? 10,
-      'cb_nb_car': userData['cb_nb_car'] ?? 1,
-      'cb_subscription': userData['cb_subscription'],
-    };
-
-    if (!collabDoc.exists) {
-      print('⚠️ Document collaborateur manquant, création...');
-      permissionsData['dateCreation'] = FieldValue.serverTimestamp();
-      await _firestore
+    try {
+      // 1. Vérifier si c'est un collaborateur
+      final userDoc = await _firestore
           .collection('users')
-          .doc(adminId)
-          .collection('authentification')
-          .doc(userId)
-          .set(permissionsData);
-      print('✅ Document collaborateur créé avec succès');
-    } else {
-      final permissions = collabDoc.data()?['permissions'] ?? {};
-      if (!(permissions['ecriture'] ?? false)) {
-        print('⚠️ Permissions manquantes, ajout des permissions...');
-        await _firestore
-            .collection('users')
-            .doc(adminId)
-            .collection('authentification')
-            .doc(userId)
-            .set(permissionsData, SetOptions(merge: true));
-        print('✅ Permissions ajoutées avec succès');
+          .doc(user.uid)
+          .get();
+
+      if (!userDoc.exists) return '';
+      
+      final userData = userDoc.data() ?? {};
+      final String role = userData['role'] ?? '';
+      
+      if (role == 'collaborateur') {
+        // Pour un collaborateur, on utilise l'ID de l'admin
+        final String adminId = userData['adminId'] ?? '';
+        if (adminId.isEmpty) {
+          throw Exception("ID administrateur non trouvé");
+        }
+        return adminId;
       }
+
+      // Pour un admin, on utilise son propre ID
+      return user.uid;
+    } catch (e) {
+      print('❌ Erreur lors de la récupération de l\'ID cible : $e');
+      throw Exception("Données administrateur non trouvées");
     }
   }
 
@@ -395,9 +358,11 @@ class _LocationPageState extends State<LocationPage> {
 
       // Si un email client est disponible, générer et envoyer le PDF
       if (widget.email != null && widget.email!.isNotEmpty) {
-        // Récupérer les données de l'entreprise depuis le document de l'admin
+        // Récupérer les données de l'entreprise depuis le document authentification de l'admin
         final adminDoc = await _firestore
             .collection('users')
+            .doc(targetUserId)
+            .collection('authentification')
             .doc(targetUserId)
             .get();
 
@@ -415,7 +380,7 @@ class _LocationPageState extends State<LocationPage> {
         final logoUrl = adminData['logoUrl'] ?? '';
 
         // Debug print pour vérifier les données
-        print('Données entreprise pour PDF:');
+        print('📊 Données entreprise pour PDF:');
         print('Nom: $nomEntreprise');
         print('Adresse: $adresseEntreprise');
         print('Téléphone: $telephoneEntreprise');
