@@ -386,7 +386,7 @@ Future<String> generatePdf(
             pw.Container(
               width: double.infinity,
               padding:
-                  const pw.EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+                  const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 10),
               margin: const pw.EdgeInsets.symmetric(vertical: 20),
               decoration: pw.BoxDecoration(
                 color: PdfColors.grey200,
@@ -427,6 +427,9 @@ Future<String> generatePdf(
               siret: siret,
               nom: data['nom'],
               prenom: data['prenom'],
+              nomCollaborateur: data['collaborateur']?['nom'],
+              prenomCollaborateur: data['collaborateur']?['prenom'],
+              role: data['collaborateur']?['role'],
               boldFont: boldFont,
               italicFont: italicFont,
               scriptFont: scriptFont,

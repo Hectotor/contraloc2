@@ -14,13 +14,16 @@ class SignaCachetWidget {
     required String siret,
     required String? nom,
     required String? prenom,
+    required String? nomCollaborateur,
+    required String? prenomCollaborateur,
+    required String? role,
     required pw.Font boldFont,
     required pw.Font scriptFont,
     required pw.Font italicFont,
-    required String? dateFinEffectif, // Ajout du paramètre
-    String? signatureBase64, // Ancien paramètre
-    pw.MemoryImage? signatureImage, // Nouveau paramètre
-    pw.MemoryImage? signatureRetourImage, // Nouveau paramètre
+    required String? dateFinEffectif,
+    String? signatureBase64,
+    pw.MemoryImage? signatureImage,
+    pw.MemoryImage? signatureRetourImage,
   }) {
     // Log des informations de signature
     print('🔑 Paramètres de signature reçus :');
@@ -60,17 +63,23 @@ class SignaCachetWidget {
                 telephone: telephone,
                 siret: siret,
                 boldFont: boldFont,
+                italicFont: italicFont,
+                nomCollaborateur: nomCollaborateur,
+                prenomCollaborateur: prenomCollaborateur,
+                role: role,
               ),
               _buildSignatures(
                 nom: nom,
                 prenom: prenom,
+                nomCollaborateur: nomCollaborateur,
+                prenomCollaborateur: prenomCollaborateur,
                 boldFont: boldFont,
                 scriptFont: scriptFont,
                 italicFont: italicFont,
                 dateFinEffectif: dateFinEffectif,
-                signatureBase64: signatureBase64, // Passage de l'ancien paramètre
-                signatureImage: signatureImage, // Passage du nouveau paramètre
-                signatureRetourImage: signatureRetourImage, // Passage du nouveau paramètre
+                signatureBase64: signatureBase64,
+                signatureImage: signatureImage,
+                signatureRetourImage: signatureRetourImage,
               ),
             ],
           ),
@@ -109,6 +118,10 @@ class SignaCachetWidget {
     required String telephone,
     required String siret,
     required pw.Font boldFont,
+    required pw.Font italicFont,
+    String? nomCollaborateur,
+    String? prenomCollaborateur,
+    String? role,
   }) {
     return pw.Container(
       width: 200,
@@ -146,6 +159,17 @@ class SignaCachetWidget {
           pw.Text('SIRET : $siret',
               style: const pw.TextStyle(fontSize: 12),
               textAlign: pw.TextAlign.center),
+          if (role == 'collaborateur' && nomCollaborateur != null && prenomCollaborateur != null) ...[
+            pw.SizedBox(height: 8),
+            pw.Text(
+              'Loué par : $nomCollaborateur $prenomCollaborateur',
+              style: pw.TextStyle(
+                fontSize: 12,
+                font: italicFont,
+              ),
+              textAlign: pw.TextAlign.center,
+            ),
+          ],
         ],
       ),
     );
@@ -154,6 +178,8 @@ class SignaCachetWidget {
   static pw.Widget _buildSignatures({
     required String? nom,
     required String? prenom,
+    required String? nomCollaborateur,
+    required String? prenomCollaborateur,
     required pw.Font boldFont,
     required pw.Font scriptFont,
     required pw.Font italicFont,

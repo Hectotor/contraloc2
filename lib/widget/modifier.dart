@@ -542,63 +542,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
             color: Colors.white), // L'icône est déjà en blanc
         centerTitle: true,
         actions: [
-          FutureBuilder<Map<String, dynamic>?>(
-            future: _getCollaborateurPermissions(),
-            builder: (context, snapshot) {
-              // Si on a les permissions du collaborateur ou si ce n'est pas un collaborateur
-              final bool canCloseContract = snapshot.data == null || // Utilisateur normal
-                                          (snapshot.data != null && snapshot.data!['permissions']['ecriture'] == true); // Collaborateur avec permission
-
-              return IconButton(
-                icon: const Icon(Icons.check_circle_outline),
-                onPressed: canCloseContract ? () async {
-                  print('🔄 Tentative de clôture du contrat');
-                  print('   - Contrat ID: ${widget.contratId}');
-                  print('   - Statut: ${widget.data['status'] ?? "Non défini"}');
-                  print('   - Véhicule: ${widget.data['marque'] ?? ""} ${widget.data['modele'] ?? ""} (${widget.data['immatriculation'] ?? ""})');
-                  
-                  final bool? confirmed = await CloturerLocationPopup.show(
-                    context,
-                    onConfirm: () async {
-                      print('📄 Début de la génération du PDF...');
-                      setState(() {
-                        _isGeneratingPdf = true;
-                      });
-
-                      try {
-                        await _generatePdf();
-                        print('✅ PDF généré avec succès');
-                      } catch (e) {
-                        print('❌ Erreur lors de la génération du PDF: $e');
-                      } finally {
-                        if (mounted) {
-                          setState(() {
-                            _isGeneratingPdf = false;
-                          });
-                        }
-                      }
-                    },
-                  );
-
-                  if (confirmed == true) {
-                    print('✅ Clôture confirmée, mise à jour du contrat...');
-                    _updateContrat();
-                  } else {
-                    print('❌ Clôture annulée par l\'utilisateur');
-                  }
-                } : () {
-                  print('❌ Utilisateur sans permission de clôture');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Vous n'avez pas la permission de clôturer ce contrat"),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                },
-                color: Colors.white,
-              );
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.delete, color: Colors.white),
             onPressed: () => SuppContrat.showDeleteConfirmationDialog(
