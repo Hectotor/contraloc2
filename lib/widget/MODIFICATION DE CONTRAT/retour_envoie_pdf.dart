@@ -85,9 +85,8 @@ class RetourEnvoiePdf {
             collabDoc = querySnapshot.docs.first;
             print('✅ Document collaborateur trouvé avec ID');
             
-            // ignore: unnecessary_cast
-            final collabData = collabDoc.data() as Map<String, dynamic>?;
-            if (collabData != null && collabData['permissions'] != null) {
+            final collabData = collabDoc.data() as Map<String, dynamic>;
+            if (collabData['permissions'] != null) {
               permissions = collabData['permissions'];
             }
           } else {
@@ -109,9 +108,8 @@ class RetourEnvoiePdf {
             collabDoc = collabDocByUid;
             print('✅ Document collaborateur trouvé avec UID');
             
-            // ignore: unnecessary_cast
-            final collabData = collabDocByUid.data() as Map<String, dynamic>?;
-            if (collabData != null && collabData['permissions'] != null) {
+            final collabData = collabDocByUid.data() as Map<String, dynamic>;
+            if (collabData['permissions'] != null) {
               permissions = collabData['permissions'];
             }
           } else {
@@ -263,6 +261,45 @@ class RetourEnvoiePdf {
           ? vehicleDoc.docs.first.data() 
           : {};
 
+      // Récupérer les informations du collaborateur si c'est un collaborateur qui génère le PDF
+      Map<String, dynamic>? collaborateurInfo;
+      if (isCollaborateur) {
+        print('👤 Récupération des informations du collaborateur...');
+        try {
+          final collabDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+              
+          if (collabDoc.exists) {
+            final collabData = collabDoc.data() as Map<String, dynamic>;
+            
+            // Récupérer les détails du collaborateur depuis la collection authentification de l'admin
+            if (collabData['id'] != null) {
+              final collabAuthDoc = await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(targetUserId)
+                  .collection('authentification')
+                  .where('id', isEqualTo: collabData['id'])
+                  .limit(1)
+                  .get();
+                  
+              if (collabAuthDoc.docs.isNotEmpty) {
+                final collabAuthData = collabAuthDoc.docs.first.data();
+                collaborateurInfo = {
+                  'nom': collabAuthData['nom'] ?? '',
+                  'prenom': collabAuthData['prenom'] ?? '',
+                  'role': 'collaborateur'
+                };
+                print('✅ Informations du collaborateur récupérées: ${collaborateurInfo['prenom']} ${collaborateurInfo['nom']}');
+              }
+            }
+          }
+        } catch (e) {
+          print('❌ Erreur lors de la récupération des informations du collaborateur: $e');
+        }
+      }
+
       // Fusionner les données du contrat avec les données du véhicule et de l'entreprise
       final mergedData = Map<String, dynamic>.from(contratData);
       mergedData.addAll({
@@ -286,6 +323,8 @@ class RetourEnvoiePdf {
         'telephone': contratData['telephone'] ?? '',
         'email': contratData['email'] ?? '',
         'numeroPermis': contratData['numeroPermis'] ?? '',
+        // Ajouter les informations du collaborateur dans le format attendu par SignaCachetWidget
+        'collaborateur': collaborateurInfo,
       });
 
       print('🚗 Données fusionnées:');
