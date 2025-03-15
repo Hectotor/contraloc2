@@ -382,54 +382,146 @@ class _ModifierScreenState extends State<ModifierScreen> {
   }
 
   Future<void> _generatePdf() async {
-    // Afficher un dialogue de chargement personnalisé
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Chargement(
-          message: "Génération du PDF en cours...",
-        );
-      },
-    );
-
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception("Utilisateur non connecté");
+      // Afficher un dialogue de chargement
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
 
-      // Récupérer le document du contrat
-      final contratDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('locations')
-          .doc(widget.contratId)
-          .get();
+      // Récupérer les informations de l'utilisateur
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('Utilisateur non connecté');
+      }
 
       // Récupérer la signature de retour
       String? signatureRetourBase64;
-      if (contratDoc.exists) {
-        Map<String, dynamic> contratData = contratDoc.data() as Map<String, dynamic>;
+      try {
+        // Récupérer le document du contrat
+        final contratDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('locations')
+            .doc(widget.contratId)
+            .get();
 
-        // Essayer de récupérer la signature de retour
-        if (contratData.containsKey('signature_retour') &&
-            contratData['signature_retour'] is String) {
-          signatureRetourBase64 = contratData['signature_retour'];
+        // Récupérer la signature de retour
+        if (contratDoc.exists) {
+          Map<String, dynamic> contratData = contratDoc.data() as Map<String, dynamic>;
+
+          // Essayer de récupérer la signature de retour
+          if (contratData.containsKey('signature_retour') &&
+              contratData['signature_retour'] is String) {
+            signatureRetourBase64 = contratData['signature_retour'];
+          }
         }
+      } catch (e) {
+        print('Erreur lors de la récupération de la signature de retour: $e');
       }
 
-      // Log de débogage
-      print('📝 Signature de retour récupérée : ${signatureRetourBase64 != null ? 'Présente (${signatureRetourBase64.length} caractères)' : 'Absente'}');
+      print('📝 Utilisation du compte admin pour les contrats');
+      print('📝 Signature de retour récupérée : ${signatureRetourBase64 != null ? 'Présente' : 'Absente'}');
 
-      // Récupérer les données utilisateur
+      // Récupérer les données de l'utilisateur
+      print('🔍 Récupération des données utilisateur depuis le document principal...');
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
           .get();
 
-      final userData = userDoc.data() ?? {};
+      Map<String, dynamic> userData = userDoc.data() ?? {};
+      print('👤 Données utilisateur récupérées: ${userData.keys.toList()}');
+      print('📋 Nom entreprise dans userData: ${userData['nomEntreprise']}');
+      print('📋 Adresse entreprise dans userData: ${userData['adresse']}');
+      print('📋 Téléphone entreprise dans userData: ${userData['telephone']}');
+      print('📋 SIRET entreprise dans userData: ${userData['siret']}');
 
+      // Déterminer si l'utilisateur est un collaborateur
+      final isCollaborateur = userData['role'] == 'collaborateur';
+      String targetUserId = user.uid;
+      Map<String, dynamic> adminData = {};
+
+      // Si c'est un collaborateur, récupérer les données de l'admin
+      if (isCollaborateur && userData['adminId'] != null) {
+        targetUserId = userData['adminId'];
+        print('👥 Utilisateur collaborateur détecté, récupération des données admin (ID: $targetUserId)');
+        
+        // Essayer d'abord de récupérer depuis le document principal de l'admin
+        final adminDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(targetUserId)
+            .get();
+        
+        adminData = adminDoc.data() ?? {};
+        print('👑 Données admin récupérées du document principal: ${adminData.keys.toList()}');
+        
+        // Si les données d'entreprise ne sont pas dans le document principal, essayer dans la collection 'authentification'
+        if (adminData['nomEntreprise'] == null || adminData['adresse'] == null) {
+          print('🔍 Données entreprise non trouvées dans le document principal, recherche dans authentification...');
+          final adminAuthDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(targetUserId)
+              .collection('authentification')
+              .doc(targetUserId)
+              .get();
+              
+          final adminAuthData = adminAuthDoc.data() ?? {};
+          print('👑 Données admin récupérées de authentification: ${adminAuthData.keys.toList()}');
+          
+          // Fusionner les données
+          if (adminAuthData.isNotEmpty) {
+            adminData.addAll({
+              'nomEntreprise': adminAuthData['nomEntreprise'],
+              'adresse': adminAuthData['adresse'],
+              'telephone': adminAuthData['telephone'],
+              'siret': adminAuthData['siret'],
+              'logoUrl': adminAuthData['logoUrl'],
+            });
+          }
+        }
+        
+        print('📋 Nom entreprise final dans adminData: ${adminData['nomEntreprise']}');
+        print('📋 Adresse entreprise finale dans adminData: ${adminData['adresse']}');
+        print('📋 Téléphone entreprise final dans adminData: ${adminData['telephone']}');
+        print('📋 SIRET entreprise final dans adminData: ${adminData['siret']}');
+      } else {
+        print('👤 Utilisateur admin détecté (ID: $targetUserId)');
+        
+        // Pour un admin, vérifier aussi dans la collection 'authentification' si nécessaire
+        if (userData['nomEntreprise'] == null || userData['adresse'] == null) {
+          print('🔍 Données entreprise non trouvées dans le document principal de l\'admin, recherche dans authentification...');
+          final adminAuthDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('authentification')
+              .doc(user.uid)
+              .get();
+              
+          final adminAuthData = adminAuthDoc.data() ?? {};
+          print('👑 Données admin récupérées de authentification: ${adminAuthData.keys.toList()}');
+          
+          // Fusionner les données
+          if (adminAuthData.isNotEmpty) {
+            userData.addAll({
+              'nomEntreprise': adminAuthData['nomEntreprise'],
+              'adresse': adminAuthData['adresse'],
+              'telephone': adminAuthData['telephone'],
+              'siret': adminAuthData['siret'],
+              'logoUrl': adminAuthData['logoUrl'],
+            });
+          }
+          
+          print('📋 Nom entreprise final dans userData: ${userData['nomEntreprise']}');
+          print('📋 Adresse entreprise finale dans userData: ${userData['adresse']}');
+          print('📋 Téléphone entreprise final dans userData: ${userData['telephone']}');
+          print('📋 SIRET entreprise final dans userData: ${userData['siret']}');
+        }
+      }
+      
       // Récupérer les données du véhicule
       final vehicleDoc = await FirebaseFirestore.instance
           .collection('users')
@@ -443,6 +535,70 @@ class _ModifierScreenState extends State<ModifierScreen> {
           : {};
 
       // Générer le PDF
+      print('📄 Préparation des données pour le PDF...');
+      final nomEntrepriseValue = isCollaborateur ? adminData['nomEntreprise'] ?? '' : userData['nomEntreprise'] ?? '';
+      final adresseEntrepriseValue = isCollaborateur ? adminData['adresse'] ?? '' : userData['adresse'] ?? '';
+      final telephoneEntrepriseValue = isCollaborateur ? adminData['telephone'] ?? '' : userData['telephone'] ?? '';
+      final siretEntrepriseValue = isCollaborateur ? adminData['siret'] ?? '' : userData['siret'] ?? '';
+      
+      // Préparer les données du collaborateur si nécessaire
+      Map<String, dynamic> collaborateurData = {};
+      if (isCollaborateur) {
+        // Récupérer l'ID du collaborateur depuis son document principal
+        String collaborateurId = userData['id'] ?? '';
+        print('📋 ID du collaborateur: $collaborateurId');
+        
+        if (collaborateurId.isNotEmpty) {
+          // Récupérer les données du collaborateur depuis la collection authentification de l'admin en utilisant son ID
+          final collabQuery = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(targetUserId)
+              .collection('authentification')
+              .where('id', isEqualTo: collaborateurId)
+              .limit(1)
+              .get();
+              
+          if (collabQuery.docs.isNotEmpty) {
+            final collabData = collabQuery.docs.first.data();
+            print('👤 Données collaborateur récupérées avec ID: ${collabData.keys.toList()}');
+            print('📋 Nom collaborateur: ${collabData['nom']}');
+            print('📋 Prénom collaborateur: ${collabData['prenom']}');
+            
+            collaborateurData = {
+              'nom': collabData['nom'] ?? '',
+              'prenom': collabData['prenom'] ?? '',
+              'role': 'collaborateur'
+            };
+          } else {
+            print('⚠️ Aucun document trouvé pour le collaborateur avec ID: $collaborateurId');
+            
+            // Fallback: utiliser les données du contrat
+            collaborateurData = {
+              'nom': widget.data['nom'] ?? '',
+              'prenom': widget.data['prenom'] ?? '',
+              'role': 'collaborateur'
+            };
+          }
+        } else {
+          print('⚠️ ID du collaborateur non trouvé dans son document principal');
+          
+          // Fallback: utiliser les données du contrat
+          collaborateurData = {
+            'nom': widget.data['nom'] ?? '',
+            'prenom': widget.data['prenom'] ?? '',
+            'role': 'collaborateur'
+          };
+        }
+        
+        print('👥 Données collaborateur préparées: ${collaborateurData.toString()}');
+      }
+      
+      print('🏢 Valeurs finales pour le PDF:');
+      print('📋 Nom entreprise: $nomEntrepriseValue');
+      print('📋 Adresse entreprise: $adresseEntrepriseValue');
+      print('📋 Téléphone entreprise: $telephoneEntrepriseValue');
+      print('📋 SIRET entreprise: $siretEntrepriseValue');
+      
       final pdfPath = await generatePdf(
         {
           ...widget.data,
@@ -451,16 +607,29 @@ class _ModifierScreenState extends State<ModifierScreen> {
           'carburantManquant': _carburantManquantController.text,
           'caution': _cautionController.text,
           'signatureRetour': signatureRetourBase64 ?? '',
+          'nom': widget.data['nom'] ?? '',
+          'prenom': widget.data['prenom'] ?? '',
+          'adresse': widget.data['adresse'] ?? '',
+          'telephone': widget.data['telephone'] ?? '',
+          'email': widget.data['email'] ?? '',
+          'numeroPermis': widget.data['numeroPermis'] ?? '',
+          // Ajouter les informations de l'entreprise
+          'nomEntreprise': nomEntrepriseValue,
+          'adresseEntreprise': adresseEntrepriseValue,
+          'telephoneEntreprise': telephoneEntrepriseValue,
+          'siretEntreprise': siretEntrepriseValue,
+          // Ajouter les informations du collaborateur si nécessaire
+          if (isCollaborateur) 'collaborateur': collaborateurData,
         },
         widget.data['dateFinEffectif'] ?? '',
         widget.data['kilometrageRetour'] ?? '',
         widget.data['commentaireRetour'] ?? '',
         [],
-        userData['nomEntreprise'] ?? '',
-        userData['logoUrl'] ?? '',
-        userData['adresse'] ?? '',
-        userData['telephone'] ?? '',
-        userData['siret'] ?? '',
+        nomEntrepriseValue,
+        isCollaborateur ? adminData['logoUrl'] ?? '' : userData['logoUrl'] ?? '',
+        adresseEntrepriseValue,
+        telephoneEntrepriseValue,
+        siretEntrepriseValue,
         widget.data['commentaireRetour'] ?? '',
         widget.data['typeCarburant'] ?? '',
         widget.data['boiteVitesses'] ?? '',

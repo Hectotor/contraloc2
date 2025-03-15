@@ -358,6 +358,58 @@ class _LocationPageState extends State<LocationPage> {
 
       // Si un email client est disponible, générer et envoyer le PDF
       if (widget.email != null && widget.email!.isNotEmpty) {
+        // Récupérer les données de l'utilisateur actuel pour déterminer le rôle
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          throw Exception('Utilisateur non connecté');
+        }
+
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (!userDoc.exists) {
+          throw Exception('Document utilisateur non trouvé');
+        }
+
+        final userData = userDoc.data() as Map<String, dynamic>;
+        final String role = userData['role'] ?? '';
+        String? collaborateurNom;
+        String? collaborateurPrenom;
+
+        // Si c'est un collaborateur, récupérer son nom et prénom
+        if (role == 'collaborateur') {
+          final String adminId = userData['adminId'] ?? '';
+          final String collaborateurId = userData['id'] ?? '';
+
+          print('📝 Récupération des données du collaborateur: ID=$collaborateurId, AdminID=$adminId');
+
+          if (adminId.isNotEmpty && collaborateurId.isNotEmpty) {
+            try {
+              // Rechercher le document du collaborateur dans la collection authentification de l'admin
+              final collaborateurQuery = await _firestore
+                  .collection('users')
+                  .doc(adminId)
+                  .collection('authentification')
+                  .where('id', isEqualTo: collaborateurId)
+                  .limit(1)
+                  .get();
+
+              if (collaborateurQuery.docs.isNotEmpty) {
+                final collaborateurData = collaborateurQuery.docs.first.data();
+                collaborateurNom = collaborateurData['nom'];
+                collaborateurPrenom = collaborateurData['prenom'];
+                print('✅ Données collaborateur trouvées: $collaborateurPrenom $collaborateurNom');
+              } else {
+                print('⚠️ Document collaborateur non trouvé dans la collection authentification');
+              }
+            } catch (e) {
+              print('❌ Erreur lors de la récupération des données du collaborateur: $e');
+            }
+          }
+        }
+
         // Récupérer les données de l'entreprise depuis le document authentification de l'admin
         final adminDoc = await _firestore
             .collection('users')
@@ -446,6 +498,11 @@ class _LocationPageState extends State<LocationPage> {
             'telephoneEntreprise': telephoneEntreprise,
             'siretEntreprise': siretEntreprise,
             'logoUrl': logoUrl,
+            'collaborateur': {
+              'nom': collaborateurNom,
+              'prenom': collaborateurPrenom,
+              'role': role,
+            },
           },
           _dateFinEffectifController.text, // dateFinEffectif
           _kilometrageRetourController.text, // kilometrageRetour

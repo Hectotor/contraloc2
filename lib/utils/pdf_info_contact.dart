@@ -12,11 +12,42 @@ class PdfInfoContactWidget {
     required pw.Font ttf,
     pw.ImageProvider? logoImage,
   }) {
+    // Logs pour le débogage
+    print('🔍 PdfInfoContactWidget.build - Paramètres reçus:');
+    print('📋 nomEntreprise (paramètre): $nomEntreprise');
+    print('📋 adresse (paramètre): $adresse');
+    print('📋 telephone (paramètre): $telephone');
+    print('📋 siret (paramètre): $siret');
+    print('📋 clientData contient: ${clientData.keys.toList()}');
+    print('📋 nomEntreprise dans clientData: ${clientData['nomEntreprise']}');
+    print('📋 adresseEntreprise dans clientData: ${clientData['adresseEntreprise']}');
+    print('📋 telephoneEntreprise dans clientData: ${clientData['telephoneEntreprise']}');
+    print('📋 siretEntreprise dans clientData: ${clientData['siretEntreprise']}');
+    
     // Vérification et nettoyage des valeurs vides
-    final entrepriseNom = nomEntreprise.trim().isNotEmpty ? nomEntreprise : 'Non renseigné';
-    final entrepriseAdresse = adresse.trim().isNotEmpty ? adresse : 'Non renseigné';
-    final entrepriseTelephone = telephone.trim().isNotEmpty ? telephone : 'Non renseigné';
-    final entrepriseSiret = siret.trim().isNotEmpty ? siret : 'Non renseigné';
+    // Priorité aux données dans clientData si elles existent
+    final entrepriseNom = clientData['nomEntreprise']?.trim().isNotEmpty ?? false 
+        ? clientData['nomEntreprise'] 
+        : (nomEntreprise.trim().isNotEmpty ? nomEntreprise : 'Non renseigné');
+    
+    final entrepriseAdresse = clientData['adresseEntreprise']?.trim().isNotEmpty ?? false 
+        ? clientData['adresseEntreprise'] 
+        : (adresse.trim().isNotEmpty ? adresse : 'Non renseigné');
+    
+    final entrepriseTelephone = clientData['telephoneEntreprise']?.trim().isNotEmpty ?? false 
+        ? clientData['telephoneEntreprise'] 
+        : (telephone.trim().isNotEmpty ? telephone : 'Non renseigné');
+    
+    final entrepriseSiret = clientData['siretEntreprise']?.trim().isNotEmpty ?? false 
+        ? clientData['siretEntreprise'] 
+        : (siret.trim().isNotEmpty ? siret : 'Non renseigné');
+
+    // Logs des valeurs finales utilisées
+    print('🏢 Valeurs finales utilisées dans le PDF:');
+    print('📋 Nom entreprise final: $entrepriseNom');
+    print('📋 Adresse entreprise finale: $entrepriseAdresse');
+    print('📋 Téléphone entreprise final: $entrepriseTelephone');
+    print('📋 SIRET entreprise final: $entrepriseSiret');
 
     // Vérification et nettoyage des valeurs vides pour les données client
     final clientNom = clientData['nom']?.trim().isNotEmpty ?? false ? clientData['nom'] : 'Non renseigné';

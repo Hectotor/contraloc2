@@ -56,6 +56,7 @@ class RetourEnvoiePdf {
       if (userData != null && userData['role'] == 'collaborateur') {
         isCollaborateur = true;
         final adminId = userData['adminId'];
+        targetUserId = adminId;
         
         // Vérifier les permissions du collaborateur
         print('👥 Utilisateur collaborateur détecté, vérification des permissions...');
@@ -70,7 +71,6 @@ class RetourEnvoiePdf {
         if (collabData != null && collabData['permissions'] != null) {
           if (collabData['permissions']['ecriture'] == true) {
             print('✅ Collaborateur avec permission d\'écriture');
-            targetUserId = adminId;
           } else {
             print('❌ Collaborateur sans permission d\'écriture');
             throw Exception("Vous n'avez pas la permission de générer des PDF");
@@ -80,14 +80,30 @@ class RetourEnvoiePdf {
         print('👤 Utilisateur admin');
       }
 
-      // Récupérer les informations du client
-      print('📄 Récupération des données client...');
-      DocumentSnapshot clientDoc = await FirebaseFirestore.instance
+      // Récupérer les informations de l'entreprise depuis le document principal de l'admin
+      print('📄 Récupération des données de l\'entreprise...');
+      DocumentSnapshot adminDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(targetUserId)
-          .collection('authentification')
-          .doc(isCollaborateur ? user.uid : targetUserId)
           .get();
+
+      if (!adminDoc.exists) {
+        throw Exception('Données administrateur non trouvées');
+      }
+
+      final adminData = adminDoc.data() as Map<String, dynamic>;
+
+      // Récupérer les informations de l'entreprise
+      String nomEntreprise = isCollaborateur ? adminData['nomEntreprise'] ?? 'Contraloc' : userData?['nomEntreprise'] ?? 'Contraloc';
+      String adresse = isCollaborateur ? adminData['adresse'] ?? '' : userData?['adresse'] ?? '';
+      String telephone = isCollaborateur ? adminData['telephone'] ?? '' : userData?['telephone'] ?? '';
+      String logoUrl = isCollaborateur ? adminData['logoUrl'] ?? '' : userData?['logoUrl'] ?? '';
+      String siret = isCollaborateur ? adminData['siret'] ?? '' : userData?['siret'] ?? '';
+      
+      print('🏢 Informations entreprise récupérées:');
+      print('   - Nom: $nomEntreprise');
+      print('   - SIRET: ${siret.isNotEmpty ? siret : "Non renseigné"}');
+      print('   - Logo: ${logoUrl.isNotEmpty ? "Présent" : "Non renseigné"}');
 
       // Récupérer la signature du contrat
       print('📄 Récupération des données du contrat...');
@@ -99,34 +115,19 @@ class RetourEnvoiePdf {
           .get();
 
       // Utiliser des valeurs par défaut sécurisées
-      Map<String, dynamic> clientData = clientDoc.data() as Map<String, dynamic>? ?? {};
       Map<String, dynamic> contratDataComplete = contratDoc.data() as Map<String, dynamic>? ?? {};
 
-      String? clientEmail = clientData['email'] as String?;
-      clientEmail ??= '';
-      String nomEntreprise = (clientData['nomEntreprise'] ?? 'Contraloc').toString();
-      String adresse = (clientData['adresse'] ?? '').toString();
-      String telephone = (clientData['telephone'] ?? '').toString();
-      String logoUrl = (clientData['logoUrl'] ?? '').toString();
-      String siret = (clientData['siret'] ?? '').toString();
-      
-      print('🏢 Informations entreprise récupérées:');
-      print('   - Nom: $nomEntreprise');
-      print('   - SIRET: ${siret.isNotEmpty ? siret : "Non renseigné"}');
-      print('   - Logo: ${logoUrl.isNotEmpty ? "Présent" : "Non renseigné"}');
-
-      // Récupérer la signature
-      String? signatureBase64;
-      if (contratDataComplete.containsKey('signature') && 
-          contratDataComplete['signature'] is Map) {
-        signatureBase64 = contratDataComplete['signature']['base64'];
-      }
-
-      // Récupérer les signatures aller et retour
+      String signatureBase64 = '';
       String? signatureAllerBase64;
       String? signatureRetourBase64;
       
-      // Récupérer la signature aller
+      // Récupérer la signature
+      if (contratDataComplete.containsKey('signature') && 
+          contratDataComplete['signature'] is Map) {
+        signatureBase64 = contratDataComplete['signature']['base64'] ?? '';
+      }
+
+      // Récupérer les signatures aller et retour
       if (contratDoc.exists) {
         // Essayer de récupérer la signature aller
         if (contratDataComplete.containsKey('signature_aller') && 
@@ -145,7 +146,7 @@ class RetourEnvoiePdf {
       print('   - Signature aller: ${signatureAllerBase64 != null ? "Présente" : "Manquante"}');
       print('   - Signature retour: ${signatureRetourBase64 != null ? "Présente" : "Manquante"}');
 
-      // Récupérer les données du véhicule
+      // Récupérer les données du véhicule et du contrat
       print('🚗 Récupération des données du véhicule...');
       final vehicleDoc = await FirebaseFirestore.instance
           .collection('users')
@@ -158,40 +159,40 @@ class RetourEnvoiePdf {
           ? vehicleDoc.docs.first.data() 
           : {};
 
-      print('🚗 Données véhicule:');
-      print('   - Immatriculation: ${contratData['immatriculation'] ?? "Non renseigné"}');
-      print('   - Marque/Modèle: ${contratData['marque'] ?? ""} ${contratData['modele'] ?? ""}');
+      // Fusionner les données du contrat avec les données du véhicule et de l'entreprise
+      final mergedData = Map<String, dynamic>.from(contratData);
+      mergedData.addAll({
+        'typeCarburant': vehicleData['typeCarburant'] ?? contratData['typeCarburant'] ?? '',
+        'boiteVitesses': vehicleData['boiteVitesses'] ?? contratData['boiteVitesses'] ?? '',
+        'vin': vehicleData['vin'] ?? contratData['vin'] ?? '',
+        'assuranceNom': vehicleData['assuranceNom'] ?? contratData['assuranceNom'] ?? '',
+        'assuranceNumero': vehicleData['assuranceNumero'] ?? contratData['assuranceNumero'] ?? '',
+        'franchise': vehicleData['franchise'] ?? contratData['franchise'] ?? '',
+        'prixLocation': vehicleData['prixLocation'] ?? contratData['prixLocation'] ?? '',
+        // Ajouter les informations de l'entreprise
+        'nomEntreprise': nomEntreprise,
+        'adresseEntreprise': adresse,
+        'telephoneEntreprise': telephone,
+        'siretEntreprise': siret,
+        'logoUrl': logoUrl,
+        // S'assurer que les informations client sont présentes
+        'nom': contratData['nom'] ?? '',
+        'prenom': contratData['prenom'] ?? '',
+        'adresse': contratData['adresse'] ?? '',
+        'telephone': contratData['telephone'] ?? '',
+        'email': contratData['email'] ?? '',
+        'numeroPermis': contratData['numeroPermis'] ?? '',
+      });
+
+      print('🚗 Données fusionnées:');
+      print('   - Immatriculation: ${mergedData['immatriculation'] ?? "Non renseigné"}');
+      print('   - Marque/Modèle: ${mergedData['marque'] ?? ""} ${mergedData['modele'] ?? ""}');
+      print('   - Entreprise: ${mergedData['nomEntreprise']}');
 
       // Générer le PDF de clôture
       print('📄 Génération du PDF en cours...');
       final pdfPath = await generatePdf(
-        {
-          'nom': (contratData['nom'] ?? '').toString(),
-          'prenom': (contratData['prenom'] ?? '').toString(),
-          'adresse': (contratData['adresse'] ?? '').toString(),
-          'telephone': (contratData['telephone'] ?? '').toString(),
-          'email': (contratData['email'] ?? '').toString(),
-          'numeroPermis': (contratData['numeroPermis'] ?? '').toString(),
-          'marque': (contratData['marque'] ?? '').toString(),
-          'modele': (contratData['modele'] ?? '').toString(),
-          'immatriculation': (contratData['immatriculation'] ?? '').toString(),
-          'commentaire': (contratData['commentaire'] ?? '').toString(),
-          'photos': contratData['photos'] ?? [],
-          'signatureAller': signatureAllerBase64 ?? '',
-          'signatureBase64': signatureBase64 ?? '',
-          'signatureRetour': signatureRetourBase64 ?? '',
-          
-          // Nouveaux champs ajoutés
-          'nettoyageInt': (contratData['nettoyageInt'] ?? '').toString(),
-          'nettoyageExt': (contratData['nettoyageExt'] ?? '').toString(),
-          'carburantManquant': (contratData['carburantManquant'] ?? '').toString(),
-          'caution': (contratData['caution'] ?? '').toString(),
-          
-          // Champs supplémentaires
-          'pourcentageEssence': (contratData['pourcentageEssence'] ?? '0').toString(),
-          'typeLocation': (contratData['typeLocation'] ?? '').toString(),
-          'conditions': (contratData['conditions'] ?? ContratModifier.defaultContract).toString(),
-        },
+        mergedData,
         dateFinEffectif,
         kilometrageRetour,
         commentaireRetour,
@@ -202,24 +203,24 @@ class RetourEnvoiePdf {
         telephone,
         siret,
         commentaireRetour,
-        (contratData['typeCarburant'] ?? '').toString(),
-        (contratData['boiteVitesses'] ?? '').toString(),
-        (contratData['vin'] ?? '').toString(),
-        (contratData['assuranceNom'] ?? '').toString(),
-        (contratData['assuranceNumero'] ?? '').toString(),
-        (contratData['franchise'] ?? '').toString(),
-        (contratData['kilometrageSupp'] ?? '').toString(),
-        (contratData['rayures'] ?? '').toString(),
-        (contratData['dateDebut'] ?? '').toString(),
-        (contratData['dateFinTheorique'] ?? '').toString(),
+        (mergedData['typeCarburant'] ?? '').toString(),
+        (mergedData['boiteVitesses'] ?? '').toString(),
+        (mergedData['vin'] ?? '').toString(),
+        (mergedData['assuranceNom'] ?? '').toString(),
+        (mergedData['assuranceNumero'] ?? '').toString(),
+        (mergedData['franchise'] ?? '').toString(),
+        (mergedData['kilometrageSupp'] ?? '').toString(),
+        (mergedData['rayures'] ?? '').toString(),
+        (mergedData['dateDebut'] ?? '').toString(),
+        (mergedData['dateFinTheorique'] ?? '').toString(),
         dateFinEffectif,
-        (contratData['kilometrageDepart'] ?? '').toString(),
-        (contratData['kilometrageAutorise'] ?? '').toString(),
-        (contratData['pourcentageEssence'] ?? '0').toString(),
-        (contratData['typeLocation'] ?? '').toString(),
-        (vehicleData['prixLocation'] ?? contratData['prixLocation'] ?? '').toString(),
-        condition: (contratData['conditions'] ?? ContratModifier.defaultContract).toString(),
-        signatureBase64: signatureBase64 ?? '',
+        (mergedData['kilometrageDepart'] ?? '').toString(),
+        (mergedData['kilometrageAutorise'] ?? '').toString(),
+        (mergedData['pourcentageEssence'] ?? '0').toString(),
+        (mergedData['typeLocation'] ?? '').toString(),
+        (mergedData['prixLocation'] ?? '').toString(),
+        condition: (mergedData['conditions'] ?? ContratModifier.defaultContract).toString(),
+        signatureBase64: signatureBase64,
         signatureRetourBase64: signatureRetourBase64 ?? '',
         signatureAllerBase64: signatureAllerBase64 ?? '',
       );
@@ -232,16 +233,16 @@ class RetourEnvoiePdf {
       }
 
       // Envoyer le PDF par email si un email est disponible
-      if ((contratData['email'] ?? '').toString().isNotEmpty) {
-        print('📧 Envoi du PDF par email à ${contratData['email']}...');
+      if ((mergedData['email'] ?? '').toString().isNotEmpty) {
+        print('📧 Envoi du PDF par email à ${mergedData['email']}...');
         await EmailService.sendEmailWithPdf(
           pdfPath: pdfPath,
-          email: (contratData['email'] ?? '').toString(),
-          marque: (contratData['marque'] ?? '').toString(),
-          modele: (contratData['modele'] ?? '').toString(),
+          email: (mergedData['email'] ?? '').toString(),
+          marque: (mergedData['marque'] ?? '').toString(),
+          modele: (mergedData['modele'] ?? '').toString(),
           context: context,
-          prenom: (contratData['prenom'] ?? '').toString(),
-          nom: (contratData['nom'] ?? '').toString(),
+          prenom: (mergedData['prenom'] ?? '').toString(),
+          nom: (mergedData['nom'] ?? '').toString(),
           nomEntreprise: nomEntreprise,
           adresse: adresse,
           telephone: telephone,

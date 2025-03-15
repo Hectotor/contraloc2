@@ -60,6 +60,25 @@ Future<String> generatePdf(
   String? signatureRetourBase64, // Signature retour
   String? signatureAllerBase64, // Nouvelle signature aller
 }) async {
+  // Logs pour le débogage
+  print('🔍 generatePdf - Début de la génération du PDF');
+  print('📋 Paramètres directs reçus:');
+  print('📋 nomEntreprise (paramètre): $nomEntreprise');
+  print('📋 adresse (paramètre): $adresse');
+  print('📋 telephone (paramètre): $telephone');
+  print('📋 siret (paramètre): $siret');
+  print('📋 logoUrl (paramètre): $logoUrl');
+  
+  print('📋 Données dans l\'objet data:');
+  print('📋 nomEntreprise dans data: ${data['nomEntreprise']}');
+  print('📋 adresseEntreprise dans data: ${data['adresseEntreprise']}');
+  print('📋 telephoneEntreprise dans data: ${data['telephoneEntreprise']}');
+  print('📋 siretEntreprise dans data: ${data['siretEntreprise']}');
+  
+  // Vérifier si les informations de l'entreprise sont présentes dans l'objet data
+  bool entrepriseInfoInData = data['nomEntreprise'] != null && data['nomEntreprise'].toString().trim().isNotEmpty;
+  print('📋 Informations entreprise présentes dans data: $entrepriseInfoInData');
+
   final pdf = pw.Document();
 
   // Chargez les données des polices
