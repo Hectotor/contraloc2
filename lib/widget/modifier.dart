@@ -79,6 +79,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
       final userData = userDoc.data();
       if (userData != null && userData['role'] == 'collaborateur') {
         final adminId = userData['adminId'];
+        print('👥 Utilisateur collaborateur détecté');
+        print('   - Admin ID: $adminId');
 
         // Récupérer les permissions du collaborateur
         final collabDoc = await FirebaseFirestore.instance
@@ -90,12 +92,19 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
         final collabData = collabDoc.data();
         if (collabData != null && collabData['permissions'] != null) {
-          print('👥 Permissions collaborateur trouvées');
+          final permissions = collabData['permissions'];
+          print('📋 Permissions collaborateur:');
+          print('   - Lecture: ${permissions['lecture'] == true ? "✅" : "❌"}');
+          print('   - Écriture: ${permissions['ecriture'] == true ? "✅" : "❌"}');
           return {
             'adminId': adminId,
-            'permissions': collabData['permissions'],
+            'permissions': permissions,
           };
+        } else {
+          print('❌ Aucune permission trouvée pour le collaborateur');
         }
+      } else {
+        print('👤 Utilisateur admin');
       }
       return null;
     } catch (e) {
@@ -193,6 +202,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
     // Si c'est un collaborateur sans permission d'écriture, bloquer la mise à jour
     if (collabInfo != null && collabInfo['permissions']['ecriture'] != true) {
+      print('❌ Tentative de clôture refusée - collaborateur sans permission d\'écriture');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Vous n'avez pas la permission de modifier ce contrat"),
@@ -202,12 +212,15 @@ class _ModifierScreenState extends State<ModifierScreen> {
       return;
     }
 
+    print('📝 Début de la mise à jour du contrat...');
+
     if (_kilometrageRetourController.text.isNotEmpty &&
         int.tryParse(_kilometrageRetourController.text) != null &&
         widget.data['kilometrageDepart'] != null &&
         widget.data['kilometrageDepart'].isNotEmpty &&
         int.parse(_kilometrageRetourController.text) <
             int.parse(widget.data['kilometrageDepart'])) {
+      print('❌ Erreur: kilométrage de retour inférieur au kilométrage de départ');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -228,26 +241,32 @@ class _ModifierScreenState extends State<ModifierScreen> {
     );
 
     try {
+      print('📸 Traitement des photos...');
       // Conserver les URLs existantes
       List<String> allPhotosUrls = List<String>.from(_photosRetourUrls);
 
       // Ajouter les nouvelles photos seulement s'il y en a
       if (_photosRetour.isNotEmpty) {
+        print('📤 Upload de ${_photosRetour.length} nouvelles photos...');
         List<String> newUrls = await _uploadPhotos(_photosRetour);
         allPhotosUrls.addAll(newUrls);
+        print('✅ Upload des photos terminé');
       }
 
       // Convertir la signature de retour en base64
       String? signatureRetourBase64;
       if (_signatureRetourController.isNotEmpty) {
+        print('✍️ Traitement de la signature...');
         final signatureBytes = await _signatureRetourController.toPngBytes();
         signatureRetourBase64 = base64Encode(signatureBytes!);
       }
 
       // Déterminer l'ID de l'utilisateur à utiliser (collaborateur avec droits ou admin)
       String targetUserId = collabInfo != null ? collabInfo['adminId'] : user.uid;
+      print('👤 Mise à jour pour l\'utilisateur: ${collabInfo != null ? 'Collaborateur (Admin ID)' : 'Admin'} - $targetUserId');
 
       // Mettre à jour Firestore avec les informations de retour
+      print('💾 Sauvegarde des données dans Firestore...');
       await FirebaseFirestore.instance
           .collection('users')
           .doc(targetUserId)
@@ -265,6 +284,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'carburantManquant': _carburantManquantController.text,
         'signature_retour': signatureRetourBase64,
       });
+      print('✅ Données sauvegardées avec succès');
 
       // Fermer le dialogue de chargement
       if (context.mounted) {
@@ -272,6 +292,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
       }
 
       // Générer et envoyer le PDF
+      print('📄 Génération du PDF...');
       await RetourEnvoiePdf.genererEtEnvoyerPdfCloture(
         context: context,
         contratData: widget.data,
@@ -281,6 +302,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         commentaireRetour: _commentaireRetourController.text,
         photosRetour: _photosRetour,
       );
+      print('✅ PDF généré et envoyé avec succès');
 
       // Naviguer vers la page principale
       if (context.mounted) {
@@ -291,7 +313,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
           ),
         );
       }
+      print('✨ Clôture du contrat terminée avec succès');
     } catch (e) {
+      print('❌ Erreur lors de la clôture du contrat: $e');
       // Fermer le dialogue de chargement en cas d'erreur
       if (context.mounted) {
         Navigator.pop(context);
@@ -518,10 +542,69 @@ class _ModifierScreenState extends State<ModifierScreen> {
             color: Colors.white), // L'icône est déjà en blanc
         centerTitle: true,
         actions: [
+          FutureBuilder<Map<String, dynamic>?>(
+            future: _getCollaborateurPermissions(),
+            builder: (context, snapshot) {
+              // Si on a les permissions du collaborateur ou si ce n'est pas un collaborateur
+              final bool canCloseContract = snapshot.data == null || // Utilisateur normal
+                                          (snapshot.data != null && snapshot.data!['permissions']['ecriture'] == true); // Collaborateur avec permission
+
+              return IconButton(
+                icon: const Icon(Icons.check_circle_outline),
+                onPressed: canCloseContract ? () async {
+                  print('🔄 Tentative de clôture du contrat');
+                  print('   - Contrat ID: ${widget.contratId}');
+                  print('   - Statut: ${widget.data['status'] ?? "Non défini"}');
+                  print('   - Véhicule: ${widget.data['marque'] ?? ""} ${widget.data['modele'] ?? ""} (${widget.data['immatriculation'] ?? ""})');
+                  
+                  final bool? confirmed = await CloturerLocationPopup.show(
+                    context,
+                    onConfirm: () async {
+                      print('📄 Début de la génération du PDF...');
+                      setState(() {
+                        _isGeneratingPdf = true;
+                      });
+
+                      try {
+                        await _generatePdf();
+                        print('✅ PDF généré avec succès');
+                      } catch (e) {
+                        print('❌ Erreur lors de la génération du PDF: $e');
+                      } finally {
+                        if (mounted) {
+                          setState(() {
+                            _isGeneratingPdf = false;
+                          });
+                        }
+                      }
+                    },
+                  );
+
+                  if (confirmed == true) {
+                    print('✅ Clôture confirmée, mise à jour du contrat...');
+                    _updateContrat();
+                  } else {
+                    print('❌ Clôture annulée par l\'utilisateur');
+                  }
+                } : () {
+                  print('❌ Utilisateur sans permission de clôture');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Vous n'avez pas la permission de clôturer ce contrat"),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                },
+                color: Colors.white,
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.delete, color: Colors.white),
             onPressed: () => SuppContrat.showDeleteConfirmationDialog(
-                context, widget.contratId),
+              context,
+              widget.contratId,
+            ),
           ),
         ],
       ),

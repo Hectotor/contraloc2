@@ -262,7 +262,7 @@ Future<String> generatePdf(
                   children: [
                     pw.Text('CONTRAT DE LOCATION',
                         style: pw.TextStyle(
-                          fontSize: 24,
+                          fontSize: 16,
                           font: boldFont,
                           color: PdfColors.black,
                         ),
@@ -279,7 +279,7 @@ Future<String> generatePdf(
                 pw.Container(width: 50),
               ],
             ),
-            pw.SizedBox(height: 30),
+            pw.SizedBox(height: 20),
             PdfInfoContactWidget.build(
               nomEntreprise: nomEntreprise,
               adresse: adresse,
@@ -290,7 +290,7 @@ Future<String> generatePdf(
               ttf: ttf,
               logoImage: logoImage, // Ajout du logoImage ici
             ),
-            pw.SizedBox(height: 20),
+            pw.SizedBox(height: 10),
             PdfVoitureWidget.build(
               data: data,
               typeCarburant: typeCarburant,
@@ -331,7 +331,7 @@ Future<String> generatePdf(
                 children: [
                   pw.Text('Commentaires:',
                       style: pw.TextStyle(
-                        fontSize: 18,
+                        fontSize: 15,
                         font: boldFont,
                         color: PdfColors.blue900,
                       )),
@@ -346,7 +346,7 @@ Future<String> generatePdf(
                           children: [
                             pw.Text('Aller:',
                                 style: pw.TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 12,
                                     font: boldFont,
                                     color: PdfColors.black)),
                             pw.Text(data['commentaire'] ?? '',
@@ -361,7 +361,7 @@ Future<String> generatePdf(
                           children: [
                             pw.Text('Retour:',
                                 style: pw.TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 12,
                                     font: boldFont,
                                     color: PdfColors.black)),
                             pw.Text(commentaireRetour,
@@ -396,7 +396,7 @@ Future<String> generatePdf(
               child: pw.Text(
                 'CONDITIONS GÉNÉRALES',
                 style: pw.TextStyle(
-                  fontSize: 24,
+                  fontSize: 15,
                   font: boldFont,
                   color: PdfColors.blue900,
                 ),
@@ -405,12 +405,15 @@ Future<String> generatePdf(
             ),
             // Conditions générales
             ...condition.split('\n').map((paragraph) {
-              if (paragraph.trim().isEmpty) return pw.SizedBox(height: 10);
+              if (paragraph.trim().isEmpty) return pw.SizedBox(height: 8); // Réduit l'espacement
               return pw.Padding(
-                padding: const pw.EdgeInsets.only(bottom: 5),
+                padding: const pw.EdgeInsets.only(bottom: 4), // Réduit le padding
                 child: pw.Text(
                   paragraph.trim(),
-                  style: pw.TextStyle(font: ttf),
+                  style: pw.TextStyle(
+                    font: ttf,
+                    fontSize: 9, // Réduit la taille de la police
+                  ),
                   textAlign: pw.TextAlign.justify,
                 ),
               );

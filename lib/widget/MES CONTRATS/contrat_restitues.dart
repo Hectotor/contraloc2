@@ -22,17 +22,38 @@ class _ContratRestituesState extends State<ContratRestitues> {
       return _photoUrlCache[cacheKey];
     }
 
-    final vehiculeDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('vehicules')
-        .where('immatriculation', isEqualTo: immatriculation)
-        .get();
+    try {
+      // Vérifier si l'utilisateur est un collaborateur
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      
+      final userData = userDoc.data();
+      String targetUserId = userId;
 
-    if (vehiculeDoc.docs.isNotEmpty) {
-      final photoUrl = vehiculeDoc.docs.first.data()['photoVehiculeUrl'] as String?;
-      _photoUrlCache[cacheKey] = photoUrl;
-      return photoUrl;
+      if (userData != null && userData['role'] == 'collaborateur') {
+        targetUserId = userData['adminId'];
+      }
+
+      // Récupérer la photo du véhicule dans la collection de l'utilisateur cible
+      final vehiculeQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(targetUserId)
+          .collection('vehicules')
+          .where('immatriculation', isEqualTo: immatriculation)
+          .limit(1)
+          .get();
+
+      if (vehiculeQuery.docs.isNotEmpty) {
+        final photoUrl = vehiculeQuery.docs.first.data()['photoVehiculeUrl'] as String?;
+        if (photoUrl != null) {
+          _photoUrlCache[cacheKey] = photoUrl;
+          return photoUrl;
+        }
+      }
+    } catch (e) {
+      print('❌ Erreur lors de la récupération de la photo: $e');
     }
     return null;
   }
@@ -146,7 +167,7 @@ class _ContratRestituesState extends State<ContratRestitues> {
                     final data = contrat.data() as Map<String, dynamic>;
 
                     return FutureBuilder<String?>(
-                      future: _getVehiclePhotoUrl(contrat['userId'], data['immatriculation']),
+                      future: _getVehiclePhotoUrl(data['adminId'] ?? contrat['userId'], data['immatriculation']),
                       builder: (context, snapshot) {
                         final photoUrl = snapshot.data;
 
@@ -214,6 +235,39 @@ class _ContratRestituesState extends State<ContratRestitues> {
                                             ),
                                           ),
                                           const SizedBox(height: 8),
+                                          Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Icon(Icons.event, 
+                                                size: 16,
+                                                color: Color(0xFF08004D),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      "Date de début",
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        color: Colors.grey[700],
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      "${data['dateDebut'] ?? ''}",
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.w500,
+                                                        color: Colors.grey[900],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
                                           Row(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [

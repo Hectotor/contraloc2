@@ -38,10 +38,75 @@ class SuppContrat {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("Utilisateur non connecté");
 
+      // Vérifier si l'utilisateur est un collaborateur
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final userData = userDoc.data();
+      String targetUserId = user.uid;
+
+      if (userData != null && userData['role'] == 'collaborateur') {
+        final adminId = userData['adminId'];
+        print('👥 Utilisateur collaborateur détecté');
+        print('   - Admin ID: $adminId');
+
+        // Vérifier les permissions du collaborateur
+        final collabDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(adminId)
+            .collection('authentification')
+            .doc(user.uid)
+            .get();
+
+        final collabData = collabDoc.data();
+        if (collabData != null && collabData['permissions'] != null) {
+          final permissions = collabData['permissions'];
+          print('📋 Permissions collaborateur:');
+          print('   - Lecture: ${permissions['lecture'] == true ? "✅" : "❌"}');
+          print('   - Écriture: ${permissions['ecriture'] == true ? "✅" : "❌"}');
+          
+          if (permissions['ecriture'] == true) {
+            print('✅ Collaborateur avec permission d\'écriture');
+            targetUserId = adminId;
+          } else {
+            print('❌ Collaborateur sans permission d\'écriture');
+            if (dialogContext != null && dialogContext!.mounted) {
+              Navigator.pop(dialogContext!);
+            }
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Vous n'avez pas la permission de supprimer des contrats"),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+        } else {
+          print('❌ Aucune permission trouvée pour le collaborateur');
+          if (dialogContext != null && dialogContext!.mounted) {
+            Navigator.pop(dialogContext!);
+          }
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Permissions non trouvées"),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+      } else {
+        print('👤 Utilisateur admin');
+      }
+
       // Récupérer les données du contrat pour les photos
       final contratData = await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
+          .doc(targetUserId)
           .collection('locations')
           .doc(contratId)
           .get();
@@ -86,7 +151,7 @@ class SuppContrat {
       // Ensuite supprimer le contrat
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
+          .doc(targetUserId)
           .collection('locations')
           .doc(contratId)
           .delete();

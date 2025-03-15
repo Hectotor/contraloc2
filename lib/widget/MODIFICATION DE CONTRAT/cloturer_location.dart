@@ -40,6 +40,7 @@ class CloturerLocationPopup extends StatelessWidget {
           children: [
             TextButton(
               onPressed: () {
+                print('❌ Clôture de location annulée');
                 Navigator.of(context).pop(false);
                 onCancel?.call();
               },
@@ -57,6 +58,7 @@ class CloturerLocationPopup extends StatelessWidget {
             SizedBox(width: 10), 
             ElevatedButton(
               onPressed: () {
+                print('✅ Clôture de location confirmée');
                 Navigator.of(context).pop(true);
                 onConfirm();
               },
@@ -87,6 +89,7 @@ class CloturerLocationPopup extends StatelessWidget {
     required VoidCallback onConfirm,
     VoidCallback? onCancel,
   }) {
+    print('🔄 Ouverture de la popup de clôture de location');
     return showDialog<bool>(
       context: context,
       builder: (context) => CloturerLocationPopup(

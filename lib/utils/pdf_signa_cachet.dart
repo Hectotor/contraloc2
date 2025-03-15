@@ -42,7 +42,7 @@ class SignaCachetWidget {
           pw.Text(
             'SIGNATURES',
             style: pw.TextStyle(
-              fontSize: 20,
+              fontSize: 12,
               font: boldFont,
               color: PdfColors.blue900,
             ),
@@ -176,7 +176,7 @@ class SignaCachetWidget {
         mainAxisSize: pw.MainAxisSize.min,
         children: [
           pw.Text('Signatures client',
-              style: pw.TextStyle(fontSize: 16, font: boldFont)),
+              style: pw.TextStyle(fontSize: 12, font: boldFont)),
           pw.Divider(),
           pw.SizedBox(height: 10),
           pw.Row(

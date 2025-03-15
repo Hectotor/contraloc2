@@ -69,13 +69,61 @@ class DeleteVehicule {
       // Vérifier si l'utilisateur est un collaborateur
       final userDoc = await _firestore.collection('users').doc(user.uid).get();
       final userData = userDoc.data();
-      final targetUserId = userData != null && userData['role'] == 'collaborateur'
-          ? userData['adminId']
-          : user.uid;
+      String targetUserId = user.uid;
 
-      print('👤 Utilisateur: ${user.uid}');
-      print('🔑 Rôle: ${userData?['role']}');
-      print('👥 Admin ID: $targetUserId');
+      if (userData != null && userData['role'] == 'collaborateur') {
+        final adminId = userData['adminId'];
+        print('👥 Utilisateur collaborateur détecté');
+        print('   - Admin ID: $adminId');
+
+        // Vérifier les permissions du collaborateur
+        final collabDoc = await _firestore
+            .collection('users')
+            .doc(adminId)
+            .collection('authentification')
+            .doc(user.uid)
+            .get();
+
+        final collabData = collabDoc.data();
+        if (collabData != null && collabData['permissions'] != null) {
+          final permissions = collabData['permissions'];
+          print('📋 Permissions collaborateur:');
+          print('   - Lecture: ${permissions['lecture'] == true ? "✅" : "❌"}');
+          print('   - Écriture: ${permissions['ecriture'] == true ? "✅" : "❌"}');
+          
+          if (permissions['ecriture'] == true) {
+            print('✅ Collaborateur avec permission d\'écriture');
+            targetUserId = adminId;
+          } else {
+            print('❌ Collaborateur sans permission d\'écriture');
+            if (context.mounted) {
+              Navigator.pop(context); // Fermer l'indicateur de chargement
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Vous n'avez pas la permission de supprimer des véhicules"),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+        } else {
+          print('❌ Aucune permission trouvée pour le collaborateur');
+          if (context.mounted) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Permissions non trouvées"),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+      } else {
+        print('👤 Utilisateur admin');
+      }
+
       print('🚗 Immatriculation à supprimer: $immatriculationId');
 
       // Récupérer le document du véhicule dans la collection de l'admin

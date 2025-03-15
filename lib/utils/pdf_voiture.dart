@@ -39,19 +39,19 @@ class PdfVoitureWidget {
         children: [
           pw.Text('Conditions de la Location:',
               style: pw.TextStyle(
-                fontSize: 18,
+                fontSize: 15,
                 font: boldFont,
                 color: PdfColors.blue900,
               )),
           pw.Divider(color: PdfColors.black),
-          pw.SizedBox(height: 10),
+          pw.SizedBox(height: 12),
           pw.Text('Informations du Véhicule:',
-              style: pw.TextStyle(fontSize: 16, font: boldFont)),
+              style: pw.TextStyle(fontSize: 12, font: boldFont)),
           _buildVehiculeInfo(data, typeCarburant, boiteVitesses, assuranceNom,
               assuranceNumero, franchise, ttf),
-          pw.SizedBox(height: 15),
+          pw.SizedBox(height: 12),
           pw.Text('Détails de la Location:',
-              style: pw.TextStyle(fontSize: 16, font: boldFont)),
+              style: pw.TextStyle(fontSize: 12, font: boldFont)),
           _buildLocationDetails(
               dateDebut,
               dateFinTheorique,
@@ -92,27 +92,27 @@ class PdfVoitureWidget {
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text('Marque: ${data['marque']}',
-                style: pw.TextStyle(font: ttf)),
+                style: pw.TextStyle(font: ttf, fontSize: 10)),
             pw.Text('Modèle: ${data['modele']}',
-                style: pw.TextStyle(font: ttf)),
+                style: pw.TextStyle(font: ttf, fontSize: 10)),
             pw.Text('Immat.: ${data['immatriculation']}',
-                style: pw.TextStyle(font: ttf)),
+                style: pw.TextStyle(font: ttf, fontSize: 10)),
           ],
         ),
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text('Type carburant: $typeCarburant',
-                style: pw.TextStyle(font: ttf)),
-            pw.Text('Boîte: $boiteVitesses', style: pw.TextStyle(font: ttf)),
+                style: pw.TextStyle(font: ttf, fontSize: 10)),
+            pw.Text('Boîte: $boiteVitesses', style: pw.TextStyle(font: ttf, fontSize: 10)),
           ],
         ),
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('Assurance: $assuranceNom', style: pw.TextStyle(font: ttf)),
-            pw.Text('N°: $assuranceNumero', style: pw.TextStyle(font: ttf)),
-            pw.Text('Franchise: $franchise €', style: pw.TextStyle(font: ttf)),
+            pw.Text('Assurance: $assuranceNom', style: pw.TextStyle(font: ttf, fontSize: 10)),
+            pw.Text('N°: $assuranceNumero', style: pw.TextStyle(font: ttf, fontSize: 10)),
+            pw.Text('Franchise: $franchise €', style: pw.TextStyle(font: ttf, fontSize: 10)),
           ],
         ),
       ],
@@ -169,21 +169,21 @@ class PdfVoitureWidget {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Text('Date de début: ${dateDebut.isEmpty ? '' : dateDebut}',
-                style: pw.TextStyle(font: ttf)),
+                style: pw.TextStyle(font: ttf, fontSize: 10)),
                 pw.SizedBox(height: 5),
             pw.Text('Date de fin théorique: ${dateFinTheorique.isEmpty ? '' : dateFinTheorique}',
-                style: pw.TextStyle(font: ttf)),
+                style: pw.TextStyle(font: ttf, fontSize: 10)),
                 pw.SizedBox(height: 5),
             pw.Text('Date de fin effectif: ${dateFinEffectifData.isEmpty ? '' : dateFinEffectifData}',
-                style: pw.TextStyle(font: ttf)),
+                style: pw.TextStyle(font: ttf, fontSize: 10)),
             pw.SizedBox(height: 5),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text('Durée théorique: $dureeTheorique jours',
-                    style: pw.TextStyle(font: ttf)),
+                    style: pw.TextStyle(font: ttf, fontSize: 10)),
                 pw.Text('Durée effective: $dureeEffectif jours',
-                    style: pw.TextStyle(font: ttf)),
+                    style: pw.TextStyle(font: ttf, fontSize: 10)),
               ],
             ),
             pw.SizedBox(height: 5),
@@ -197,9 +197,9 @@ class PdfVoitureWidget {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text('Type de location: $typeLocation',
-                    style: pw.TextStyle(font: ttf, fontWeight: pw.FontWeight.bold)),
+                    style: pw.TextStyle(font: ttf, fontSize: 10, fontWeight: pw.FontWeight.bold)),
                 pw.Text('Caution: $caution €',
-                    style: pw.TextStyle(font: ttf)),
+                    style: pw.TextStyle(font: ttf, fontSize: 10)),
               ],
             ),
             pw.SizedBox(height: 5),
@@ -213,9 +213,9 @@ class PdfVoitureWidget {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text('Km de départ: $kilometrageDepart km',
-                    style: pw.TextStyle(font: ttf)),
+                    style: pw.TextStyle(font: ttf, fontSize: 10)),
                 pw.Text('Km de retour: $kilometrageRetour km',
-                    style: pw.TextStyle(font: ttf)),
+                    style: pw.TextStyle(font: ttf, fontSize: 10)),
               ],
             ),
             pw.SizedBox(height: 5),
@@ -223,9 +223,9 @@ class PdfVoitureWidget {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text('Distance autorisée: $kilometrageAutorise km',
-                    style: pw.TextStyle(font: ttf, fontWeight: pw.FontWeight.bold)),
+                    style: pw.TextStyle(font: ttf, fontSize: 10, fontWeight: pw.FontWeight.bold)),
                 pw.Text('Prix Km supp: $kilometrageSupp €/km',
-                    style: pw.TextStyle(font: ttf)),
+                    style: pw.TextStyle(font: ttf, fontSize: 10)),
               ],
             ),
             pw.SizedBox(height: 5),
@@ -233,7 +233,7 @@ class PdfVoitureWidget {
               mainAxisAlignment: pw.MainAxisAlignment.end,
               children: [
                 pw.Text('Coût total km supp: ${calculateKmSupp().toStringAsFixed(2)} €',
-                    style: pw.TextStyle(font: ttf, fontWeight: pw.FontWeight.bold)),
+                    style: pw.TextStyle(font: ttf, fontSize: 10, fontWeight: pw.FontWeight.bold)),
               ],
             ),
             pw.SizedBox(height: 5),
@@ -247,9 +247,9 @@ class PdfVoitureWidget {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text('Niveau d\'essence: $pourcentageEssence%',
-                    style: pw.TextStyle(font: ttf)),
+                    style: pw.TextStyle(font: ttf, fontSize: 10)),
                 pw.Text('Prix Rayures/élement: $prixRayures €',
-                    style: pw.TextStyle(font: ttf)),
+                    style: pw.TextStyle(font: ttf, fontSize: 10)),
               ],
             ),
             pw.SizedBox(height: 5),
@@ -263,9 +263,9 @@ class PdfVoitureWidget {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text('Frais de nettoyage intérieur: $nettoyageInt €',
-                    style: pw.TextStyle(font: ttf)),
+                    style: pw.TextStyle(font: ttf, fontSize: 10)),
                 pw.Text('Frais de nettoyage extérieur: $nettoyageExt €',
-                    style: pw.TextStyle(font: ttf)),
+                    style: pw.TextStyle(font: ttf, fontSize: 10)),
               ],
             ),
             pw.SizedBox(height: 5),
@@ -275,7 +275,7 @@ class PdfVoitureWidget {
                   mainAxisAlignment: pw.MainAxisAlignment.start,
                   children: [
                     pw.Text('Carburant manquant: $carburantManquant €',
-                        style: pw.TextStyle(font: ttf)),
+                        style: pw.TextStyle(font: ttf, fontSize: 10)),
                   ],
                 ),
                 pw.SizedBox(height: 5),
@@ -284,34 +284,28 @@ class PdfVoitureWidget {
           ],
         ),
 
-        // Prix et coûts (conditionnelle)
-        if (typeLocation != "Gratuite") ...[
-          pw.Column(
-            children: [
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Montant journalier: $prixLocation €',
-                      style: pw.TextStyle(font: ttf)),
-                  pw.Text('Coût total théorique: ${coutTotalTheorique?.isNaN ?? true ? '0.0' : coutTotalTheorique.toString()} €',
-                      style: pw.TextStyle(font: ttf)),
-                ],
-              ),
-              pw.SizedBox(height: 5),
-              pw.Column(
-                children: [
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.start,
-                    children: [
-                      pw.Text('Coût total effectif: ${coutTotal?.isNaN ?? true ? '0.0' : coutTotal.toString()} €',
-                          style: pw.TextStyle(font: ttf)),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
+        // Prix et coûts
+        pw.Column(
+          children: [
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Montant journalier: ${typeLocation == "Gratuite" ? "0" : "$prixLocation"} €',
+                    style: pw.TextStyle(font: ttf, fontSize: 10)),
+                pw.Text('Coût total théorique: ${typeLocation == "Gratuite" ? "0" : (coutTotalTheorique?.isNaN ?? true ? '0.0' : coutTotalTheorique.toString())} €',
+                    style: pw.TextStyle(font: ttf, fontSize: 10)),
+              ],
+            ),
+            pw.SizedBox(height: 5),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.start,
+              children: [
+                pw.Text('Coût total effectif: ${typeLocation == "Gratuite" ? "0" : (coutTotal?.isNaN ?? true ? '0.0' : coutTotal.toString())} €',
+                    style: pw.TextStyle(font: ttf, fontSize: 10)),
+              ],
+            ),
+          ],
+        ),
       ],
     );
   }

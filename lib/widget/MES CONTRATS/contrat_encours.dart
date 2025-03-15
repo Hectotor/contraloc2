@@ -33,10 +33,8 @@ class _ContratEnCoursState extends State<ContratEnCours> {
       String targetUserId = userId;
 
       if (userData != null && userData['role'] == 'collaborateur') {
-        print('👥 Récupération photo véhicule depuis le compte admin');
         targetUserId = userData['adminId'];
       } else {
-        print('👤 Récupération photo véhicule depuis le compte utilisateur');
       }
 
       // Vérifier si le véhicule existe dans la collection de l'utilisateur cible
@@ -51,14 +49,11 @@ class _ContratEnCoursState extends State<ContratEnCours> {
       if (vehiculeQuery.docs.isNotEmpty) {
         final photoUrl = vehiculeQuery.docs.first.data()['photoVehiculeUrl'] as String?;
         if (photoUrl != null) {
-          print('✅ Photo véhicule trouvée');
           _photoUrlCache[cacheKey] = photoUrl;
           return photoUrl;
         }
       }
-      print('⚠️ Aucune photo trouvée pour le véhicule $immatriculation');
     } catch (e) {
-      print('❌ Erreur récupération photo véhicule: $e');
     }
     return null;
   }

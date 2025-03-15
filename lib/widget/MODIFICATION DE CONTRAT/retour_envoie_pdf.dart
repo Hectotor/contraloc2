@@ -40,18 +40,60 @@ class RetourEnvoiePdf {
     }
 
     try {
-      // Récupérer les informations du client
-      DocumentSnapshot clientDoc = await FirebaseFirestore.instance
+      print('📋 Début de la génération du PDF de clôture');
+
+      // Vérifier si l'utilisateur est un collaborateur
+      print('👤 Vérification du rôle utilisateur...');
+      final userDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
           .doc(user.uid)
           .get();
 
+      final userData = userDoc.data();
+      String targetUserId = user.uid;
+      bool isCollaborateur = false;
+
+      if (userData != null && userData['role'] == 'collaborateur') {
+        isCollaborateur = true;
+        final adminId = userData['adminId'];
+        
+        // Vérifier les permissions du collaborateur
+        print('👥 Utilisateur collaborateur détecté, vérification des permissions...');
+        final collabDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(adminId)
+            .collection('authentification')
+            .doc(user.uid)
+            .get();
+
+        final collabData = collabDoc.data();
+        if (collabData != null && collabData['permissions'] != null) {
+          if (collabData['permissions']['ecriture'] == true) {
+            print('✅ Collaborateur avec permission d\'écriture');
+            targetUserId = adminId;
+          } else {
+            print('❌ Collaborateur sans permission d\'écriture');
+            throw Exception("Vous n'avez pas la permission de générer des PDF");
+          }
+        }
+      } else {
+        print('👤 Utilisateur admin');
+      }
+
+      // Récupérer les informations du client
+      print('📄 Récupération des données client...');
+      DocumentSnapshot clientDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(targetUserId)
+          .collection('authentification')
+          .doc(isCollaborateur ? user.uid : targetUserId)
+          .get();
+
       // Récupérer la signature du contrat
+      print('📄 Récupération des données du contrat...');
       DocumentSnapshot contratDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
+          .doc(targetUserId)
           .collection('locations')
           .doc(contratId)
           .get();
@@ -68,15 +110,17 @@ class RetourEnvoiePdf {
       String logoUrl = (clientData['logoUrl'] ?? '').toString();
       String siret = (clientData['siret'] ?? '').toString();
       
+      print('🏢 Informations entreprise récupérées:');
+      print('   - Nom: $nomEntreprise');
+      print('   - SIRET: ${siret.isNotEmpty ? siret : "Non renseigné"}');
+      print('   - Logo: ${logoUrl.isNotEmpty ? "Présent" : "Non renseigné"}');
+
       // Récupérer la signature
       String? signatureBase64;
       if (contratDataComplete.containsKey('signature') && 
           contratDataComplete['signature'] is Map) {
         signatureBase64 = contratDataComplete['signature']['base64'];
       }
-
-      // Log pour le débogage
-      print('Signature récupérée : ${signatureBase64 != null ? 'Présente' : 'Absente'}');
 
       // Récupérer les signatures aller et retour
       String? signatureAllerBase64;
@@ -97,14 +141,15 @@ class RetourEnvoiePdf {
         }
       }
 
-      // Log pour le débogage
-      print('📝 Signature aller récupérée : ${signatureAllerBase64 != null ? 'Présente (${signatureAllerBase64.length} caractères)' : 'Absente'}');
-      print('📝 Signature retour récupérée : ${signatureRetourBase64 != null ? 'Présente (${signatureRetourBase64.length} caractères)' : 'Absente'}');
+      print('✍️ État des signatures:');
+      print('   - Signature aller: ${signatureAllerBase64 != null ? "Présente" : "Manquante"}');
+      print('   - Signature retour: ${signatureRetourBase64 != null ? "Présente" : "Manquante"}');
 
       // Récupérer les données du véhicule
+      print('🚗 Récupération des données du véhicule...');
       final vehicleDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
+          .doc(targetUserId)
           .collection('vehicules')
           .where('immatriculation', isEqualTo: contratData['immatriculation'])
           .get();
@@ -113,7 +158,12 @@ class RetourEnvoiePdf {
           ? vehicleDoc.docs.first.data() 
           : {};
 
+      print('🚗 Données véhicule:');
+      print('   - Immatriculation: ${contratData['immatriculation'] ?? "Non renseigné"}');
+      print('   - Marque/Modèle: ${contratData['marque'] ?? ""} ${contratData['modele'] ?? ""}');
+
       // Générer le PDF de clôture
+      print('📄 Génération du PDF en cours...');
       final pdfPath = await generatePdf(
         {
           'nom': (contratData['nom'] ?? '').toString(),
@@ -174,6 +224,8 @@ class RetourEnvoiePdf {
         signatureAllerBase64: signatureAllerBase64 ?? '',
       );
 
+      print('📄 PDF généré avec succès');
+
       // Fermer le dialogue de chargement
       if (context.mounted) {
         Navigator.pop(context);
@@ -181,6 +233,7 @@ class RetourEnvoiePdf {
 
       // Envoyer le PDF par email si un email est disponible
       if ((contratData['email'] ?? '').toString().isNotEmpty) {
+        print('📧 Envoi du PDF par email à ${contratData['email']}...');
         await EmailService.sendEmailWithPdf(
           pdfPath: pdfPath,
           email: (contratData['email'] ?? '').toString(),
@@ -194,14 +247,17 @@ class RetourEnvoiePdf {
           telephone: telephone,
           logoUrl: logoUrl,
         );
+        print('✅ PDF envoyé avec succès');
       } else {
-        print("Aucun email client n'a été trouvé. Pas d'envoi de PDF.");
+        print("❌ Aucun email client n'a été trouvé. Pas d'envoi de PDF.");
       }
+
+      print('✨ Processus de clôture terminé avec succès');
 
       // Mise à jour du statut du contrat
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
+          .doc(targetUserId)
           .collection('locations')
           .doc(contratId)
           .update({
