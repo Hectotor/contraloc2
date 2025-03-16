@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Indique que l'application n'utilise pas de cryptage non exempté -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+    
+    <!-- Désactive la durée minimale de frame sur iPhone -->
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
+    
+    <!-- Région de développement par défaut -->
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    
+    <!-- Nom affiché de l'application -->
+    <key>CFBundleDisplayName</key>
+    <string>Contraloc</string>
+    
+    <!-- Nom exécutable de l'application -->
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    
+    <!-- Identifiant du bundle de l'application -->
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    
+    <!-- Version du dictionnaire d'informations du bundle -->
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    
+    <!-- Nom du bundle de l'application -->
+    <key>CFBundleName</key>
+    <string>Contraloc</string>
+    
+    <!-- Type de package du bundle -->
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    
+    <!-- Version courte du bundle -->
+    <key>CFBundleShortVersionString</key>
+    <string>$(FLUTTER_BUILD_NAME)</string>
+    
+    <!-- Signature du bundle -->
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    
+    <!-- Version du bundle -->
+    <key>CFBundleVersion</key>
+    <string>$(FLUTTER_BUILD_NUMBER)</string>
+    
+    <!-- Indique que l'application nécessite iOS -->
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    
+    <!-- Description de l'utilisation de la caméra -->
+    <key>NSCameraUsageDescription</key>
+    <string>Nécessaire pour prendre des photos de véhicules ou de documents liés aux contrats de location.</string>
+    
+    <!-- Description de l'utilisation du répertoire de documents -->
+    <key>NSDocumentsDirectoryUsageDescription</key>
+    <string>Nécessaire pour importer ou gérer les documents liés aux contrats de location.</string>
+    
+    <!-- Description de l'utilisation de la bibliothèque de photos (ajout) -->
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Nécessaire pour enregistrer des photos de véhicules ou de documents dans la galerie.</string>
+    
+    <!-- Description de l'utilisation de la bibliothèque de photos -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Nécessaire pour sélectionner des photos de véhicules ou de documents à inclure dans les contrats.</string>
+    
+    <!-- Indique que l'application observe les transactions de paiement -->
+    <key>SKPaymentTransactionObserverKey</key>
+    <true/>
+    
+    <!-- Support des événements d'entrée indirects -->
+    <key>UIApplicationSupportsIndirectInputEvents</key>
+    <true/>
+    
+    <!-- Nom du storyboard de lancement -->
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
+    
+    <!-- Nom du fichier storyboard principal -->
+    <key>UIMainStoryboardFile</key>
+    <string>Main</string>
+    
+    <!-- Orientations d'interface supportées -->
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    
+    <!-- Orientations d'interface supportées pour iPad -->
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    
+    <!-- Modes d'arrière-plan supportés -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>remote-notification</string>
+    </array>
+    
+    <!-- Configuration des notifications push Apple -->
+    <key>aps-environment</key>
+    <string>production</string>  <!-- Peut être "development" ou "production" -->
+    
+    <!-- Capacités requises de l'appareil -->
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>armv7</string>
+    </array>
+
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <true/>
+    <key>UIFileSharingEnabled</key>
+    <true/>
+
+</dict>
+</plist>
