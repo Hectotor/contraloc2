@@ -28,6 +28,9 @@ class PdfVoitureWidget {
     required pw.Font boldFont,
     required pw.Font ttf,
   }) {
+    // Récupérer la valeur de caution du map data, ou utiliser une chaîne vide si elle est absente
+    final String caution = data['caution'] ?? '';
+
     return pw.Container(
       padding: const pw.EdgeInsets.all(10), // Réduit le padding
       decoration: pw.BoxDecoration(
@@ -54,7 +57,7 @@ class PdfVoitureWidget {
           pw.Text('Détails de la Location:',
               style: pw.TextStyle(fontSize: 12, font: boldFont)),
           _buildLocationDetails(
-              data['caution'] ?? '',
+              caution,
               dateDebut,
               dateFinTheorique,
               dateFinEffectifData,
@@ -274,44 +277,11 @@ class PdfVoitureWidget {
         ),
         pw.SizedBox(height: 2),
 
-        // Coût de la location
+        // Kilométrage ligne 1
         pw.Container(
           decoration: pw.BoxDecoration(
             color: PdfColors.grey100,
           ),
-          padding: const pw.EdgeInsets.all(5),
-          child: pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Expanded(
-                flex: 1,
-                child: pw.Text('Montant journalier: ${typeLocation == "Gratuite" ? "0" : "$prixLocation"} €',
-                    style: pw.TextStyle(font: ttf, fontSize: 9)),
-              ),
-              pw.Expanded(
-                flex: 1,
-                child: pw.Container(
-                  alignment: pw.Alignment.center,
-                  child: pw.Text('Coût total théorique: ${typeLocation == "Gratuite" ? "0" : calculateCoutTotalTheorique(dateDebut, dateFinTheorique, prixLocation).toStringAsFixed(2)} €',
-                      textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(font: ttf, fontSize: 9)),
-                ),
-              ),
-              pw.Expanded(
-                flex: 1,
-                child: pw.Container(
-                  alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Coût total effectif: ${typeLocation == "Gratuite" ? "0" : calculateCoutTotalEffectif(dateDebut, dateFinEffectifData, prixLocation).toStringAsFixed(2)} €',
-                      style: pw.TextStyle(font: ttf, fontSize: 9)),
-                ),
-              ),
-            ],
-          ),
-        ),
-        pw.SizedBox(height: 2),
-
-        // Kilométrage ligne 1
-        pw.Container(
           padding: const pw.EdgeInsets.all(5),
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -345,9 +315,6 @@ class PdfVoitureWidget {
         
         // Kilométrage ligne 2
         pw.Container(
-          decoration: pw.BoxDecoration(
-            color: PdfColors.grey100,
-          ),
           padding: const pw.EdgeInsets.all(5),
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -372,6 +339,42 @@ class PdfVoitureWidget {
                   alignment: pw.Alignment.centerRight,
                   child: pw.Text('Coût total km supp: ${calculateKmSupp().toStringAsFixed(2)} €',
                       style: pw.TextStyle(font: ttf, fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 2),
+
+        // Coût de la location
+        pw.Container(
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+          ),
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Montant journalier: ${typeLocation == "Gratuite" ? "0" : "$prixLocation"} €',
+                    style: pw.TextStyle(font: ttf, fontSize: 9)),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('Coût total théorique: ${typeLocation == "Gratuite" ? "0" : calculateCoutTotalTheorique(dateDebut, dateFinTheorique, prixLocation).toStringAsFixed(2)} €',
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Coût total effectif: ${typeLocation == "Gratuite" ? "0" : calculateCoutTotalEffectif(dateDebut, dateFinEffectifData, prixLocation).toStringAsFixed(2)} €',
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
             ],
