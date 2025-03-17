@@ -199,12 +199,37 @@ Future<String> generatePdf(
   final prixLocationDouble = double.tryParse(prixLocation) ?? 0.0;
   final coutTotalTheorique = dureeTheorique > 0 && !prixLocationDouble.isNaN
       ? calculateTotalCost(dureeTheorique, prixLocationDouble)
-      : 0.0;
+      : null;
 
   // Calculer le coût total effectif avec validation
   final coutTotal = dureeEffectif > 0 && !prixLocationDouble.isNaN
       ? calculateTotalCost(dureeEffectif, prixLocationDouble)
-      : 0.0;
+      : null;
+
+  // S'assurer que typeLocation est correctement défini
+  final String typeLocationValue = data.containsKey('typeLocation') && data['typeLocation'] != null 
+      ? data['typeLocation'].toString() 
+      : typeLocation;
+
+  // S'assurer que la caution est correctement définie dans data
+  if (!data.containsKey('caution') || data['caution'] == null) {
+    data['caution'] = data.containsKey('caution') ? data['caution'] : '';
+  }
+
+  // Définir des valeurs par défaut si elles sont vides
+  if (typeLocationValue.isEmpty) {
+    data['typeLocation'] = ""; // Laisser vide pour que l'utilisateur choisisse
+  }
+  
+  if (data['caution'].toString().isEmpty) {
+    data['caution'] = "0";
+  }
+
+  // Logs de débogage pour vérifier les valeurs
+  print('DEBUG PDF - typeLocation: $typeLocationValue');
+  print('DEBUG PDF - caution: ${data['caution']}');
+  print('DEBUG PDF - data contient typeLocation: ${data.containsKey('typeLocation')}');
+  print('DEBUG PDF - data contient caution: ${data.containsKey('caution')}');
 
   // Charger les photos du véhicule à l'aller si disponibles
   List<Uint8List> photosAllerBytes = [];
@@ -305,7 +330,7 @@ Future<String> generatePdf(
               kilometrageAutorise: kilometrageAutorise,
               kilometrageRetour: kilometrageRetour,
               kilometrageSupp: kilometrageSupp,
-              typeLocation: typeLocation,
+              typeLocation: typeLocationValue,
               pourcentageEssence: pourcentageEssence,
               dureeTheorique: dureeTheorique,
               dureeEffectif: dureeEffectif,

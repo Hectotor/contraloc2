@@ -30,6 +30,23 @@ class PdfVoitureWidget {
   }) {
     // Récupérer la valeur de caution du map data, ou utiliser une chaîne vide si elle est absente
     final String caution = data['caution'] ?? '';
+    
+    // Récupérer le type de location du map data, ou utiliser la valeur passée en paramètre
+    final String typeLocationValue = data['typeLocation'] ?? typeLocation;
+    
+    // Définir des valeurs par défaut si elles sont vides
+    final String cautionFinal = caution.isEmpty ? "0" : caution;
+    final String typeLocationFinal = typeLocationValue.isEmpty ? "" : typeLocationValue;
+
+    // Logs de débogage pour vérifier les valeurs
+    print('DEBUG PDF_VOITURE - typeLocation (param): $typeLocation');
+    print('DEBUG PDF_VOITURE - typeLocation (data): ${data['typeLocation']}');
+    print('DEBUG PDF_VOITURE - typeLocationValue: $typeLocationValue');
+    print('DEBUG PDF_VOITURE - typeLocationFinal: $typeLocationFinal');
+    print('DEBUG PDF_VOITURE - caution: $caution');
+    print('DEBUG PDF_VOITURE - cautionFinal: $cautionFinal');
+    print('DEBUG PDF_VOITURE - data contient typeLocation: ${data.containsKey('typeLocation')}');
+    print('DEBUG PDF_VOITURE - data contient caution: ${data.containsKey('caution')}');
 
     return pw.Container(
       padding: const pw.EdgeInsets.all(10), // Réduit le padding
@@ -57,7 +74,7 @@ class PdfVoitureWidget {
           pw.Text('Détails de la Location:',
               style: pw.TextStyle(fontSize: 12, font: boldFont)),
           _buildLocationDetails(
-              caution,
+              data,
               dateDebut,
               dateFinTheorique,
               dateFinEffectifData,
@@ -65,7 +82,7 @@ class PdfVoitureWidget {
               kilometrageAutorise,
               kilometrageRetour,
               kilometrageSupp,
-              typeLocation,
+              typeLocationFinal,
               pourcentageEssence,
               dureeTheorique,
               dureeEffectif,
@@ -73,9 +90,6 @@ class PdfVoitureWidget {
               prixRayures,
               coutTotalTheorique,
               coutTotal,
-              data['nettoyageInt'] ?? '',
-              data['nettoyageExt'] ?? '',
-              data['carburantManquant'] ?? '',
               ttf),
         ],
       ),
@@ -124,7 +138,7 @@ class PdfVoitureWidget {
   }
 
   static pw.Widget _buildLocationDetails(
-      String caution,
+      Map<String, dynamic> data,
       String dateDebut,
       String dateFinTheorique,
       String dateFinEffectifData,
@@ -140,10 +154,16 @@ class PdfVoitureWidget {
       String prixRayures,
       double? coutTotalTheorique,
       double? coutTotal,
-      String nettoyageInt,
-      String nettoyageExt,
-      String carburantManquant,
       pw.Font ttf) {
+    
+    // Logs de débogage pour vérifier les valeurs
+    print('DEBUG _buildLocationDetails - typeLocation: $typeLocation');
+    print('DEBUG _buildLocationDetails - data: $data');
+    
+    // Utiliser directement les valeurs passées en paramètre, qui sont déjà traitées
+    final String cautionValue = data['caution'] ?? '';
+    final String typeLocationValue = typeLocation;
+
     double calculateKmSupp() {
       try {
         double kmDepart = double.parse(kilometrageDepart);
@@ -215,7 +235,7 @@ class PdfVoitureWidget {
             children: [
               pw.Expanded(
                 flex: 1,
-                child: pw.Text('Type de location: $typeLocation',
+                child: pw.Text('Type de location: $typeLocationValue',
                     style: pw.TextStyle(
                       font: ttf,
                       fontSize: 9,
@@ -235,7 +255,7 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Caution: $caution €',
+                  child: pw.Text('Caution: $cautionValue €',
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
@@ -357,14 +377,14 @@ class PdfVoitureWidget {
             children: [
               pw.Expanded(
                 flex: 1,
-                child: pw.Text('Montant journalier: ${typeLocation == "Gratuite" ? "0" : "$prixLocation"} €',
+                child: pw.Text('Montant journalier: ${typeLocationValue == "Gratuite" ? "0" : "$prixLocation"} €',
                     style: pw.TextStyle(font: ttf, fontSize: 9)),
               ),
               pw.Expanded(
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.center,
-                  child: pw.Text('Coût total théorique: ${typeLocation == "Gratuite" ? "0" : calculateCoutTotalTheorique(dateDebut, dateFinTheorique, prixLocation).toStringAsFixed(2)} €',
+                  child: pw.Text('Coût total théorique: ${typeLocationValue == "Gratuite" ? "0" : calculateCoutTotalTheorique(dateDebut, dateFinTheorique, prixLocation).toStringAsFixed(2)} €',
                       textAlign: pw.TextAlign.center,
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
@@ -373,7 +393,7 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Coût total effectif: ${typeLocation == "Gratuite" ? "0" : calculateCoutTotalEffectif(dateDebut, dateFinEffectifData, prixLocation).toStringAsFixed(2)} €',
+                  child: pw.Text('Coût total effectif: ${typeLocationValue == "Gratuite" ? "0" : calculateCoutTotalEffectif(dateDebut, dateFinEffectifData, prixLocation).toStringAsFixed(2)} €',
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
@@ -423,7 +443,7 @@ class PdfVoitureWidget {
             children: [
               pw.Expanded(
                 flex: 1,
-                child: pw.Text('Frais de nettoyage intérieur: $nettoyageInt €',
+                child: pw.Text('Frais de nettoyage intérieur: ${data['nettoyageInt'] ?? ''} €',
                     style: pw.TextStyle(font: ttf, fontSize: 9)),
               ),
               pw.Expanded(
@@ -439,7 +459,7 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Frais de nettoyage extérieur: $nettoyageExt €',
+                  child: pw.Text('Frais de nettoyage extérieur: ${data['nettoyageExt'] ?? ''} €',
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
@@ -456,7 +476,7 @@ class PdfVoitureWidget {
             children: [
               pw.Expanded(
                 flex: 1,
-                child: pw.Text('Frais de carburant manquant: $carburantManquant €',
+                child: pw.Text('Frais de carburant manquant: ${data['carburantManquant'] ?? ''} €',
                     style: pw.TextStyle(font: ttf, fontSize: 9)),
               ),
               pw.Expanded(

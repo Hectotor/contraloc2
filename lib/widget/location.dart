@@ -109,6 +109,9 @@ class _LocationPageState extends State<LocationPage> {
 
     // Initialiser la date de début avec l'année
     _dateDebutController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
+    
+    // Initialiser _typeLocationController avec la valeur par défaut de _typeLocation
+    _typeLocationController.text = _typeLocation;
 
     // Récupérer le prix de location depuis les données du véhicule
     _fetchVehicleData();
@@ -140,7 +143,15 @@ class _LocationPageState extends State<LocationPage> {
           _rayuresController.text = vehicleData['rayures'] ?? '';
           _typeCarburantController.text = vehicleData['typeCarburant'] ?? '';
           _boiteVitessesController.text = vehicleData['boiteVitesses'] ?? '';
-          _typeLocationController.text = vehicleData['typeLocation'] ?? '';
+          
+          // Synchroniser les deux variables pour typeLocation
+          String fetchedTypeLocation = vehicleData['typeLocation'] ?? 'Gratuite';
+          _typeLocationController.text = fetchedTypeLocation;
+          _typeLocation = fetchedTypeLocation;
+          
+          // Récupérer la caution
+          _cautionController.text = vehicleData['caution'] ?? '';
+          print('DEBUG FETCH - caution récupérée: ${_cautionController.text}');
         });
       }
     }
@@ -293,7 +304,7 @@ class _LocationPageState extends State<LocationPage> {
         'dateDebut': _dateDebutController.text,
         'dateFinTheorique': _dateFinTheoriqueController.text,
         'kilometrageDepart': _kilometrageDepartController.text,
-        'typeLocation': _typeLocation,
+        'typeLocation': _typeLocationController.text,
         'pourcentageEssence': _pourcentageEssence,
         'commentaire': _commentaireController.text,
         'photos': vehiculeUrls,
@@ -411,14 +422,6 @@ class _LocationPageState extends State<LocationPage> {
         final telephoneEntreprise = userData['telephone'] ?? '';
         final siretEntreprise = userData['siret'] ?? '';
 
-        // Debug print pour vérifier les données
-        print('Données entreprise pour PDF:');
-        print('Nom: $nomEntreprise');
-        print('Adresse: $adresseEntreprise');
-        print('Téléphone: $telephoneEntreprise');
-        print('SIRET: $siretEntreprise');
-
-        // Récupérer les données du véhicule depuis la collection de l'utilisateur
 
         // Récupérer les conditions depuis la collection 'users'
         final conditionsDoc = await _firestore
@@ -467,7 +470,12 @@ class _LocationPageState extends State<LocationPage> {
           'franchise': _franchiseController.text,  
           'rayures': _rayuresController.text,  
           'kilometrageSupp': _kilometrageSuppController.text,  
-          'kilometrageAutorise': _kilometrageAutoriseController.text,  
+          'kilometrageAutorise': _kilometrageAutoriseController.text,
+          'typeLocation': _typeLocationController.text,
+          'prixLocation': _prixLocationController.text,
+          'kilometrageDepart': _kilometrageDepartController.text,  
+          'pourcentageEssence': _pourcentageEssence.toString(),  
+          'condition': conditions,  
         };  
 
         final pdfPath = await generatePdf(  
@@ -721,6 +729,7 @@ class _LocationPageState extends State<LocationPage> {
                 CreateContrat.buildDropdown(_typeLocation, (value) {
                   setState(() {
                     _typeLocation = value!;
+                    _typeLocationController.text = value; // Synchroniser les deux variables
                     if (_typeLocation == "Payante") {
                       _fetchVehicleData();
                     } else {
