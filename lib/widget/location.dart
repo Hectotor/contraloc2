@@ -144,7 +144,7 @@ class _LocationPageState extends State<LocationPage> {
         });
       }
     }
-    print('DEBUG FETCH - Prix de location récupéré: ${_prixLocationController.text}');
+
   }
 
   Future<void> _selectDateTime(TextEditingController controller) async {
@@ -412,23 +412,36 @@ class _LocationPageState extends State<LocationPage> {
         final telephoneEntreprise = userData['telephone'] ?? '';
         final siretEntreprise = userData['siret'] ?? '';
 
-
         // Récupérer les conditions depuis la collection 'users'
-        final conditionsDoc = await _firestore
+        DocumentSnapshot conditionsDoc;
+        // Tenter de récupérer les conditions depuis le document 'userId'
+        conditionsDoc = await _firestore
             .collection('users')
             .doc(user.uid)
             .collection('contrats')
-            .doc(user.uid)
+            .doc('userId')
             .get();
 
         String conditions = '';
-        if (conditionsDoc.exists && conditionsDoc.data()?['texte'] != null) {
-          conditions = conditionsDoc.data()?['texte'];
+
+        // Si le document 'userId' n'existe pas, récupérer depuis le document user.uid
+        if (!conditionsDoc.exists) {
+          conditionsDoc = await _firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('contrats')
+              .doc(user.uid)
+              .get();
+        }
+
+        if (conditionsDoc.exists) {
+          final data = conditionsDoc.data() as Map<String, dynamic>?;
+          conditions = data?['texte'] ?? '';
         } else {
           // Utiliser les conditions par défaut si aucune condition personnalisée n'existe
           final defaultConditionsDoc =
               await _firestore.collection('contrats').doc('default').get();
-          conditions = defaultConditionsDoc.data()?['texte'] ??
+          conditions = (defaultConditionsDoc.data())?['texte'] ??
               ContratModifier.defaultContract;
         }
 
