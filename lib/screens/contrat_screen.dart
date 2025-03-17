@@ -24,7 +24,6 @@ class _ContratScreenState extends State<ContratScreen>
   final TextEditingController _searchController = TextEditingController();
   bool _showEnCours = true;
   bool _showRestitues = false;
-  bool _showContrat = false;
   bool _showCalendar = false; // Add this line
   late AnimationController _animationController;
 
@@ -80,8 +79,8 @@ class _ContratScreenState extends State<ContratScreen>
               ],
             ),
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 30),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal, // Add this line
+            child: SizedBox(
+              width: double.infinity,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -89,26 +88,23 @@ class _ContratScreenState extends State<ContratScreen>
                     setState(() {
                       _showEnCours = true;
                       _showRestitues = false;
-                      _showContrat = false;
-                      _showCalendar = false; // Add this line
+                      _showCalendar = false;
                     });
                   }),
-                  const SizedBox(width: 8), // Add this line
+                  const SizedBox(width: 8),
                   _buildTabButton("Restitués", _showRestitues, () {
                     setState(() {
                       _showEnCours = false;
                       _showRestitues = true;
-                      _showContrat = false;
-                      _showCalendar = false; // Add this line
+                      _showCalendar = false;
                     });
                   }),
-                  const SizedBox(width: 8), // Add this line
+                  const SizedBox(width: 8),
                   _buildTabButton("Réservés", _showCalendar, () {
                     setState(() {
                       _showEnCours = false;
                       _showRestitues = false;
-                      _showContrat = false;
-                      _showCalendar = true; // Add this line
+                      _showCalendar = true;
                     });
                   }),
                 ],
@@ -116,13 +112,11 @@ class _ContratScreenState extends State<ContratScreen>
             ),
           ),
           Expanded(
-            child: _showContrat
-                ? ContratModifier()
-                : _showEnCours
-                    ? ContratEnCours(searchText: _searchController.text)
-                    : _showRestitues
-                        ? ContratRestitues(searchText: _searchController.text)
-                        : CalendarScreen(), // Add this line
+            child: _showEnCours
+                ? ContratEnCours(searchText: _searchController.text)
+                : _showRestitues
+                    ? ContratRestitues(searchText: _searchController.text)
+                    : CalendarScreen(), // Add this line
           ),
         ],
       ),
