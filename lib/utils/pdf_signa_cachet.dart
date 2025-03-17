@@ -162,7 +162,8 @@ class SignaCachetWidget {
     
     return pw.Container(
       width: 200,
-      padding: const pw.EdgeInsets.all(16.0),
+      padding: const pw.EdgeInsets.all(5), // Réduction du padding
+      margin: const pw.EdgeInsets.only(bottom: 5), // Réduction de la marge
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey400),
         borderRadius: pw.BorderRadius.circular(8),
@@ -173,7 +174,7 @@ class SignaCachetWidget {
           pw.Text('Signatures client',
               style: pw.TextStyle(fontSize: 12, font: boldFont)),
           pw.Divider(),
-          pw.SizedBox(height: 10),
+          pw.SizedBox(height: 5),
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [

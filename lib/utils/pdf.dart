@@ -433,7 +433,7 @@ Future<String> generatePdf(
                 ),
               );
             }).toList(),
-            pw.SizedBox(height: 30), // Augmenté de 40 à 80
+            pw.SizedBox(height: 20), // Augmenté de 40 à 80
             SignaCachetWidget.build(
               logoImage: logoImage,
               nomEntreprise: nomEntreprise,
