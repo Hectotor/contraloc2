@@ -68,7 +68,6 @@ class _LocationPageState extends State<LocationPage> {
       FirebaseFirestore.instance; // Firestore instance
 
   final List<File> _photos = [];
-  String _typeLocation = "Gratuite";
   int _pourcentageEssence = 50; // Niveau d'essence par défaut
   bool _isLoading = false; // Add a state variable for loading
   bool _acceptedConditions = false; // Add a state variable for acceptance
@@ -82,21 +81,16 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _carburantManquantController =
       TextEditingController();
   final TextEditingController _kilometrageAutoriseController = TextEditingController();
-  final TextEditingController _kilometrageSuppController =
-      TextEditingController();
+  final TextEditingController _kilometrageSuppController = TextEditingController();
   final TextEditingController _vinController = TextEditingController();
   final TextEditingController _assuranceNomController = TextEditingController();
-  final TextEditingController _assuranceNumeroController =
-      TextEditingController();
+  final TextEditingController _assuranceNumeroController = TextEditingController();
   final TextEditingController _franchiseController = TextEditingController();
   final TextEditingController _rayuresController = TextEditingController();
   final TextEditingController _typeCarburantController = TextEditingController();
   final TextEditingController _boiteVitessesController = TextEditingController();
-  final TextEditingController _typeLocationController = TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
-  
-
-
+  final TextEditingController _typeLocationController = TextEditingController();
 
   @override
   void initState() {
@@ -110,8 +104,8 @@ class _LocationPageState extends State<LocationPage> {
     // Initialiser la date de début avec l'année
     _dateDebutController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
     
-    // Initialiser _typeLocationController avec la valeur par défaut de _typeLocation
-    _typeLocationController.text = _typeLocation;
+    // Initialiser _typeLocationController avec la valeur par défaut
+    _typeLocationController.text = "Gratuite";
 
     // Récupérer le prix de location depuis les données du véhicule
     _fetchVehicleData();
@@ -143,18 +137,14 @@ class _LocationPageState extends State<LocationPage> {
           _rayuresController.text = vehicleData['rayures'] ?? '';
           _typeCarburantController.text = vehicleData['typeCarburant'] ?? '';
           _boiteVitessesController.text = vehicleData['boiteVitesses'] ?? '';
-          
+          _cautionController.text = vehicleData['caution'] ?? '';
           // Synchroniser les deux variables pour typeLocation
           String fetchedTypeLocation = vehicleData['typeLocation'] ?? 'Gratuite';
           _typeLocationController.text = fetchedTypeLocation;
-          _typeLocation = fetchedTypeLocation;
-          
-          // Récupérer la caution
-          _cautionController.text = vehicleData['caution'] ?? '';
-          print('DEBUG FETCH - caution récupérée: ${_cautionController.text}');
         });
       }
     }
+    print('DEBUG FETCH - Prix de location récupéré: ${_prixLocationController.text}');
   }
 
   Future<void> _selectDateTime(TextEditingController controller) async {
@@ -218,7 +208,7 @@ class _LocationPageState extends State<LocationPage> {
     // Capture de la signature avant la validation
     await _captureSignature();
 
-    if (_typeLocation == "Payante" && _prixLocationController.text.isEmpty) {
+    if (_typeLocationController.text == "Payante" && _prixLocationController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -660,7 +650,6 @@ class _LocationPageState extends State<LocationPage> {
                 Center(
                   child: (() {
                     String dateText = _dateDebutController.text;
-                    print('dateText: $dateText'); // Afficher la valeur de dateText avant le parsing
                     if (dateText.isEmpty) {
                       return SizedBox.shrink(); // Ne rien afficher si le champ est vide
                     }
@@ -700,7 +689,6 @@ class _LocationPageState extends State<LocationPage> {
                         return SizedBox.shrink(); // Ne rien afficher si la condition n'est pas remplie
                       }
                     } catch (e) {
-                      print('Erreur de parsing de la date: $e');
                       return SizedBox.shrink(); // Ne rien afficher en cas d'erreur de parsing
                     }
                   }()),
@@ -726,18 +714,12 @@ class _LocationPageState extends State<LocationPage> {
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 ),
-                CreateContrat.buildDropdown(_typeLocation, (value) {
+                CreateContrat.buildDropdown(_typeLocationController.text, (value) {
                   setState(() {
-                    _typeLocation = value!;
-                    _typeLocationController.text = value; // Synchroniser les deux variables
-                    if (_typeLocation == "Payante") {
-                      _fetchVehicleData();
-                    } else {
-                      _prixLocationController.clear();
-                    }
+                    _typeLocationController.text = value!;
                   });
                 }),
-                if (_typeLocation == "Payante" &&
+                if (_typeLocationController.text == "Payante" &&
                     _prixLocationController.text.isEmpty)
                   const Padding(
                     padding: EdgeInsets.only(top: 8.0),
@@ -749,7 +731,7 @@ class _LocationPageState extends State<LocationPage> {
                       ),
                     ),
                   ),
-                if (_typeLocation == "Payante" &&
+                if (_typeLocationController.text == "Payante" &&
                     _prixLocationController.text.isNotEmpty) ...[
                   const SizedBox(height: 35),
                   CreateContrat.buildPrixLocationField(_prixLocationController),

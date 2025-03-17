@@ -224,13 +224,6 @@ Future<String> generatePdf(
   if (data['caution'].toString().isEmpty) {
     data['caution'] = "0";
   }
-
-  // Logs de débogage pour vérifier les valeurs
-  print('DEBUG PDF - typeLocation: $typeLocationValue');
-  print('DEBUG PDF - caution: ${data['caution']}');
-  print('DEBUG PDF - data contient typeLocation: ${data.containsKey('typeLocation')}');
-  print('DEBUG PDF - data contient caution: ${data.containsKey('caution')}');
-
   // Charger les photos du véhicule à l'aller si disponibles
   List<Uint8List> photosAllerBytes = [];
   if (data['photos'] != null) {
@@ -304,7 +297,7 @@ Future<String> generatePdf(
                 pw.Container(width: 50),
               ],
             ),
-            pw.SizedBox(height: 30),
+            pw.SizedBox(height: 15),
             PdfInfoContactWidget.build(
               nomEntreprise: nomEntreprise,
               adresse: adresse,

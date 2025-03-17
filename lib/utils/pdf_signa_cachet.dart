@@ -22,11 +22,6 @@ class SignaCachetWidget {
     pw.MemoryImage? signatureImage, // Nouveau paramètre
     pw.MemoryImage? signatureRetourImage, // Nouveau paramètre
   }) {
-    // Log des informations de signature
-    print('🔑 Paramètres de signature reçus :');
-    print('📝 Signature Base64: ${signatureBase64 != null ? 'Présente (${signatureBase64.length} caractères)' : 'Absente'}');
-    print('🖼️ Signature Image: ${signatureImage != null ? 'Présente' : 'Absente'}');
-    print('🖼️ Signature Retour Image: ${signatureRetourImage != null ? 'Présente' : 'Absente'}');
 
     return pw.Container(
       width: double.infinity,

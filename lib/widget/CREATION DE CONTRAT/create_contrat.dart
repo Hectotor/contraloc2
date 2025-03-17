@@ -53,6 +53,10 @@ class CreateContrat {
   }
 
   static Widget buildDropdown(String typeLocation, Function onChanged) {
+    final items = const [
+      "Gratuite",
+      "Payante",
+    ];
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -61,17 +65,16 @@ class CreateContrat {
       ),
       child: DropdownButtonFormField<String>(
         value: typeLocation,
-        onChanged: (value) => onChanged(value),
-        items: const [
-          DropdownMenuItem(
-            value: "Gratuite",
-            child: Text("Gratuite", style: TextStyle(color: Colors.black)),
-          ),
-          DropdownMenuItem(
-            value: "Payante",
-            child: Text("Payante", style: TextStyle(color: Colors.black)),
-          ),
-        ],
+        items: items.map<DropdownMenuItem<String>>((String value) {
+          return DropdownMenuItem<String>(
+            value: value,
+            child: Text(value, style: TextStyle(color: Colors.black)),
+          );
+        }).toList(),
+        onChanged: (String? newValue) {
+          print('DEBUG DROPDOWN - Nouvelle valeur sélectionnée: $newValue');
+          onChanged(newValue);
+        },
         dropdownColor:
             Colors.white, // Ajout de cette ligne pour le fond du menu
         decoration: InputDecoration(
