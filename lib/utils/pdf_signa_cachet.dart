@@ -42,7 +42,7 @@ class SignaCachetWidget {
           pw.Text(
             'SIGNATURES',
             style: pw.TextStyle(
-              fontSize: 20,
+              fontSize: 15,
               font: boldFont,
               color: PdfColors.blue900,
             ),
@@ -135,16 +135,16 @@ class SignaCachetWidget {
             pw.SizedBox(height: 10),
           ],
           pw.Text(nomEntreprise,
-              style: pw.TextStyle(fontSize: 16, font: boldFont)),
+              style: pw.TextStyle(fontSize: 12, font: boldFont)),
           pw.SizedBox(height: 4),
           pw.Text(adresse,
-              style: const pw.TextStyle(fontSize: 12),
+              style: const pw.TextStyle(fontSize: 9),
               textAlign: pw.TextAlign.center),
           pw.Text('Téléphone : $telephone',
-              style: const pw.TextStyle(fontSize: 12),
+              style: const pw.TextStyle(fontSize: 9),
               textAlign: pw.TextAlign.center),
           pw.Text('SIRET : $siret',
-              style: const pw.TextStyle(fontSize: 12),
+              style: const pw.TextStyle(fontSize: 9),
               textAlign: pw.TextAlign.center),
         ],
       ),
@@ -176,7 +176,7 @@ class SignaCachetWidget {
         mainAxisSize: pw.MainAxisSize.min,
         children: [
           pw.Text('Signatures client',
-              style: pw.TextStyle(fontSize: 16, font: boldFont)),
+              style: pw.TextStyle(fontSize: 12, font: boldFont)),
           pw.Divider(),
           pw.SizedBox(height: 10),
           pw.Row(
@@ -186,7 +186,7 @@ class SignaCachetWidget {
                 child: pw.Column(
                   children: [
                     pw.Text('Départ',
-                        style: pw.TextStyle(fontSize: 12, font: boldFont)),
+                        style: pw.TextStyle(fontSize: 9, font: boldFont)),
                     pw.SizedBox(height: 5),
                     if (nom != null && prenom != null)
                       pw.Text(
@@ -214,7 +214,7 @@ class SignaCachetWidget {
                 child: pw.Column(
                   children: [
                     pw.Text('Retour',
-                        style: pw.TextStyle(fontSize: 12, font: boldFont)),
+                        style: pw.TextStyle(fontSize: 9, font: boldFont)),
                     pw.SizedBox(height: 5),
                     if (nom != null &&
                         prenom != null &&

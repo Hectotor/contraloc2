@@ -262,14 +262,14 @@ Future<String> generatePdf(
                   children: [
                     pw.Text('CONTRAT DE LOCATION',
                         style: pw.TextStyle(
-                          fontSize: 24,
+                          fontSize: 18,
                           font: boldFont,
                           color: PdfColors.black,
                         ),
                         textAlign: pw.TextAlign.center),
                     pw.Text(nomEntreprise,
                         style: pw.TextStyle(
-                          fontSize: 18,
+                          fontSize: 12,
                           font: boldFont,
                           color: PdfColors.black,
                         ),
@@ -331,7 +331,7 @@ Future<String> generatePdf(
                 children: [
                   pw.Text('Commentaires:',
                       style: pw.TextStyle(
-                        fontSize: 18,
+                        fontSize: 12,
                         font: boldFont,
                         color: PdfColors.blue900,
                       )),
@@ -346,7 +346,7 @@ Future<String> generatePdf(
                           children: [
                             pw.Text('Aller:',
                                 style: pw.TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 12,
                                     font: boldFont,
                                     color: PdfColors.black)),
                             pw.Text(data['commentaire'] ?? '',
@@ -361,7 +361,7 @@ Future<String> generatePdf(
                           children: [
                             pw.Text('Retour:',
                                 style: pw.TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 12,
                                     font: boldFont,
                                     color: PdfColors.black)),
                             pw.Text(commentaireRetour,
@@ -386,8 +386,8 @@ Future<String> generatePdf(
             pw.Container(
               width: double.infinity,
               padding:
-                  const pw.EdgeInsets.symmetric(vertical: 20, horizontal: 10),
-              margin: const pw.EdgeInsets.symmetric(vertical: 20),
+                  const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+              margin: const pw.EdgeInsets.symmetric(vertical: 10),
               decoration: pw.BoxDecoration(
                 color: PdfColors.grey200,
                 borderRadius: pw.BorderRadius.circular(8),
@@ -396,7 +396,7 @@ Future<String> generatePdf(
               child: pw.Text(
                 'CONDITIONS GÉNÉRALES',
                 style: pw.TextStyle(
-                  fontSize: 24,
+                  fontSize: 15,
                   font: boldFont,
                   color: PdfColors.blue900,
                 ),
@@ -410,12 +410,12 @@ Future<String> generatePdf(
                 padding: const pw.EdgeInsets.only(bottom: 5),
                 child: pw.Text(
                   paragraph.trim(),
-                  style: pw.TextStyle(font: ttf),
+                  style: pw.TextStyle(font: ttf, fontSize: 9),
                   textAlign: pw.TextAlign.justify,
                 ),
               );
             }).toList(),
-            pw.SizedBox(height: 40), // Augmenté de 40 à 80
+            pw.SizedBox(height: 30), // Augmenté de 40 à 80
             SignaCachetWidget.build(
               logoImage: logoImage,
               nomEntreprise: nomEntreprise,

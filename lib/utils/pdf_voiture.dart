@@ -40,19 +40,19 @@ class PdfVoitureWidget {
         children: [
           pw.Text('Conditions de la Location:',
               style: pw.TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 font: boldFont,
                 color: PdfColors.blue900,
               )),
           pw.Divider(color: PdfColors.black),
-          pw.SizedBox(height: 5), // Réduit la taille de l'espace
+          pw.SizedBox(height: 2), // Réduit la taille de l'espace
           pw.Text('Informations du Véhicule:',
-              style: pw.TextStyle(fontSize: 14, font: boldFont)),
+              style: pw.TextStyle(fontSize: 12, font: boldFont)),
           _buildVehiculeInfo(data, typeCarburant, boiteVitesses, assuranceNom,
               assuranceNumero, franchise, ttf),
           pw.SizedBox(height: 10), // Réduit la taille de l'espace
           pw.Text('Détails de la Location:',
-              style: pw.TextStyle(fontSize: 14, font: boldFont)),
+              style: pw.TextStyle(fontSize: 12, font: boldFont)),
           _buildLocationDetails(
               dateDebut,
               dateFinTheorique,
@@ -93,27 +93,27 @@ class PdfVoitureWidget {
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text('Marque: ${data['marque']}',
-                style: pw.TextStyle(font: ttf)),
+                style: pw.TextStyle(font: ttf, fontSize: 9)),
             pw.Text('Modèle: ${data['modele']}',
-                style: pw.TextStyle(font: ttf)),
+                style: pw.TextStyle(font: ttf, fontSize: 9)),
             pw.Text('Immat.: ${data['immatriculation']}',
-                style: pw.TextStyle(font: ttf)),
+                style: pw.TextStyle(font: ttf, fontSize: 9)),
           ],
         ),
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text('Type carburant: $typeCarburant',
-                style: pw.TextStyle(font: ttf)),
-            pw.Text('Boîte: $boiteVitesses', style: pw.TextStyle(font: ttf)),
+                style: pw.TextStyle(font: ttf, fontSize: 9)),
+            pw.Text('Boîte: $boiteVitesses', style: pw.TextStyle(font: ttf, fontSize: 9)),
           ],
         ),
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('Assurance: $assuranceNom', style: pw.TextStyle(font: ttf)),
-            pw.Text('N°: $assuranceNumero', style: pw.TextStyle(font: ttf)),
-            pw.Text('Franchise: $franchise €', style: pw.TextStyle(font: ttf)),
+            pw.Text('Assurance: $assuranceNom', style: pw.TextStyle(font: ttf, fontSize: 9)),
+            pw.Text('N°: $assuranceNumero', style: pw.TextStyle(font: ttf, fontSize: 9)),
+            pw.Text('Franchise: $franchise €', style: pw.TextStyle(font: ttf, fontSize: 9)),
           ],
         ),
       ],
@@ -139,7 +139,7 @@ class PdfVoitureWidget {
       String nettoyageInt,
       String nettoyageExt,
       String carburantManquant,
-      String caution, // Ajouter ce paramètre
+      String caution,
       pw.Font ttf) {
     double calculateKmSupp() {
       try {
@@ -188,145 +188,293 @@ class PdfVoitureWidget {
       }
     }
 
+    double calculateKmParcourus() {
+      try {
+        double kmDepart = double.parse(kilometrageDepart);
+        double kmRetour = double.parse(kilometrageRetour);
+        return kmRetour - kmDepart;
+      } catch (e) {
+        return 0.0; // Gestion des erreurs
+      }
+    }
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Type de location : $typeLocation',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Caution : $caution €',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text(''),
-            ),
-          ],
+        // Informations générales
+        pw.Container(
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+          ),
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Type de location: $typeLocation',
+                    style: pw.TextStyle(
+                      font: ttf,
+                      fontSize: 9,
+                      fontWeight: pw.FontWeight.bold,
+                    )),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('', 
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Caution: $caution €',
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+            ],
+          ),
         ),
-        pw.SizedBox(height: 5),
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Date de début : ${dateDebut.isEmpty ? '' : dateDebut}',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Date de fin théorique : ${dateFinTheorique.isEmpty ? '' : dateFinTheorique}',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Date de fin effective : ${dateFinEffectifData.isEmpty ? '' : dateFinEffectifData}',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-          ],
+        pw.SizedBox(height: 2),
+
+        // Dates et durée
+        pw.Container(
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Date de début: ${dateDebut.isEmpty ? '' : dateDebut}',
+                    style: pw.TextStyle(font: ttf, fontSize: 9)),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('Date de fin théorique: ${dateFinTheorique.isEmpty ? '' : dateFinTheorique}',
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Date de fin effectif: ${dateFinEffectifData.isEmpty ? '' : dateFinEffectifData}',
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+            ],
+          ),
         ),
-        pw.SizedBox(height: 5),
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Montant journalier : ${typeLocation == 'Gratuite' ? '00.00' : '$prixLocation €'}',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Coût total théorique : ${calculateCoutTotalTheorique(dateDebut, dateFinTheorique, prixLocation).toStringAsFixed(2) ?? '00.00'} €',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Coût total effectif : ${calculateCoutTotalEffectif(dateDebut, dateFinEffectifData, prixLocation).toStringAsFixed(2) ?? '00.00'} €',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-          ],
+        pw.SizedBox(height: 2),
+
+        // Coût de la location
+        pw.Container(
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+          ),
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Montant journalier: ${typeLocation == "Gratuite" ? "0" : "$prixLocation"} €',
+                    style: pw.TextStyle(font: ttf, fontSize: 9)),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('Coût total théorique: ${typeLocation == "Gratuite" ? "0" : calculateCoutTotalTheorique(dateDebut, dateFinTheorique, prixLocation).toStringAsFixed(2)} €',
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Coût total effectif: ${typeLocation == "Gratuite" ? "0" : calculateCoutTotalEffectif(dateDebut, dateFinEffectifData, prixLocation).toStringAsFixed(2)} €',
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+            ],
+          ),
         ),
-        pw.SizedBox(height: 5),
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Km de départ : $kilometrageDepart km',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Km de retour : $kilometrageRetour km',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Distance autorisée : $kilometrageAutorise km',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-          ],
+        pw.SizedBox(height: 2),
+
+        // Kilométrage ligne 1
+        pw.Container(
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Km de départ: $kilometrageDepart km',
+                    style: pw.TextStyle(font: ttf, fontSize: 9)),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('Km parcourus: ${calculateKmParcourus().toStringAsFixed(0)} km',
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Km de retour: $kilometrageRetour km',
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+            ],
+          ),
         ),
-        pw.SizedBox(height: 5),
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Prix du km supplémentaire : $kilometrageSupp €/km',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Coût total km supp : ${calculateKmSupp().toStringAsFixed(2)} €',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Niveau d\'essence : $pourcentageEssence %',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-          ],
+        pw.SizedBox(height: 2),
+        
+        // Kilométrage ligne 2
+        pw.Container(
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+          ),
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Distance autorisée: $kilometrageAutorise km',
+                    style: pw.TextStyle(font: ttf, fontSize: 9, fontWeight: pw.FontWeight.bold)),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('Prix Km supp: $kilometrageSupp €/km',
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Coût total km supp: ${calculateKmSupp().toStringAsFixed(2)} €',
+                      style: pw.TextStyle(font: ttf, fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
         ),
-        pw.SizedBox(height: 5),
+        pw.SizedBox(height: 2),
+
+        // État du véhicule
+        pw.Container(
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Niveau d\'essence: $pourcentageEssence%',
+                    style: pw.TextStyle(font: ttf, fontSize: 9)),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('', 
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 2),
+
+        // Frais supplémentaires
         pw.Text('Frais supplémentaires (si applicable)',
-            style: pw.TextStyle(font: ttf, fontSize: 10)),
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Frais de nettoyage intérieur : ${nettoyageInt.isEmpty ? '0.00' : nettoyageInt} €',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Frais de nettoyage extérieur : ${nettoyageExt.isEmpty ? '0.00' : nettoyageExt} €',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Carburant manquant : ${carburantManquant.isEmpty ? '0.00' : carburantManquant} €',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-          ],
+            style: pw.TextStyle(font: ttf, fontSize: 10, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 2),
+        
+        // Frais supplémentaires ligne 1
+        pw.Container(
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+          ),
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Frais de nettoyage intérieur: $nettoyageInt €',
+                    style: pw.TextStyle(font: ttf, fontSize: 9)),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('', 
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Frais de nettoyage extérieur: $nettoyageExt €',
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+            ],
+          ),
         ),
-        pw.SizedBox(height: 5),
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.start,
-          children: [
-            pw.Expanded(
-              flex: 1,
-              child: pw.Text('Prix des rayures/dommages : $prixRayures €',
-                  style: pw.TextStyle(font: ttf, fontSize: 10)),
-            ),
-          ],
+        pw.SizedBox(height: 2),
+        
+        // Frais supplémentaires ligne 2
+        pw.Container(
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Frais de carburant manquant: $carburantManquant €',
+                    style: pw.TextStyle(font: ttf, fontSize: 9)),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('', 
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('Frais de rayures/dommages: $prixRayures €',
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
