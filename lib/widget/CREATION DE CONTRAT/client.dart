@@ -44,6 +44,7 @@ class _ClientPageState extends State<ClientPage> {
   final TextEditingController _telephoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _numeroPermisController = TextEditingController();
+  final TextEditingController immatriculationClientController = TextEditingController();
 
   File? _permisRecto;
   File? _permisVerso;
@@ -165,12 +166,42 @@ class _ClientPageState extends State<ClientPage> {
     );
   }
 
-  Future<void> _pickImage(bool isRecto) async {
-    final picker = ImagePicker();
+  Future<void> _selectImage(ImageSource source, bool isRecto) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: source,
+        imageQuality: 70,
+      );
+      if (pickedFile != null) {
+        final compressedImage = await FlutterImageCompress.compressWithFile(
+          pickedFile.path,
+          minWidth: 800,
+          minHeight: 800,
+          quality: 85,
+        );
+        if (compressedImage != null) {
+          setState(() {
+            if (isRecto) {
+              _permisRecto = File(pickedFile.path);
+            } else {
+              _permisVerso = File(pickedFile.path);
+            }
+          });
+        }
+      } else {
+        print('Aucune image sélectionnée'); // Log d'erreur
+      }
+    } catch (e) {
+      print('Erreur lors de la sélection de l\'image : $e');
+    }
+  }
+
+  Future<void> _showImagePickerDialog(bool isRecto) async {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: Colors.white, // Ajout du fond blanc
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
@@ -188,92 +219,35 @@ class _ClientPageState extends State<ClientPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              ListTile(
-                leading:
-                    const Icon(Icons.photo_library, color: Color(0xFF08004D)),
-                title: const Text('Choisir depuis la galerie'),
-                onTap: () async {
-                  final pickedFile = await picker.pickImage(
-                    source: ImageSource.gallery,
-                    imageQuality: 70,
-                  );
-                  if (pickedFile != null) {
-                    final compressedImage =
-                        await FlutterImageCompress.compressWithFile(
-                      pickedFile.path,
-                      minWidth: 800,
-                      minHeight: 800,
-                      quality: 85,
-                    );
-                    if (compressedImage != null) {
-                      setState(() {
-                        if (isRecto) {
-                          _permisRecto = File(pickedFile.path);
-                        } else {
-                          _permisVerso = File(pickedFile.path);
-                        }
-                      });
-                    }
-                  }
-                  Navigator.of(context).pop();
-                },
-              ),
-              ListTile(
-                leading:
-                    const Icon(Icons.photo_camera, color: Color(0xFF08004D)),
-                title: const Text('Prendre une photo'),
-                onTap: () async {
-                  final pickedFile = await picker.pickImage(
-                    source: ImageSource.camera,
-                    imageQuality: 70,
-                  );
-                  if (pickedFile != null) {
-                    final compressedImage =
-                        await FlutterImageCompress.compressWithFile(
-                      pickedFile.path,
-                      minWidth: 800,
-                      minHeight: 800,
-                      quality: 85,
-                    );
-                    if (compressedImage != null) {
-                      setState(() {
-                        if (isRecto) {
-                          _permisRecto = File(pickedFile.path);
-                        } else {
-                          _permisVerso = File(pickedFile.path);
-                        }
-                      });
-                    }
-                  }
-                  Navigator.of(context).pop();
-                },
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF08004D),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text(
-                    "Annuler",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                  ),
+                ListTile(
+                  leading: const Icon(Icons.photo_camera, color: Color(0xFF08004D)),
+                  title: const Text('Prendre une photo'),
+                  onTap: () async {
+                    await _selectImage(ImageSource.camera, isRecto);
+                    Navigator.of(context).pop();
+                  },
                 ),
-              ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library, color: Color(0xFF08004D)),
+                  title: const Text('Choisir depuis la galerie'),
+                  onTap: () async {
+                    await _selectImage(ImageSource.gallery, isRecto);
+                    Navigator.of(context).pop();
+                  },
+                ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _pickImage(bool isRecto) async {
+    try {
+      await _showImagePickerDialog(isRecto);
+    } catch (e) {
+      print('Erreur lors de la sélection de l\'image : $e');
+    }
   }
 
   bool _isValidEmail(String email) {
@@ -378,6 +352,7 @@ class _ClientPageState extends State<ClientPage> {
             _buildTextField("Email", _emailController,
                 keyboardType: TextInputType.emailAddress),
             _buildTextField("N° Permis", _numeroPermisController),
+            _buildTextField("Immatriculation véhicule client", immatriculationClientController),
             const SizedBox(height: 20),
             buildPhotoButton(),
             if (_showPermisFields && isPremiumUser) ...[
