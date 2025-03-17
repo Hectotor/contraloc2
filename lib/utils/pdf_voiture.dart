@@ -28,25 +28,9 @@ class PdfVoitureWidget {
     required pw.Font boldFont,
     required pw.Font ttf,
   }) {
-    // Récupérer la valeur de caution du map data, ou utiliser une chaîne vide si elle est absente
-    final String caution = data['caution'] ?? '';
-    
     // Récupérer le type de location du map data, ou utiliser la valeur passée en paramètre
     final String typeLocationValue = data['typeLocation'] ?? typeLocation;
-    
-    // Définir des valeurs par défaut si elles sont vides
-    final String cautionFinal = caution.isEmpty ? "0" : caution;
     final String typeLocationFinal = typeLocationValue.isEmpty ? "" : typeLocationValue;
-
-    // Logs de débogage pour vérifier les valeurs
-    print('DEBUG PDF_VOITURE - typeLocation (param): $typeLocation');
-    print('DEBUG PDF_VOITURE - typeLocation (data): ${data['typeLocation']}');
-    print('DEBUG PDF_VOITURE - typeLocationValue: $typeLocationValue');
-    print('DEBUG PDF_VOITURE - typeLocationFinal: $typeLocationFinal');
-    print('DEBUG PDF_VOITURE - caution: $caution');
-    print('DEBUG PDF_VOITURE - cautionFinal: $cautionFinal');
-    print('DEBUG PDF_VOITURE - data contient typeLocation: ${data.containsKey('typeLocation')}');
-    print('DEBUG PDF_VOITURE - data contient caution: ${data.containsKey('caution')}');
 
     return pw.Container(
       padding: const pw.EdgeInsets.all(10), // Réduit le padding
@@ -155,10 +139,6 @@ class PdfVoitureWidget {
       double? coutTotalTheorique,
       double? coutTotal,
       pw.Font ttf) {
-    
-    // Logs de débogage pour vérifier les valeurs
-    print('DEBUG _buildLocationDetails - typeLocation: $typeLocation');
-    print('DEBUG _buildLocationDetails - data: $data');
     
     // Utiliser directement les valeurs passées en paramètre, qui sont déjà traitées
     final String cautionValue = data['caution'] ?? '';

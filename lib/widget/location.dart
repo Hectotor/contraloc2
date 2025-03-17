@@ -273,6 +273,39 @@ class _LocationPageState extends State<LocationPage> {
         vehiculeUrls.add(url);
       }
 
+      // Récupérer les conditions depuis la collection 'users'
+      DocumentSnapshot conditionsDoc;
+      // Tenter de récupérer les conditions depuis le document 'userId'
+      conditionsDoc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('contrats')
+          .doc('userId')
+          .get();
+
+      String conditions = '';
+
+      // Si le document 'userId' n'existe pas, récupérer depuis le document user.uid
+      if (!conditionsDoc.exists) {
+        conditionsDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('contrats')
+            .doc(user.uid)
+            .get();
+      }
+
+      if (conditionsDoc.exists) {
+        final data = conditionsDoc.data() as Map<String, dynamic>?;
+        conditions = data?['texte'] ?? '';
+      } else {
+        // Utiliser les conditions par défaut si aucune condition personnalisée n'existe
+        final defaultConditionsDoc =
+            await _firestore.collection('contrats').doc('default').get();
+        conditions = (defaultConditionsDoc.data())?['texte'] ??
+            ContratModifier.defaultContract;
+      }
+
       // Créer le contrat dans la collection de l'utilisateur
       await _firestore
           .collection('users')
@@ -388,6 +421,7 @@ class _LocationPageState extends State<LocationPage> {
         'franchise': _franchiseController.text,
         'rayures': _rayuresController.text,
         'prixLocation': _prixLocationController.text,
+        'conditions': conditions, // Sauvegarder les conditions directement dans le document du contrat
       });
 
       // Si un email client est disponible, générer et envoyer le PDF

@@ -298,6 +298,36 @@ class _ModifierScreenState extends State<ModifierScreen> {
           .doc(widget.contratId)
           .get();
 
+      // Récupérer les conditions du contrat
+      String conditions = ContratModifier.defaultContract;
+      if (contratDoc.exists) {
+        final contratData = contratDoc.data() as Map<String, dynamic>;
+        
+        // Vérifier si les conditions sont sauvegardées dans le document du contrat
+        if (contratData.containsKey('conditions') && 
+            contratData['conditions'] is String && 
+            contratData['conditions'].isNotEmpty) {
+          conditions = contratData['conditions'];
+          print('📄 Utilisation des conditions sauvegardées dans le contrat');
+        } else {
+          // Si les conditions ne sont pas dans le contrat, récupérer les conditions personnalisées actuelles
+          final conditionsDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('contrats')
+              .doc('userId')
+              .get();
+
+          if (conditionsDoc.exists) {
+            final conditionsData = conditionsDoc.data();
+            if (conditionsData != null && conditionsData.containsKey('texte')) {
+              conditions = conditionsData['texte'];
+              print('📄 Utilisation des conditions personnalisées actuelles');
+            }
+          }
+        }
+      }
+
       // Récupérer la signature de retour
       String? signatureRetourBase64;
       if (contratDoc.exists) {
@@ -312,6 +342,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
       // Log de débogage
       print('📝 Signature de retour récupérée : ${signatureRetourBase64 != null ? 'Présente (${signatureRetourBase64.length} caractères)' : 'Absente'}');
+      print('📄 Conditions personnalisées récupérées : ${conditions != ContratModifier.defaultContract ? 'Personnalisées' : 'Par défaut'}');
 
       // Récupérer les données utilisateur
       final userDoc = await FirebaseFirestore.instance
@@ -344,6 +375,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
           'carburantManquant': _carburantManquantController.text,
           'caution': _cautionController.text,
           'signatureRetour': signatureRetourBase64 ?? '',
+          'conditions': conditions, // Utiliser les conditions personnalisées récupérées
         },
         widget.data['dateFinEffectif'] ?? '',
         widget.data['kilometrageRetour'] ?? '',
@@ -371,7 +403,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         (widget.data['pourcentageEssence'] ?? '').toString(),
         widget.data['typeLocation'] ?? '',
         widget.data['prixLocation'] ?? vehicleData['prixLocation'] ?? '',
-        condition: (widget.data['conditions'] ?? ContratModifier.defaultContract).toString(),
+        condition: conditions, // Utiliser les conditions personnalisées récupérées
         signatureBase64: '',
         signatureRetourBase64: signatureRetourBase64,
       );
