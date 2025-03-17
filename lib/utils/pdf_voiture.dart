@@ -54,6 +54,7 @@ class PdfVoitureWidget {
           pw.Text('Détails de la Location:',
               style: pw.TextStyle(fontSize: 12, font: boldFont)),
           _buildLocationDetails(
+              data['caution'] ?? '',
               dateDebut,
               dateFinTheorique,
               dateFinEffectifData,
@@ -72,7 +73,6 @@ class PdfVoitureWidget {
               data['nettoyageInt'] ?? '',
               data['nettoyageExt'] ?? '',
               data['carburantManquant'] ?? '',
-              data['caution'] ?? '',
               ttf),
         ],
       ),
@@ -121,6 +121,7 @@ class PdfVoitureWidget {
   }
 
   static pw.Widget _buildLocationDetails(
+      String caution,
       String dateDebut,
       String dateFinTheorique,
       String dateFinEffectifData,
@@ -139,7 +140,6 @@ class PdfVoitureWidget {
       String nettoyageInt,
       String nettoyageExt,
       String carburantManquant,
-      String caution,
       pw.Font ttf) {
     double calculateKmSupp() {
       try {

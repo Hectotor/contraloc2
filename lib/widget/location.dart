@@ -441,64 +441,64 @@ class _LocationPageState extends State<LocationPage> {
 
         final signatureAller = await _signatureController.toPngBytes();
 
-        // Générer le PDF avec tous les paramètres nécessaires
-        final pdfPath = await generatePdf(
-          {
-            'nom': widget.nom,
-            'prenom': widget.prenom,
-            'adresse': widget.adresse,
-            'telephone': widget.telephone,
-            'email': widget.email,
-            'numeroPermis': widget.numeroPermis,
-            'marque': widget.marque,
-            'modele': widget.modele,
-            'immatriculation': widget.immatriculation,
-            'commentaire': _commentaireController.text,
-            'photos': vehiculeUrls,
-            'signatureAller': signatureAller,
-            'signatureBase64': _signatureBase64, // Passer explicitement la signature base64
-            'nettoyageInt': _nettoyageIntController.text,
-            'nettoyageExt': _nettoyageExtController.text,
-            'carburantManquant': _carburantManquantController.text,
-            'caution': _cautionController.text,
-            'typeCarburant': _typeCarburantController.text,
-            'boiteVitesses': _boiteVitessesController.text,
-            'vin': _vinController.text,
-            'assuranceNom': _assuranceNomController.text,
-            'assuranceNumero': _assuranceNumeroController.text,
-            'franchise': _franchiseController.text,
-            'rayures': _rayuresController.text,
-            'kilometrageSupp': _kilometrageSuppController.text,
-            'kilometrageAutorise': _kilometrageAutoriseController.text,
-          },
-          '', // dateFinEffectif
-          '', // kilometrageRetour
-          '', // commentaireRetour
-          [], // photosRetour
-          nomEntreprise, // déjà passé comme paramètre positionnel
-          userData['logoUrl'] ?? '',
-          adresseEntreprise, // déjà passé comme paramètre positionnel
-          telephoneEntreprise, // déjà passé comme paramètre positionnel
-          siretEntreprise, // déjà passé comme paramètre positionnel
-          '', // commentaireRetourData
-          _typeCarburantController.text,
-          _boiteVitessesController.text,
-          _vinController.text,
-          _assuranceNomController.text,
-          _assuranceNumeroController.text,
-          _franchiseController.text,
-          _rayuresController.text,
-          _dateDebutController.text,
-          _dateFinTheoriqueController.text,
-          '', // dateFinEffectifData
-          _kilometrageDepartController.text,
-          _pourcentageEssence.toString(),
-          _typeLocationController.text,
-          _prixLocationController.text,
-          _kilometrageSuppController.text,
-          _kilometrageAutoriseController.text,
-          condition: conditions, // seul paramètre nommé nécessaire
-          signatureBase64: _signatureBase64, // Ajouter le paramètre nommé
+        final pdfParams = {  
+          'nom': widget.nom,  
+          'prenom': widget.prenom,  
+          'adresse': widget.adresse,  
+          'telephone': widget.telephone,  
+          'email': widget.email,  
+          'numeroPermis': widget.numeroPermis,  
+          'marque': widget.marque,  
+          'modele': widget.modele,  
+          'immatriculation': widget.immatriculation,  
+          'commentaire': _commentaireController.text,  
+          'photos': vehiculeUrls,  
+          'signatureAller': signatureAller,  
+          'signatureBase64': _signatureBase64,  
+          'nettoyageInt': _nettoyageIntController.text,  
+          'nettoyageExt': _nettoyageExtController.text,  
+          'carburantManquant': _carburantManquantController.text,  
+          'caution': _cautionController.text,  
+          'typeCarburant': _typeCarburantController.text,  
+          'boiteVitesses': _boiteVitessesController.text,  
+          'vin': _vinController.text,  
+          'assuranceNom': _assuranceNomController.text,  
+          'assuranceNumero': _assuranceNumeroController.text,  
+          'franchise': _franchiseController.text,  
+          'rayures': _rayuresController.text,  
+          'kilometrageSupp': _kilometrageSuppController.text,  
+          'kilometrageAutorise': _kilometrageAutoriseController.text,  
+        };  
+
+        final pdfPath = await generatePdf(  
+          pdfParams,  
+          '', // dateFinEffectif  
+          '', // kilometrageRetour  
+          '', // commentaireRetour  
+          [], // photosRetour  
+          nomEntreprise,  
+          userData['logoUrl'] ?? '',  
+          adresseEntreprise,  
+          telephoneEntreprise,  
+          siretEntreprise,  
+          '', // commentaireRetourData  
+          _typeCarburantController.text,  
+          _boiteVitessesController.text,  
+          _vinController.text,  
+          _assuranceNomController.text,  
+          _assuranceNumeroController.text,  
+          _franchiseController.text,  
+          _kilometrageSuppController.text,  
+          _rayuresController.text,  
+          _dateDebutController.text,  
+          _dateFinTheoriqueController.text,  
+          '', // dateFinEffectifData  
+          _kilometrageDepartController.text,  
+          _kilometrageAutoriseController.text,  
+          _pourcentageEssence.toString(),  
+          _typeLocationController.text,  
+          _prixLocationController.text,  
+          condition: conditions,  
         );
 
         // Envoyer le PDF par email
