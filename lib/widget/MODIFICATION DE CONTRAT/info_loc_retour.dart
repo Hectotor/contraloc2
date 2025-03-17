@@ -18,8 +18,20 @@ class InfoLocRetour extends StatelessWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
-        Text("Date de fin effectif: ${data['dateFinEffectif']}"),
-        Text("Kilométrage de retour: ${data['kilometrageRetour']}"),
+        Row(
+          children: [
+            Icon(Icons.date_range, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("Date de fin effectif: ${data['dateFinEffectif']}")),
+          ],
+        ),
+        Row(
+          children: [
+            Icon(Icons.speed, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("Kilométrage de retour: ${data['kilometrageRetour']}")),
+          ],
+        ),
         const SizedBox(height: 10),
         if (data['photosRetourUrls'] != null &&
             data['photosRetourUrls'].isNotEmpty)

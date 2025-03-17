@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../USERS/contrat_condition.dart'; // Import de l'écran de modification
 import '../widget/MES CONTRATS/contrat_encours.dart';
 import '../widget/MES CONTRATS/contrat_restitues.dart';
 import '../widget/MES CONTRATS/calendar.dart'; // Add this line
@@ -112,16 +111,6 @@ class _ContratScreenState extends State<ContratScreen>
                       _showCalendar = true; // Add this line
                     });
                   }),
-                  const SizedBox(width: 8), // Add this line
-                  _buildTabButton("Contrat", _showContrat, () {
-                    setState(() {
-                      _showEnCours = false;
-                      _showRestitues = false;
-                      _showContrat = true;
-                      _showCalendar = false; // Add this line
-                    });
-                  }),
-
                 ],
               ),
             ),

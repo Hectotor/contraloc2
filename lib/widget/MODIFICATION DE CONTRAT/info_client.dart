@@ -20,12 +20,55 @@ class InfoClient extends StatelessWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
-        Text("Nom: ${data['nom']}"),
-        Text("Prénom: ${data['prenom']}"),
-        Text("Adresse: ${data['adresse']}"),
-        Text("Téléphone: ${data['telephone']}"),
-        Text("Email: ${data['email']}"),
-        Text("N° Permis: ${data['numeroPermis']}"),
+        Row(
+          children: [
+            Icon(Icons.person, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("Nom: ${data['nom']}")),
+          ],
+        ),
+        Row(
+          children: [
+            Icon(Icons.person_outline, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("Prénom: ${data['prenom']}")),
+          ],
+        ),
+        Row(
+          children: [
+            Icon(Icons.location_on, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("Adresse: ${data['adresse']}")),
+          ],
+        ),
+        Row(
+          children: [
+            Icon(Icons.phone, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("Téléphone: ${data['telephone']}")),
+          ],
+        ),
+        Row(
+          children: [
+            Icon(Icons.email, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("Email: ${data['email']}")),
+          ],
+        ),
+        Row(
+          children: [
+            Icon(Icons.credit_card, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("N° Permis: ${data['numeroPermis']}")),
+          ],
+        ),
+        Row(
+          children: [
+            Icon(Icons.directions_car, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("N° Immatriculation: ${data['immatriculationClient']}")),
+          ],
+        ),
         const SizedBox(height: 10),
         if (data['permisRecto'] != null || data['permisVerso'] != null)
           Column(

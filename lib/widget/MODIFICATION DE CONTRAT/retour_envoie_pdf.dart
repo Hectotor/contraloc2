@@ -122,6 +122,7 @@ class RetourEnvoiePdf {
           'telephone': (contratData['telephone'] ?? '').toString(),
           'email': (contratData['email'] ?? '').toString(),
           'numeroPermis': (contratData['numeroPermis'] ?? '').toString(),
+          'immatriculationClient': (contratData['immatriculationClient'] ?? '').toString(),
           'marque': (contratData['marque'] ?? '').toString(),
           'modele': (contratData['modele'] ?? '').toString(),
           'immatriculation': (contratData['immatriculation'] ?? '').toString(),

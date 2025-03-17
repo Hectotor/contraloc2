@@ -489,7 +489,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                     data: widget.data,
                     onShowFullScreenImages: _showFullScreenImages,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 50),
                   InfoLoc(
                     data: widget.data,
                     onShowFullScreenImages: _showFullScreenImages,
@@ -501,7 +501,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                       onShowFullScreenImages: _showFullScreenImages,
                     ),
                   ],
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 50),
                   if (widget.data['status'] == 'en_cours') ...[
                     RetourLoc(
                       dateFinEffectifController: _dateFinEffectifController,

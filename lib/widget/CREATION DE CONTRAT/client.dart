@@ -105,6 +105,7 @@ class _ClientPageState extends State<ClientPage> {
             _telephoneController.text = data['telephone'] ?? '';
             _emailController.text = data['email'] ?? '';
             _numeroPermisController.text = data['numeroPermis'] ?? '';
+            immatriculationClientController.text = data['immatriculationClient'] ?? '';
           });
         }
       }
@@ -271,8 +272,8 @@ class _ClientPageState extends State<ClientPage> {
               email: _emailController.text,
               permisRecto: _permisRecto,
               permisVerso: _permisVerso,
-              numeroPermis:
-                  _numeroPermisController.text, // Ajout de numeroPermis
+              numeroPermis:_numeroPermisController.text,
+              immatriculationClient: immatriculationClientController.text, // Ajout de numeroPermis
               contratId: widget.contratId, // Ajout de contratId
             ),
           ),

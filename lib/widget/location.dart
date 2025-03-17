@@ -35,6 +35,7 @@ class LocationPage extends StatefulWidget {
   final File? permisRecto;
   final File? permisVerso;
   final String? numeroPermis;
+  final String? immatriculationClient;
   final String? contratId;
 
   const LocationPage({
@@ -50,6 +51,7 @@ class LocationPage extends StatefulWidget {
     this.permisRecto,
     this.permisVerso,
     this.numeroPermis,
+    this.immatriculationClient,
     this.contratId,
   }) : super(key: key);
 
@@ -406,6 +408,8 @@ class _LocationPageState extends State<LocationPage> {
             FieldValue.serverTimestamp(), // Ajouter la date de création
         'numeroPermis': widget.numeroPermis ??
             '', // Assurez-vous que numeroPermis est bien stocké
+        'immatriculationClient': widget.immatriculationClient ??
+            '', // Assurez-vous que immatriculationClient est bien stocké
         'nettoyageInt': _nettoyageIntController.text,
         'nettoyageExt': _nettoyageExtController.text,
         'carburantManquant': _carburantManquantController.text,
@@ -488,6 +492,7 @@ class _LocationPageState extends State<LocationPage> {
           'telephone': widget.telephone,  
           'email': widget.email,  
           'numeroPermis': widget.numeroPermis,  
+          'immatriculationClient': widget.immatriculationClient,  
           'marque': widget.marque,  
           'modele': widget.modele,  
           'immatriculation': widget.immatriculation,  

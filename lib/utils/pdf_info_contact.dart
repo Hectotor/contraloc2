@@ -112,6 +112,8 @@ class PdfInfoContactWidget {
               style: pw.TextStyle(font: ttf, fontSize: 9)),
           pw.Text('Numéro de permis: ${clientData['numeroPermis']}',
               style: pw.TextStyle(font: ttf, fontSize: 9)),
+          pw.Text('Immatriculation véhicule: ${clientData['immatriculationClient']}',
+              style: pw.TextStyle(font: ttf, fontSize: 9)),
         ],
       ),
     );

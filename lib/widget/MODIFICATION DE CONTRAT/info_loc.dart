@@ -18,11 +18,41 @@ class InfoLoc extends StatelessWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
-        Text("Date de début: ${data['dateDebut']}"),
-        Text("Date de fin théorique: ${data['dateFinTheorique']}"),
-        Text("Kilométrage de départ: ${data['kilometrageDepart']}"),
-        Text("Type de location: ${data['typeLocation']}"),
-        Text("Niveau d'essence: ${data['pourcentageEssence']}%"),
+        Row(
+          children: [
+            Icon(Icons.date_range, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("Date de début: ${data['dateDebut']}")),
+          ],
+        ),
+        Row(
+          children: [
+            Icon(Icons.date_range, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("Date de fin théorique: ${data['dateFinTheorique']}")),
+          ],
+        ),
+        Row(
+          children: [
+            Icon(Icons.speed, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("Kilométrage de départ: ${data['kilometrageDepart']}")),
+          ],
+        ),
+        Row(
+          children: [
+            Icon(Icons.category, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("Type de location: ${data['typeLocation']}")),
+          ],
+        ),
+        Row(
+          children: [
+            Icon(Icons.local_gas_station, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("Niveau d'essence: ${data['pourcentageEssence']}%")),
+          ],
+        ),
         const SizedBox(height: 10),
         if (data['photos'] != null && data['photos'].isNotEmpty)
           Column(
