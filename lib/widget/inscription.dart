@@ -4,6 +4,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import '../services/revenue_cat_service.dart'; // Import RevenueCat Service
+import 'popup_mail_confir.dart'; // Import du widget PopupMailConfirmation
 
 // Définition de UpperCaseTextFormatter
 class UpperCaseTextFormatter extends TextInputFormatter {
@@ -61,7 +62,7 @@ class _InscriptionPageState extends State<InscriptionPage> {
   bool _showConfirmPassword = false;
   bool _isLoading = false; // Add loading state
 
-  void _register() async {
+  Future<void> _register() async {
     setState(() {
       _isLoading = true; // Start loading
     });
@@ -138,6 +139,8 @@ class _InscriptionPageState extends State<InscriptionPage> {
             .collection('authentification')
             .doc(userCredential.user!.uid)
             .set({
+          'uid': userCredential.user!.uid,
+          'role': 'admin',
           'nomEntreprise': _nomEntrepriseController.text
               .trim()
               .toUpperCase(), // Convert to uppercase
@@ -145,6 +148,8 @@ class _InscriptionPageState extends State<InscriptionPage> {
           'nom': nom, // Utiliser le nom formaté
           'adresse': _adresseController.text.trim(),
           'email': email,
+          'emailVerifie': false,
+          'dateCreation': FieldValue.serverTimestamp(),
           'telephone': _telephoneController.text.trim(),
           'subscriptionId': 'free',
           'isSubscriptionActive': false,
@@ -160,7 +165,14 @@ class _InscriptionPageState extends State<InscriptionPage> {
           _isLoading = false; // Stop loading
         });
 
-        _showSuccessDialog(); // Affiche le popup au lieu du Fluttertoast
+        // Afficher le popup de confirmation d'email
+        PopupMailConfirmation.afficher(
+          context: context,
+          onPressed: () {
+            Navigator.of(context).pop(); // Ferme le popup
+            Navigator.of(context).pop(); // Retourne à l'écran de connexion
+          },
+        );
       }
     } catch (e) {
       Fluttertoast.showToast(msg: "Erreur : ${e.toString()}");
@@ -168,72 +180,6 @@ class _InscriptionPageState extends State<InscriptionPage> {
         _isLoading = false; // Stop loading
       });
     }
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.white, // Ajout du fond blanc
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.mark_email_read,
-                color: Color(0xFF0F056B),
-                size: 60,
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "Inscription réussie !",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F056B),
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "Un email de confirmation a été envoyé.\nVeuillez vérifier votre boîte de réception pour activer votre compte.",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(); // Ferme le popup
-                    Navigator.of(context)
-                        .pop(); // Retourne à l'écran de connexion
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0F056B),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text(
-                    "Compris",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   bool _isPasswordValid(String password) {

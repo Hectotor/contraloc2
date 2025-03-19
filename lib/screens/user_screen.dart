@@ -11,6 +11,9 @@ import '../USERS/question_user.dart'; // Import the question user screen
 import '../USERS/abonnement_screen.dart'; // Add this import
 import '../USERS/supprimer_compte.dart'; // Import du fichier supprimer_compte.dart
 import '../USERS/contrat_condition.dart'; // Correct import for the contrat condition screen
+import '../USERS/collab.dart' as collab; // Importer le fichier collab.dart avec un alias
+import '../USERS/collaborateur_dashboard.dart'; // Importer le tableau de bord du collaborateur
+import '../services/user_data_service.dart'; // Importer le service de données utilisateur
 
 class UserScreen extends StatefulWidget {
   const UserScreen({Key? key}) : super(key: key);
@@ -43,6 +46,7 @@ class _UserScreenState extends State<UserScreen> {
   String subscriptionId = 'free'; // Add subscription ID state
 
   bool _isUserDataLoaded = false; // Add a flag to check if user data is loaded
+  bool _isCollaborateur = false; // Add a flag to check if the user is a collaborator
 
   @override
   void initState() {
@@ -50,16 +54,7 @@ class _UserScreenState extends State<UserScreen> {
     currentUser = _auth.currentUser;
     if (currentUser != null) {
       _loadUserData();
-    } else {
-      // Identifiant de test
-      _nomEntrepriseController.text = "Entreprise Test";
-      _nomController.text = "Test";
-      _prenomController.text = "Utilisateur";
-      _emailController.text = "test@example.com";
-      _telephoneController.text = "1234567890";
-      _adresseController.text = "123 Rue de Test";
-      _siretController.text = "12345678901234";
-    }
+    } 
   }
 
   // Charger les données utilisateur depuis Firestore
@@ -67,108 +62,117 @@ class _UserScreenState extends State<UserScreen> {
     if (_isUserDataLoaded) return; // Return if data is already loaded
 
     try {
-      final docRef = _firestore
-          .collection('users')
-          .doc(currentUser!.uid)
-          .collection('authentification')
-          .doc(currentUser!.uid);
+      setState(() {
+        _isLoading = true;
+      });
+      
+      // Utiliser le service UserDataService pour charger les données
+      final UserDataService userDataService = UserDataService();
+      final Map<String, dynamic> userData = await userDataService.loadUserData();
+      
+      // Vérifier si l'utilisateur est un collaborateur
+      final bool isCollaborateur = userData['role'] == 'collaborateur';
+      
+      setState(() {
+        // Données de l'abonnement (pour les admins)
+        isSubscriptionActive = userData['isSubscriptionActive'] ?? false;
+        subscriptionId = userData['subscriptionId'] ?? 'free';
 
-      final doc = await docRef.get();
-
-      if (doc.exists) {
-        final data = doc.data()!;
-
-        // Conserver l'état de l'abonnement dans les données utilisateur
-        setState(() {
-          // Données de l'abonnement
-          isSubscriptionActive = data['isSubscriptionActive'] ?? false;
-          subscriptionId = data['subscriptionId'] ?? 'free';
-
-          // Autres données utilisateur
-          _nomEntrepriseController.text = data['nomEntreprise'] ?? '';
-          _nomController.text = data['nom'] ?? '';
-          _prenomController.text = data['prenom'] ?? '';
-          _emailController.text = currentUser?.email ?? '';
-          _telephoneController.text = data['telephone'] ?? '';
-          _adresseController.text = data['adresse'] ?? '';
-          _siretController.text = data['siret'] ?? '';
-          _logoUrl = data['logoUrl'] as String?;
-          _isUserDataLoaded = true; // Set the flag to true after loading data
-        });
-      }
+        // Données utilisateur communes
+        _nomController.text = userData['nom'] ?? '';
+        _prenomController.text = userData['prenom'] ?? '';
+        _emailController.text = currentUser?.email ?? '';
+        
+        // Données entreprise (pour tous)
+        _nomEntrepriseController.text = userData['nomEntreprise'] ?? '';
+        _telephoneController.text = userData['telephone'] ?? '';
+        _adresseController.text = userData['adresse'] ?? '';
+        _siretController.text = userData['siret'] ?? '';
+        _logoUrl = userData['logoUrl'];
+        
+        // Marquer les données comme chargées
+        _isUserDataLoaded = true;
+        _isLoading = false;
+        
+        // Stocker le rôle de l'utilisateur
+        _isCollaborateur = isCollaborateur;
+      });
     } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
       print('DEBUG - Error loading user data: $e');
     }
   }
 
   // Méthode pour mettre à jour les coordonnées utilisateur
   Future<void> _updateUserData() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // Utilisez le logoUrl existant si aucun nouveau logo n'est sélectionné
-      String? finalLogoUrl = _logoUrl;
-
-      // Si un nouveau logo a été sélectionné, uploadez-le
-      if (_logo != null) {
-        finalLogoUrl = await _uploadLogoToStorage(File(_logo!.path));
-      }
-
-      // Créer l'objet tampon avec le logo actuel
-      final Map<String, dynamic> tamponData = {
-        'logoUrl': finalLogoUrl, // Utilisez le logo final ici
-        'nomEntreprise': _nomEntrepriseController.text.trim(),
-        'adresse': _adresseController.text.trim(),
-        'telephone': _telephoneController.text.trim(),
-        'siret': _siretController.text.trim(),
-      };
-
-      // Créer l'objet de données utilisateur complet
-      final Map<String, dynamic> userData = {
-        'nomEntreprise': _nomEntrepriseController.text.trim(),
-        'nom': _nomController.text.trim(),
-        'prenom': _prenomController.text.trim(),
-        'email': _emailController.text.trim(),
-        'telephone': _telephoneController.text.trim(),
-        'adresse': _adresseController.text.trim(),
-        'siret': _siretController.text.trim(),
-        'logoUrl': finalLogoUrl,
-        'tampon': tamponData, // Ajouter les données du tampon
-        'lastUpdateDate': FieldValue.serverTimestamp(),
-      };
-
-      // Mettre à jour Firestore
-      await _firestore
-          .collection('users')
-          .doc(currentUser!.uid)
-          .collection('authentification')
-          .doc(currentUser!.uid)
-          .update(userData);
-
+    if (_formKey.currentState!.validate()) {
       setState(() {
-        _logoUrl = finalLogoUrl;
-        _isLoading = false;
+        _isLoading = true;
       });
 
-      if (context.mounted) {
+      try {
+        // Déterminer l'URL finale du logo
+        String? finalLogoUrl = _logoUrl;
+
+        // Si un nouveau logo a été sélectionné, uploadez-le
+        if (_logo != null) {
+          final fileName = '${currentUser!.uid}.jpg';
+          final Reference storageRef = FirebaseStorage.instance
+              .ref()
+              .child('users/${currentUser!.uid}/logo/$fileName');
+
+          await storageRef.putFile(File(_logo!.path));
+          final downloadUrl = await storageRef.getDownloadURL();
+          print("Logo uploadé avec succès : $downloadUrl");
+          finalLogoUrl = downloadUrl;
+        }
+
+        // Créer un objet avec les données mises à jour
+        final Map<String, dynamic> updatedData = {
+          'nom': _nomController.text,
+          'prenom': _prenomController.text,
+          'nomEntreprise': _nomEntrepriseController.text,
+          'telephone': _telephoneController.text,
+          'adresse': _adresseController.text,
+          'siret': _siretController.text,
+          'logoUrl': finalLogoUrl,
+        };
+
+        // Utiliser le service UserDataService pour mettre à jour les données
+        final UserDataService userDataService = UserDataService();
+        final bool success = await userDataService.updateUserData(updatedData);
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profil mis à jour avec succès'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Erreur lors de la mise à jour du profil'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+        print('DEBUG - Error updating user data: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Coordonnées mises à jour avec succès !"),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
           ),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erreur lors de la mise à jour : $e")),
         );
       }
     }
@@ -209,32 +213,8 @@ class _UserScreenState extends State<UserScreen> {
 
   // Méthode pour choisir une image de logo
 
-  // Méthode pour uploader le logo sur Firebase Storage
-  Future<String?> _uploadLogoToStorage(File imageFile) async {
-    if (currentUser == null) {
-      print('Erreur: utilisateur non connecté');
-      return null;
-    }
-
-    try {
-      final fileName = '${currentUser!.uid}.jpg';
-      final Reference storageRef = FirebaseStorage.instance
-          .ref()
-          .child('users/${currentUser!.uid}/logo/$fileName');
-
-      await storageRef.putFile(imageFile);
-      final downloadUrl = await storageRef.getDownloadURL();
-      print("Logo uploadé avec succès : $downloadUrl");
-      return downloadUrl;
-    } catch (e) {
-      print('Erreur upload logo: $e');
-      return null;
-    }
-  }
-
-  // Méthode pour supprimer le logo
-
-  Future<void> _showLogoutConfirmationDialog() async {
+  // Méthode pour afficher la boîte de dialogue de confirmation de déconnexion
+  void _showLogoutConfirmationDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -367,7 +347,7 @@ class _UserScreenState extends State<UserScreen> {
                       ),
                       const SizedBox(height: 20),
                       _buildTextField(
-                          "Nom de l'entreprise", _nomEntrepriseController, true,
+                          "Nom de l'entreprise", _nomEntrepriseController, !_isCollaborateur,
                           icon: Icons.business),
                       _buildTextField("Nom", _nomController, true,
                           icon: Icons.person),
@@ -375,9 +355,9 @@ class _UserScreenState extends State<UserScreen> {
                           icon: Icons.person_outline),
                       _buildTextField("Email", _emailController, false,
                           isReadOnly: true, icon: Icons.email),
-                      _buildTextField("Téléphone", _telephoneController, true,
+                      _buildTextField("Téléphone", _telephoneController, !_isCollaborateur,
                           icon: Icons.phone),
-                      _buildTextField("Adresse", _adresseController, true,
+                      _buildTextField("Adresse", _adresseController, !_isCollaborateur,
                           icon: Icons.location_on),
                       _buildTextField("Numéro SIRET", _siretController, false,
                           icon: Icons.business_center),
@@ -411,64 +391,131 @@ class _UserScreenState extends State<UserScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 50),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ContratModifier(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.edit, color: Colors.white),
-                            const SizedBox(width: 10),
-                            const Text(
-                              "Personnaliser le contrat location",
-                              style: TextStyle(color: Colors.white, fontSize: 18),
-                            ),
-                          ],
-                        ),
-                      ),
                       const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const AbonnementScreen(),
+                      
+                      // Bouton pour accéder au tableau de bord du collaborateur (visible uniquement pour les collaborateurs)
+                      if (_isCollaborateur)
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CollaborateurDashboard(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.dashboard, color: Colors.white),
+                              const SizedBox(width: 10),
+                              const Text(
+                                "Tableau de bord collaborateur",
+                                style: TextStyle(color: Colors.white, fontSize: 18),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.subscriptions, color: Colors.white),
-                            const SizedBox(width: 10),
-                            const Text(
-                              "Gérer mon Abonnement",
-                              style: TextStyle(color: Colors.white, fontSize: 18),
+                      
+                      const SizedBox(height: 30),
+                      
+                      // Boutons visibles uniquement pour les administrateurs
+                      if (!_isCollaborateur) ...[
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ContratModifier(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.edit, color: Colors.white),
+                              const SizedBox(width: 10),
+                              const Text(
+                                "Personnaliser le contrat location",
+                                style: TextStyle(color: Colors.white, fontSize: 18),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => collab.AddCollaborateurScreen(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.purple,
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.person_add, color: Colors.white),
+                              const SizedBox(width: 10),
+                              const Text(
+                                "Gérer mes collaborateurs",
+                                style: TextStyle(color: Colors.white, fontSize: 18),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AbonnementScreen(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.subscriptions, color: Colors.white),
+                              const SizedBox(width: 10),
+                              const Text(
+                                "Gérer mon Abonnement",
+                                style: TextStyle(color: Colors.white, fontSize: 18),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      
                       const SizedBox(height: 50),
                       ElevatedButton(
                         onPressed: _resetPassword,
