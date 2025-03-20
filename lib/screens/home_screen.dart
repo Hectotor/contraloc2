@@ -22,6 +22,10 @@ class _HomeScreenState extends State<HomeScreen> {
   late DeleteVehicule _deleteVehicule;
   String _prenom = '';
   bool _isUserDataLoaded = false; // Add a flag to check if user data is loaded
+  String _searchQuery = ''; // Variable pour stocker le texte de recherche
+  bool _isSearching = false; // Variable pour indiquer si la recherche est active
+  bool _showSearchBar = false; // Variable pour afficher/masquer la barre de recherche
+  final TextEditingController _searchController = TextEditingController(); // Contrôleur pour le TextField
 
   @override
   void initState() {
@@ -175,6 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _searchController.dispose(); // Libérer les ressources du contrôleur
     super.dispose();
   }
 
@@ -183,14 +188,54 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white, // Modification ici
       appBar: AppBar(
-        title: const Text(
-          "Mes véhicules",
-          style: TextStyle(
-              color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
-        ),
+        title: _showSearchBar
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Rechercher un véhicule...',
+                  hintStyle: const TextStyle(color: Colors.white70),
+                  border: InputBorder.none,
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () {
+                      setState(() {
+                        _showSearchBar = false;
+                        _searchQuery = '';
+                        _isSearching = false;
+                        _searchController.clear();
+                      });
+                    },
+                  ),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.toLowerCase();
+                    _isSearching = value.isNotEmpty;
+                  });
+                },
+              )
+            : const Text(
+                "Mes véhicules",
+                style: TextStyle(
+                    color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
+              ),
         backgroundColor: const Color(0xFF08004D), // Bleu nuit plus foncé
         centerTitle: true,
         elevation: 0,
+        actions: [
+          if (!_showSearchBar)
+            IconButton(
+              icon: const Icon(Icons.search, color: Colors.white),
+              onPressed: () {
+                setState(() {
+                  _showSearchBar = true;
+                  _searchController.text = _searchQuery;
+                });
+              },
+            ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore
@@ -262,21 +307,35 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
 
+          // Filtrer les véhicules si une recherche est active
+          List<QueryDocumentSnapshot> filteredVehicles = vehicles;
+          if (_isSearching && _searchQuery.isNotEmpty) {
+            filteredVehicles = vehicles.where((vehicle) {
+              final data = vehicle.data() as Map<String, dynamic>;
+              final marque = (data['marque'] ?? '').toString().toLowerCase();
+              final modele = (data['modele'] ?? '').toString().toLowerCase();
+              final immatriculation = (data['immatriculation'] ?? '').toString().toLowerCase();
+              
+              return marque.contains(_searchQuery) || 
+                     modele.contains(_searchQuery) || 
+                     immatriculation.contains(_searchQuery);
+            }).toList();
+          }
+
           return Column(
             children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 child: Column(
                   children: [
-                    SizedBox(height: 5),
-                    Text(
+                    const SizedBox(height: 5),
+                    const Text(
                       "(Appuie long pour modifier)",
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey,
                         fontStyle: FontStyle.italic,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
@@ -290,9 +349,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     childAspectRatio: 3 / 4,
                   ),
                   padding: const EdgeInsets.all(12.0),
-                  itemCount: vehicles.length,
+                  itemCount: filteredVehicles.length,
                   itemBuilder: (context, index) {
-                    final vehicle = vehicles[index];
+                    final vehicle = filteredVehicles[index];
                     final data = vehicle.data() as Map<String, dynamic>;
 
                     return GestureDetector(
