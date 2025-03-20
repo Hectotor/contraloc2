@@ -20,6 +20,11 @@ service cloud.firestore {
       allow read: if request.auth != null;
     }
     
+    // Gestion des collaborateurs sous un admin
+    match /collaborateurs/{collaborateurId} {
+      allow read, write: if isAuthenticated() && isOwner(userId);
+    }
+    
     // Règle par défaut - refuser tout accès non explicitement autorisé
     match /{document=**} {
       allow read, write: if false;
