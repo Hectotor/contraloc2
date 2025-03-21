@@ -11,8 +11,10 @@ class CollaboratorPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Liste des Collaborateurs'),
-        backgroundColor: const Color(0xFF0F056B),
+        title: const Text('Mes collaborateurs',
+            style: TextStyle(
+                color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF08004D),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -57,10 +59,10 @@ class CollaboratorPage extends StatelessWidget {
               ),
             );
           },
-          icon: const Icon(Icons.add, color: Colors.white),
+          icon: const Icon(Icons.person_add, color: Colors.white),
           label: const Text(
-            'Ajouter Collaborateur',
-            style: TextStyle(color: Colors.white),
+            'Ajouter',
+            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
           ),
           backgroundColor: const Color(0xFF0F056B),
         ),

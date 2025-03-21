@@ -35,12 +35,19 @@ class _HomeScreenState extends State<HomeScreen> {
     _setupSubscriptionCheck();
   }
 
-  void _setupSubscriptionCheck() {
-    print('🔄 Initialisation de la vérification des abonnements');
-    // Vérification initiale au démarrage
+  // Variable pour suivre si la vérification des abonnements a déjà été configurée
+  static bool _subscriptionCheckSetup = false;
 
-    // Vérification toutes les 24 heures
-    Timer.periodic(const Duration(hours: 24), (_) {});
+  void _setupSubscriptionCheck() {
+    // Ne configurer la vérification qu'une seule fois
+    if (!_subscriptionCheckSetup) {
+      // Vérification toutes les 24 heures
+      Timer.periodic(const Duration(hours: 24), (_) {
+        // Ici, vous pouvez ajouter le code pour vérifier l'abonnement
+        // Par exemple: _checkSubscriptionStatus();
+      });
+      _subscriptionCheckSetup = true;
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -192,10 +199,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
+                cursorColor: Colors.white, // Définir la couleur du curseur en blanc
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'Rechercher un véhicule...',
-                  hintStyle: const TextStyle(color: Colors.white70),
+                  hintStyle: const TextStyle(color: Colors.white),
                   border: InputBorder.none,
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),

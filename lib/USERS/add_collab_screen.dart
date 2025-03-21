@@ -108,7 +108,7 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
               fontSize: 26,
               fontWeight: FontWeight.bold), // Couleur du titre en blanc
         ),
-        backgroundColor: const Color(0xFF0F056B),
+        backgroundColor: const Color(0xFF08004D),
                 leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
