@@ -1,5 +1,3 @@
-import 'package:ContraLoc/USERS/abonnement_screen.dart';
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,6 +6,8 @@ import '../widget/delete_vehicule.dart';
 import '../widget/CREATION DE CONTRAT/client.dart'; // Assurez-vous que ce fichier est correctement importé
 import '../utils/animation.dart';
 import '../HOME/info_user.dart'; // Import du nouveau fichier
+import '../HOME/contract_limit_manager.dart'; // Import du gestionnaire de limite de contrats
+import '../HOME/popup_limite_contrat.dart'; // Import du popup de limite de contrats
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -27,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController(); // Contrôleur pour le TextField
   late UserInfoManager _userInfoManager; // Instance de notre gestionnaire d'informations utilisateur
   bool _isUserDataLoaded = false; // Variable pour suivre si les données utilisateur sont chargées
+  late ContractLimitManager _contractLimitManager; // Instance de notre gestionnaire de limite de contrats
 
   @override
   void initState() {
@@ -44,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Charger les données utilisateur
     _userInfoManager.loadUserData();
     _setupSubscriptionCheck();
+    _contractLimitManager = ContractLimitManager(); // Initialiser le gestionnaire de limite de contrats
   }
 
   // Variable pour suivre si la vérification des abonnements a déjà été configurée
@@ -59,109 +61,6 @@ class _HomeScreenState extends State<HomeScreen> {
       });
       _subscriptionCheckSetup = true;
     }
-  }
-
-  Future<bool> _checkMonthlyContractLimit() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      // Récupérer la limite de contrats de l'utilisateur
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .get();
-
-      final cb_limite_contrat = userDoc.data()?['cb_limite_contrat'] ?? 10;
-      
-      int limiteContrat = 10; // Limite par défaut
-      
-      // Si cb_limite_contrat est 999, on garde cette limite illimitée
-      if (cb_limite_contrat == 999) {
-        limiteContrat = 999;
-      } else {
-        // Si cb_limite_contrat est 10, on vérifie limiteContrat
-        final limiteContratTemp = userDoc.data()?['limiteContrat'] ?? 10;
-        // Si limiteContrat est 999, on prend 999, sinon on garde 10
-        if (limiteContratTemp == 999) {
-          limiteContrat = 999;
-        }
-      }
-
-      // Calculer le début et la fin du mois en cours
-      final now = DateTime.now();
-      final startOfMonth = DateTime(now.year, now.month, 1);
-      final endOfMonth = DateTime(now.year, now.month + 1, 0);
-
-      // Compter les contrats créés ce mois-ci en utilisant la collection 'locations'
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('locations')
-          .where('dateCreation', isGreaterThanOrEqualTo: startOfMonth)
-          .where('dateCreation', isLessThanOrEqualTo: endOfMonth)
-          .get();
-
-      final nombreContratsMois = querySnapshot.docs.length;
-      print(
-          'Nombre de contrats ce mois: $nombreContratsMois sur $limiteContrat autorisés');
-
-      return nombreContratsMois < limiteContrat;
-    }
-    return false;
-  }
-
-  void _showLimitReachedDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: const Text(
-            "Limite mensuelle atteinte",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF08004D),
-            ),
-          ),
-          content: const Text(
-            "Vous avez atteint votre limite de contrats pour ce mois. Passez à un abonnement supérieur pour créer plus de contrats.",
-            style: TextStyle(fontSize: 16),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                "Plus tard",
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AbonnementScreen(),
-                  ),
-                );
-              },
-              child: const Text(
-                "Voir les abonnements",
-                style: TextStyle(
-                  color: Color(0xFF08004D),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -346,11 +245,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     return GestureDetector(
                       onTap: () async {
-                        final canCreateContract =
-                            await _checkMonthlyContractLimit();
+                        final canCreateContract = await _contractLimitManager.checkMonthlyContractLimit();
 
                         if (!canCreateContract) {
-                          _showLimitReachedDialog();
+                          PopupLimiteContrat.showLimitReachedDialog(context);
                           return;
                         }
 
