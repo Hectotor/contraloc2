@@ -3,11 +3,11 @@ import 'package:ContraLoc/USERS/abonnement_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 import 'dart:async'; // Import Timer
 import '../widget/delete_vehicule.dart';
 import '../widget/CREATION DE CONTRAT/client.dart'; // Assurez-vous que ce fichier est correctement importé
 import '../utils/animation.dart';
+import '../HOME/info_user.dart'; // Import du nouveau fichier
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -21,17 +21,28 @@ class _HomeScreenState extends State<HomeScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   late DeleteVehicule _deleteVehicule;
   String _prenom = '';
-  bool _isUserDataLoaded = false; // Add a flag to check if user data is loaded
   String _searchQuery = ''; // Variable pour stocker le texte de recherche
   bool _isSearching = false; // Variable pour indiquer si la recherche est active
   bool _showSearchBar = false; // Variable pour afficher/masquer la barre de recherche
   final TextEditingController _searchController = TextEditingController(); // Contrôleur pour le TextField
+  late UserInfoManager _userInfoManager; // Instance de notre gestionnaire d'informations utilisateur
+  bool _isUserDataLoaded = false; // Variable pour suivre si les données utilisateur sont chargées
 
   @override
   void initState() {
     super.initState();
     _deleteVehicule = DeleteVehicule(context);
-    _loadUserData();
+    // Initialiser le gestionnaire d'informations utilisateur
+    _userInfoManager = UserInfoManager(
+      onPrenomLoaded: (prenom) {
+        setState(() {
+          _prenom = prenom;
+          _isUserDataLoaded = true;
+        });
+      }
+    );
+    // Charger les données utilisateur
+    _userInfoManager.loadUserData();
     _setupSubscriptionCheck();
   }
 
@@ -47,62 +58,6 @@ class _HomeScreenState extends State<HomeScreen> {
         // Par exemple: _checkSubscriptionStatus();
       });
       _subscriptionCheckSetup = true;
-    }
-  }
-
-  Future<void> _loadUserData() async {
-    if (_isUserDataLoaded) return;
-
-    final user = _auth.currentUser;
-    if (user != null) {
-      try {
-        print('👤 Chargement des données utilisateur...');
-        // Vérifier l'état de l'abonnement via RevenueCat
-        final customerInfo = await Purchases.getCustomerInfo();
-        print(
-            '📱 État RevenueCat: ${customerInfo.entitlements.active.length} abonnement(s) actif(s)');
-
-        // Vérifier si l'utilisateur est un collaborateur
-        final userDoc = await _firestore.collection('users').doc(user.uid).get();
-        
-        if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
-          // C'est un collaborateur, récupérer ses propres données
-          print('👥 Utilisateur collaborateur détecté');
-          
-          // Récupérer l'ID de l'admin pour référence
-          final adminId = userDoc.data()?['adminId'];
-          if (adminId != null) {
-            print('👥 Administrateur associé: $adminId');
-          }
-          
-          // Chercher les informations du collaborateur dans la collection de l'admin
-          // Note: Nous n'accédons pas aux données de l'admin directement
-          if (mounted) {
-            setState(() {
-              // Utiliser les données disponibles dans le document du collaborateur
-              _prenom = userDoc.data()?['prenom'] ?? '';
-              _isUserDataLoaded = true;
-            });
-          }
-        } else {
-          // C'est un administrateur, continuer normalement
-          final userData = await _firestore
-              .collection('users')
-              .doc(user.uid)
-              .collection('authentification')
-              .doc(user.uid)
-              .get();
-
-          if (userData.exists && mounted) {
-            setState(() {
-              _prenom = userData.data()?['prenom'] ?? '';
-              _isUserDataLoaded = true;
-            });
-          }
-        }
-      } catch (e) {
-        print('❌ Erreur chargement données: $e');
-      }
     }
   }
 
@@ -270,7 +225,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
+      body: !_isUserDataLoaded 
+          ? const Center(child: CircularProgressIndicator()) 
+          : StreamBuilder<QuerySnapshot>(
         stream: _firestore
             .collection('users')
             .doc(_auth.currentUser?.uid)
