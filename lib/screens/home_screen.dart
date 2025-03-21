@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async'; // Import Timer
 import '../widget/delete_vehicule.dart';
 import '../widget/CREATION DE CONTRAT/client.dart'; // Assurez-vous que ce fichier est correctement importé
@@ -8,6 +7,7 @@ import '../utils/animation.dart';
 import '../HOME/info_user.dart'; // Import du nouveau fichier
 import '../HOME/contract_limit_manager.dart'; // Import du gestionnaire de limite de contrats
 import '../HOME/popup_limite_contrat.dart'; // Import du popup de limite de contrats
+import '../widget/MES CONTRATS/vehicle_access_manager.dart'; // Import du gestionnaire d'accès aux véhicules
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -17,8 +17,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   late DeleteVehicule _deleteVehicule;
   String _prenom = '';
   String _searchQuery = ''; // Variable pour stocker le texte de recherche
@@ -28,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late UserInfoManager _userInfoManager; // Instance de notre gestionnaire d'informations utilisateur
   bool _isUserDataLoaded = false; // Variable pour suivre si les données utilisateur sont chargées
   late ContractLimitManager _contractLimitManager; // Instance de notre gestionnaire de limite de contrats
+  late VehicleAccessManager _vehicleAccessManager; // Instance de notre gestionnaire d'accès aux véhicules
 
   @override
   void initState() {
@@ -42,10 +41,24 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     );
+    
     // Charger les données utilisateur
     _userInfoManager.loadUserData();
     _setupSubscriptionCheck();
     _contractLimitManager = ContractLimitManager(); // Initialiser le gestionnaire de limite de contrats
+    _vehicleAccessManager = VehicleAccessManager(); // Initialiser le gestionnaire d'accès aux véhicules
+    
+    // Initialiser le gestionnaire d'accès aux véhicules (asynchrone)
+    _initializeVehicleAccess();
+  }
+  
+  // Méthode pour initialiser le gestionnaire d'accès aux véhicules
+  Future<void> _initializeVehicleAccess() async {
+    await _vehicleAccessManager.initialize();
+    // Forcer une mise à jour de l'interface après l'initialisation
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   // Variable pour suivre si la vérification des abonnements a déjà été configurée
@@ -127,11 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: !_isUserDataLoaded 
           ? const Center(child: CircularProgressIndicator()) 
           : StreamBuilder<QuerySnapshot>(
-        stream: _firestore
-            .collection('users')
-            .doc(_auth.currentUser?.uid)
-            .collection('vehicules')
-            .snapshots(),
+        stream: _vehicleAccessManager.getVehiclesStream(), // Utiliser le stream fourni par VehicleAccessManager
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -252,39 +261,31 @@ class _HomeScreenState extends State<HomeScreen> {
                           return;
                         }
 
-                        // Modification ici : vérifier dans la sous-collection de l'utilisateur
-                        final user = FirebaseAuth.instance.currentUser;
-                        if (user != null) {
-                          final doc = await FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(user.uid)
-                              .collection('vehicules')
-                              .doc(vehicle.id)
-                              .get();
+                        // Utiliser le gestionnaire d'accès aux véhicules pour récupérer le document
+                        final doc = await _vehicleAccessManager.getVehicleDocument(vehicle.id);
 
-                          // Vérifier si le widget est toujours monté avant de naviguer
-                          if (!mounted) return;
+                        // Vérifier si le widget est toujours monté avant de naviguer
+                        if (!mounted) return;
 
-                          if (doc.exists) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ClientPage(
-                                  marque: data['marque'] ?? '',
-                                  modele: data['modele'] ?? '',
-                                  immatriculation:
-                                      data['immatriculation'] ?? '',
-                                ),
+                        if (doc.exists) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ClientPage(
+                                marque: data['marque'] ?? '',
+                                modele: data['modele'] ?? '',
+                                immatriculation:
+                                    data['immatriculation'] ?? '',
                               ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Ce véhicule n'existe plus."),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Ce véhicule n'existe plus."),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
                         }
                       },
                       onLongPress: () =>

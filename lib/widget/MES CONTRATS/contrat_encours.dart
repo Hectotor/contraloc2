@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:ContraLoc/services/firestore_service.dart';
 import '../modifier.dart';
+import 'package:ContraLoc/widget/MES%20CONTRATS/vehicle_access_manager.dart';
+import 'package:ContraLoc/widget/MES%20CONTRATS/contract_access_manager.dart';
 
 class ContratEnCours extends StatefulWidget {
   final String searchText;
@@ -15,6 +16,25 @@ class ContratEnCours extends StatefulWidget {
 class _ContratEnCoursState extends State<ContratEnCours> {
   final Map<String, String?> _photoUrlCache = {};
   final _searchController = TextEditingController();
+  late VehicleAccessManager _vehicleAccessManager;
+  late ContractAccessManager _contractAccessManager;
+  
+  @override
+  void initState() {
+    super.initState();
+    _vehicleAccessManager = VehicleAccessManager();
+    _contractAccessManager = ContractAccessManager();
+    _initializeAccess();
+  }
+  
+  // Méthode pour initialiser les gestionnaires d'accès
+  Future<void> _initializeAccess() async {
+    await _vehicleAccessManager.initialize();
+    await _contractAccessManager.initialize();
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   Future<String?> _getVehiclePhotoUrl(String userId, String immatriculation) async {
     final cacheKey = '$userId-$immatriculation';
@@ -22,15 +42,18 @@ class _ContratEnCoursState extends State<ContratEnCours> {
       return _photoUrlCache[cacheKey];
     }
 
-    final vehiculeDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('vehicules')
-        .where('immatriculation', isEqualTo: immatriculation)
-        .get();
+    // Utiliser le gestionnaire d'accès aux véhicules pour récupérer le véhicule par immatriculation
+    final vehiculeDoc = await _vehicleAccessManager.getVehicleByImmatriculation(immatriculation);
 
     if (vehiculeDoc.docs.isNotEmpty) {
-      final photoUrl = vehiculeDoc.docs.first.data()['photoVehiculeUrl'] as String?;
+      // Accéder aux données de manière sûre
+      final data = vehiculeDoc.docs.first.data();
+      String? photoUrl;
+      
+      if (data != null && data is Map<String, dynamic>) {
+        photoUrl = data['photoVehiculeUrl'] as String?;
+      }
+      
       _photoUrlCache[cacheKey] = photoUrl;
       return photoUrl;
     }
@@ -78,7 +101,7 @@ class _ContratEnCoursState extends State<ContratEnCours> {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirestoreService.getContrats('en_cours'),
+              stream: _contractAccessManager.getActiveContractsStream(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(

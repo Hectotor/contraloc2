@@ -7,6 +7,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:ContraLoc/USERS/abonnement_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ContraLoc/widget/CREATION%20DE%20CONTRAT/subscription_manager.dart'; // Import du gestionnaire d'abonnement
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
@@ -49,39 +50,27 @@ class _ClientPageState extends State<ClientPage> {
   File? _permisRecto;
   File? _permisVerso;
   bool isPremiumUser = false; // Nouvelle propriété
+  late SubscriptionManager _subscriptionManager; // Instance du gestionnaire d'abonnement
 
   @override
   void initState() {
     super.initState();
-    _checkPremiumStatus();
+    _subscriptionManager = SubscriptionManager(); // Initialiser le gestionnaire d'abonnement
+    _initializeSubscription(); // Initialiser et vérifier le statut d'abonnement
     if (widget.contratId != null) {
       _loadClientData();
     }
   }
 
-  Future<void> _checkPremiumStatus() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .get();
-
-      if (doc.exists) {
-        final data = doc.data() ?? {};
-        final subscriptionId = data['subscriptionId'] ?? 'free';
-        final cb_subscription = data['cb_subscription'] ?? 'free';
-
-        setState(() {
-          // L'utilisateur est premium si l'un des deux abonnements est premium
-          isPremiumUser = subscriptionId == 'premium-monthly_access' ||
-              subscriptionId == 'premium-yearly_access' ||
-              cb_subscription == 'premium-monthly_access' ||
-              cb_subscription == 'premium-yearly_access';
-        });
-      }
+  // Méthode pour initialiser et vérifier le statut d'abonnement
+  Future<void> _initializeSubscription() async {
+    await _subscriptionManager.initialize(); // Initialiser le gestionnaire
+    final isPremium = await _subscriptionManager.isPremiumUser(); // Vérifier le statut premium
+    
+    if (mounted) {
+      setState(() {
+        isPremiumUser = isPremium;
+      });
     }
   }
 

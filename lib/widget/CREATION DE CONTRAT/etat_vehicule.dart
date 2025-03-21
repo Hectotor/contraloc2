@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:ContraLoc/USERS/abonnement_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ContraLoc/widget/CREATION DE CONTRAT/subscription_manager.dart';
 
 class EtatVehicule extends StatefulWidget {
   final List<File> photos;
@@ -23,36 +22,23 @@ class EtatVehicule extends StatefulWidget {
 
 class _EtatVehiculeState extends State<EtatVehicule> {
   bool isPremiumUser = false;
+  late SubscriptionManager _subscriptionManager;
 
   @override
   void initState() {
     super.initState();
-    _checkPremiumStatus();
+    _subscriptionManager = SubscriptionManager();
+    _initializeSubscription();
   }
 
-  Future<void> _checkPremiumStatus() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .get();
-
-      if (doc.exists) {
-        final data = doc.data() ?? {};
-        final subscriptionId = data['subscriptionId'] ?? 'free';
-        final cb_subscription = data['cb_subscription'] ?? 'free';
-
-        setState(() {
-          // L'utilisateur est premium si l'un des deux abonnements est premium
-          isPremiumUser = subscriptionId == 'premium-monthly_access' ||
-              subscriptionId == 'premium-yearly_access' ||
-              cb_subscription == 'premium-monthly_access' ||
-              cb_subscription == 'premium-yearly_access';
-        });
-      }
+  Future<void> _initializeSubscription() async {
+    await _subscriptionManager.initialize();
+    final isPremium = await _subscriptionManager.isPremiumUser();
+    
+    if (mounted) {
+      setState(() {
+        isPremiumUser = isPremium;
+      });
     }
   }
 
@@ -125,9 +111,8 @@ class _EtatVehiculeState extends State<EtatVehicule> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        backgroundColor: Colors.white, // Ajout du fond blanc
+        backgroundColor: Colors.white, 
         child: Container(
-          // Ajout d'un Container pour plus de style
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
