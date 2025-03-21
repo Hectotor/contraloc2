@@ -62,18 +62,43 @@ class _HomeScreenState extends State<HomeScreen> {
         print(
             '📱 État RevenueCat: ${customerInfo.entitlements.active.length} abonnement(s) actif(s)');
 
-        final userData = await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('authentification')
-            .doc(user.uid)
-            .get();
+        // Vérifier si l'utilisateur est un collaborateur
+        final userDoc = await _firestore.collection('users').doc(user.uid).get();
+        
+        if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
+          // C'est un collaborateur, récupérer ses propres données
+          print('👥 Utilisateur collaborateur détecté');
+          
+          // Récupérer l'ID de l'admin pour référence
+          final adminId = userDoc.data()?['adminId'];
+          if (adminId != null) {
+            print('👥 Administrateur associé: $adminId');
+          }
+          
+          // Chercher les informations du collaborateur dans la collection de l'admin
+          // Note: Nous n'accédons pas aux données de l'admin directement
+          if (mounted) {
+            setState(() {
+              // Utiliser les données disponibles dans le document du collaborateur
+              _prenom = userDoc.data()?['prenom'] ?? '';
+              _isUserDataLoaded = true;
+            });
+          }
+        } else {
+          // C'est un administrateur, continuer normalement
+          final userData = await _firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('authentification')
+              .doc(user.uid)
+              .get();
 
-        if (userData.exists && mounted) {
-          setState(() {
-            _prenom = userData.data()?['prenom'] ?? '';
-            _isUserDataLoaded = true;
-          });
+          if (userData.exists && mounted) {
+            setState(() {
+              _prenom = userData.data()?['prenom'] ?? '';
+              _isUserDataLoaded = true;
+            });
+          }
         }
       } catch (e) {
         print('❌ Erreur chargement données: $e');

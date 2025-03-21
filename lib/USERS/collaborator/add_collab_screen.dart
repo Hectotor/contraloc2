@@ -87,15 +87,6 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
           'dateCreation': FieldValue.serverTimestamp(),
         });
 
-        // Ajouter les informations dans la collection users pour le collaborateur
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(collaboratorId)
-            .set({
-          'adminId': adminId,
-          'role': 'collaborateur',
-        });
-
         print('Collaborateur ajouté avec succès : $collaboratorId');
 
         // Informer l'administrateur que le collaborateur a été ajouté avec succès

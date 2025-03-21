@@ -11,7 +11,7 @@ import '../USERS/question_user.dart'; // Import the question user screen
 import '../USERS/abonnement_screen.dart'; // Add this import
 import '../USERS/supprimer_compte.dart'; // Import du fichier supprimer_compte.dart
 import '../USERS/contrat_condition.dart'; // Correct import for the contrat condition screen
-import '../USERS/collaborator.dart'; // Importer le nouveau fichier
+import '../USERS/collaborator/collaborator.dart'; // Importer le nouveau fichier
 
 class UserScreen extends StatefulWidget {
   const UserScreen({Key? key}) : super(key: key);
