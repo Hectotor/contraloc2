@@ -80,8 +80,8 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
           'role': 'collaborateur',
           'permissions': {
             'lecture': true,
-            'ecriture': false,
-            'suppression': false,
+            'ecriture': true,
+            'suppression': true,
           },
           'emailVerifie': false,
           'dateCreation': FieldValue.serverTimestamp(),
@@ -179,7 +179,7 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
                               ),
                               SizedBox(height: 4),
                               Text(
-                                "Le collaborateur aura accès à votre liste de véhicules et pourra consulter les contrats.",
+                                "Le collaborateur aura accès à votre liste de véhicules et pourra consulter, modifier et gérer les contrats.",
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Color(0xFF555555),
@@ -314,7 +314,7 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       labelText: 'Mot de passe',
-                      hintText: 'Minimum 8 caractères',
+                      hintText: 'Minimum 8 caractères, 1 caractère spécial',
                       prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF08004D)),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -349,6 +349,9 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
                       }
                       if (value.length < 8) {
                         return 'Veuillez entrer un mot de passe d\'au moins 8 caractères';
+                      }
+                      if (!RegExp(r'^(?=.*[!@#\$%\^&\*])').hasMatch(value)) {
+                        return 'Le mot de passe doit contenir au moins 1 caractère spécial';
                       }
                       return null;
                     },
