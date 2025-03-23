@@ -12,18 +12,33 @@ import 'pdf_voiture.dart';
 import 'pdf_info_contact.dart';
 
 Future<pw.MemoryImage?> _loadImageFromFirebaseStorage(String logoUrl) async {
-  try {
-    // Télécharger les données de l'image
-    final Uint8List? logoBytes = await FirebaseStorage.instance
-        .refFromURL(logoUrl)
-        .getData();
-    
-    if (logoBytes != null) {
-      return pw.MemoryImage(logoBytes);
-    }
-  } catch (e) {
-    print("Erreur de chargement du logo depuis Firebase Storage : $e");
+  // Vérifier si l'URL est valide
+  if (logoUrl.isEmpty || !logoUrl.startsWith('https://')) {
+    print("URL du logo invalide: $logoUrl");
+    return null;
   }
+  
+  // Essayer d'abord via HTTP pour éviter l'erreur d'autorisation Firebase
+  try {
+    final response = await NetworkAssetBundle(Uri.parse(logoUrl)).load(logoUrl);
+    final bytes = response.buffer.asUint8List();
+    return pw.MemoryImage(bytes);
+  } catch (httpError) {
+    // Si HTTP échoue, essayer via Firebase Storage
+    try {
+      final Uint8List? logoBytes = await FirebaseStorage.instance
+          .refFromURL(logoUrl)
+          .getData();
+      
+      if (logoBytes != null) {
+        return pw.MemoryImage(logoBytes);
+      }
+    } catch (e) {
+      // Erreur silencieuse - nous avons déjà essayé HTTP
+    }
+  }
+  
+  print("Impossible de charger le logo: $logoUrl");
   return null;
 }
 
@@ -79,12 +94,26 @@ Future<String> generatePdf(
   if (logoUrl.isNotEmpty) {
     try {
       // Vérifier si c'est une URL Firebase Storage
-      if (logoUrl.startsWith('https://firebasestorage.googleapis.com')) {
+      if (logoUrl.startsWith('https://firebasestorage.googleapis.com') || 
+          logoUrl.startsWith('https://storage.googleapis.com')) {
         logoImage = await _loadImageFromFirebaseStorage(logoUrl);
+      } else if (logoUrl.startsWith('https://')) {
+        // Autres URLs HTTPS
+        try {
+          final response = await NetworkAssetBundle(Uri.parse(logoUrl)).load(logoUrl);
+          final bytes = response.buffer.asUint8List();
+          logoImage = pw.MemoryImage(bytes);
+        } catch (httpError) {
+          print("Échec du chargement du logo via HTTP: $httpError");
+        }
       } else {
         // Chemin local
-        final logoBytes = await File(logoUrl).readAsBytes();
-        logoImage = pw.MemoryImage(logoBytes);
+        try {
+          final logoBytes = await File(logoUrl).readAsBytes();
+          logoImage = pw.MemoryImage(logoBytes);
+        } catch (fileError) {
+          print("Erreur de lecture du fichier logo local: $fileError");
+        }
       }
     } catch (e) {
       print("Erreur de chargement du logo : $e");
