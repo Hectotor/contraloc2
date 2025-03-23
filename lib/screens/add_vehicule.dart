@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../widget/enregistrer_vehicule.dart';
 import '../services/collaborateur_util.dart';
 import 'package:flutter/services.dart';
+import '../widget/take_picture.dart';
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
@@ -38,7 +39,6 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  final ImagePicker _picker = ImagePicker();
 
   bool _isLoading = false;
 
@@ -107,6 +107,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   }
 
   Future<void> _pickImage(String imageType) async {
+    // Utilisation de la fonction globale showImagePickerDialog du fichier take_picture.dart
     final XFile? selectedImage = await showImagePickerDialog(context, imageType);
     if (selectedImage != null) {
       setState(() {
@@ -118,59 +119,6 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
           _assurancePhoto = selectedImage;
         }
       });
-    }
-  }
-
-  Future<XFile?> showImagePickerDialog(BuildContext context, String imageType) async {
-    XFile? pickedFile;
-    await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Sélectionner une image pour ${_getImageTypeLabel(imageType)}"),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                GestureDetector(
-                  child: const ListTile(
-                    leading: Icon(Icons.photo_library),
-                    title: Text("Galerie"),
-                  ),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-                    pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-                  },
-                ),
-                const Padding(padding: EdgeInsets.all(8.0)),
-                GestureDetector(
-                  child: const ListTile(
-                    leading: Icon(Icons.camera_alt),
-                    title: Text("Appareil photo"),
-                  ),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-                    pickedFile = await _picker.pickImage(source: ImageSource.camera);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    return pickedFile;
-  }
-
-  String _getImageTypeLabel(String imageType) {
-    switch (imageType) {
-      case 'car':
-        return 'le véhicule';
-      case 'carteGrise':
-        return 'la carte grise';
-      case 'assurance':
-        return 'l\'assurance';
-      default:
-        return imageType;
     }
   }
 
@@ -193,7 +141,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       if (targetId == null) {
         throw Exception("ID cible non disponible");
       }
-
+      
       final fileName = '${imageType}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final storageRef = _storage.ref().child(
           'users/$targetId/vehicules/${_immatriculationController.text}/$fileName');
