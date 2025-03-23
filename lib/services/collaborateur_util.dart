@@ -273,12 +273,46 @@ class CollaborateurUtil {
         cb_subscription == 'premium-yearly_access';
   }
 
+  /// Fonction utilitaire pour exécuter une requête Firestore avec retentative (backoff)
+  /// en cas d'erreur temporaire de connectivité
+  static Future<T> _executeWithRetry<T>({
+    required Future<T> Function() operation,
+    int maxRetries = 3,
+    Duration initialDelay = const Duration(milliseconds: 500),
+  }) async {
+    int attempts = 0;
+    Duration delay = initialDelay;
+    
+    while (true) {
+      try {
+        attempts++;
+        return await operation();
+      } catch (e) {
+        final isUnavailable = e.toString().contains('unavailable') || 
+                             e.toString().contains('network error') ||
+                             e.toString().contains('timeout');
+        
+        if (!isUnavailable || attempts >= maxRetries) {
+          print("❌ Erreur après $attempts tentatives: $e");
+          rethrow; // Relancer l'erreur si ce n'est pas une erreur de connectivité ou si max retries atteint
+        }
+        
+        print("⚠️ Tentative $attempts échouée, nouvelle tentative dans ${delay.inMilliseconds}ms: $e");
+        await Future.delayed(delay);
+        delay *= 2; // Backoff exponentiel
+      }
+    }
+  }
+
   /// Vérifie si un collaborateur a une permission spécifique
   /// Paramètres:
   /// - permissionType: 'lecture', 'ecriture', ou 'suppression'
   static Future<bool> checkCollaborateurPermission(String permissionType) async {
     try {
-      final status = await checkCollaborateurStatus();
+      // Utiliser la fonction avec retentative pour vérifier le statut
+      final status = await _executeWithRetry(
+        operation: () => checkCollaborateurStatus(),
+      );
       
       // Si l'utilisateur n'est pas un collaborateur, on retourne true (admin a toutes les permissions)
       if (status['isCollaborateur'] != true) {
@@ -293,9 +327,11 @@ class CollaborateurUtil {
         return false;
       }
       
-      // Récupérer les données du collaborateur depuis son propre document user
+      // Récupérer les données du collaborateur depuis son propre document user avec retentative
       // Cette approche respecte les règles de sécurité Firestore
-      final userDoc = await _firestore.collection('users').doc(userId).get();
+      final userDoc = await _executeWithRetry(
+        operation: () => _firestore.collection('users').doc(userId).get(),
+      );
       
       if (!userDoc.exists) {
         print("❌ Document utilisateur non trouvé");
@@ -309,12 +345,14 @@ class CollaborateurUtil {
         
         // Essayer de récupérer depuis la collection collaborateurs si on a les droits
         try {
-          final collaborateurDoc = await _firestore
-              .collection('users')
-              .doc(adminId)
-              .collection('collaborateurs')
-              .doc(userId)
-              .get();
+          final collaborateurDoc = await _executeWithRetry(
+            operation: () => _firestore
+                .collection('users')
+                .doc(adminId)
+                .collection('collaborateurs')
+                .doc(userId)
+                .get(),
+          );
           
           if (collaborateurDoc.exists) {
             final collabPermissions = collaborateurDoc.data()?['permissions'];
