@@ -20,7 +20,6 @@ import 'MODIFICATION DE CONTRAT/commentaire_retour.dart';
 
 import '../utils/pdf.dart';
 import '../USERS/contrat_condition.dart';
-import 'chargement.dart'; // Import the new chargement.dart file
 
 import 'MODIFICATION DE CONTRAT/supp_contrat.dart';
 import 'MODIFICATION DE CONTRAT/info_loc.dart';
@@ -58,7 +57,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
   final List<File> _photosRetour = [];
   // Ajout d'une liste pour stocker les URLs des photos
   List<String> _photosRetourUrls = [];
-  bool _isGeneratingPdf = false; // Add a state variable for loading
   bool _isUpdatingContrat = false; // Add a state variable for updating
   final TextEditingController _nettoyageIntController = TextEditingController();
   final TextEditingController _nettoyageExtController = TextEditingController();
@@ -275,12 +273,16 @@ class _ModifierScreenState extends State<ModifierScreen> {
   }
 
   Future<void> _generatePdf() async {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() {
-        _isGeneratingPdf = true;
-      });
-    });
-
+    // Afficher le widget de chargement
+    bool dialogShown = false;
+    if (context.mounted) {
+      dialogShown = true;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     int tentatives = 0;
     const maxTentatives = 5;
@@ -443,9 +445,10 @@ class _ModifierScreenState extends State<ModifierScreen> {
           signatureRetourBase64: signatureRetourBase64,
         );
 
-        // Fermer le dialogue de chargement
-        if (context.mounted) {
+        // Fermer le dialogue de chargement si nécessaire
+        if (dialogShown && context.mounted) {
           Navigator.pop(context);
+          dialogShown = false;
         }
 
         // Ouvrir le PDF
@@ -465,8 +468,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
         // Si c'est la dernière tentative ou si ce n'est pas une erreur de connectivité
         if (tentatives >= maxTentatives || !isConnectivityError) {
           // Fermer le dialogue de chargement en cas d'erreur
-          if (context.mounted) {
+          if (dialogShown && context.mounted) {
             Navigator.pop(context);
+            dialogShown = false;
             
             String errorMessage = 'Une erreur est survenue.';
             
@@ -499,20 +503,14 @@ class _ModifierScreenState extends State<ModifierScreen> {
           
           // Mettre à jour le message de chargement
           if (context.mounted) {
-            Navigator.pop(context);
+            if (dialogShown) {
+              Navigator.pop(context);
+            }
+            dialogShown = true;
             showDialog(
               context: context,
               barrierDismissible: false,
-              builder: (context) => AlertDialog(
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 16),
-                    Text("Problème de connexion, nouvelle tentative ${tentatives + 1}/$maxTentatives..."),
-                  ],
-                ),
-              ),
+              builder: (context) => const Center(child: CircularProgressIndicator()),
             );
           }
           
@@ -520,14 +518,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
         }
       }
     }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        setState(() {
-          _isGeneratingPdf = false;
-        });
-      }
-    });
   }
 
   DateTime _parseDateWithFallback(String dateStr) {
@@ -683,7 +673,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
               ),
             ),
           ),
-          if (_isGeneratingPdf) Chargement(), // Show loading indicator
         ],
       ),
     );

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import '../../services/collaborateur_util.dart';
 
 class SuppContrat {
   static Future<void> deleteContract(
@@ -35,38 +35,72 @@ class SuppContrat {
     );
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception("Utilisateur non connecté");
+      // Vérifier le statut du collaborateur
+      final status = await CollaborateurUtil.checkCollaborateurStatus();
+      final userId = status['userId'];
+      final isCollaborateur = status['isCollaborateur'] == true;
+      final adminId = status['adminId'];
+      
+      if (userId == null) throw Exception("Utilisateur non connecté");
+      
+      // Vérifier les permissions de suppression pour les collaborateurs
+      if (isCollaborateur) {
+        final hasDeletePermission = await CollaborateurUtil.checkCollaborateurPermission('suppression');
+        if (!hasDeletePermission) {
+          // Fermer le dialogue de chargement
+          if (dialogContext != null && dialogContext!.mounted) {
+            Navigator.pop(dialogContext!);
+          }
+          
+          // Afficher un message d'erreur
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Vous n\'avez pas les permissions nécessaires pour supprimer ce contrat.'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
+        }
+      }
+      
+      // Déterminer l'ID à utiliser (admin pour les collaborateurs)
+      final targetId = isCollaborateur ? adminId : userId;
 
       // Récupérer les données du contrat pour les photos
-      final contratData = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('locations')
-          .doc(contratId)
-          .get();
+      final contratDoc = await CollaborateurUtil.getDocument(
+        collection: 'users',
+        docId: targetId!,
+        subCollection: 'locations',
+        subDocId: contratId,
+        useAdminId: isCollaborateur,
+      );
 
       // Sauvegarder les URLs des photos
       List<String> photosToDelete = [];
-      if (contratData.exists) {
-        final data = contratData.data()!;
+      if (contratDoc.exists) {
+        final data = contratDoc.data() as Map<String, dynamic>?;
+        
+        if (data != null) {
+          // Ajouter les photos standard
+          if (data['photos'] != null) {
+            photosToDelete.addAll(List<String>.from(data['photos']));
+          }
 
-        // Ajouter les photos standard
-        if (data['photos'] != null) {
-          photosToDelete.addAll(List<String>.from(data['photos']));
-        }
+          // Ajouter les photos de retour
+          if (data['photosRetourUrls'] != null) {
+            photosToDelete.addAll(List<String>.from(data['photosRetourUrls']));
+          }
 
-        // Ajouter les photos de retour
-        if (data['photosRetourUrls'] != null) {
-          photosToDelete.addAll(List<String>.from(data['photosRetourUrls']));
-        }
-
-        // Ajouter les photos de permis
-        if (data['permisRecto'] != null) {
-          photosToDelete.add(data['permisRecto']);
-        }
-        if (data['permisVerso'] != null) {
-          photosToDelete.add(data['permisVerso']);
+          // Ajouter les photos de permis
+          if (data['permisRecto'] != null) {
+            photosToDelete.add(data['permisRecto']);
+          }
+          if (data['permisVerso'] != null) {
+            photosToDelete.add(data['permisVerso']);
+          }
         }
       }
 
@@ -86,7 +120,7 @@ class SuppContrat {
       // Ensuite supprimer le contrat
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
+          .doc(targetId)
           .collection('locations')
           .doc(contratId)
           .delete();
