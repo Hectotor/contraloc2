@@ -1,47 +1,123 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../screens/add_vehicule.dart';
+import '../services/collaborateur_util.dart';
 
 class DeleteVehicule {
   final BuildContext context;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   DeleteVehicule(this.context);
 
   void navigateToAddVehicule([String? immatriculationId]) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    try {
+      // Vérifier le statut du collaborateur
+      final status = await CollaborateurUtil.checkCollaborateurStatus();
+      final userId = status['userId'];
+      
+      if (userId == null) {
+        print("❌ Utilisateur non connecté");
+        return;
+      }
+      
+      // Déterminer l'ID à utiliser (admin ou collaborateur)
+      final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
+      
+      if (targetId == null) {
+        print("❌ ID cible non disponible");
+        return;
+      }
+      
+      // Vérifier les permissions si c'est un collaborateur
+      if (status['isCollaborateur']) {
+        // Vérifier si le collaborateur a la permission d'écriture
+        final hasWritePermission = await CollaborateurUtil.checkCollaborateurPermission('ecriture');
+        if (!hasWritePermission) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Vous n'avez pas la permission de modifier les véhicules."),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+      }
 
-    Map<String, dynamic>? vehicleData;
-    if (immatriculationId != null) {
-      final doc = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('vehicules')
-          .doc(immatriculationId)
-          .get();
-      vehicleData = doc.data();
-    }
-    if (context.mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => AddVehiculeScreen(
-            vehicleId: immatriculationId,
-            vehicleData: vehicleData,
+      Map<String, dynamic>? vehicleData;
+      if (immatriculationId != null) {
+        final doc = await _firestore
+            .collection('users')
+            .doc(targetId)
+            .collection('vehicules')
+            .doc(immatriculationId)
+            .get();
+        vehicleData = doc.data();
+      }
+      
+      if (context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AddVehiculeScreen(
+              vehicleId: immatriculationId,
+              vehicleData: vehicleData,
+            ),
           ),
-        ),
-      );
+        );
+      }
+    } catch (e) {
+      print("❌ Erreur lors de la navigation: $e");
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erreur: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   Future<void> deleteVehicule(String immatriculationId) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
     try {
+      // Vérifier le statut du collaborateur
+      final status = await CollaborateurUtil.checkCollaborateurStatus();
+      final userId = status['userId'];
+      
+      if (userId == null) {
+        print("❌ Utilisateur non connecté");
+        return;
+      }
+      
+      // Déterminer l'ID à utiliser (admin ou collaborateur)
+      final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
+      
+      if (targetId == null) {
+        print("❌ ID cible non disponible");
+        return;
+      }
+      
+      // Vérifier les permissions si c'est un collaborateur
+      if (status['isCollaborateur']) {
+        // Vérifier si le collaborateur a la permission de suppression
+        final hasDeletePermission = await CollaborateurUtil.checkCollaborateurPermission('suppression');
+        if (!hasDeletePermission) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Vous n'avez pas la permission de supprimer les véhicules."),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+      }
+
       // Afficher un indicateur de chargement
       if (context.mounted) {
         showDialog(
@@ -56,7 +132,7 @@ class DeleteVehicule {
       // Récupérer d'abord le document du véhicule
       final vehicleDoc = await _firestore
           .collection('users')
-          .doc(user.uid)
+          .doc(targetId)
           .collection('vehicules')
           .doc(immatriculationId)
           .get();
@@ -65,7 +141,7 @@ class DeleteVehicule {
         // Si le document n'existe pas, essayer de le trouver par l'immatriculation
         final querySnapshot = await _firestore
             .collection('users')
-            .doc(user.uid)
+            .doc(targetId)
             .collection('vehicules')
             .where('immatriculation', isEqualTo: immatriculationId)
             .get();
@@ -137,7 +213,7 @@ class DeleteVehicule {
         await _deleteStorageFile(vehicleData['photoAssuranceUrl']);
       }
     } catch (e) {
-      print('Erreur lors de la suppression des photos: $e');
+      print('❌ Erreur lors de la suppression des photos: $e');
     }
   }
 
@@ -147,11 +223,11 @@ class DeleteVehicule {
           fileUrl.isNotEmpty &&
           (fileUrl.startsWith('gs://') ||
               fileUrl.startsWith('https://firebasestorage.googleapis.com'))) {
-        final ref = FirebaseStorage.instance.refFromURL(fileUrl);
+        final ref = _storage.refFromURL(fileUrl);
         await ref.delete();
       }
     } catch (e) {
-      print('Erreur lors de la suppression du fichier: $e');
+      print('❌ Erreur lors de la suppression du fichier: $e');
     }
   }
 
@@ -159,7 +235,7 @@ class DeleteVehicule {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: Colors.white, // Ajout ici
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
@@ -200,19 +276,21 @@ class DeleteVehicule {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF08004D),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    backgroundColor: Colors.grey[300],
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
                   child: const Text(
-                    "Annuler",
+                    'Annuler',
                     style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
@@ -228,7 +306,7 @@ class DeleteVehicule {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: Colors.white, // Ajout ici
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
@@ -238,58 +316,69 @@ class DeleteVehicule {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
-                Icons.warning_rounded,
+                Icons.warning_amber_rounded,
                 color: Colors.red,
                 size: 60,
               ),
               const SizedBox(height: 20),
               const Text(
-                "Suppression",
+                "Confirmation",
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.red,
+                  color: Color(0xFF08004D),
                 ),
               ),
               const SizedBox(height: 10),
               const Text(
-                "Êtes-vous sûr de vouloir supprimer ce véhicule ?",
+                "Êtes-vous sûr de vouloir supprimer ce véhicule ? Cette action est irréversible.",
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
+                style: TextStyle(fontSize: 14),
               ),
               const SizedBox(height: 20),
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[300],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
                       child: const Text(
-                        "Annuler",
+                        'Annuler',
                         style: TextStyle(
-                          color: Color(0xFF08004D),
-                          fontSize: 16,
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
                       onPressed: () {
                         Navigator.pop(context);
                         deleteVehicule(immatriculationId);
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
                       child: const Text(
-                        "Supprimer",
+                        'Supprimer',
                         style: TextStyle(
-                          fontSize: 16,
                           color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),

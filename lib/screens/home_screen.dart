@@ -4,7 +4,7 @@ import 'dart:async'; // Import Timer
 import '../widget/delete_vehicule.dart';
 import '../widget/CREATION DE CONTRAT/client.dart'; // Assurez-vous que ce fichier est correctement importé
 import '../utils/animation.dart';
-import '../HOME/info_user.dart'; // Import du nouveau fichier
+import '../services/collaborateur_util.dart'; // Import du nouveau fichier
 import '../widget/MES CONTRATS/vehicle_access_manager.dart'; // Import du gestionnaire d'accès aux véhicules
 
 class HomeScreen extends StatefulWidget {
@@ -21,7 +21,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isSearching = false; // Variable pour indiquer si la recherche est active
   bool _showSearchBar = false; // Variable pour afficher/masquer la barre de recherche
   final TextEditingController _searchController = TextEditingController(); // Contrôleur pour le TextField
-  late UserInfoManager _userInfoManager; // Instance de notre gestionnaire d'informations utilisateur
   bool _isUserDataLoaded = false; // Variable pour suivre si les données utilisateur sont chargées
 
   late VehicleAccessManager _vehicleAccessManager; // Instance de notre gestionnaire d'accès aux véhicules
@@ -30,23 +29,37 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _deleteVehicule = DeleteVehicule(context);
-    // Initialiser le gestionnaire d'informations utilisateur
-    _userInfoManager = UserInfoManager(
-      onPrenomLoaded: (prenom) {
-        setState(() {
-          _prenom = prenom;
-          _isUserDataLoaded = true;
-        });
-      }
-    );
     
-    // Charger les données utilisateur
-    _userInfoManager.loadUserData();
+    // Charger les données utilisateur avec CollaborateurUtil
+    _loadUserData();
     _setupSubscriptionCheck();
     _vehicleAccessManager = VehicleAccessManager(); // Initialiser le gestionnaire d'accès aux véhicules
     
     // Initialiser le gestionnaire d'accès aux véhicules (asynchrone)
     _initializeVehicleAccess();
+  }
+  
+  // Méthode pour charger les données utilisateur avec CollaborateurUtil
+  Future<void> _loadUserData() async {
+    try {
+      // Utiliser CollaborateurUtil pour récupérer les données d'authentification
+      final authData = await CollaborateurUtil.getAuthData();
+      
+      if (mounted) {
+        setState(() {
+          _prenom = authData['prenom'] ?? '';
+          _isUserDataLoaded = true;
+        });
+      }
+    } catch (e) {
+      print('❌ Erreur lors du chargement des données utilisateur: $e');
+      if (mounted) {
+        setState(() {
+          _prenom = '';
+          _isUserDataLoaded = true; // Marquer comme chargé même en cas d'erreur pour éviter un écran de chargement infini
+        });
+      }
+    }
   }
   
   // Méthode pour initialiser le gestionnaire d'accès aux véhicules

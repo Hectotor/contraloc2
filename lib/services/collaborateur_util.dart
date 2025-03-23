@@ -48,53 +48,85 @@ class CollaborateurUtil {
   /// Récupère les données d'authentification de l'utilisateur (admin ou collaborateur)
   /// Pour un collaborateur, récupère les données de son administrateur
   static Future<Map<String, dynamic>> getAuthData() async {
-    final status = await checkCollaborateurStatus();
-    final userId = status['userId'];
-    
-    if (userId == null) {
-      return {};
-    }
-    
-    // Déterminer l'ID à utiliser pour récupérer les données d'authentification
-    final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
-    
-    if (targetId == null) {
+    final user = _auth.currentUser;
+    if (user == null) {
       return {};
     }
     
     try {
-      // Essayer d'abord depuis le cache
-      final docCache = await _firestore
-          .collection('users')
-          .doc(targetId)
-          .collection('authentification')
-          .doc(targetId)
-          .get(GetOptions(source: Source.cache));
+      print('👤 Chargement des données utilisateur...');
       
-      if (docCache.exists) {
-        print('📋 Données authentification récupérées depuis le cache');
-        return docCache.data() as Map<String, dynamic>;
-      }
+      // Note: La vérification RevenueCat est gérée dans info_user.dart
+
+      // Vérifier si l'utilisateur est un collaborateur
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
       
-      // Si pas dans le cache et utilisateur est admin, essayer depuis le serveur
-      if (!status['isCollaborateur']) {
-        final docServer = await _firestore
-            .collection('users')
-            .doc(targetId)
-            .collection('authentification')
-            .doc(targetId)
-            .get();
+      if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
+        // C'est un collaborateur, récupérer ses propres données
+        print('👥 Utilisateur collaborateur détecté');
+        
+        // Récupérer l'ID de l'admin pour référence
+        final adminId = userDoc.data()?['adminId'];
+        if (adminId != null) {
+          print('👥 Administrateur associé: $adminId');
+          
+          // Essayer d'abord depuis le cache
+          try {
+            final docCache = await _firestore
+                .collection('users')
+                .doc(adminId)
+                .collection('authentification')
+                .doc(adminId)
+                .get(GetOptions(source: Source.cache));
             
-        if (docServer.exists) {
-          print('🔄 Données authentification récupérées depuis le serveur');
-          return docServer.data() as Map<String, dynamic>;
+            if (docCache.exists) {
+              print('📋 Données authentification admin récupérées depuis le cache');
+              return docCache.data() as Map<String, dynamic>;
+            }
+          } catch (e) {
+            print('⚠️ Cache non disponible: $e');
+          }
+          
+          // Si pas dans le cache, essayer depuis le serveur
+          try {
+            final docServer = await _firestore
+                .collection('users')
+                .doc(adminId)
+                .collection('authentification')
+                .doc(adminId)
+                .get();
+                
+            if (docServer.exists) {
+              print('🔄 Données authentification admin récupérées depuis le serveur');
+              return docServer.data() as Map<String, dynamic>;
+            }
+          } catch (e) {
+            print('❌ Erreur récupération données admin: $e');
+          }
         }
+        
+        // Si on n'a pas pu récupérer les données de l'admin, utiliser les données du collaborateur
+        return userDoc.data() as Map<String, dynamic>;
       } else {
-        // Pour les collaborateurs sans accès au cache, utiliser des valeurs par défaut
-        print('👥 Collaborateur sans accès au cache, utilisation des valeurs par défaut');
+        // C'est un administrateur, continuer normalement
+        try {
+          final userData = await _firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('authentification')
+              .doc(user.uid)
+              .get();
+
+          if (userData.exists) {
+            print('📋 Données authentification admin récupérées');
+            return userData.data() as Map<String, dynamic>;
+          }
+        } catch (e) {
+          print('❌ Erreur récupération données authentification: $e');
+        }
       }
     } catch (e) {
-      print('❌ Erreur récupération données authentification: $e');
+      print('❌ Erreur générale récupération données: $e');
     }
     
     return {};
@@ -239,5 +271,68 @@ class CollaborateurUtil {
         subscriptionId == 'premium-yearly_access' ||
         cb_subscription == 'premium-monthly_access' ||
         cb_subscription == 'premium-yearly_access';
+  }
+
+  /// Vérifie si un collaborateur a une permission spécifique
+  /// Paramètres:
+  /// - permissionType: 'lecture', 'ecriture', ou 'suppression'
+  static Future<bool> checkCollaborateurPermission(String permissionType) async {
+    try {
+      final status = await checkCollaborateurStatus();
+      
+      // Si l'utilisateur n'est pas un collaborateur, on retourne true (admin a toutes les permissions)
+      if (status['isCollaborateur'] != true) {
+        return true;
+      }
+      
+      final userId = status['userId'];
+      final adminId = status['adminId'];
+      
+      if (userId == null || adminId == null) {
+        print("❌ Identifiants manquants pour la vérification des permissions");
+        return false;
+      }
+      
+      // Récupérer les données du collaborateur depuis son propre document user
+      // Cette approche respecte les règles de sécurité Firestore
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      
+      if (!userDoc.exists) {
+        print("❌ Document utilisateur non trouvé");
+        return false;
+      }
+      
+      // Vérifier si le document contient des permissions
+      final permissions = userDoc.data()?['permissions'];
+      if (permissions == null) {
+        print("❌ Permissions non définies dans le document utilisateur");
+        
+        // Essayer de récupérer depuis la collection collaborateurs si on a les droits
+        try {
+          final collaborateurDoc = await _firestore
+              .collection('users')
+              .doc(adminId)
+              .collection('collaborateurs')
+              .doc(userId)
+              .get();
+          
+          if (collaborateurDoc.exists) {
+            final collabPermissions = collaborateurDoc.data()?['permissions'];
+            if (collabPermissions != null) {
+              return collabPermissions[permissionType] == true;
+            }
+          }
+        } catch (e) {
+          print("⚠️ Impossible d'accéder aux permissions dans la collection collaborateurs: $e");
+        }
+        
+        return false;
+      }
+      
+      return permissions[permissionType] == true;
+    } catch (e) {
+      print("❌ Erreur lors de la vérification des permissions: $e");
+      return false;
+    }
   }
 }

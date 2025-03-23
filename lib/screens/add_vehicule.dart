@@ -1,17 +1,12 @@
-import 'package:dio/dio.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart';
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import '../widget/enregistrer_vehicule.dart';
-import '../widget/add_pho_car_atte.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
-import 'package:flutter/cupertino.dart';
-import '../ajouter_vehicule/check_vehicle_limit.dart';
+import '../services/collaborateur_util.dart';
+import 'package:flutter/services.dart';
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
@@ -28,94 +23,91 @@ class AddVehiculeScreen extends StatefulWidget {
   final String? vehicleId;
   final Map<String, dynamic>? vehicleData;
 
-  const AddVehiculeScreen({Key? key, this.vehicleId, this.vehicleData})
-      : super(key: key);
+  const AddVehiculeScreen({
+    Key? key,
+    this.vehicleId,
+    this.vehicleData,
+  }) : super(key: key);
 
   @override
-  State<AddVehiculeScreen> createState() => _AddVehiculeScreenState();
+  _AddVehiculeScreenState createState() => _AddVehiculeScreenState();
 }
 
 class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   final _formKey = GlobalKey<FormState>();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final ImagePicker _picker = ImagePicker();
 
+  bool _isLoading = false;
+
+  // Contrôleurs pour les champs de texte
   final TextEditingController _marqueController = TextEditingController();
   final TextEditingController _modeleController = TextEditingController();
-  final TextEditingController _immatriculationController =
-      TextEditingController();
+  final TextEditingController _immatriculationController = TextEditingController();
   final TextEditingController _vinController = TextEditingController();
   final TextEditingController _prixLocationController = TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
   final TextEditingController _franchiseController = TextEditingController();
-  final TextEditingController _kilometrageSuppController =
-      TextEditingController();
+  final TextEditingController _kilometrageSuppController = TextEditingController();
   final TextEditingController _rayuresController = TextEditingController();
   final TextEditingController _assuranceNomController = TextEditingController();
-  final TextEditingController _assuranceNumeroController =
-      TextEditingController(); // New field
-  final TextEditingController _entretienDateController =
-      TextEditingController();
-  final TextEditingController _carburantManquantController =
-      TextEditingController();
+  final TextEditingController _assuranceNumeroController = TextEditingController();
+  final TextEditingController _entretienDateController = TextEditingController();
+  final TextEditingController _carburantManquantController = TextEditingController();
   final TextEditingController _nettoyageIntController = TextEditingController();
   final TextEditingController _nettoyageExtController = TextEditingController();
-  
 
-  String _typeCarburant = "Essence"; // Initialize with a valid value
-  String _boiteVitesses = "Manuelle"; // Initialize with a valid value
+  String _typeCarburant = "Essence"; 
+  String _boiteVitesses = "Manuelle"; 
 
+  // Variables pour les images
   XFile? _carPhoto;
   XFile? _carteGrisePhoto;
   XFile? _assurancePhoto;
-  bool _isLoading = false;
-  final Dio dio = Dio();
 
   @override
   void initState() {
     super.initState();
     if (widget.vehicleData != null) {
-      _marqueController.text = widget.vehicleData!['marque'] ?? '';
-      _modeleController.text = widget.vehicleData!['modele'] ?? '';
-      _immatriculationController.text =
-          widget.vehicleData!['immatriculation'] ?? '';
-      _vinController.text = widget.vehicleData!['vin'] ?? '';
-      _prixLocationController.text = widget.vehicleData!['prixLocation'] ?? '';
-      _cautionController.text = widget.vehicleData!['caution'] ?? '';
-      _franchiseController.text = widget.vehicleData!['franchise'] ?? '';
-      _kilometrageSuppController.text =
-          widget.vehicleData!['kilometrageSupp'] ?? '';
-      _rayuresController.text = widget.vehicleData!['rayures'] ?? '';
-      _assuranceNomController.text = widget.vehicleData!['assuranceNom'] ?? '';
-      _assuranceNumeroController.text =
-          widget.vehicleData!['assuranceNumero'] ?? '';
-      _entretienDateController.text =
-          widget.vehicleData!['entretienDate'] ?? '';
-      _typeCarburant = widget.vehicleData!['typeCarburant'] ?? 'Essence';
-      _boiteVitesses = widget.vehicleData!['boiteVitesses'] ?? 'Manuelle';
-      _nettoyageIntController.text = widget.vehicleData!['nettoyageInt'] ?? '';
-      _nettoyageExtController.text = widget.vehicleData!['nettoyageExt'] ?? '';
-      _carburantManquantController.text =
-          widget.vehicleData!['carburantManquant'] ?? '';
-      // Load images if available
-      if (widget.vehicleData!['photoVehiculeUrl'] != null &&
-          widget.vehicleData!['photoVehiculeUrl'].isNotEmpty) {
-        _carPhoto = XFile(widget.vehicleData!['photoVehiculeUrl']);
-      }
-      if (widget.vehicleData!['photoCarteGriseUrl'] != null &&
-          widget.vehicleData!['photoCarteGriseUrl'].isNotEmpty) {
-        _carteGrisePhoto = XFile(widget.vehicleData!['photoCarteGriseUrl']);
-      }
-      if (widget.vehicleData!['photoAssuranceUrl'] != null &&
-          widget.vehicleData!['photoAssuranceUrl'].isNotEmpty) {
-        _assurancePhoto = XFile(widget.vehicleData!['photoAssuranceUrl']);
-      }
+      _loadVehicleData();
+    }
+  }
+
+  void _loadVehicleData() {
+    final data = widget.vehicleData!;
+    _marqueController.text = data['marque'] ?? '';
+    _modeleController.text = data['modele'] ?? '';
+    _immatriculationController.text = data['immatriculation'] ?? '';
+    _vinController.text = data['vin'] ?? '';
+    _prixLocationController.text = data['prixLocation'] ?? '';
+    _cautionController.text = data['caution'] ?? '';
+    _franchiseController.text = data['franchise'] ?? '';
+    _kilometrageSuppController.text = data['kilometrageSupp'] ?? '';
+    _rayuresController.text = data['rayures'] ?? '';
+    _assuranceNomController.text = data['assuranceNom'] ?? '';
+    _assuranceNumeroController.text = data['assuranceNumero'] ?? '';
+    _entretienDateController.text = data['entretienDate'] ?? '';
+    _typeCarburant = data['typeCarburant'] ?? 'Essence';
+    _boiteVitesses = data['boiteVitesses'] ?? 'Manuelle';
+    _nettoyageIntController.text = data['nettoyageInt'] ?? '';
+    _nettoyageExtController.text = data['nettoyageExt'] ?? '';
+    _carburantManquantController.text = data['carburantManquant'] ?? '';
+
+    if (data['photoVehiculeUrl'] != null && data['photoVehiculeUrl'].isNotEmpty) {
+      _carPhoto = XFile(data['photoVehiculeUrl']);
+    }
+    if (data['photoCarteGriseUrl'] != null && data['photoCarteGriseUrl'].isNotEmpty) {
+      _carteGrisePhoto = XFile(data['photoCarteGriseUrl']);
+    }
+    if (data['photoAssuranceUrl'] != null && data['photoAssuranceUrl'].isNotEmpty) {
+      _assurancePhoto = XFile(data['photoAssuranceUrl']);
     }
   }
 
   Future<void> _pickImage(String imageType) async {
-    final XFile? selectedImage =
-        await showImagePickerDialog(context, imageType);
+    final XFile? selectedImage = await showImagePickerDialog(context, imageType);
     if (selectedImage != null) {
       setState(() {
         if (imageType == 'car') {
@@ -129,38 +121,84 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     }
   }
 
-  Future<String?> _uploadImageToStorage(
-      File imageFile, String imageType) async {
+  Future<XFile?> showImagePickerDialog(BuildContext context, String imageType) async {
+    XFile? pickedFile;
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Sélectionner une image pour ${_getImageTypeLabel(imageType)}"),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                GestureDetector(
+                  child: const ListTile(
+                    leading: Icon(Icons.photo_library),
+                    title: Text("Galerie"),
+                  ),
+                  onTap: () async {
+                    Navigator.of(context).pop();
+                    pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+                  },
+                ),
+                const Padding(padding: EdgeInsets.all(8.0)),
+                GestureDetector(
+                  child: const ListTile(
+                    leading: Icon(Icons.camera_alt),
+                    title: Text("Appareil photo"),
+                  ),
+                  onTap: () async {
+                    Navigator.of(context).pop();
+                    pickedFile = await _picker.pickImage(source: ImageSource.camera);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    return pickedFile;
+  }
+
+  String _getImageTypeLabel(String imageType) {
+    switch (imageType) {
+      case 'car':
+        return 'le véhicule';
+      case 'carteGrise':
+        return 'la carte grise';
+      case 'assurance':
+        return 'l\'assurance';
+      default:
+        return imageType;
+    }
+  }
+
+  Future<String?> _uploadImageToStorage(File imageFile, String imageType) async {
     try {
-      final compressedImage = await FlutterImageCompress.compressWithFile(
-        imageFile.absolute.path,
-        minWidth: 800,
-        minHeight: 800,
-        quality: 85,
-      );
+      final user = _auth.currentUser;
+      if (user == null) throw Exception("User not authenticated");
 
-      if (compressedImage == null) {
-        throw Exception('Image compression failed');
+      // Vérifier le statut du collaborateur
+      final status = await CollaborateurUtil.checkCollaborateurStatus();
+      final userId = status['userId'];
+      
+      if (userId == null) {
+        throw Exception("Utilisateur non connecté");
+      }
+      
+      // Déterminer l'ID à utiliser (admin ou collaborateur)
+      final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
+      
+      if (targetId == null) {
+        throw Exception("ID cible non disponible");
       }
 
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception("User not authenticated");
-      }
+      final fileName = '${imageType}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final storageRef = _storage.ref().child(
+          'users/$targetId/vehicules/${_immatriculationController.text}/$fileName');
 
-      final fileName =
-          '${imageType}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-
-      // Nouvelle structure : directement après l'immatriculation
-      final storageRef = FirebaseStorage.instance.ref().child(
-          'users/${user.uid}/vehicules/${_immatriculationController.text}/$fileName');
-
-      // Create temporary file for compressed image
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/$fileName');
-      await tempFile.writeAsBytes(compressedImage);
-
-      final uploadTask = storageRef.putFile(tempFile);
+      final uploadTask = storageRef.putFile(imageFile);
       await uploadTask.timeout(const Duration(seconds: 30));
 
       return await storageRef.getDownloadURL();
@@ -170,80 +208,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     }
   }
 
-  // Removed unused method _getUserSubscriptionLimit
-
-  Future<void> _moveStorageFiles(String oldImmat, String newImmat) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
-    try {
-      // Structure des URLs des photos
-      final oldPhotos = {
-        'vehicule': widget.vehicleData?['photoVehiculeUrl'],
-        'carte_grise': widget.vehicleData?['photoCarteGriseUrl'],
-        'assurance': widget.vehicleData?['photoAssuranceUrl'],
-      };
-
-      Map<String, String> newUrls = {};
-
-      for (var entry in oldPhotos.entries) {
-        String? oldUrl = entry.value;
-        if (oldUrl != null && oldUrl.isNotEmpty) {
-          // Créer un nouveau nom de fichier
-          final fileName =
-              '${entry.key}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-
-          // Télécharger l'image depuis l'URL
-          final response = await dio.get(oldUrl,
-              options: Options(responseType: ResponseType.bytes));
-          final imageBytes = response.data;
-
-          // Créer une nouvelle référence dans le storage
-          final newRef = FirebaseStorage.instance
-              .ref()
-              .child('users/${user.uid}/vehicules/$newImmat/$fileName');
-
-          // Upload le fichier
-          await newRef.putData(imageBytes);
-
-          // Obtenir la nouvelle URL
-          final newUrl = await newRef.getDownloadURL();
-          newUrls[entry.key] = newUrl;
-
-          // Supprimer l'ancien fichier
-          try {
-            final oldRef = FirebaseStorage.instance.refFromURL(oldUrl);
-            await oldRef.delete();
-          } catch (e) {
-            print('Erreur lors de la suppression de l\'ancien fichier: $e');
-          }
-        }
-      }
-
-      // Mettre à jour les URLs dans vehicleData
-      if (newUrls['vehicule'] != null) {
-        widget.vehicleData?['photoVehiculeUrl'] = newUrls['vehicule'];
-      }
-      if (newUrls['carte_grise'] != null) {
-        widget.vehicleData?['photoCarteGriseUrl'] = newUrls['carte_grise'];
-      }
-      if (newUrls['assurance'] != null) {
-        widget.vehicleData?['photoAssuranceUrl'] = newUrls['assurance'];
-      }
-    } catch (e) {
-      print('Erreur lors du déplacement des fichiers: $e');
-      throw Exception('Erreur lors du déplacement des photos: $e');
-    }
-  }
-
-  // Méthodes supprimées car déplacées dans check_vehicle_limit.dart
-
   Future<void> _saveVehicule() async {
-    // Vérifier la limite de véhicules avant de sauvegarder
-    final vehicleLimitChecker = VehicleLimitChecker(context);
-    final canAddVehicle = await vehicleLimitChecker.checkVehicleLimit(isUpdating: widget.vehicleId != null);
-    if (!canAddVehicle) return;
-
     if (!_formKey.currentState!.validate()) {
       print("Validation échouée. Certains champs requis sont manquants.");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -255,58 +220,78 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final user = _auth.currentUser;
-      if (user == null) throw Exception("User not authenticated");
+      // Vérifier le statut du collaborateur
+      final status = await CollaborateurUtil.checkCollaborateurStatus();
+      final userId = status['userId'];
+      
+      if (userId == null) {
+        throw Exception("Utilisateur non connecté");
+      }
+      
+      // Déterminer l'ID à utiliser (admin ou collaborateur)
+      final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
+      
+      if (targetId == null) {
+        throw Exception("ID cible non disponible");
+      }
+      
+      // Vérifier les permissions si c'est un collaborateur
+      if (status['isCollaborateur']) {
+        // Vérifier si le collaborateur a la permission d'écriture
+        final hasWritePermission = await CollaborateurUtil.checkCollaborateurPermission('ecriture');
+        if (!hasWritePermission) {
+          throw Exception("Vous n'avez pas la permission de modifier les véhicules");
+        }
+      }
 
-      // Si c'est une modification et que l'immatriculation a changé
-      if (widget.vehicleId != null &&
-          widget.vehicleId != _immatriculationController.text) {
-        // 1. Déplacer les fichiers dans le storage
-        await _moveStorageFiles(
-          widget.vehicleId!,
-          _immatriculationController.text,
-        );
+      if (widget.vehicleId == null && _immatriculationController.text.isEmpty) {
+        throw Exception("L'immatriculation est requise");
+      }
 
-        // 2. Préparer les données du véhicule
+      // Vérifier si un véhicule avec cette immatriculation existe déjà
+      if (widget.vehicleId == null) {
+        final existingDoc = await _firestore
+            .collection('users')
+            .doc(targetId)
+            .collection('vehicules')
+            .where('immatriculation', isEqualTo: _immatriculationController.text)
+            .get();
+
+        if (existingDoc.docs.isNotEmpty) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Un véhicule avec cette immatriculation existe déjà")),
+            );
+          }
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        final docId = _immatriculationController.text;
+        final vehicleRef = await _getVehicleDocRef(docId);
+
         final vehicleData = await _prepareVehicleData();
+        await vehicleRef.set(vehicleData);
 
-        // 3. Créer le nouveau document
-        final newVehicleRef = _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('vehicules')
-            .doc(_immatriculationController.text);
-
-        // 4. Sauvegarder les données
-        await newVehicleRef.set(vehicleData);
-
-        // 5. Supprimer l'ancien document
-        await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('vehicules')
-            .doc(widget.vehicleId)
-            .delete();
-
-        showEnregistrementPopup(context);
+        if (context.mounted) {
+          showEnregistrementPopup(context);
+        }
       } else {
-        // Cas normal : création ou modification sans changement d'immatriculation
         final docId = widget.vehicleId ?? _immatriculationController.text;
-        final vehicleRef = _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('vehicules')
-            .doc(docId);
+        final vehicleRef = await _getVehicleDocRef(docId);
 
         final vehicleData = await _prepareVehicleData();
         await vehicleRef.set(vehicleData, SetOptions(merge: true));
-        showEnregistrementPopup(context);
+        
+        if (context.mounted) {
+          showEnregistrementPopup(context);
+        }
       }
     } catch (e) {
       print("Erreur lors de l'enregistrement du véhicule : $e");
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Impossible d'enregistrer le véhicule. Vérifiez que les champs suivants sont remplis : Marque, Modèle, Immatriculation")),
+          SnackBar(content: Text("Impossible d'enregistrer le véhicule: $e")),
         );
       }
     } finally {
@@ -314,7 +299,6 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     }
   }
 
-  // Nouvelle méthode pour préparer les données du véhicule
   Future<Map<String, dynamic>> _prepareVehicleData() async {
     final user = _auth.currentUser;
     if (user == null) throw Exception("User not authenticated");
@@ -323,29 +307,26 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     String? photoCarteGriseUrl;
     String? photoAssuranceUrl;
 
-    // Gestion des photos
+    // Upload des images si elles ont été sélectionnées
     if (_carPhoto != null && !_carPhoto!.path.startsWith('http')) {
-      photoVoitureUrl =
-          await _uploadImageToStorage(File(_carPhoto!.path), 'vehicule');
+      photoVoitureUrl = await _uploadImageToStorage(File(_carPhoto!.path), 'vehicule');
     } else {
       photoVoitureUrl = widget.vehicleData?['photoVehiculeUrl'];
     }
 
-    if (_carteGrisePhoto != null &&
-        !_carteGrisePhoto!.path.startsWith('http')) {
-      photoCarteGriseUrl = await _uploadImageToStorage(
-          File(_carteGrisePhoto!.path), 'carte_grise');
+    if (_carteGrisePhoto != null && !_carteGrisePhoto!.path.startsWith('http')) {
+      photoCarteGriseUrl = await _uploadImageToStorage(File(_carteGrisePhoto!.path), 'carte_grise');
     } else {
       photoCarteGriseUrl = widget.vehicleData?['photoCarteGriseUrl'];
     }
 
     if (_assurancePhoto != null && !_assurancePhoto!.path.startsWith('http')) {
-      photoAssuranceUrl =
-          await _uploadImageToStorage(File(_assurancePhoto!.path), 'assurance');
+      photoAssuranceUrl = await _uploadImageToStorage(File(_assurancePhoto!.path), 'assurance');
     } else {
       photoAssuranceUrl = widget.vehicleData?['photoAssuranceUrl'];
     }
 
+    // Préparer les données du véhicule
     return {
       'userId': user.uid,
       'marque': _marqueController.text,
@@ -368,13 +349,40 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       'photoVehiculeUrl': photoVoitureUrl ?? '',
       'photoCarteGriseUrl': photoCarteGriseUrl ?? '',
       'photoAssuranceUrl': photoAssuranceUrl ?? '',
+      'dateCreation': widget.vehicleData != null && widget.vehicleData!['dateCreation'] != null
+          ? widget.vehicleData!['dateCreation']
+          : FieldValue.serverTimestamp(),
+      'dateModification': FieldValue.serverTimestamp(),
     };
+  }
+
+  Future<DocumentReference> _getVehicleDocRef(String docId) async {
+    // Vérifier le statut du collaborateur
+    final status = await CollaborateurUtil.checkCollaborateurStatus();
+    final userId = status['userId'];
+    
+    if (userId == null) {
+      throw Exception("Utilisateur non connecté");
+    }
+    
+    // Déterminer l'ID à utiliser (admin ou collaborateur)
+    final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
+    
+    if (targetId == null) {
+      throw Exception("ID cible non disponible");
+    }
+    
+    return _firestore
+        .collection('users')
+        .doc(targetId)
+        .collection('vehicules')
+        .doc(docId);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Ajout ici
+      backgroundColor: Colors.white, 
       appBar: AppBar(
         title: Text(
           widget.vehicleId != null ? "Modifier" : "Ajouter un véhicule",
@@ -494,7 +502,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                   _buildTextField(
                       "Nom de l'assurance", _assuranceNomController),
                   _buildTextField("N° téléphone l'assurance",
-                      _assuranceNumeroController), // New field
+                      _assuranceNumeroController), 
                   _buildTextField(
                       "Date du prochain entretien", _entretienDateController),
                   _buildSectionTitle("Ajouter des images"),
@@ -517,7 +525,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                     child: const Text("Enregistrer",
                         style: TextStyle(color: Colors.white, fontSize: 20)),
                   ),
-                  const SizedBox(height: 40), // Ajout de la marge en bas
+                  const SizedBox(height: 40), 
                 ],
               ),
             ),
@@ -540,7 +548,6 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       {bool isRequired = false,
       TextInputType? keyboardType,
       List<TextInputFormatter>? inputFormatters}) {
-    // Déterminer le type de clavier et les icônes spécifiques
     Widget? suffixIcon;
 
     if ([
@@ -557,19 +564,17 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       keyboardType = keyboardType ?? TextInputType.number;
       suffixIcon = IconButton(
         icon: Icon(Icons.check_circle,
-            color: Colors.grey[400]), // Couleur plus claire
+            color: Colors.grey[400]), 
         onPressed: () {
           FocusScope.of(context).unfocus();
         },
       );
     }
 
-    // Configuration spéciale pour le numéro de téléphone de l'assurance
     if (label == "N° téléphone l'assurance") {
       keyboardType = TextInputType.phone;
     }
 
-    // Configuration spéciale pour la date d'entretien
     if (label == "Date du prochain entretien") {
       return Padding(
         padding: const EdgeInsets.only(bottom: 16.0),
@@ -608,7 +613,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
             labelStyle: const TextStyle(color: Color(0xFF08004D)),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             suffixIcon: Icon(Icons.calendar_today,
-                color: Colors.grey[400]), // Couleur plus claire
+                color: Colors.grey[400]), 
           ),
         ),
       );
@@ -620,10 +625,9 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
         controller: controller,
         keyboardType: keyboardType,
         textCapitalization: TextCapitalization
-            .characters, // Forcer les majuscules pendant la saisie
+            .characters, 
         inputFormatters: inputFormatters ??
             [
-              // Ne pas appliquer le formateur pour les champs numériques
               if (keyboardType != TextInputType.number &&
                   keyboardType != TextInputType.phone &&
                   label != "Date du prochain entretien")
@@ -689,7 +693,6 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: ClipRRect(
-                // Ajout du ClipRRect pour arrondir l'image
                 borderRadius: BorderRadius.circular(12),
                 child: image != null
                     ? image.path.startsWith('http')

@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../../services/collaborateur_util.dart';
 
 class VoitureSelectionne extends StatelessWidget {
   final String marque;
@@ -18,24 +18,41 @@ class VoitureSelectionne extends StatelessWidget {
 
   Future<String?> _getVehiclePhotoUrl() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-
-        final vehiculeDoc = await firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('vehicules')
-            .where('immatriculation', isEqualTo: immatriculation)
-            .get();
-
-        if (vehiculeDoc.docs.isNotEmpty) {
-          final data = vehiculeDoc.docs.first.data();
-          return data['photoVehiculeUrl'] as String?;
-        }
+      // Utiliser CollaborateurUtil pour vérifier le statut du collaborateur
+      final status = await CollaborateurUtil.checkCollaborateurStatus();
+      final userId = status['userId'];
+      
+      if (userId == null) {
+        print("❌ Utilisateur non connecté");
+        return null;
       }
+      
+      // Déterminer l'ID à utiliser (admin ou collaborateur)
+      final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
+      
+      if (targetId == null) {
+        print("❌ ID cible non disponible");
+        return null;
+      }
+      
+      print("🔍 Recherche du véhicule pour ${status['isCollaborateur'] ? 'collaborateur' : 'admin'} avec ID: $targetId");
+      
+      // Utiliser l'ID approprié pour accéder à la collection de véhicules
+      final vehiculeDoc = await firestore
+          .collection('users')
+          .doc(targetId)
+          .collection('vehicules')
+          .where('immatriculation', isEqualTo: immatriculation)
+          .get();
+
+      if (vehiculeDoc.docs.isNotEmpty) {
+        final data = vehiculeDoc.docs.first.data();
+        return data['photoVehiculeUrl'] as String?;
+      }
+      
       return null;
     } catch (e) {
-      print("Erreur lors de la récupération de la photo : $e"); 
+      print("❌ Erreur lors de la récupération de la photo : $e"); 
       return null;
     }
   }
