@@ -58,20 +58,53 @@ class VehicleAccessManager {
   
   // Méthode pour obtenir le stream des véhicules
   Stream<QuerySnapshot> getVehiclesStream() {
-    if (_targetUserId == null) {
-      // Si pas encore initialisé ou erreur, utiliser l'ID de l'utilisateur actuel
-      final currentUserId = _auth.currentUser?.uid;
-      return _firestore
-          .collection('users')
-          .doc(currentUserId)
-          .collection('vehicules')
-          .snapshots();
+    if (!_isInitialized) {
+      // Si le gestionnaire n'est pas encore initialisé, initialiser de manière synchrone
+      // et retourner un stream qui attend l'initialisation
+      return Stream.fromFuture(
+        Future(() async {
+          await initialize();
+          
+          final effectiveUserId = _targetUserId ?? _auth.currentUser?.uid;
+          if (effectiveUserId == null) {
+            // Retourner un snapshot vide si aucun utilisateur n'est connecté
+            return FirebaseFirestore.instance.collection('empty').limit(0).get();
+          }
+          
+          // Une fois initialisé, récupérer les données
+          final snapshot = await _firestore
+              .collection('users')
+              .doc(effectiveUserId)
+              .collection('vehicules')
+              .get(GetOptions(source: Source.serverAndCache)); // Utiliser le cache si disponible
+              
+          return snapshot;
+        })
+      ).asyncExpand((snapshot) {
+        // Une fois que nous avons les données initiales, retourner le stream continu
+        final effectiveUserId = _targetUserId ?? _auth.currentUser?.uid;
+        if (effectiveUserId == null) {
+          return Stream.empty();
+        }
+        
+        return _firestore
+            .collection('users')
+            .doc(effectiveUserId)
+            .collection('vehicules')
+            .snapshots();
+      });
     }
     
-    // Utiliser l'ID cible (admin ou utilisateur actuel)
+    // Si déjà initialisé, utiliser l'ID cible (admin ou utilisateur actuel)
+    final effectiveUserId = _targetUserId ?? _auth.currentUser?.uid;
+    if (effectiveUserId == null) {
+      // Retourner un stream vide si aucun utilisateur n'est connecté
+      return Stream.empty();
+    }
+    
     return _firestore
         .collection('users')
-        .doc(_targetUserId)
+        .doc(effectiveUserId)
         .collection('vehicules')
         .snapshots();
   }

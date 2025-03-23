@@ -22,21 +22,20 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _showSearchBar = false; // Variable pour afficher/masquer la barre de recherche
   final TextEditingController _searchController = TextEditingController(); // Contrôleur pour le TextField
   bool _isUserDataLoaded = false; // Variable pour suivre si les données utilisateur sont chargées
-
   late VehicleAccessManager _vehicleAccessManager; // Instance de notre gestionnaire d'accès aux véhicules
+  bool _isVehicleManagerInitialized = false; // Variable pour suivre si le gestionnaire est initialisé
 
   @override
   void initState() {
     super.initState();
     _deleteVehicule = DeleteVehicule(context);
     
-    // Charger les données utilisateur avec CollaborateurUtil
-    _loadUserData();
-    _setupSubscriptionCheck();
-    _vehicleAccessManager = VehicleAccessManager(); // Initialiser le gestionnaire d'accès aux véhicules
+    // Initialiser le gestionnaire d'accès aux véhicules
+    _vehicleAccessManager = VehicleAccessManager();
     
-    // Initialiser le gestionnaire d'accès aux véhicules (asynchrone)
-    _initializeVehicleAccess();
+    // Charger les données utilisateur et initialiser le gestionnaire de véhicules
+    _initializeData();
+    _setupSubscriptionCheck();
   }
   
   // Méthode pour charger les données utilisateur avec CollaborateurUtil
@@ -57,6 +56,32 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _prenom = '';
           _isUserDataLoaded = true; // Marquer comme chargé même en cas d'erreur pour éviter un écran de chargement infini
+        });
+      }
+    }
+  }
+  
+  // Méthode pour initialiser toutes les données nécessaires
+  Future<void> _initializeData() async {
+    try {
+      // Charger les données utilisateur
+      await _loadUserData();
+      
+      // Initialiser le gestionnaire d'accès aux véhicules
+      await _initializeVehicleAccess();
+      
+      // Mettre à jour l'état
+      if (mounted) {
+        setState(() {
+          _isVehicleManagerInitialized = true;
+        });
+      }
+    } catch (e) {
+      print('❌ Erreur lors de l\'initialisation des données: $e');
+      if (mounted) {
+        setState(() {
+          _isUserDataLoaded = true; // Marquer comme chargé même en cas d'erreur
+          _isVehicleManagerInitialized = true;
         });
       }
     }
@@ -147,18 +172,42 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
         ],
       ),
-      body: !_isUserDataLoaded 
+      body: !_isUserDataLoaded || !_isVehicleManagerInitialized 
           ? const Center(child: CircularProgressIndicator()) 
           : StreamBuilder<QuerySnapshot>(
         stream: _vehicleAccessManager.getVehiclesStream(), // Utiliser le stream fourni par VehicleAccessManager
         builder: (context, snapshot) {
+          // Gérer les différents états de connexion
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            // Pendant le chargement initial, afficher un indicateur de chargement
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text("Chargement de vos véhicules...", 
+                       style: TextStyle(color: Color(0xFF1A237E)))
+                ],
+              )
+            );
+          }
+          
+          // En cas d'erreur, afficher un message d'erreur
+          if (snapshot.hasError) {
+            print('❌ Erreur dans le stream des véhicules: ${snapshot.error}');
+            return Center(
+              child: Text(
+                'Erreur lors du chargement des véhicules',
+                style: TextStyle(color: Colors.red),
+              ),
+            );
           }
 
           final vehicles = snapshot.data?.docs ?? [];
 
-          if (vehicles.isEmpty) {
+          // Uniquement afficher l'écran vide si nous avons reçu des données et qu'elles sont vides
+          if (vehicles.isEmpty && snapshot.connectionState == ConnectionState.active) {
             return Stack(
               children: [
                 Center(
