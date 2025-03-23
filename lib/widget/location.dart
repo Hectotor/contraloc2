@@ -325,6 +325,16 @@ class _LocationPageState extends State<LocationPage> {
         conditions = ContratModifier.defaultContract;
       }
 
+      // Récupérer les données utilisateur avec CollaborateurUtil avant de créer le contrat
+      final userData = await CollaborateurUtil.getAuthData();
+      
+      // S'assurer que toutes les données sont présentes
+      final nomEntreprise = userData['nomEntreprise'] ?? '';
+      final adresseEntreprise = userData['adresse'] ?? '';
+      final telephoneEntreprise = userData['telephone'] ?? '';
+      final siretEntreprise = userData['siret'] ?? '';
+      final logoUrl = userData['logoUrl'] ?? '';
+
       // Créer le contrat dans la collection de l'utilisateur
       await _firestore
           .collection('users')
@@ -445,24 +455,20 @@ class _LocationPageState extends State<LocationPage> {
         'franchise': _franchiseController.text,
         'rayures': _rayuresController.text,
         'prixLocation': _prixLocationController.text,
+        'logoUrl': logoUrl,
+        'nomEntreprise': nomEntreprise,
+        'adresseEntreprise': adresseEntreprise,
+        'telephoneEntreprise': telephoneEntreprise,
+        'siretEntreprise': siretEntreprise,
         'conditions': conditions, // Sauvegarder les conditions directement dans le document du contrat
       });
 
       // Si un email client est disponible, générer et envoyer le PDF
       if (widget.email != null && widget.email!.isNotEmpty) {
-        // Récupérer les données utilisateur avec CollaborateurUtil
-        final userData = await CollaborateurUtil.getAuthData();
-
+        // Les données utilisateur sont déjà récupérées ci-dessus
         if (userData.isEmpty) {
           throw Exception('Données utilisateur non trouvées');
         }
-
-        // S'assurer que toutes les données sont présentes
-        final nomEntreprise = userData['nomEntreprise'] ?? '';
-        final adresseEntreprise = userData['adresse'] ?? '';
-        final telephoneEntreprise = userData['telephone'] ?? '';
-        final siretEntreprise = userData['siret'] ?? '';
-        final logoUrl = userData['logoUrl'] ?? '';
 
         final signatureAller = await _signatureController.toPngBytes();
 
