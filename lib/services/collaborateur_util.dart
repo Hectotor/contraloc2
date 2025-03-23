@@ -22,7 +22,30 @@ class CollaborateurUtil {
     }
 
     try {
-      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      // Utiliser _executeWithRetry pour gérer les erreurs de connectivité
+      final userDoc = await _executeWithRetry(
+        operation: () async {
+          try {
+            // Essayer d'abord depuis le cache
+            final docCache = await _firestore.collection('users').doc(user.uid).get(GetOptions(source: Source.cache));
+            
+            if (docCache.exists) {
+              print('📋 Statut collaborateur récupéré depuis le cache');
+              return docCache;
+            }
+            
+            // Si pas dans le cache, essayer depuis le serveur
+            return await _firestore.collection('users').doc(user.uid).get();
+          } catch (e) {
+            // Si c'est une erreur de cache, essayer directement depuis le serveur
+            if (e.toString().contains('Failed to get document from cache')) {
+              print('⚠️ Cache non disponible pour le statut collaborateur, tentative depuis le serveur');
+              return await _firestore.collection('users').doc(user.uid).get();
+            }
+            rethrow;
+          }
+        }
+      );
       
       if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
         final adminId = userDoc.data()?['adminId'];
@@ -36,6 +59,8 @@ class CollaborateurUtil {
       }
     } catch (e) {
       print('❌ Erreur lors de la vérification du statut collaborateur: $e');
+      // En cas d'erreur, supposer que l'utilisateur n'est pas un collaborateur
+      // mais renvoyer quand même son ID pour permettre l'accès à ses propres données
     }
     
     return {
@@ -59,77 +84,136 @@ class CollaborateurUtil {
       // Note: La vérification RevenueCat est gérée dans info_user.dart
 
       // Vérifier si l'utilisateur est un collaborateur
-      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final status = await checkCollaborateurStatus();
+      final userId = status['userId'];
+      final isCollaborateur = status['isCollaborateur'] == true;
+      final adminId = status['adminId'];
       
-      if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
-        // C'est un collaborateur, récupérer ses propres données
+      if (isCollaborateur && adminId != null) {
+        // C'est un collaborateur, récupérer les données de l'admin
         print('👥 Utilisateur collaborateur détecté');
+        print('👥 Administrateur associé: $adminId');
         
-        // Récupérer l'ID de l'admin pour référence
-        final adminId = userDoc.data()?['adminId'];
-        if (adminId != null) {
-          print('👥 Administrateur associé: $adminId');
-          
-          // Essayer d'abord depuis le cache
-          try {
-            final docCache = await _firestore
-                .collection('users')
-                .doc(adminId)
-                .collection('authentification')
-                .doc(adminId)
-                .get(GetOptions(source: Source.cache));
-            
-            if (docCache.exists) {
-              print('📋 Données authentification admin récupérées depuis le cache');
-              return docCache.data() as Map<String, dynamic>;
-            }
-          } catch (e) {
-            print('⚠️ Cache non disponible: $e');
-          }
-          
-          // Si pas dans le cache, essayer depuis le serveur
-          try {
-            final docServer = await _firestore
-                .collection('users')
-                .doc(adminId)
-                .collection('authentification')
-                .doc(adminId)
-                .get();
+        // Utiliser _executeWithRetry pour gérer les erreurs de connectivité
+        try {
+          return await _executeWithRetry(
+            operation: () async {
+              try {
+                // Essayer d'abord depuis le cache
+                final docCache = await _firestore
+                    .collection('users')
+                    .doc(adminId)
+                    .collection('authentification')
+                    .doc(adminId)
+                    .get(GetOptions(source: Source.cache));
                 
-            if (docServer.exists) {
-              print('🔄 Données authentification admin récupérées depuis le serveur');
-              return docServer.data() as Map<String, dynamic>;
+                if (docCache.exists) {
+                  print('📋 Données authentification admin récupérées depuis le cache');
+                  return docCache.data() as Map<String, dynamic>;
+                }
+                
+                // Si pas dans le cache, essayer depuis le serveur
+                final docServer = await _firestore
+                    .collection('users')
+                    .doc(adminId)
+                    .collection('authentification')
+                    .doc(adminId)
+                    .get();
+                    
+                if (docServer.exists) {
+                  print('🔄 Données authentification admin récupérées depuis le serveur');
+                  return docServer.data() as Map<String, dynamic>;
+                }
+                
+                throw Exception('Données d\'authentification de l\'admin non trouvées');
+              } catch (e) {
+                // Si c'est une erreur de cache, essayer directement depuis le serveur
+                if (e.toString().contains('Failed to get document from cache')) {
+                  print('⚠️ Cache non disponible, tentative depuis le serveur');
+                  final docServer = await _firestore
+                      .collection('users')
+                      .doc(adminId)
+                      .collection('authentification')
+                      .doc(adminId)
+                      .get();
+                      
+                  if (docServer.exists) {
+                    return docServer.data() as Map<String, dynamic>;
+                  }
+                }
+                rethrow;
+              }
             }
-          } catch (e) {
-            print('❌ Erreur récupération données admin: $e');
-          }
+          );
+        } catch (e) {
+          print('❌ Erreur récupération données admin: $e');
+          // Si on n'a pas pu récupérer les données de l'admin, utiliser les données du collaborateur
+          final userDoc = await _executeWithRetry(
+            operation: () => _firestore.collection('users').doc(userId).get()
+          );
+          return userDoc.data() as Map<String, dynamic>;
         }
-        
-        // Si on n'a pas pu récupérer les données de l'admin, utiliser les données du collaborateur
-        return userDoc.data() as Map<String, dynamic>;
       } else {
         // C'est un administrateur, continuer normalement
         try {
-          final userData = await _firestore
-              .collection('users')
-              .doc(user.uid)
-              .collection('authentification')
-              .doc(user.uid)
-              .get();
-
-          if (userData.exists) {
-            print('📋 Données authentification admin récupérées');
-            return userData.data() as Map<String, dynamic>;
-          }
+          return await _executeWithRetry(
+            operation: () async {
+              try {
+                // Essayer d'abord depuis le cache
+                final docCache = await _firestore
+                    .collection('users')
+                    .doc(user.uid)
+                    .collection('authentification')
+                    .doc(user.uid)
+                    .get(GetOptions(source: Source.cache));
+                
+                if (docCache.exists) {
+                  print('📋 Données authentification admin récupérées depuis le cache');
+                  return docCache.data() as Map<String, dynamic>;
+                }
+                
+                // Si pas dans le cache, essayer depuis le serveur
+                final docServer = await _firestore
+                    .collection('users')
+                    .doc(user.uid)
+                    .collection('authentification')
+                    .doc(user.uid)
+                    .get();
+                    
+                if (docServer.exists) {
+                  print('📋 Données authentification admin récupérées');
+                  return docServer.data() as Map<String, dynamic>;
+                }
+                
+                return {};
+              } catch (e) {
+                // Si c'est une erreur de cache, essayer directement depuis le serveur
+                if (e.toString().contains('Failed to get document from cache')) {
+                  print('⚠️ Cache non disponible, tentative depuis le serveur');
+                  final docServer = await _firestore
+                      .collection('users')
+                      .doc(user.uid)
+                      .collection('authentification')
+                      .doc(user.uid)
+                      .get();
+                      
+                  if (docServer.exists) {
+                    return docServer.data() as Map<String, dynamic>;
+                  }
+                }
+                rethrow;
+              }
+            }
+          );
         } catch (e) {
           print('❌ Erreur récupération données authentification: $e');
+          return {};
         }
       }
     } catch (e) {
       print('❌ Erreur générale récupération données: $e');
+      return {};
     }
-    
-    return {};
   }
   
   /// Récupère les données d'un document dans une collection spécifique
@@ -166,25 +250,39 @@ class CollaborateurUtil {
         docRef = docRef.collection(subCollection).doc(subDocId ?? docId);
       }
       
-      // Essayer d'abord depuis le cache
-      final docCache = await docRef.get(GetOptions(source: Source.cache));
-      
-      if (docCache.exists) {
-        print('📋 Document récupéré depuis le cache: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
-        return docCache;
-      }
-      
-      // Si pas dans le cache, essayer depuis le serveur
-      final docServer = await docRef.get();
-      
-      if (docServer.exists) {
-        print('🔄 Document récupéré depuis le serveur: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
-        return docServer;
-      }
-      
-      print('⚠️ Document non trouvé: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
-      return docServer; // Retourner le document vide
-      
+      // Utiliser _executeWithRetry pour gérer les erreurs de connectivité
+      return await _executeWithRetry(
+        operation: () async {
+          try {
+            // Essayer d'abord depuis le cache
+            final docCache = await docRef.get(GetOptions(source: Source.cache));
+            
+            if (docCache.exists) {
+              print('📋 Document récupéré depuis le cache: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
+              return docCache;
+            }
+            
+            // Si pas dans le cache, essayer depuis le serveur
+            final docServer = await docRef.get();
+            
+            if (docServer.exists) {
+              print('🔄 Document récupéré depuis le serveur: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
+              return docServer;
+            }
+            
+            print('⚠️ Document non trouvé: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
+            return docServer; // Retourner le document vide
+          } catch (e) {
+            // Si c'est une erreur de cache, essayer directement depuis le serveur
+            if (e.toString().contains('Failed to get document from cache')) {
+              print('⚠️ Cache non disponible, tentative depuis le serveur');
+              final docServer = await docRef.get();
+              return docServer;
+            }
+            rethrow;
+          }
+        },
+      );
     } catch (e) {
       print('❌ Erreur récupération document: $e');
       throw e;
@@ -228,20 +326,34 @@ class CollaborateurUtil {
         query = queryBuilder(query);
       }
       
-      // Essayer d'abord depuis le cache
-      final queryCache = await query.get(GetOptions(source: Source.cache));
-      
-      if (!queryCache.docs.isEmpty) {
-        print('📋 Collection récupérée depuis le cache: $collection/$docId/$subCollection');
-        return queryCache;
-      }
-      
-      // Si pas dans le cache, essayer depuis le serveur
-      final queryServer = await query.get();
-      
-      print('🔄 Collection récupérée depuis le serveur: $collection/$docId/$subCollection (${queryServer.docs.length} documents)');
-      return queryServer;
-      
+      // Utiliser _executeWithRetry pour gérer les erreurs de connectivité
+      return await _executeWithRetry(
+        operation: () async {
+          try {
+            // Essayer d'abord depuis le cache
+            final queryCache = await query.get(GetOptions(source: Source.cache));
+            
+            if (!queryCache.docs.isEmpty) {
+              print('📋 Collection récupérée depuis le cache: $collection/$docId/$subCollection');
+              return queryCache;
+            }
+            
+            // Si pas dans le cache, essayer depuis le serveur
+            final queryServer = await query.get();
+            
+            print('🔄 Collection récupérée depuis le serveur: $collection/$docId/$subCollection (${queryServer.docs.length} documents)');
+            return queryServer;
+          } catch (e) {
+            // Si c'est une erreur de cache, essayer directement depuis le serveur
+            if (e.toString().contains('Failed to get documents from cache')) {
+              print('⚠️ Cache non disponible, tentative depuis le serveur');
+              final queryServer = await query.get();
+              return queryServer;
+            }
+            rethrow;
+          }
+        },
+      );
     } catch (e) {
       print('❌ Erreur récupération collection: $e');
       throw e;
@@ -277,8 +389,8 @@ class CollaborateurUtil {
   /// en cas d'erreur temporaire de connectivité
   static Future<T> _executeWithRetry<T>({
     required Future<T> Function() operation,
-    int maxRetries = 3,
-    Duration initialDelay = const Duration(milliseconds: 500),
+    int maxRetries = 5,
+    Duration initialDelay = const Duration(seconds: 1),
   }) async {
     int attempts = 0;
     Duration delay = initialDelay;

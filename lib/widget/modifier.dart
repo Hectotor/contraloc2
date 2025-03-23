@@ -65,7 +65,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
   final TextEditingController _carburantManquantController =
       TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
-  
 
   @override
   void initState() {
@@ -276,168 +275,259 @@ class _ModifierScreenState extends State<ModifierScreen> {
   }
 
   Future<void> _generatePdf() async {
-    // Afficher un dialogue de chargement personnalisé
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Chargement(
-          message: "Génération du PDF en cours...",
-        );
-      },
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(() {
+        _isGeneratingPdf = true;
+      });
+    });
 
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception("Utilisateur non connecté");
 
-      // Vérifier si l'utilisateur est un collaborateur
-      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
-      final String userId = collaborateurStatus['userId'] ?? user.uid;
-      final String targetId = collaborateurStatus['isCollaborateur'] 
-          ? collaborateurStatus['adminId'] ?? user.uid 
-          : user.uid;
-
-      print('🔍 Génération PDF - userId: $userId, targetId: $targetId');
-
-      // Récupérer le document du contrat (toujours utiliser l'ID de l'utilisateur actuel)
-      final contratDoc = await CollaborateurUtil.getDocument(
-        collection: 'users',
-        docId: userId,
-        subCollection: 'locations',
-        subDocId: widget.contratId,
-        useAdminId: false, // Les contrats sont toujours dans la collection de l'utilisateur actuel
-      );
-
-      // Récupérer les conditions du contrat
-      String conditions = ContratModifier.defaultContract;
-      if (contratDoc.exists) {
-        final contratData = contratDoc.data() as Map<String, dynamic>;
+    int tentatives = 0;
+    const maxTentatives = 5;
+    
+    while (tentatives < maxTentatives) {
+      try {
+        tentatives++;
         
-        // Vérifier si les conditions sont sauvegardées dans le document du contrat
-        if (contratData.containsKey('conditions') && 
-            contratData['conditions'] is String && 
-            contratData['conditions'].isNotEmpty) {
-          conditions = contratData['conditions'];
-          print('📄 Utilisation des conditions sauvegardées dans le contrat');
-        } else {
-          // Si les conditions ne sont pas dans le contrat, récupérer les conditions personnalisées actuelles
-          try {
-            final conditionsDoc = await CollaborateurUtil.getDocument(
+        // Récupérer les informations nécessaires pour le PDF
+        final status = await CollaborateurUtil.checkCollaborateurStatus();
+        final userId = status['userId'];
+        final isCollaborateur = status['isCollaborateur'] == true;
+        final adminId = status['adminId'];
+        final targetId = isCollaborateur ? adminId : userId;
+        
+        print('🔍 Génération PDF - userId: $userId, targetId: $targetId, isCollaborateur: $isCollaborateur');
+
+        // CORRECTION IMPORTANTE: Pour un collaborateur, le contrat doit être récupéré dans la collection de l'admin
+        DocumentSnapshot contratDoc;
+        try {
+          if (isCollaborateur) {
+            // Si c'est un collaborateur, le contrat est dans la collection de l'admin
+            contratDoc = await CollaborateurUtil.getDocument(
               collection: 'users',
-              docId: targetId, // Utiliser l'ID de l'admin pour les collaborateurs
-              subCollection: 'contrats',
-              subDocId: 'userId',
+              docId: targetId!, // ID de l'admin
+              subCollection: 'locations',
+              subDocId: widget.contratId,
               useAdminId: true,
             );
+            print('📄 Récupération du contrat depuis la collection de l\'admin: $targetId');
+          } else {
+            // Si c'est un admin, le contrat est dans sa propre collection
+            contratDoc = await CollaborateurUtil.getDocument(
+              collection: 'users',
+              docId: userId!,
+              subCollection: 'locations',
+              subDocId: widget.contratId,
+              useAdminId: false,
+            );
+            print('📄 Récupération du contrat depuis la collection de l\'utilisateur: $userId');
+          }
+        } catch (e) {
+          print('❌ Erreur lors de la récupération du contrat: $e');
+          throw Exception('Impossible de récupérer le contrat. Erreur: $e');
+        }
 
-            if (conditionsDoc.exists) {
-              final conditionsData = conditionsDoc.data() as Map<String, dynamic>?;
-              if (conditionsData != null && conditionsData.containsKey('texte')) {
-                conditions = conditionsData['texte'];
-                print('📄 Utilisation des conditions personnalisées actuelles');
+        // Récupérer les conditions du contrat
+        String conditions = ContratModifier.defaultContract;
+        if (contratDoc.exists) {
+          final contratData = contratDoc.data() as Map<String, dynamic>;
+          
+          // Vérifier si les conditions sont sauvegardées dans le document du contrat
+          if (contratData.containsKey('conditions') && 
+              contratData['conditions'] is String && 
+              contratData['conditions'].isNotEmpty) {
+            conditions = contratData['conditions'];
+            print('📄 Utilisation des conditions sauvegardées dans le contrat');
+          } else {
+            // Si les conditions ne sont pas dans le contrat, récupérer les conditions personnalisées actuelles
+            try {
+              final conditionsDoc = await CollaborateurUtil.getDocument(
+                collection: 'users',
+                docId: targetId, // Utiliser l'ID de l'admin pour les collaborateurs
+                subCollection: 'contrats',
+                subDocId: 'userId',
+                useAdminId: true,
+              );
+
+              if (conditionsDoc.exists) {
+                final conditionsData = conditionsDoc.data() as Map<String, dynamic>?;
+                if (conditionsData != null && conditionsData.containsKey('texte')) {
+                  conditions = conditionsData['texte'];
+                  print('📄 Utilisation des conditions personnalisées actuelles');
+                }
               }
+            } catch (e) {
+              print('⚠️ Erreur lors de la récupération des conditions: $e');
+              // Continuer avec les conditions par défaut
             }
-          } catch (e) {
-            print('⚠️ Erreur lors de la récupération des conditions: $e');
-            // Continuer avec les conditions par défaut
           }
         }
-      }
 
-      // Récupérer la signature de retour
-      String? signatureRetourBase64;
-      if (contratDoc.exists) {
-        Map<String, dynamic> contratData = contratDoc.data() as Map<String, dynamic>;
+        // Récupérer la signature de retour
+        String? signatureRetourBase64;
+        if (contratDoc.exists) {
+          Map<String, dynamic> contratData = contratDoc.data() as Map<String, dynamic>;
+          
+          // Essayer de récupérer la signature de retour
+          if (contratData.containsKey('signature_retour') && 
+              contratData['signature_retour'] is String) {
+            signatureRetourBase64 = contratData['signature_retour'];
+          }
+        }
+
+        // Log de débogage
+        print('📝 Signature de retour récupérée : ${signatureRetourBase64 != null ? 'Présente (${signatureRetourBase64.length} caractères)' : 'Absente'}');
+        print('📄 Conditions personnalisées récupérées : ${conditions != ContratModifier.defaultContract ? 'Personnalisées' : 'Par défaut'}');
+
+        // Récupérer les données utilisateur (utiliser l'ID de l'admin pour les collaborateurs)
+        final userData = await CollaborateurUtil.getAuthData();
+
+        // Récupérer les données du véhicule
+        final vehicleQuery = await CollaborateurUtil.getCollection(
+          collection: 'users',
+          docId: targetId!, // Utiliser l'ID de l'admin pour les collaborateurs
+          subCollection: 'vehicules',
+          queryBuilder: (query) => query.where('immatriculation', isEqualTo: widget.data['immatriculation']),
+          useAdminId: isCollaborateur, // Utiliser useAdminId=true pour les collaborateurs
+        );
+
+        if (vehicleQuery.docs.isEmpty) {
+          print('⚠️ Aucun véhicule trouvé avec l\'immatriculation: ${widget.data['immatriculation']}');
+        } else {
+          print('🚗 Véhicule trouvé: ${vehicleQuery.docs.first.id}');
+        }
+
+        final vehicleData = vehicleQuery.docs.isNotEmpty 
+            ? vehicleQuery.docs.first.data() as Map<String, dynamic>
+            : <String, dynamic>{};
+
+        // Générer le PDF
+        final pdfPath = await generatePdf(
+          {
+            ...widget.data,
+            'nettoyageInt': _nettoyageIntController.text,
+            'nettoyageExt': _nettoyageExtController.text,
+            'carburantManquant': _carburantManquantController.text,
+            'caution': _cautionController.text,
+            'signatureRetour': signatureRetourBase64 ?? '',
+            'conditions': conditions, // Utiliser les conditions personnalisées récupérées
+          },
+          widget.data['dateFinEffectif'] ?? '',
+          widget.data['kilometrageRetour'] ?? '',
+          widget.data['commentaireRetour'] ?? '',
+          [],
+          userData['nomEntreprise'] ?? '',
+          userData['logoUrl'] ?? '',
+          userData['adresse'] ?? '',
+          userData['telephone'] ?? '',
+          userData['siret'] ?? '',
+          widget.data['commentaireRetour'] ?? '',
+          widget.data['typeCarburant'] ??'',
+          widget.data['boiteVitesses'] ??'',
+          widget.data['vin'] ??'',
+          widget.data['assuranceNom'] ??'',
+          widget.data['assuranceNumero'] ??'',
+          widget.data['franchise'] ??'',
+          widget.data['kilometrageSupp'] ??'',
+          widget.data['rayures'] ??'',
+          widget.data['dateDebut'] ?? '',
+          widget.data['dateFinTheorique'] ?? '',
+          widget.data['dateFinEffectif'] ?? '',
+          widget.data['kilometrageDepart'] ?? '',
+          widget.data['kilometrageAutorise'] ?? '',
+          (widget.data['pourcentageEssence'] ?? '').toString(),
+          widget.data['typeLocation'] ?? '',
+          widget.data['prixLocation'] ?? vehicleData['prixLocation'] ?? '',
+          condition: conditions, // Utiliser les conditions personnalisées récupérées
+          signatureBase64: '',
+          signatureRetourBase64: signatureRetourBase64,
+        );
+
+        // Fermer le dialogue de chargement
+        if (context.mounted) {
+          Navigator.pop(context);
+        }
+
+        // Ouvrir le PDF
+        await OpenFilex.open(pdfPath);
         
-        // Essayer de récupérer la signature de retour
-        if (contratData.containsKey('signature_retour') && 
-            contratData['signature_retour'] is String) {
-          signatureRetourBase64 = contratData['signature_retour'];
+        // Si on arrive ici, tout s'est bien passé, on sort de la boucle
+        break;
+        
+      } catch (e) {
+        // Gestion des erreurs
+        print('Erreur lors de la génération du PDF : $e');
+        
+        final isConnectivityError = e.toString().contains('unavailable') || 
+                                   e.toString().contains('network error') ||
+                                   e.toString().contains('timeout');
+        
+        // Si c'est la dernière tentative ou si ce n'est pas une erreur de connectivité
+        if (tentatives >= maxTentatives || !isConnectivityError) {
+          // Fermer le dialogue de chargement en cas d'erreur
+          if (context.mounted) {
+            Navigator.pop(context);
+            
+            String errorMessage = 'Une erreur est survenue.';
+            
+            if (isConnectivityError) {
+              errorMessage = 'Problème de connexion au serveur. Vérifiez votre connexion internet et réessayez.';
+            } else if (e.toString().contains('permission-denied')) {
+              errorMessage = 'Vous n\'avez pas les permissions nécessaires pour accéder à ce contrat.';
+            } else {
+              errorMessage = 'Erreur : ${e.toString()}';
+            }
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(errorMessage),
+                duration: const Duration(seconds: 5),
+                action: SnackBarAction(
+                  label: 'Réessayer',
+                  onPressed: () {
+                    _generatePdf();
+                  },
+                ),
+              ),
+            );
+          }
+          break;
+        } else {
+          // Attendre avant de réessayer
+          final delayMs = 1000 * (1 << (tentatives - 1)); // Backoff exponentiel: 1s, 2s, 4s, 8s, 16s
+          print('⏳ Tentative $tentatives échouée, nouvelle tentative dans ${delayMs}ms');
+          
+          // Mettre à jour le message de chargement
+          if (context.mounted) {
+            Navigator.pop(context);
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => AlertDialog(
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text("Problème de connexion, nouvelle tentative ${tentatives + 1}/$maxTentatives..."),
+                  ],
+                ),
+              ),
+            );
+          }
+          
+          await Future.delayed(Duration(milliseconds: delayMs));
         }
       }
-
-      // Log de débogage
-      print('📝 Signature de retour récupérée : ${signatureRetourBase64 != null ? 'Présente (${signatureRetourBase64.length} caractères)' : 'Absente'}');
-      print('📄 Conditions personnalisées récupérées : ${conditions != ContratModifier.defaultContract ? 'Personnalisées' : 'Par défaut'}');
-
-      // Récupérer les données utilisateur (utiliser l'ID de l'admin pour les collaborateurs)
-      final userData = await CollaborateurUtil.getAuthData();
-
-      // Récupérer les données du véhicule
-      final vehicleQuery = await CollaborateurUtil.getCollection(
-        collection: 'users',
-        docId: targetId, // Utiliser l'ID de l'admin pour les collaborateurs
-        subCollection: 'vehicules',
-        queryBuilder: (query) => query.where('immatriculation', isEqualTo: widget.data['immatriculation']),
-        useAdminId: true,
-      );
-
-      final vehicleData = vehicleQuery.docs.isNotEmpty 
-          ? vehicleQuery.docs.first.data() as Map<String, dynamic>
-          : <String, dynamic>{};
-
-      // Générer le PDF
-      final pdfPath = await generatePdf(
-        {
-          ...widget.data,
-          'nettoyageInt': _nettoyageIntController.text,
-          'nettoyageExt': _nettoyageExtController.text,
-          'carburantManquant': _carburantManquantController.text,
-          'caution': _cautionController.text,
-          'signatureRetour': signatureRetourBase64 ?? '',
-          'conditions': conditions, // Utiliser les conditions personnalisées récupérées
-        },
-        widget.data['dateFinEffectif'] ?? '',
-        widget.data['kilometrageRetour'] ?? '',
-        widget.data['commentaireRetour'] ?? '',
-        [],
-        userData['nomEntreprise'] ?? '',
-        userData['logoUrl'] ?? '',
-        userData['adresse'] ?? '',
-        userData['telephone'] ?? '',
-        userData['siret'] ?? '',
-        widget.data['commentaireRetour'] ?? '',
-        widget.data['typeCarburant'] ??'',
-        widget.data['boiteVitesses'] ??'',
-        widget.data['vin'] ??'',
-        widget.data['assuranceNom'] ??'',
-        widget.data['assuranceNumero'] ??'',
-        widget.data['franchise'] ??'',
-        widget.data['kilometrageSupp'] ??'',
-        widget.data['rayures'] ??'',
-        widget.data['dateDebut'] ?? '',
-        widget.data['dateFinTheorique'] ?? '',
-        widget.data['dateFinEffectif'] ?? '',
-        widget.data['kilometrageDepart'] ?? '',
-        widget.data['kilometrageAutorise'] ?? '',
-        (widget.data['pourcentageEssence'] ?? '').toString(),
-        widget.data['typeLocation'] ?? '',
-        widget.data['prixLocation'] ?? vehicleData['prixLocation'] ?? '',
-        condition: conditions, // Utiliser les conditions personnalisées récupérées
-        signatureBase64: '',
-        signatureRetourBase64: signatureRetourBase64,
-      );
-
-      // Fermer le dialogue de chargement
-      if (context.mounted) {
-        Navigator.pop(context);
-      }
-
-      // Ouvrir le PDF
-      await OpenFilex.open(pdfPath);
-    } catch (e) {
-      // Gestion des erreurs
-      print('Erreur lors de la génération du PDF : $e');
-      
-      // Fermer le dialogue de chargement en cas d'erreur
-      if (context.mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : ${e.toString()}')),
-        );
-      }
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          _isGeneratingPdf = false;
+        });
+      }
+    });
   }
 
   DateTime _parseDateWithFallback(String dateStr) {
