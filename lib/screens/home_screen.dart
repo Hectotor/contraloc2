@@ -5,8 +5,6 @@ import '../widget/delete_vehicule.dart';
 import '../widget/CREATION DE CONTRAT/client.dart'; // Assurez-vous que ce fichier est correctement importé
 import '../utils/animation.dart';
 import '../HOME/info_user.dart'; // Import du nouveau fichier
-import '../HOME/contract_limit_manager.dart'; // Import du gestionnaire de limite de contrats
-import '../HOME/popup_limite_contrat.dart'; // Import du popup de limite de contrats
 import '../widget/MES CONTRATS/vehicle_access_manager.dart'; // Import du gestionnaire d'accès aux véhicules
 
 class HomeScreen extends StatefulWidget {
@@ -25,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController(); // Contrôleur pour le TextField
   late UserInfoManager _userInfoManager; // Instance de notre gestionnaire d'informations utilisateur
   bool _isUserDataLoaded = false; // Variable pour suivre si les données utilisateur sont chargées
-  late ContractLimitManager _contractLimitManager; // Instance de notre gestionnaire de limite de contrats
+
   late VehicleAccessManager _vehicleAccessManager; // Instance de notre gestionnaire d'accès aux véhicules
 
   @override
@@ -45,7 +43,6 @@ class _HomeScreenState extends State<HomeScreen> {
     // Charger les données utilisateur
     _userInfoManager.loadUserData();
     _setupSubscriptionCheck();
-    _contractLimitManager = ContractLimitManager(); // Initialiser le gestionnaire de limite de contrats
     _vehicleAccessManager = VehicleAccessManager(); // Initialiser le gestionnaire d'accès aux véhicules
     
     // Initialiser le gestionnaire d'accès aux véhicules (asynchrone)
@@ -254,13 +251,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     return GestureDetector(
                       onTap: () async {
-                        final canCreateContract = await _contractLimitManager.checkMonthlyContractLimit();
-
-                        if (!canCreateContract) {
-                          PopupLimiteContrat.showLimitReachedDialog(context);
-                          return;
-                        }
-
                         // Utiliser le gestionnaire d'accès aux véhicules pour récupérer le document
                         final doc = await _vehicleAccessManager.getVehicleDocument(vehicle.id);
 

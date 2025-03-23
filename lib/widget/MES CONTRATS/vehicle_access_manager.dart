@@ -10,6 +10,11 @@ class VehicleAccessManager {
   String? _targetUserId;
   bool _isInitialized = false;
   
+  // Map pour stocker les timestamps de dernière mise à jour des véhicules
+  final Map<String, DateTime> _lastVehicleUpdate = {};
+  // Durée après laquelle on considère que les données du cache sont obsolètes (5 minutes par défaut)
+  final Duration _cacheValidityDuration = Duration(minutes: 5);
+  
   // Méthode pour initialiser le gestionnaire
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -72,29 +77,94 @@ class VehicleAccessManager {
   }
   
   // Méthode pour récupérer un document de véhicule spécifique
+  // Utilise le cache en priorité pour réduire les coûts Firebase
   Future<DocumentSnapshot> getVehicleDocument(String vehicleId) async {
     // S'assurer que le gestionnaire est initialisé
     if (!_isInitialized) {
       await initialize();
     }
     
-    // Utiliser l'ID cible (admin ou utilisateur actuel)
-    if (_targetUserId == null) {
-      final currentUserId = _auth.currentUser?.uid;
-      return _firestore
-          .collection('users')
-          .doc(currentUserId)
-          .collection('vehicules')
-          .doc(vehicleId)
-          .get();
+    final String effectiveUserId = _targetUserId ?? _auth.currentUser?.uid ?? '';
+    if (effectiveUserId.isEmpty) {
+      throw Exception('Aucun utilisateur connecté');
     }
     
-    return _firestore
+    final docRef = _firestore
         .collection('users')
-        .doc(_targetUserId)
+        .doc(effectiveUserId)
         .collection('vehicules')
-        .doc(vehicleId)
-        .get();
+        .doc(vehicleId);
+    
+    // Vérifier si nous devons forcer une mise à jour depuis le serveur
+    final bool shouldRefreshFromServer = _shouldRefreshVehicleData(vehicleId);
+    
+    try {
+      // D'abord essayer de récupérer depuis le cache
+      final DocumentSnapshot docSnapshot = await docRef.get(GetOptions(source: Source.cache));
+      
+      // Si les données sont dans le cache et ne nécessitent pas de mise à jour, les retourner
+      if (docSnapshot.exists && !shouldRefreshFromServer) {
+        print('📋 Véhicule $vehicleId récupéré depuis le cache');
+        return docSnapshot;
+      }
+      
+      // Si les données ne sont pas dans le cache ou nécessitent une mise à jour, 
+      // les récupérer depuis le serveur
+      final DocumentSnapshot serverSnapshot = await docRef.get(GetOptions(source: Source.server));
+      
+      // Mettre à jour le timestamp de dernière mise à jour
+      _lastVehicleUpdate[vehicleId] = DateTime.now();
+      
+      print('🔄 Véhicule $vehicleId mis à jour depuis le serveur');
+      return serverSnapshot;
+    } catch (e) {
+      // En cas d'erreur (ex: hors ligne), essayer de récupérer depuis le cache
+      try {
+        print('⚠️ Erreur serveur, tentative de récupération depuis le cache: $e');
+        return await docRef.get(GetOptions(source: Source.cache));
+      } catch (cacheError) {
+        print('❌ Erreur cache: $cacheError');
+        rethrow;
+      }
+    }
+  }
+  
+  // Méthode pour forcer la mise à jour d'un véhicule depuis le serveur
+  Future<DocumentSnapshot> refreshVehicleFromServer(String vehicleId) async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+    
+    final String effectiveUserId = _targetUserId ?? _auth.currentUser?.uid ?? '';
+    if (effectiveUserId.isEmpty) {
+      throw Exception('Aucun utilisateur connecté');
+    }
+    
+    final docRef = _firestore
+        .collection('users')
+        .doc(effectiveUserId)
+        .collection('vehicules')
+        .doc(vehicleId);
+    
+    final serverSnapshot = await docRef.get(GetOptions(source: Source.server));
+    _lastVehicleUpdate[vehicleId] = DateTime.now();
+    
+    print('🔄 Véhicule $vehicleId forcé depuis le serveur');
+    return serverSnapshot;
+  }
+  
+  // Méthode privée pour déterminer si les données du véhicule doivent être mises à jour
+  bool _shouldRefreshVehicleData(String vehicleId) {
+    final lastUpdate = _lastVehicleUpdate[vehicleId];
+    if (lastUpdate == null) {
+      return true; // Première fois, mise à jour nécessaire
+    }
+    
+    final now = DateTime.now();
+    final difference = now.difference(lastUpdate);
+    
+    // Mettre à jour si les données sont plus anciennes que la durée de validité du cache
+    return difference > _cacheValidityDuration;
   }
   
   // Méthode pour récupérer un véhicule par immatriculation
@@ -104,23 +174,41 @@ class VehicleAccessManager {
       await initialize();
     }
     
-    // Utiliser l'ID cible (admin ou utilisateur actuel)
-    if (_targetUserId == null) {
-      final currentUserId = _auth.currentUser?.uid;
-      return _firestore
-          .collection('users')
-          .doc(currentUserId)
-          .collection('vehicules')
-          .where('immatriculation', isEqualTo: immatriculation)
-          .get();
+    final String effectiveUserId = _targetUserId ?? _auth.currentUser?.uid ?? '';
+    if (effectiveUserId.isEmpty) {
+      throw Exception('Aucun utilisateur connecté');
     }
     
-    return _firestore
+    final query = _firestore
         .collection('users')
-        .doc(_targetUserId)
+        .doc(effectiveUserId)
         .collection('vehicules')
-        .where('immatriculation', isEqualTo: immatriculation)
-        .get();
+        .where('immatriculation', isEqualTo: immatriculation);
+    
+    try {
+      // D'abord essayer de récupérer depuis le cache
+      final QuerySnapshot cacheSnapshot = await query.get(GetOptions(source: Source.cache));
+      
+      // Si des résultats sont trouvés dans le cache, les retourner
+      if (!cacheSnapshot.docs.isEmpty) {
+        print('📋 Véhicule avec immatriculation $immatriculation récupéré depuis le cache');
+        return cacheSnapshot;
+      }
+      
+      // Sinon, récupérer depuis le serveur
+      final QuerySnapshot serverSnapshot = await query.get(GetOptions(source: Source.server));
+      print('🔄 Véhicule avec immatriculation $immatriculation récupéré depuis le serveur');
+      return serverSnapshot;
+    } catch (e) {
+      // En cas d'erreur (ex: hors ligne), essayer de récupérer depuis le cache
+      try {
+        print('⚠️ Erreur serveur, tentative de récupération depuis le cache: $e');
+        return await query.get(GetOptions(source: Source.cache));
+      } catch (cacheError) {
+        print('❌ Erreur cache: $cacheError');
+        rethrow;
+      }
+    }
   }
   
   // Méthode pour récupérer l'ID cible (utilisateur actuel ou admin)
