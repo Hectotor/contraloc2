@@ -7,6 +7,7 @@ import '../services/revenue_cat_service.dart';
 import '../widget/inscription.dart'; // Import de la page d'inscription
 import '../widget/navigation.dart'; // Import de la page de navigation
 import '../utils/welcome_mail.dart'; // Ajout de l'import pour WelcomeMail
+import '../widget/chargement.dart'; // Import du widget de chargement
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -21,6 +22,7 @@ class _LoginPageState extends State<LoginPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _showPassword = false; // Ajout de la variable pour gérer la visibilité
   String? _errorMessage; // Nouvelle variable pour stocker le message d'erreur
+  bool _isLoading = false; // Nouvelle variable pour gérer l'état de chargement
 
   // Méthode pour valider l'email
   bool _isValidEmail(String email) {
@@ -43,6 +45,10 @@ class _LoginPageState extends State<LoginPage> {
       _showErrorToast("Veuillez entrer une adresse email valide.");
       return;
     }
+
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       // Connexion Firebase
@@ -107,23 +113,63 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       }
-    } catch (e) {
+    } on FirebaseAuthException catch (e) {
+
+      // Extraire le code d'erreur Firebase
+      String errorMessage = _getFriendlyErrorMessage(e.code);
+      
+      // Définir le message d'erreur (sans afficher de toast)
       setState(() {
-        _errorMessage = _getFriendlyErrorMessage(e.toString());
+        _errorMessage = errorMessage;
+      });
+    } catch (e) {
+      print('❌ Erreur de connexion: $e');
+      
+      // Extraire le code d'erreur Firebase
+      String errorMessage;
+      errorMessage = _getFriendlyErrorMessage(e.toString());
+      
+      // Définir le message d'erreur (sans afficher de toast)
+      setState(() {
+        _errorMessage = errorMessage;
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
       });
     }
   }
 
   // Fonction pour afficher des messages d'erreur plus clairs
   String _getFriendlyErrorMessage(String error) {
-    if (error.contains('wrong-password')) {
-      return "Le mot de passe est incorrect.";
-    } else if (error.contains('user-not-found')) {
-      return "Aucun utilisateur trouvé avec cet email.";
-    } else if (error.contains('invalid-email')) {
-      return "L'adresse email n'est pas valide.";
-    } else {
-      return "Une erreur est survenue. Veuillez réessayer.";
+    print('🔍 Analyse du code d\'erreur: "$error"');
+    
+    // Cas spécifiques pour les erreurs Firebase
+    switch (error) {
+      case 'wrong-password':
+        return "Le mot de passe est incorrect. Veuillez réessayer.";
+      case 'user-not-found':
+        return "Aucun utilisateur trouvé avec cet email. Veuillez vérifier votre email et votre mot de passe.";
+      case 'invalid-email':
+        return "L'adresse email n'est pas valide. Veuillez vérifier votre email.";
+      case 'too-many-requests':
+        return "Trop de tentatives échouées. Veuillez réessayer plus tard.";
+      case 'user-disabled':
+        return "Ce compte a été désactivé. Veuillez contacter le support.";
+      case 'operation-not-allowed':
+        return "La connexion avec email et mot de passe n'est pas activée.";
+      case 'network-request-failed':
+        return "Problème de connexion réseau. Vérifiez votre connexion internet.";
+      case 'invalid-credential':
+        return "Identifiants invalides. Veuillez vérifier votre email et votre mot de passe.";
+      case 'account-exists-with-different-credential':
+        return "Un compte existe déjà avec une autre méthode de connexion.";
+      case 'weak-password':
+        return "Le mot de passe est trop faible. Utilisez au moins 6 caractères.";
+      case 'email-already-in-use':
+        return "Cette adresse email est déjà utilisée par un autre compte.";
+      default:
+        return "Une erreur est survenue. Veuillez réessayer.";
     }
   }
 
@@ -243,7 +289,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   // Bouton Connexion
                   ElevatedButton(
-                    onPressed: _login,
+                    onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF08004D), // Bleu nuit
                       minimumSize: const Size(double.infinity, 50),
@@ -251,10 +297,18 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      "Connexion",
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            "Connexion",
+                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
                   ),
                   const SizedBox(height: 10),
 
@@ -283,7 +337,9 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-          if (!isKeyboardVisible) // Ajouter cette condition
+          if (_isLoading)
+            const Chargement(),
+          if (!isKeyboardVisible && !_isLoading) // Ajouter cette condition
             Positioned(
               bottom: 20,
               left: 0,
@@ -291,7 +347,7 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 children: const [
                   Text(
-                    "Fabriqué en France 🇫🇷 ",
+                    "Fabriqué en France 🇫🇷",
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey,

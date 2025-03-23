@@ -328,11 +328,14 @@ class _LocationPageState extends State<LocationPage> {
       // Créer le contrat dans la collection de l'utilisateur
       await _firestore
           .collection('users')
-          .doc(userId)
+          .doc(targetId) // Utiliser targetId au lieu de userId pour stocker dans la collection de l'admin
           .collection('locations')
           .doc(contratId)
           .set({
-        'userId': userId,
+        'userId': userId, // Conserver l'ID de l'utilisateur qui a créé le contrat
+        'adminId': targetId, // Ajouter l'ID de l'admin pour référence
+        'createdBy': userId, // Ajouter qui a créé le contrat (collaborateur ou admin)
+        'isCollaborateur': collaborateurStatus['isCollaborateur'] ?? false, // Indiquer si créé par un collaborateur
         'nom': widget.nom ?? '',
         'prenom': widget.prenom ?? '',
         'adresse': widget.adresse ?? '',
