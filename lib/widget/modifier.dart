@@ -29,6 +29,7 @@ import 'MODIFICATION DE CONTRAT/retour_loc.dart';
 import 'navigation.dart'; // Import the NavigationPage
 import 'MODIFICATION DE CONTRAT/cloturer_location.dart'; // Import the popup
 import 'MODIFICATION DE CONTRAT/retour_envoie_pdf.dart'; // Nouvelle importation
+import 'package:ContraLoc/services/collaborateur_util.dart';
 
 class ModifierScreen extends StatefulWidget {
   final String contratId;
@@ -290,13 +291,23 @@ class _ModifierScreenState extends State<ModifierScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("Utilisateur non connecté");
 
-      // Récupérer le document du contrat
-      final contratDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('locations')
-          .doc(widget.contratId)
-          .get();
+      // Vérifier si l'utilisateur est un collaborateur
+      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
+      final String userId = collaborateurStatus['userId'] ?? user.uid;
+      final String targetId = collaborateurStatus['isCollaborateur'] 
+          ? collaborateurStatus['adminId'] ?? user.uid 
+          : user.uid;
+
+      print('🔍 Génération PDF - userId: $userId, targetId: $targetId');
+
+      // Récupérer le document du contrat (toujours utiliser l'ID de l'utilisateur actuel)
+      final contratDoc = await CollaborateurUtil.getDocument(
+        collection: 'users',
+        docId: userId,
+        subCollection: 'locations',
+        subDocId: widget.contratId,
+        useAdminId: false, // Les contrats sont toujours dans la collection de l'utilisateur actuel
+      );
 
       // Récupérer les conditions du contrat
       String conditions = ContratModifier.defaultContract;
@@ -311,19 +322,25 @@ class _ModifierScreenState extends State<ModifierScreen> {
           print('📄 Utilisation des conditions sauvegardées dans le contrat');
         } else {
           // Si les conditions ne sont pas dans le contrat, récupérer les conditions personnalisées actuelles
-          final conditionsDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .collection('contrats')
-              .doc('userId')
-              .get();
+          try {
+            final conditionsDoc = await CollaborateurUtil.getDocument(
+              collection: 'users',
+              docId: targetId, // Utiliser l'ID de l'admin pour les collaborateurs
+              subCollection: 'contrats',
+              subDocId: 'userId',
+              useAdminId: true,
+            );
 
-          if (conditionsDoc.exists) {
-            final conditionsData = conditionsDoc.data();
-            if (conditionsData != null && conditionsData.containsKey('texte')) {
-              conditions = conditionsData['texte'];
-              print('📄 Utilisation des conditions personnalisées actuelles');
+            if (conditionsDoc.exists) {
+              final conditionsData = conditionsDoc.data() as Map<String, dynamic>?;
+              if (conditionsData != null && conditionsData.containsKey('texte')) {
+                conditions = conditionsData['texte'];
+                print('📄 Utilisation des conditions personnalisées actuelles');
+              }
             }
+          } catch (e) {
+            print('⚠️ Erreur lors de la récupération des conditions: $e');
+            // Continuer avec les conditions par défaut
           }
         }
       }
@@ -344,27 +361,21 @@ class _ModifierScreenState extends State<ModifierScreen> {
       print('📝 Signature de retour récupérée : ${signatureRetourBase64 != null ? 'Présente (${signatureRetourBase64.length} caractères)' : 'Absente'}');
       print('📄 Conditions personnalisées récupérées : ${conditions != ContratModifier.defaultContract ? 'Personnalisées' : 'Par défaut'}');
 
-      // Récupérer les données utilisateur
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .get();
-
-      final userData = userDoc.data() ?? {};
+      // Récupérer les données utilisateur (utiliser l'ID de l'admin pour les collaborateurs)
+      final userData = await CollaborateurUtil.getAuthData();
 
       // Récupérer les données du véhicule
-      final vehicleDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('vehicules')
-          .where('immatriculation', isEqualTo: widget.data['immatriculation'])
-          .get();
+      final vehicleQuery = await CollaborateurUtil.getCollection(
+        collection: 'users',
+        docId: targetId, // Utiliser l'ID de l'admin pour les collaborateurs
+        subCollection: 'vehicules',
+        queryBuilder: (query) => query.where('immatriculation', isEqualTo: widget.data['immatriculation']),
+        useAdminId: true,
+      );
 
-      final vehicleData = vehicleDoc.docs.isNotEmpty 
-          ? vehicleDoc.docs.first.data() 
-          : {};
+      final vehicleData = vehicleQuery.docs.isNotEmpty 
+          ? vehicleQuery.docs.first.data() as Map<String, dynamic>
+          : <String, dynamic>{};
 
       // Générer le PDF
       final pdfPath = await generatePdf(

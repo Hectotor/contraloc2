@@ -3,6 +3,7 @@ import 'package:ContraLoc/utils/pdf.dart';
 import 'package:ContraLoc/USERS/contrat_condition.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:signature/signature.dart';
+import 'package:ContraLoc/services/collaborateur_util.dart';
 import '../widget/navigation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -246,6 +247,15 @@ class _LocationPageState extends State<LocationPage> {
         return;
       }
 
+      // Vérifier si l'utilisateur est un collaborateur
+      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
+      final String userId = collaborateurStatus['userId'] ?? user.uid;
+      final String targetId = collaborateurStatus['isCollaborateur'] 
+          ? collaborateurStatus['adminId'] ?? user.uid 
+          : user.uid;
+
+      print(' Création contrat - userId: $userId, targetId: $targetId');
+
       // D'abord, uploader toutes les photos et obtenir les URLs
       String? permisRectoUrl;
       String? permisVersoUrl;
@@ -254,7 +264,7 @@ class _LocationPageState extends State<LocationPage> {
       // Générer un ID unique pour le contrat
       final contratId = widget.contratId ?? _firestore
           .collection('users')
-          .doc(user.uid)
+          .doc(userId)
           .collection('locations')
           .doc()
           .id;
@@ -276,46 +286,53 @@ class _LocationPageState extends State<LocationPage> {
       }
 
       // Récupérer les conditions depuis la collection 'users'
-      DocumentSnapshot conditionsDoc;
-      // Tenter de récupérer les conditions depuis le document 'userId'
-      conditionsDoc = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('contrats')
-          .doc('userId')
-          .get();
-
       String conditions = '';
+      try {
+        // Utiliser CollaborateurUtil pour récupérer les conditions
+        final conditionsDoc = await CollaborateurUtil.getDocument(
+          collection: 'users',
+          docId: targetId,
+          subCollection: 'contrats',
+          subDocId: 'userId',
+          useAdminId: true,
+        );
 
-      // Si le document 'userId' n'existe pas, récupérer depuis le document user.uid
-      if (!conditionsDoc.exists) {
-        conditionsDoc = await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('contrats')
-            .doc(user.uid)
-            .get();
-      }
+        if (conditionsDoc.exists) {
+          final data = conditionsDoc.data() as Map<String, dynamic>?;
+          conditions = data?['texte'] ?? '';
+        } else {
+          // Essayer avec l'ID de l'utilisateur comme document ID
+          final conditionsUserDoc = await CollaborateurUtil.getDocument(
+            collection: 'users',
+            docId: targetId,
+            subCollection: 'contrats',
+            subDocId: targetId,
+            useAdminId: true,
+          );
 
-      if (conditionsDoc.exists) {
-        final data = conditionsDoc.data() as Map<String, dynamic>?;
-        conditions = data?['texte'] ?? '';
-      } else {
-        // Utiliser les conditions par défaut si aucune condition personnalisée n'existe
-        final defaultConditionsDoc =
-            await _firestore.collection('contrats').doc('default').get();
-        conditions = (defaultConditionsDoc.data())?['texte'] ??
-            ContratModifier.defaultContract;
+          if (conditionsUserDoc.exists) {
+            final data = conditionsUserDoc.data() as Map<String, dynamic>?;
+            conditions = data?['texte'] ?? '';
+          } else {
+            // Utiliser les conditions par défaut si aucune condition personnalisée n'existe
+            final defaultConditionsDoc = await _firestore.collection('contrats').doc('default').get();
+            conditions = (defaultConditionsDoc.data())?['texte'] ?? ContratModifier.defaultContract;
+          }
+        }
+      } catch (e) {
+        print('Erreur lors de la récupération des conditions: $e');
+        // Utiliser les conditions par défaut en cas d'erreur
+        conditions = ContratModifier.defaultContract;
       }
 
       // Créer le contrat dans la collection de l'utilisateur
       await _firestore
           .collection('users')
-          .doc(user.uid)
+          .doc(userId)
           .collection('locations')
           .doc(contratId)
           .set({
-        'userId': user.uid,
+        'userId': userId,
         'nom': widget.nom ?? '',
         'prenom': widget.prenom ?? '',
         'adresse': widget.adresse ?? '',
@@ -430,58 +447,19 @@ class _LocationPageState extends State<LocationPage> {
 
       // Si un email client est disponible, générer et envoyer le PDF
       if (widget.email != null && widget.email!.isNotEmpty) {
-        // Récupérer les données utilisateur de manière plus robuste
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('authentification')
-            .doc(user.uid)
-            .get();
+        // Récupérer les données utilisateur avec CollaborateurUtil
+        final userData = await CollaborateurUtil.getAuthData();
 
-        if (!userDoc.exists) {
+        if (userData.isEmpty) {
           throw Exception('Données utilisateur non trouvées');
         }
-
-        final userData = userDoc.data()!;
 
         // S'assurer que toutes les données sont présentes
         final nomEntreprise = userData['nomEntreprise'] ?? '';
         final adresseEntreprise = userData['adresse'] ?? '';
         final telephoneEntreprise = userData['telephone'] ?? '';
         final siretEntreprise = userData['siret'] ?? '';
-
-        // Récupérer les conditions depuis la collection 'users'
-        DocumentSnapshot conditionsDoc;
-        // Tenter de récupérer les conditions depuis le document 'userId'
-        conditionsDoc = await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('contrats')
-            .doc('userId')
-            .get();
-
-        String conditions = '';
-
-        // Si le document 'userId' n'existe pas, récupérer depuis le document user.uid
-        if (!conditionsDoc.exists) {
-          conditionsDoc = await _firestore
-              .collection('users')
-              .doc(user.uid)
-              .collection('contrats')
-              .doc(user.uid)
-              .get();
-        }
-
-        if (conditionsDoc.exists) {
-          final data = conditionsDoc.data() as Map<String, dynamic>?;
-          conditions = data?['texte'] ?? '';
-        } else {
-          // Utiliser les conditions par défaut si aucune condition personnalisée n'existe
-          final defaultConditionsDoc =
-              await _firestore.collection('contrats').doc('default').get();
-          conditions = (defaultConditionsDoc.data())?['texte'] ??
-              ContratModifier.defaultContract;
-        }
+        final logoUrl = userData['logoUrl'] ?? '';
 
         final signatureAller = await _signatureController.toPngBytes();
 
@@ -527,7 +505,7 @@ class _LocationPageState extends State<LocationPage> {
           '', // commentaireRetour  
           [], // photosRetour  
           nomEntreprise,  
-          userData['logoUrl'] ?? '',  
+          logoUrl,  
           adresseEntreprise,  
           telephoneEntreprise,  
           siretEntreprise,  
@@ -560,8 +538,7 @@ class _LocationPageState extends State<LocationPage> {
           context: context,
           prenom: widget.prenom,
           nom: widget.nom,
-          nomEntreprise: userData['nomEntreprise'] ??
-              '', // Passer le nom de l'entreprise de l'utilisateur
+          nomEntreprise: nomEntreprise,
         );
       }
 
@@ -578,15 +555,15 @@ class _LocationPageState extends State<LocationPage> {
         });
       }
     } catch (e) {
-      print(
-          "Erreur lors de la validation du contrat : $e"); // Ajout d'un print pour déboguer
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erreur lors de la validation du contrat : $e")),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false; // Set loading state to false
-      });
+      print('Erreur lors de la validation du contrat : $e');
+      if (context.mounted) {
+        setState(() {
+          _isLoading = false; // Set loading state to false
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : ${e.toString()}')),
+        );
+      }
     }
   }
 

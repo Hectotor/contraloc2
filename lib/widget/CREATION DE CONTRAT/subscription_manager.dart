@@ -63,28 +63,82 @@ class SubscriptionManager {
     }
     
     try {
+      // Accéder directement au document d'authentification de l'administrateur
+      // Les collaborateurs n'ont pas besoin d'accéder à leur propre document d'authentification
+      // car ils utilisent l'abonnement de l'administrateur
       final doc = await _firestore
           .collection('users')
           .doc(_targetUserId)
           .collection('authentification')
           .doc(_targetUserId)
-          .get();
+          .get(GetOptions(source: Source.cache)); // Utiliser le cache pour éviter les erreurs de permission
       
-      if (doc.exists) {
-        final data = doc.data() ?? {};
-        final subscriptionId = data['subscriptionId'] ?? 'free';
-        final cb_subscription = data['cb_subscription'] ?? 'free';
+      if (!doc.exists) {
+        // Si le document n'existe pas dans le cache, essayer de le récupérer depuis le serveur
+        // mais uniquement si l'utilisateur est l'administrateur lui-même
+        final currentUser = _auth.currentUser;
+        if (currentUser != null && currentUser.uid == _targetUserId) {
+          try {
+            final serverDoc = await _firestore
+                .collection('users')
+                .doc(_targetUserId)
+                .collection('authentification')
+                .doc(_targetUserId)
+                .get();
+                
+            if (serverDoc.exists) {
+              final data = serverDoc.data() ?? {};
+              final subscriptionId = data['subscriptionId'] ?? 'free';
+              final cb_subscription = data['cb_subscription'] ?? 'free';
+              
+              // L'utilisateur est premium si l'un des deux abonnements est premium
+              return subscriptionId == 'premium-monthly_access' ||
+                  subscriptionId == 'premium-yearly_access' ||
+                  cb_subscription == 'premium-monthly_access' ||
+                  cb_subscription == 'premium-yearly_access';
+            }
+          } catch (e) {
+            print('❌ Erreur récupération serveur pour admin: $e');
+          }
+        }
         
-        // L'utilisateur est premium si l'un des deux abonnements est premium
-        return subscriptionId == 'premium-monthly_access' ||
-            subscriptionId == 'premium-yearly_access' ||
-            cb_subscription == 'premium-monthly_access' ||
-            cb_subscription == 'premium-yearly_access';
+        // Pour les collaborateurs, on considère qu'ils ont accès aux fonctionnalités premium
+        // car ils agissent au nom de l'administrateur
+        final userDoc = await _firestore.collection('users').doc(currentUser?.uid).get();
+        if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
+          print('👥 Collaborateur détecté, accès premium accordé par défaut');
+          return true;
+        }
+        
+        return false;
       }
       
-      return false; // Document n'existe pas
+      final data = doc.data() ?? {};
+      final subscriptionId = data['subscriptionId'] ?? 'free';
+      final cb_subscription = data['cb_subscription'] ?? 'free';
+      
+      // L'utilisateur est premium si l'un des deux abonnements est premium
+      return subscriptionId == 'premium-monthly_access' ||
+          subscriptionId == 'premium-yearly_access' ||
+          cb_subscription == 'premium-monthly_access' ||
+          cb_subscription == 'premium-yearly_access';
     } catch (e) {
       print('❌ Erreur vérification abonnement premium: $e');
+      
+      // En cas d'erreur de permission, accorder l'accès premium aux collaborateurs
+      try {
+        final currentUser = _auth.currentUser;
+        if (currentUser != null) {
+          final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+          if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
+            print('👥 Erreur de permission pour collaborateur, accès premium accordé par défaut');
+            return true;
+          }
+        }
+      } catch (innerError) {
+        print('❌ Erreur lors de la vérification du rôle: $innerError');
+      }
+      
       return false; // En cas d'erreur, considérer comme non premium
     }
   }

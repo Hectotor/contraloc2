@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:ContraLoc/services/collaborateur_util.dart';
 
 import 'abonnement_screen.dart';
 
@@ -77,6 +78,7 @@ En cas d’échec de la résolution amiable, les litiges seront soumis aux tribu
 class _ContratModifierState extends State<ContratModifier> {
   final TextEditingController _controller = TextEditingController();
   bool isPremiumUser = false; // Ajouter cette variable
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -87,52 +89,67 @@ class _ContratModifierState extends State<ContratModifier> {
 
   Future<void> _checkPremiumStatus() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('authentification')
-            .doc(user.uid)
-            .get();
+      setState(() {
+        isLoading = true;
+      });
+      
+      // Utiliser CollaborateurUtil pour récupérer les données d'authentification
+      final userData = await CollaborateurUtil.getAuthData();
+      
+      if (userData.isNotEmpty) {
+        final subscriptionId = userData['subscriptionId'] ?? 'free';
+        final cb_subscription = userData['cb_subscription'] ?? 'free';
 
-        if (doc.exists) {
-          final data = doc.data() ?? {};
-          final subscriptionId = data['subscriptionId'] ?? 'free';
-          final cb_subscription = data['cb_subscription'] ?? 'free';
-
-          setState(() {
-            // L'utilisateur est premium si l'un des deux abonnements est premium
-            isPremiumUser = subscriptionId == 'premium-monthly_access' ||
-                subscriptionId == 'premium-yearly_access' ||
-                cb_subscription == 'premium-monthly_access' ||
-                cb_subscription == 'premium-yearly_access';
-            print('Status Premium: $isPremiumUser');
-            print('SubscriptionId: $subscriptionId');
-            print('CB Subscription: $cb_subscription');
-          });
-        }
+        setState(() {
+          // L'utilisateur est premium si l'un des deux abonnements est premium
+          isPremiumUser = subscriptionId == 'premium-monthly_access' ||
+              subscriptionId == 'premium-yearly_access' ||
+              cb_subscription == 'premium-monthly_access' ||
+              cb_subscription == 'premium-yearly_access';
+          print('Status Premium: $isPremiumUser');
+          print('SubscriptionId: $subscriptionId');
+          print('CB Subscription: $cb_subscription');
+        });
       }
     } catch (e) {
       print('Erreur lors de la vérification du statut Premium: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
   Future<void> _loadContract() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('contrats')
-            .doc('userId')
-            .get();
+      setState(() {
+        isLoading = true;
+      });
+      
+      // Récupérer le statut du collaborateur
+      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
+      final String targetId = collaborateurStatus['isCollaborateur'] 
+          ? collaborateurStatus['adminId'] ?? FirebaseAuth.instance.currentUser?.uid 
+          : FirebaseAuth.instance.currentUser?.uid ?? '';
+      
+      if (targetId.isNotEmpty) {
+        // Utiliser CollaborateurUtil pour récupérer le document
+        final doc = await CollaborateurUtil.getDocument(
+          collection: 'users',
+          docId: targetId,
+          subCollection: 'contrats',
+          subDocId: 'userId',
+          useAdminId: true,
+        );
 
         // Safely access the data
         final data = doc.data();
         setState(() {
-          _controller.text = data?['texte'] ?? ContratModifier.defaultContract;
+          if (data != null && data is Map<String, dynamic>) {
+            _controller.text = data['texte'] ?? ContratModifier.defaultContract;
+          } else {
+            _controller.text = ContratModifier.defaultContract;
+          }
         });
       } else {
         setState(() {
@@ -144,6 +161,10 @@ class _ContratModifierState extends State<ContratModifier> {
       setState(() {
         _controller.text = ContratModifier.defaultContract;
       });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
@@ -154,21 +175,58 @@ class _ContratModifierState extends State<ContratModifier> {
       return;
     }
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('contrats')
-          .doc('userId')
-          .set({
-        'texte': _controller.text,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+    try {
+      // Récupérer le statut du collaborateur
+      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
+      final String userId = collaborateurStatus['userId'] ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+      final String targetId = collaborateurStatus['isCollaborateur'] 
+          ? collaborateurStatus['adminId'] ?? userId 
+          : userId;
+      
+      if (targetId.isNotEmpty) {
+        // Vérifier si l'utilisateur est un collaborateur avec des permissions d'écriture
+        bool hasWritePermission = true;
+        if (collaborateurStatus['isCollaborateur'] == true) {
+          final permissions = collaborateurStatus['permissions'];
+          if (permissions is Map<String, dynamic>) {
+            hasWritePermission = permissions['write'] == true;
+          }
+        }
+        
+        if (collaborateurStatus['isCollaborateur'] == true && !hasWritePermission) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vous n\'avez pas les permissions nécessaires pour modifier le contrat.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+          return;
+        }
+        
+        // Utiliser CollaborateurUtil pour mettre à jour le document
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(targetId)
+            .collection('contrats')
+            .doc('userId')
+            .set({
+          'texte': _controller.text,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Contrat enregistré avec succès.'),
+            backgroundColor: Colors.blueAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Erreur lors de la sauvegarde du contrat: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Contrat enregistré avec succès.'),
-          backgroundColor: Colors.blueAccent,
+        SnackBar(
+          content: Text('Erreur lors de la sauvegarde: ${e.toString()}'),
+          backgroundColor: Colors.redAccent,
         ),
       );
     }
@@ -268,108 +326,110 @@ class _ContratModifierState extends State<ContratModifier> {
           ),
         ],
       ),
-      body: Container(
-        padding: const EdgeInsets.all(16.0),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      spreadRadius: 2,
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF08004D),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                          topRight: Radius.circular(20),
+      body: isLoading 
+        ? const Center(child: CircularProgressIndicator(color: Color(0xFF08004D)))
+        : Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 2,
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF08004D),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            topRight: Radius.circular(20),
+                          ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(20),
-                        child: GestureDetector(
-                          onTap:
-                              _onTextFieldTap, // Ajouter le gestionnaire de tap
-                          child: TextFormField(
-                            controller: _controller,
-                            maxLines: null,
-                            enabled: isPremiumUser,
-                            readOnly: !isPremiumUser, // Ajouter cette ligne
-                            style: const TextStyle(
-                              fontFamily: 'Roboto', // Change font to Roboto
-                              fontSize: 16,
-                              height: 1.6,
-                              color: Color(0xFF2C3E50),
-                            ),
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: isPremiumUser
-                                  ? 'Le contenu du contrat...'
-                                  : 'Abonnement Premium requis pour modifier le contrat',
-                              hintStyle: TextStyle(color: Colors.grey.shade400),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(20),
+                          child: GestureDetector(
+                            onTap:
+                                _onTextFieldTap, // Ajouter le gestionnaire de tap
+                            child: TextFormField(
+                              controller: _controller,
+                              maxLines: null,
+                              enabled: isPremiumUser,
+                              readOnly: !isPremiumUser, // Ajouter cette ligne
+                              style: const TextStyle(
+                                fontFamily: 'Roboto', // Change font to Roboto
+                                fontSize: 16,
+                                height: 1.6,
+                                color: Color(0xFF2C3E50),
+                              ),
+                              decoration: InputDecoration(
+                                border: InputBorder.none,
+                                hintText: isPremiumUser
+                                    ? 'Le contenu du contrat...'
+                                    : 'Abonnement Premium requis pour modifier le contrat',
+                                hintStyle: TextStyle(color: Colors.grey.shade400),
+                              ),
                             ),
                           ),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              ),
+              // Garder les boutons existants
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: isPremiumUser ? _resetContract : null,
+                        icon: const Icon(Icons.refresh, color: Colors.white),
+                        label: const Text('Réinitialiser',
+                            style: TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed:
+                            isPremiumUser ? _saveContract : _showPremiumDialog,
+                        icon: const Icon(Icons.save, color: Colors.white),
+                        label: const Text('Enregistrer',
+                            style: TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF08004D),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
-            // Garder les boutons existants
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: isPremiumUser ? _resetContract : null,
-                      icon: const Icon(Icons.refresh, color: Colors.white),
-                      label: const Text('Réinitialiser',
-                          style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed:
-                          isPremiumUser ? _saveContract : _showPremiumDialog,
-                      icon: const Icon(Icons.save, color: Colors.white),
-                      label: const Text('Enregistrer',
-                          style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF08004D),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
     );
   }
 }

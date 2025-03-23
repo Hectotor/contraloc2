@@ -22,33 +22,102 @@ class EmailService {
     try {
       // Récupérer les données de l'utilisateur
       final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final userData = await FirebaseFirestore.instance
+      if (user == null) {
+        throw Exception('Utilisateur non connecté');
+      }
+      
+      // Vérifier si l'utilisateur est un collaborateur
+      String targetUserId = user.uid;
+      bool isCollaborateur = false;
+      
+      try {
+        final userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
-            .collection('authentification')
-            .doc(user.uid)
             .get();
+        
+        if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
+          isCollaborateur = true;
+          final adminId = userDoc.data()?['adminId'];
+          if (adminId != null) {
+            print('👥 Collaborateur détecté, utilisation des données de l\'administrateur: $adminId');
+            targetUserId = adminId;
+          }
+        }
+      } catch (e) {
+        print('❌ Erreur lors de la vérification du rôle: $e');
+        // Continuer avec l'ID de l'utilisateur actuel
+      }
+
+      // Essayer d'abord de récupérer depuis le cache pour éviter les erreurs de permission
+      try {
+        final userData = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(targetUserId)
+            .collection('authentification')
+            .doc(targetUserId)
+            .get(GetOptions(source: Source.cache));
 
         if (userData.exists) {
           nomEntreprise = userData.data()?['nomEntreprise'] ?? 'Contraloc';
           adresse = userData.data()?['adresse'] ?? '';
           telephone = userData.data()?['telephone'] ?? '';
           logoUrl = userData.data()?['logoUrl'];
+          print('📋 Données entreprise récupérées depuis le cache');
+        } else if (!isCollaborateur) {
+          // Si les données ne sont pas dans le cache et que l'utilisateur n'est pas un collaborateur,
+          // essayer de récupérer depuis le serveur
+          final serverData = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(targetUserId)
+              .collection('authentification')
+              .doc(targetUserId)
+              .get();
+              
+          if (serverData.exists) {
+            nomEntreprise = serverData.data()?['nomEntreprise'] ?? 'Contraloc';
+            adresse = serverData.data()?['adresse'] ?? '';
+            telephone = serverData.data()?['telephone'] ?? '';
+            logoUrl = serverData.data()?['logoUrl'];
+            print('🔄 Données entreprise récupérées depuis le serveur');
+          }
+        } else {
+          // Pour les collaborateurs qui n'ont pas accès au cache, utiliser des valeurs par défaut
+          print('👥 Collaborateur sans accès au cache, utilisation des valeurs par défaut');
+          nomEntreprise = nomEntreprise ?? 'Contraloc';
         }
+      } catch (e) {
+        print('❌ Erreur récupération données entreprise: $e');
+        // En cas d'erreur, utiliser des valeurs par défaut
+        nomEntreprise = nomEntreprise ?? 'Contraloc';
       }
 
       // Récupérer les paramètres SMTP depuis admin/smtpSettings
-      final adminDoc = await FirebaseFirestore.instance
-          .collection('admin')
-          .doc('smtpSettings')
-          .get();
+      DocumentSnapshot adminDoc;
+      try {
+        // Essayer d'abord depuis le cache
+        adminDoc = await FirebaseFirestore.instance
+            .collection('admin')
+            .doc('smtpSettings')
+            .get(GetOptions(source: Source.cache));
+            
+        if (!adminDoc.exists) {
+          // Si pas dans le cache, essayer depuis le serveur
+          adminDoc = await FirebaseFirestore.instance
+              .collection('admin')
+              .doc('smtpSettings')
+              .get();
+        }
+      } catch (e) {
+        print('❌ Erreur récupération paramètres SMTP: $e');
+        throw Exception('Configuration SMTP non accessible: $e');
+      }
 
       if (!adminDoc.exists) {
         throw Exception('Configuration SMTP non trouvée');
       }
 
-      final smtpData = adminDoc.data() ?? {};
+      final smtpData = adminDoc.data() as Map<String, dynamic>;
       final smtpEmail = smtpData['smtpEmail'] ?? '';
       final smtpPassword = smtpData['smtpPassword'] ?? '';
       final smtpServer = smtpData['smtpServer'] ?? '';
