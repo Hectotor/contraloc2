@@ -93,24 +93,13 @@ class _ContratModifierState extends State<ContratModifier> {
         isLoading = true;
       });
       
-      // Utiliser CollaborateurUtil pour récupérer les données d'authentification
-      final userData = await CollaborateurUtil.getAuthData();
+      // Utiliser la nouvelle méthode de CollaborateurUtil
+      final isPremium = await CollaborateurUtil.isPremiumUser();
       
-      if (userData.isNotEmpty) {
-        final subscriptionId = userData['subscriptionId'] ?? 'free';
-        final cb_subscription = userData['cb_subscription'] ?? 'free';
-
-        setState(() {
-          // L'utilisateur est premium si l'un des deux abonnements est premium
-          isPremiumUser = subscriptionId == 'premium-monthly_access' ||
-              subscriptionId == 'premium-yearly_access' ||
-              cb_subscription == 'premium-monthly_access' ||
-              cb_subscription == 'premium-yearly_access';
-          print('Status Premium: $isPremiumUser');
-          print('SubscriptionId: $subscriptionId');
-          print('CB Subscription: $cb_subscription');
-        });
-      }
+      setState(() {
+        isPremiumUser = isPremium;
+        print('Status Premium: $isPremiumUser');
+      });
     } catch (e) {
       print('Erreur lors de la vérification du statut Premium: $e');
     } finally {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:ContraLoc/USERS/abonnement_screen.dart';
-import 'package:ContraLoc/widget/CREATION DE CONTRAT/subscription_manager.dart';
+import 'package:ContraLoc/services/collaborateur_util.dart';
 
 class EtatVehicule extends StatefulWidget {
   final List<File> photos;
@@ -22,23 +22,31 @@ class EtatVehicule extends StatefulWidget {
 
 class _EtatVehiculeState extends State<EtatVehicule> {
   bool isPremiumUser = false;
-  late SubscriptionManager _subscriptionManager;
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _subscriptionManager = SubscriptionManager();
-    _initializeSubscription();
+    _checkPremiumStatus();
   }
 
-  Future<void> _initializeSubscription() async {
-    await _subscriptionManager.initialize();
-    final isPremium = await _subscriptionManager.isPremiumUser();
-    
-    if (mounted) {
-      setState(() {
-        isPremiumUser = isPremium;
-      });
+  Future<void> _checkPremiumStatus() async {
+    try {
+      final isPremium = await CollaborateurUtil.isPremiumUser();
+      
+      if (mounted) {
+        setState(() {
+          isPremiumUser = isPremium;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Erreur lors de la vérification du statut Premium: $e');
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -178,7 +186,7 @@ class _EtatVehiculeState extends State<EtatVehicule> {
         ),
         const SizedBox(height: 10),
         ElevatedButton.icon(
-          onPressed: isPremiumUser ? _pickImage : _showPremiumDialog,
+          onPressed: isLoading ? null : isPremiumUser ? _pickImage : _showPremiumDialog,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
             minimumSize: const Size(double.infinity, 50),

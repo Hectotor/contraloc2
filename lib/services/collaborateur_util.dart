@@ -215,4 +215,29 @@ class CollaborateurUtil {
       throw e;
     }
   }
+
+  /// Vérifie si l'utilisateur (ou son administrateur) a un abonnement premium
+  /// Cette méthode remplace SubscriptionManager.isPremiumUser()
+  static Future<bool> isPremiumUser() async {
+    final userData = await getAuthData();
+    
+    if (userData.isEmpty) {
+      // Vérifier si c'est un collaborateur sans accès aux données d'authentification
+      final status = await checkCollaborateurStatus();
+      if (status['isCollaborateur'] == true) {
+        print('👥 Collaborateur détecté, accès premium accordé par défaut');
+        return true; // Accorder l'accès premium aux collaborateurs par défaut
+      }
+      return false;
+    }
+    
+    final subscriptionId = userData['subscriptionId'] ?? 'free';
+    final cb_subscription = userData['cb_subscription'] ?? 'free';
+    
+    // L'utilisateur est premium si l'un des deux abonnements est premium
+    return subscriptionId == 'premium-monthly_access' ||
+        subscriptionId == 'premium-yearly_access' ||
+        cb_subscription == 'premium-monthly_access' ||
+        cb_subscription == 'premium-yearly_access';
+  }
 }
