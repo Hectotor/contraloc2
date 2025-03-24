@@ -144,6 +144,14 @@ class _ModifierScreenState extends State<ModifierScreen> {
     );
 
     try {
+      // Récupérer les informations du statut du collaborateur
+      final status = await CollaborateurUtil.checkCollaborateurStatus();
+      final userId = status['userId'];
+      final isCollaborateur = status['isCollaborateur'] == true;
+      final adminId = status['adminId'];
+
+      print('🔄 Mise à jour du contrat - userId: $userId, isCollaborateur: $isCollaborateur, adminId: $adminId');
+
       // Conserver les URLs existantes
       List<String> allPhotosUrls = List<String>.from(_photosRetourUrls);
 
@@ -160,26 +168,43 @@ class _ModifierScreenState extends State<ModifierScreen> {
         signatureRetourBase64 = base64Encode(signatureBytes!);
       }
 
-      // Mettre à jour Firestore avec les informations de retour
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('locations')
-          .doc(widget.contratId)
-          .update({
+      // Préparer les données de mise à jour
+      final updateData = {
+        'status': 'restitue',
         'dateFinEffectif': _dateFinEffectifController.text,
         'commentaireRetour': _commentaireRetourController.text,
         'kilometrageRetour': _kilometrageRetourController.text.isNotEmpty
             ? _kilometrageRetourController.text
             : null,
         'photosRetourUrls': allPhotosUrls,
-        // Ajouter ces trois champs
         'nettoyageInt': _nettoyageIntController.text,
         'nettoyageExt': _nettoyageExtController.text,
         'carburantManquant': _carburantManquantController.text,
-        // Ajouter la signature de retour
         'signature_retour': signatureRetourBase64,
-      });
+      };
+
+      // Mettre à jour Firestore avec les informations de retour
+      if (isCollaborateur && adminId != null) {
+        // Si c'est un collaborateur, utiliser la collection de l'admin
+        await CollaborateurUtil.updateDocument(
+          collection: 'users',
+          docId: adminId,
+          subCollection: 'locations',
+          subDocId: widget.contratId,
+          data: updateData,
+          useAdminId: true,
+        );
+        print('✅ Contrat mis à jour dans la collection de l\'admin: $adminId');
+      } else {
+        // Si c'est un admin, utiliser sa propre collection
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('locations')
+            .doc(widget.contratId)
+            .update(updateData);
+        print('✅ Contrat mis à jour dans la collection de l\'utilisateur: $userId');
+      }
 
       // Fermer le dialogue de chargement
       if (context.mounted) {

@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../utils/pdf.dart';
 import '../CREATION DE CONTRAT/mail.dart';
 import '../../USERS/contrat_condition.dart';
+import '../../services/collaborateur_util.dart'; // Importer CollaborateurUtil
 
 class RetourEnvoiePdf {
   static Future<void> genererEtEnvoyerPdfCloture({
@@ -199,17 +200,49 @@ class RetourEnvoiePdf {
         print("Aucun email client n'a été trouvé. Pas d'envoi de PDF.");
       }
 
+      // Récupérer les informations du statut du collaborateur
+      final status = await CollaborateurUtil.checkCollaborateurStatus();
+      final userId = status['userId'];
+      final isCollaborateur = status['isCollaborateur'] == true;
+      final adminId = status['adminId'];
+
+      print('🔄 Mise à jour du statut du contrat - userId: $userId, isCollaborateur: $isCollaborateur, adminId: $adminId');
+
       // Mise à jour du statut du contrat
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('locations')
-          .doc(contratId)
-          .update({
-        'status': 'restitue',
-        'dateRestitution': FieldValue.serverTimestamp(),
-        'pdfClotureSent': true,
-      });
+      try {
+        if (isCollaborateur && adminId != null) {
+          // Si c'est un collaborateur, utiliser la collection de l'admin
+          await CollaborateurUtil.updateDocument(
+            collection: 'users',
+            docId: adminId,
+            subCollection: 'locations',
+            subDocId: contratId,
+            data: {
+              'status': 'restitue',
+              'dateRestitution': FieldValue.serverTimestamp(),
+              'pdfClotureSent': true,
+            },
+            useAdminId: true,
+          );
+          print('✅ Statut du contrat mis à jour dans la collection de l\'admin: $adminId');
+        } else {
+          // Si c'est un admin, utiliser sa propre collection
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .collection('locations')
+              .doc(contratId)
+              .update({
+            'status': 'restitue',
+            'dateRestitution': FieldValue.serverTimestamp(),
+            'pdfClotureSent': true,
+          });
+          print('✅ Statut du contrat mis à jour dans la collection de l\'utilisateur: $userId');
+        }
+      } catch (e) {
+        print('❌ Erreur lors de la mise à jour du statut du contrat: $e');
+        throw Exception('Erreur lors de la mise à jour du statut du contrat: $e');
+      }
 
       // Afficher un message de succès
       ScaffoldMessenger.of(context).showSnackBar(

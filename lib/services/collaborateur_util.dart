@@ -396,34 +396,69 @@ class CollaborateurUtil {
         .snapshots();
   }
 
-  /// Fonction utilitaire pour exécuter une requête Firestore avec retentative (backoff)
-  /// en cas d'erreur temporaire de connectivité
-  static Future<T> _executeWithRetry<T>({
-    required Future<T> Function() operation,
-    int maxRetries = 5,
-    Duration initialDelay = const Duration(seconds: 1),
+  /// Met à jour un document dans une collection spécifique
+  /// Pour un collaborateur, utilise l'ID de l'administrateur si nécessaire
+  /// Paramètres:
+  /// - collection: Nom de la collection principale (ex: 'users')
+  /// - docId: ID du document dans la collection principale
+  /// - subCollection: Nom de la sous-collection (optionnel)
+  /// - subDocId: ID du document dans la sous-collection (optionnel)
+  /// - data: Données à mettre à jour
+  /// - useAdminId: Si true et que l'utilisateur est un collaborateur, utilise l'ID de l'admin
+  static Future<void> updateDocument({
+    required String collection,
+    required String docId,
+    String? subCollection,
+    String? subDocId,
+    required Map<String, dynamic> data,
+    bool useAdminId = false,
   }) async {
-    int attempts = 0;
-    Duration delay = initialDelay;
+    final status = await checkCollaborateurStatus();
+    final userId = status['userId'];
+    final isCollaborateur = status['isCollaborateur'] == true;
     
-    while (true) {
-      try {
-        attempts++;
-        return await operation();
-      } catch (e) {
-        final isUnavailable = e.toString().contains('unavailable') || 
-                             e.toString().contains('network error') ||
-                             e.toString().contains('timeout');
-        
-        if (!isUnavailable || attempts >= maxRetries) {
-          print("❌ Erreur après $attempts tentatives: $e");
-          rethrow; // Relancer l'erreur si ce n'est pas une erreur de connectivité ou si max retries atteint
-        }
-        
-        print("⚠️ Tentative $attempts échouée, nouvelle tentative dans ${delay.inMilliseconds}ms: $e");
-        await Future.delayed(delay);
-        delay *= 2; // Backoff exponentiel
+    if (userId == null) {
+      throw Exception('Utilisateur non connecté');
+    }
+    
+    // Vérifier les permissions d'écriture pour les collaborateurs
+    if (isCollaborateur) {
+      final hasPermission = await checkCollaborateurPermission('ecriture');
+      if (!hasPermission) {
+        throw Exception('Permission d\'écriture refusée pour ce collaborateur');
       }
+    }
+    
+    // Déterminer l'ID à utiliser
+    final targetId = (useAdminId && isCollaborateur) 
+        ? status['adminId'] 
+        : userId;
+    
+    if (targetId == null) {
+      throw Exception('ID cible non disponible');
+    }
+    
+    try {
+      // Construire la référence au document
+      DocumentReference docRef = _firestore.collection(collection).doc(docId);
+      
+      // Ajouter la sous-collection si nécessaire
+      if (subCollection != null) {
+        docRef = docRef.collection(subCollection).doc(subDocId ?? docId);
+      }
+      
+      // Utiliser _executeWithRetry pour gérer les erreurs de connectivité
+      await _executeWithRetry(
+        operation: () async {
+          print('📝 Mise à jour du document: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
+          await docRef.update(data);
+          print('✅ Document mis à jour avec succès');
+          return true;
+        },
+      );
+    } catch (e) {
+      print('❌ Erreur mise à jour document: $e');
+      throw e;
     }
   }
 
@@ -494,6 +529,37 @@ class CollaborateurUtil {
     } catch (e) {
       print("❌ Erreur lors de la vérification des permissions: $e");
       return false;
+    }
+  }
+
+  /// Fonction utilitaire pour exécuter une requête Firestore avec retentative (backoff)
+  /// en cas d'erreur temporaire de connectivité
+  static Future<T> _executeWithRetry<T>({
+    required Future<T> Function() operation,
+    int maxRetries = 5,
+    Duration initialDelay = const Duration(seconds: 1),
+  }) async {
+    int attempts = 0;
+    Duration delay = initialDelay;
+    
+    while (true) {
+      try {
+        attempts++;
+        return await operation();
+      } catch (e) {
+        final isUnavailable = e.toString().contains('unavailable') || 
+                             e.toString().contains('network error') ||
+                             e.toString().contains('timeout');
+        
+        if (!isUnavailable || attempts >= maxRetries) {
+          print("❌ Erreur après $attempts tentatives: $e");
+          rethrow; // Relancer l'erreur si ce n'est pas une erreur de connectivité ou si max retries atteint
+        }
+        
+        print("⚠️ Tentative $attempts échouée, nouvelle tentative dans ${delay.inMilliseconds}ms: $e");
+        await Future.delayed(delay);
+        delay *= 2; // Backoff exponentiel
+      }
     }
   }
 }

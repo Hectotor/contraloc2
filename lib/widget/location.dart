@@ -118,7 +118,6 @@ class _LocationPageState extends State<LocationPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       // Déterminer si l'utilisateur est un collaborateur
-      String userDocId = user.uid;
       String adminId = user.uid; // Par défaut, l'utilisateur est considéré comme admin
       
       // Vérifier si l'utilisateur est un collaborateur
