@@ -8,6 +8,8 @@ import '../screens/login.dart'; // Import de l'écran de connexion si l'utilisat
 import '../USERS/tampon.dart';
 import '../USERS/logo.dart';
 import '../USERS/admin_logo_widget.dart'; // Import du nouveau widget pour le logo admin
+import '../USERS/admin_info_widget.dart'; // Import du nouveau widget pour les infos admin
+import '../USERS/admin_tampon_widget.dart'; // Import du nouveau widget pour le tampon admin
 import '../USERS/question_user.dart'; // Import the question user screen
 import '../USERS/abonnement_screen.dart'; // Add this import
 import '../USERS/supprimer_compte.dart'; // Import du fichier supprimer_compte.dart
@@ -364,139 +366,172 @@ class _UserScreenState extends State<UserScreen> {
                         currentUser: currentUser,
                       ),
                       const SizedBox(height: 20),
-                      _buildTextField(
-                          "Nom de l'entreprise", _nomEntrepriseController, true,
-                          icon: Icons.business),
-                      _buildTextField("Nom", _nomController, true,
-                          icon: Icons.person),
-                      _buildTextField("Prénom", _prenomController, true,
-                          icon: Icons.person_outline),
-                      _buildTextField("Email", _emailController, false,
-                          isReadOnly: true, icon: Icons.email),
-                      _buildTextField("Téléphone", _telephoneController, true,
-                          icon: Icons.phone),
-                      _buildTextField("Adresse", _adresseController, true,
-                          icon: Icons.location_on),
-                      _buildTextField("Numéro SIRET", _siretController, false,
-                          icon: Icons.business_center),
+                      
+                      // Afficher les informations de l'administrateur pour les collaborateurs
+                      if (_isCollaborateur)
+                        const AdminInfoWidget(
+                          showTitle: true,
+                          padding: EdgeInsets.only(bottom: 20),
+                        ),
+                        
+                      // Afficher les champs de texte modifiables uniquement pour les administrateurs
+                      if (!_isCollaborateur) ...[
+                        _buildTextField(
+                            "Nom de l'entreprise", _nomEntrepriseController, true,
+                            icon: Icons.business),
+                        _buildTextField("Nom", _nomController, true,
+                            icon: Icons.person),
+                        _buildTextField("Prénom", _prenomController, true,
+                            icon: Icons.person_outline),
+                        _buildTextField("Email", _emailController, false,
+                            isReadOnly: true, icon: Icons.email),
+                        _buildTextField("Téléphone", _telephoneController, true,
+                            icon: Icons.phone),
+                        _buildTextField("Adresse", _adresseController, true,
+                            icon: Icons.location_on),
+                        _buildTextField("Numéro SIRET", _siretController, false,
+                            icon: Icons.business_center),
+                      ],
+                      
+                      // Si c'est un collaborateur, afficher quand même son email
+                      if (_isCollaborateur)
+                        _buildTextField("Email", _emailController, false,
+                            isReadOnly: true, icon: Icons.email),
+                      
                       const SizedBox(height: 10),
-                      Tampon(
-                        logoPath: _logo?.path ?? _logoUrl ?? '',
-                        nomEntreprise: _nomEntrepriseController.text,
-                        adresse: _adresseController.text,
-                        telephone: _telephoneController.text,
-                        siret: _siretController.text,
-                      ),
+                      
+                      // Afficher le tampon uniquement pour les administrateurs
+                      if (!_isCollaborateur)
+                        Tampon(
+                          logoPath: _logo?.path ?? _logoUrl ?? '',
+                          nomEntreprise: _nomEntrepriseController.text,
+                          adresse: _adresseController.text,
+                          telephone: _telephoneController.text,
+                          siret: _siretController.text,
+                        ),
+                      
+                      // Afficher le tampon de l'administrateur pour les collaborateurs
+                      if (_isCollaborateur)
+                        const AdminTamponWidget(),
+                      
                       const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _updateUserData,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0F056B), // Bleu nuit
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      
+                      // Bouton de mise à jour uniquement pour les administrateurs
+                      if (!_isCollaborateur)
+                        ElevatedButton(
+                          onPressed: _updateUserData,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F056B), // Bleu nuit
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.update, color: Colors.white),
+                              const SizedBox(width: 10),
+                              const Text(
+                                "Mettre à jour",
+                                style: TextStyle(color: Colors.white, fontSize: 18),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.update, color: Colors.white),
-                            const SizedBox(width: 10),
-                            const Text(
-                              "Mettre à jour",
-                              style: TextStyle(color: Colors.white, fontSize: 18),
-                            ),
-                          ],
-                        ),
-                      ),
+                      
                       const SizedBox(height: 50),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ContratModifier(),
+                      
+                      // Boutons visibles uniquement pour les administrateurs
+                      if (!_isCollaborateur) ...[
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ContratModifier(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.edit, color: Colors.white),
+                              const SizedBox(width: 10),
+                              const Text(
+                                "Personnaliser le contrat location",
+                                style: TextStyle(color: Colors.white, fontSize: 18),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.edit, color: Colors.white),
-                            const SizedBox(width: 10),
-                            const Text(
-                              "Personnaliser le contrat location",
-                              style: TextStyle(color: Colors.white, fontSize: 18),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CollaboratorPage(
+                                  adminId: currentUser!.uid,), // Naviguer vers l'écran d'ajout de collaborateur
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.purple,
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CollaboratorPage(
-                                adminId: currentUser!.uid,), // Naviguer vers l'écran d'ajout de collaborateur
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.purple,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.person_add, color: Colors.white),
+                              const SizedBox(width: 10),
+                              const Text(
+                                "Ajouter un collaborateur",
+                                style: TextStyle(color: Colors.white, fontSize: 18),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.person_add, color: Colors.white),
-                            const SizedBox(width: 10),
-                            const Text(
-                              "Ajouter un collaborateur",
-                              style: TextStyle(color: Colors.white, fontSize: 18),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AbonnementScreen(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const AbonnementScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.subscriptions, color: Colors.white),
+                              const SizedBox(width: 10),
+                              const Text(
+                                "Gérer mon Abonnement",
+                                style: TextStyle(color: Colors.white, fontSize: 18),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.subscriptions, color: Colors.white),
-                            const SizedBox(width: 10),
-                            const Text(
-                              "Gérer mon Abonnement",
-                              style: TextStyle(color: Colors.white, fontSize: 18),
-                            ),
-                          ],
-                        ),
-                      ),
+                      ],
                       const SizedBox(height: 50),
                       ElevatedButton(
                         onPressed: _resetPassword,
@@ -554,7 +589,7 @@ class _UserScreenState extends State<UserScreen> {
                         padding: const EdgeInsets.only(top: 20, bottom: 10),
                         child: Text(
                           textAlign: TextAlign.center,
-                          'Version 1.0.9\nFabriqué en France 🇫🇷\nDepuis 2020 - Contraloc.fr',
+                          'Version 1.0.9\nFabriqué en France \nDepuis 2020 - Contraloc.fr',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 12,
