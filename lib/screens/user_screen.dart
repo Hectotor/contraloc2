@@ -4,12 +4,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart'; // Import Firebase Storage
-import '../screens/login.dart'; // Import de l'écran de connexion si l'utilisateur se déconnecte
 import '../USERS/tampon.dart';
 import '../USERS/logo.dart';
 import '../USERS/admin_logo_widget.dart'; // Import du nouveau widget pour le logo admin
 import '../USERS/admin_info_widget.dart'; // Import du nouveau widget pour les infos admin
 import '../USERS/admin_tampon_widget.dart'; // Import du nouveau widget pour le tampon admin
+import '../USERS/popup_deconnexion.dart'; // Import de la classe PopupDeconnexion
+import '../USERS/collaborateur_info_widget.dart'; // Import du widget pour les infos du collaborateur
 import '../USERS/question_user.dart'; // Import the question user screen
 import '../USERS/abonnement_screen.dart'; // Add this import
 import '../USERS/supprimer_compte.dart'; // Import du fichier supprimer_compte.dart
@@ -67,32 +68,43 @@ class _UserScreenState extends State<UserScreen> {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser != null) {
-        final userDoc = await _firestore
-            .collection('users')
-            .doc(currentUser.uid)
-            .collection('authentification')
-            .doc(currentUser.uid)
-            .get();
-
-        if (userDoc.exists) {
-          final data = userDoc.data() as Map<String, dynamic>;
-          setState(() {
-            _nomController.text = data['nom'] ?? '';
-            _prenomController.text = data['prenom'] ?? '';
-            _emailController.text = data['email'] ?? '';
-            _telephoneController.text = data['telephone'] ?? '';
-            _adresseController.text = data['adresse'] ?? '';
-            _siretController.text = data['siret'] ?? '';
-            _logoUrl = data['logoUrl'] as String?;
-            _isUserDataLoaded = true; // Set the flag to true after loading data
-          });
-        }
-
         // Vérifier si l'utilisateur est un collaborateur
         final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
+        final isCollaborateur = collaborateurStatus['isCollaborateur'] == true;
+        
         setState(() {
-          _isCollaborateur = collaborateurStatus['isCollaborateur'] == true;
+          _isCollaborateur = isCollaborateur;
         });
+        
+        if (!isCollaborateur) {
+          // Chargement normal pour un administrateur
+          final userDoc = await _firestore
+              .collection('users')
+              .doc(currentUser.uid)
+              .collection('authentification')
+              .doc(currentUser.uid)
+              .get();
+
+          if (userDoc.exists) {
+            final data = userDoc.data() as Map<String, dynamic>;
+            setState(() {
+              _nomController.text = data['nom'] ?? '';
+              _prenomController.text = data['prenom'] ?? '';
+              _emailController.text = data['email'] ?? '';
+              _telephoneController.text = data['telephone'] ?? '';
+              _adresseController.text = data['adresse'] ?? '';
+              _siretController.text = data['siret'] ?? '';
+              _logoUrl = data['logoUrl'] as String?;
+              _isUserDataLoaded = true; // Set the flag to true after loading data
+            });
+          }
+        } else {
+          // Pour les collaborateurs, marquer simplement les données comme chargées
+          // car le widget CollaborateurInfoWidget se charge de les récupérer
+          setState(() {
+            _isUserDataLoaded = true;
+          });
+        }
       }
     } catch (e) {
       print('DEBUG - Error loading user data: $e');
@@ -188,23 +200,6 @@ class _UserScreenState extends State<UserScreen> {
     }
   }
 
-  // Méthode pour déconnecter l'utilisateur
-  Future<void> _logout() async {
-    try {
-      await _auth.signOut();
-      // Suppression de Purchases.logOut() ici, car nous ne voulons pas déconnecter RevenueCat
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginPage()),
-        (route) => false,
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erreur : $e")),
-      );
-    }
-  }
-
   // Méthode pour choisir une image de logo
 
   // Méthode pour uploader le logo sur Firebase Storage
@@ -232,64 +227,6 @@ class _UserScreenState extends State<UserScreen> {
 
   // Méthode pour supprimer le logo
 
-  Future<void> _showLogoutConfirmationDialog() async {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white, // Ajout ici
-        title: const Text(
-          "Confirmation de déconnexion",
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF08004D),
-          ),
-        ),
-        content: const Text(
-          "Êtes-vous sûr de vouloir vous déconnecter ?",
-          style: TextStyle(
-            fontSize: 18,
-            color: Colors.black87,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              "Annuler",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF08004D),
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _logout();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text(
-              "Se déconnecter",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -316,7 +253,7 @@ class _UserScreenState extends State<UserScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: _showLogoutConfirmationDialog, // Modification ici
+            onPressed: () => PopupDeconnexion.showLogoutConfirmationDialog(context),
           ),
         ],
       ),
@@ -374,6 +311,13 @@ class _UserScreenState extends State<UserScreen> {
                           padding: EdgeInsets.only(bottom: 20),
                         ),
                         
+                      // Afficher les informations personnelles du collaborateur
+                      if (_isCollaborateur)
+                        const CollaborateurInfoWidget(
+                          showTitle: true,
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                        ),
+                      
                       // Afficher les champs de texte modifiables uniquement pour les administrateurs
                       if (!_isCollaborateur) ...[
                         _buildTextField(
@@ -392,11 +336,6 @@ class _UserScreenState extends State<UserScreen> {
                         _buildTextField("Numéro SIRET", _siretController, false,
                             icon: Icons.business_center),
                       ],
-                      
-                      // Si c'est un collaborateur, afficher quand même son email
-                      if (_isCollaborateur)
-                        _buildTextField("Email", _emailController, false,
-                            isReadOnly: true, icon: Icons.email),
                       
                       const SizedBox(height: 10),
                       

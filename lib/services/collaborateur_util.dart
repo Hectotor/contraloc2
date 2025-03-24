@@ -385,6 +385,17 @@ class CollaborateurUtil {
         cb_subscription == 'premium-yearly_access';
   }
 
+  /// Récupère les contrats de l'administrateur avec un statut spécifique
+  /// Cette méthode est utilisée par les collaborateurs pour accéder aux contrats de leur admin
+  static Stream<QuerySnapshot> getAdminContrats(String adminId, String status) {
+    return _firestore
+        .collection('users')
+        .doc(adminId)
+        .collection('contrats')
+        .where('status', isEqualTo: status)
+        .snapshots();
+  }
+
   /// Fonction utilitaire pour exécuter une requête Firestore avec retentative (backoff)
   /// en cas d'erreur temporaire de connectivité
   static Future<T> _executeWithRetry<T>({
