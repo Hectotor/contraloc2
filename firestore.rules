@@ -1,30 +1,88 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Fonctions d'aide
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isCollaborateur(adminId) {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'collaborateur' && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.adminId == adminId;
+    }
+    
+    function isAuthorized(userId) {
+      return isOwner(userId) ||
+        exists(/databases/$(database)/documents/users/$(userId)/collaborateurs/$(request.auth.uid)) ||
+        exists(/databases/$(database)/documents/collaborateurs_data/$(request.auth.uid));
+    }
+    
+    function isCollaborateurOf(adminId) {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'collaborateur' && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.adminId == adminId;
+    }
+    
     // Permettre la lecture des clés API RevenueCat sans authentification
     match /api_keys/{docId} {
       allow read: if true;
       allow write: if false;
     }
     
-    // Règles existantes pour les autres collections
-    match /users/{userId}/authentification/{docId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Gestion des utilisateurs et de leurs sous-collections
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && isOwner(userId);
+      // Permettre aux collaborateurs de lire le document principal de leur administrateur
+      allow read: if isAuthenticated() && isCollaborateurOf(userId);
+
+      // Gestion des collaborateurs sous un admin
+      match /collaborateurs/{collaborateurId} {
+        allow read, write: if isAuthenticated() && isOwner(userId);
+      }
+
+      // Gestion des véhicules (accessible aux collaborateurs)
+      match /vehicules/{vehiculeId} {
+        allow read, write: if isAuthenticated() && isAuthorized(userId);
+      }
+
+      // Gestion des locations (accessible aux collaborateurs)
+      match /locations/{locationId} {
+        allow read, write: if isAuthenticated() && isAuthorized(userId);
+      }
+      
+      // Permettre aux collaborateurs d'accéder au document d'authentification de leur administrateur
+      match /authentification/{authId} {
+        allow read, write: if isAuthenticated() && isOwner(userId);
+        // Permettre l'accès en lecture seule pour les collaborateurs
+        allow read: if isAuthenticated() && isCollaborateurOf(userId);
+      }
     }
 
-    match /users/{userId}/authentification/{authId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+    // Accès aux paramètres de contact (lecture seulement)
+    match /contactSettings/{document} {
+      allow read: if isAuthenticated();
     }
-    
-    match /contactSettings/{document=**} {
-      allow read: if request.auth != null;
+
+    // Accès aux paramètres SMTP (admin uniquement)
+    match /admin/smtpSettings {
+      allow read: if isAuthenticated();
     }
-    
-    // Gestion des collaborateurs sous un admin
-    match /collaborateurs/{collaborateurId} {
+
+    // Permettre l'accès à toutes les sous-collections d'un utilisateur
+    match /users/{userId}/{document=**} {
       allow read, write: if isAuthenticated() && isOwner(userId);
     }
-    
+
+    // Gestion des contrats (lecture seulement)
+    match /contrats/{docId} {
+      allow read: if isAuthenticated();
+    }
+
     // Règle par défaut - refuser tout accès non explicitement autorisé
     match /{document=**} {
       allow read, write: if false;

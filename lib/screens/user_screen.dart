@@ -7,11 +7,13 @@ import 'package:firebase_storage/firebase_storage.dart'; // Import Firebase Stor
 import '../screens/login.dart'; // Import de l'écran de connexion si l'utilisateur se déconnecte
 import '../USERS/tampon.dart';
 import '../USERS/logo.dart';
+import '../USERS/admin_logo_widget.dart'; // Import du nouveau widget pour le logo admin
 import '../USERS/question_user.dart'; // Import the question user screen
 import '../USERS/abonnement_screen.dart'; // Add this import
 import '../USERS/supprimer_compte.dart'; // Import du fichier supprimer_compte.dart
 import '../USERS/contrat_condition.dart'; // Correct import for the contrat condition screen
 import '../USERS/collaborator/collaborator.dart'; // Importer le nouveau fichier
+import '../services/collaborateur_util.dart'; // Importer le fichier CollaborateurUtil
 
 class UserScreen extends StatefulWidget {
   const UserScreen({Key? key}) : super(key: key);
@@ -44,6 +46,7 @@ class _UserScreenState extends State<UserScreen> {
   String subscriptionId = 'free'; // Add subscription ID state
 
   bool _isUserDataLoaded = false; // Add a flag to check if user data is loaded
+  bool _isCollaborateur = false; // Add a flag to check if user is collaborator
 
   @override
   void initState() {
@@ -56,36 +59,37 @@ class _UserScreenState extends State<UserScreen> {
 
   // Charger les données utilisateur depuis Firestore
   Future<void> _loadUserData() async {
-    if (_isUserDataLoaded) return; // Return if data is already loaded
-
+    // Si les données sont déjà chargées, ne pas les recharger
+    if (_isUserDataLoaded) return;
+    
     try {
-      final docRef = _firestore
-          .collection('users')
-          .doc(currentUser!.uid)
-          .collection('authentification')
-          .doc(currentUser!.uid);
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('authentification')
+            .doc(currentUser.uid)
+            .get();
 
-      final doc = await docRef.get();
+        if (userDoc.exists) {
+          final data = userDoc.data() as Map<String, dynamic>;
+          setState(() {
+            _nomController.text = data['nom'] ?? '';
+            _prenomController.text = data['prenom'] ?? '';
+            _emailController.text = data['email'] ?? '';
+            _telephoneController.text = data['telephone'] ?? '';
+            _adresseController.text = data['adresse'] ?? '';
+            _siretController.text = data['siret'] ?? '';
+            _logoUrl = data['logoUrl'] as String?;
+            _isUserDataLoaded = true; // Set the flag to true after loading data
+          });
+        }
 
-      if (doc.exists) {
-        final data = doc.data()!;
-
-        // Conserver l'état de l'abonnement dans les données utilisateur
+        // Vérifier si l'utilisateur est un collaborateur
+        final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
         setState(() {
-          // Données de l'abonnement
-          isSubscriptionActive = data['isSubscriptionActive'] ?? false;
-          subscriptionId = data['subscriptionId'] ?? 'free';
-
-          // Autres données utilisateur
-          _nomEntrepriseController.text = data['nomEntreprise'] ?? '';
-          _nomController.text = data['nom'] ?? '';
-          _prenomController.text = data['prenom'] ?? '';
-          _emailController.text = currentUser?.email ?? '';
-          _telephoneController.text = data['telephone'] ?? '';
-          _adresseController.text = data['adresse'] ?? '';
-          _siretController.text = data['siret'] ?? '';
-          _logoUrl = data['logoUrl'] as String?;
-          _isUserDataLoaded = true; // Set the flag to true after loading data
+          _isCollaborateur = collaborateurStatus['isCollaborateur'] == true;
         });
       }
     } catch (e) {
@@ -330,7 +334,9 @@ class _UserScreenState extends State<UserScreen> {
                   key: _formKey,
                   child: Column(
                     children: [
-                      LogoWidget(
+                      _isCollaborateur 
+                      ? const AdminLogoWidget() 
+                      : LogoWidget(
                         initialLogoUrl: _logoUrl,
                         onLogoChanged: (String? newLogoUrl) async {
                           setState(() {
