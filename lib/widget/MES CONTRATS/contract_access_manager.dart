@@ -111,6 +111,55 @@ class ContractAccessManager {
         .snapshots();
   }
   
+  // Méthode pour obtenir le stream des contrats réservés
+  Stream<QuerySnapshot> getReservedContractsStream() {
+    if (!_isInitialized) {
+      initialize();
+    }
+    
+    if (_targetUserId == null) {
+      // Si pas encore initialisé ou erreur, utiliser l'ID de l'utilisateur actuel
+      final currentUserId = _auth.currentUser?.uid;
+      if (currentUserId == null) return Stream.empty();
+      
+      return _firestore
+          .collection('users')
+          .doc(currentUserId)
+          .collection('locations')
+          .where('status', isEqualTo: 'réservé')
+          .orderBy('dateCreation', descending: true)
+          .snapshots();
+    }
+    
+    // Utiliser l'ID cible (admin ou utilisateur actuel)
+    return _firestore
+        .collection('users')
+        .doc(_targetUserId)
+        .collection('locations')
+        .where('status', isEqualTo: 'réservé')
+        .orderBy('dateCreation', descending: true)
+        .snapshots();
+  }
+  
+  // Méthode pour supprimer un contrat réservé
+  Future<void> deleteReservedContract(String contratId) async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+    
+    final effectiveUserId = _targetUserId ?? _auth.currentUser?.uid;
+    if (effectiveUserId == null) {
+      throw Exception("Utilisateur non connecté");
+    }
+    
+    await _firestore
+        .collection('users')
+        .doc(effectiveUserId)
+        .collection('locations')
+        .doc(contratId)
+        .delete();
+  }
+  
   // Méthode pour récupérer les contrats par date
   Future<QuerySnapshot> getContractsByDate(DateTime date) async {
     if (!_isInitialized) {

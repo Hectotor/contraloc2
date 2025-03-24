@@ -1,9 +1,9 @@
 import 'package:ContraLoc/widget/CREATION%20DE%20CONTRAT/client.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:ContraLoc/services/firestore_service.dart';
-import 'package:intl/intl.dart'; // Ajoutez cette ligne en haut de votre fichier
-
+import 'package:intl/intl.dart'; 
+import 'package:ContraLoc/widget/MES%20CONTRATS/vehicle_access_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CalendarScreen extends StatefulWidget {
   @override
@@ -12,7 +12,91 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> {
   String selectedFilter = 'Tous';
-  final Map<String, String?> _photoUrlCache = {}; // Add a cache for photo URLs
+  final Map<String, String?> _photoUrlCache = {}; 
+  late VehicleAccessManager _vehicleAccessManager;
+  String? _targetUserId;
+  bool _isInitialized = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    _vehicleAccessManager = VehicleAccessManager();
+    _initializeAccess();
+  }
+  
+  Future<void> _initializeAccess() async {
+    await _vehicleAccessManager.initialize();
+    _targetUserId = _vehicleAccessManager.getTargetUserId();
+    _isInitialized = true;
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Stream<QuerySnapshot> _getReservedContractsStream() {
+    if (!_isInitialized) {
+      return Stream.fromFuture(
+        Future(() async {
+          await _initializeAccess();
+          
+          final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
+          if (effectiveUserId == null) {
+            return FirebaseFirestore.instance.collection('empty').limit(0).get();
+          }
+          
+          final snapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(effectiveUserId)
+              .collection('locations')
+              .where('status', isEqualTo: 'réservé')
+              .orderBy('dateCreation', descending: true)
+              .get();
+              
+          return snapshot;
+        })
+      ).asyncExpand((snapshot) {
+        final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
+        if (effectiveUserId == null) {
+          return Stream.empty();
+        }
+        
+        return FirebaseFirestore.instance
+            .collection('users')
+            .doc(effectiveUserId)
+            .collection('locations')
+            .where('status', isEqualTo: 'réservé')
+            .orderBy('dateCreation', descending: true)
+            .snapshots();
+      });
+    }
+    
+    final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
+    if (effectiveUserId == null) {
+      return Stream.empty();
+    }
+    
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(effectiveUserId)
+        .collection('locations')
+        .where('status', isEqualTo: 'réservé')
+        .orderBy('dateCreation', descending: true)
+        .snapshots();
+  }
+  
+  Future<void> _deleteReservedContract(String contratId) async {
+    final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
+    if (effectiveUserId == null) {
+      throw Exception("Utilisateur non connecté");
+    }
+    
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(effectiveUserId)
+        .collection('locations')
+        .doc(contratId)
+        .delete();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +110,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
         ),
         child: StreamBuilder<QuerySnapshot>(
-          stream: FirestoreService.getReservedContrats('réservé'),
+          stream: _getReservedContractsStream(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -74,11 +158,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
             final contrats = snapshot.data!.docs;
             
-            // Trier les contrats par date de réservation (du plus ancien au plus récent)
             contrats.sort((a, b) {
               final dateA = (a.data() as Map<String, dynamic>)['dateReservation'] as Timestamp;
               final dateB = (b.data() as Map<String, dynamic>)['dateReservation'] as Timestamp;
-              return dateA.compareTo(dateB); // Ordre croissant
+              return dateA.compareTo(dateB); 
             });
 
             return Column(
@@ -198,7 +281,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       }
 
                       return FutureBuilder<String?>(
-                        future: _getVehiclePhotoUrl(contrat['userId'], data['immatriculation']),
+                        future: _getVehiclePhotoUrl(data['immatriculation']),
                         builder: (context, snapshot) {
                           final photoUrl = snapshot.data;
 
@@ -430,7 +513,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          FirestoreService.deleteReservedContrat(contratId);
+                          _deleteReservedContract(contratId);
                           Navigator.pop(context);
                         },
                         style: ElevatedButton.styleFrom(
@@ -461,22 +544,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Future<String?> _getVehiclePhotoUrl(String userId, String immatriculation) async {
-    final cacheKey = '$userId-$immatriculation';
+  Future<String?> _getVehiclePhotoUrl(String immatriculation) async {
+    final cacheKey = immatriculation;
     if (_photoUrlCache.containsKey(cacheKey)) {
       return _photoUrlCache[cacheKey];
     }
 
-    final vehiculeDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('vehicules')
-        .where('immatriculation', isEqualTo: immatriculation)
-        .get();
+    final vehiculeDoc = await _vehicleAccessManager.getVehicleByImmatriculation(immatriculation);
 
     if (vehiculeDoc.docs.isNotEmpty) {
-      final photoUrl = vehiculeDoc.docs.first.data()['photoVehiculeUrl'] as String?;
-      _photoUrlCache[cacheKey] = photoUrl; // Cache the photo URL
+      final data = vehiculeDoc.docs.first.data();
+      String? photoUrl;
+      
+      if (data != null && data is Map<String, dynamic>) {
+        photoUrl = data['photoVehiculeUrl'] as String?;
+      }
+      
+      _photoUrlCache[cacheKey] = photoUrl;
       return photoUrl;
     }
     return null;
