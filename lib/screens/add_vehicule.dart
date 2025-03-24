@@ -1,13 +1,15 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import '../widget/enregistrer_vehicule.dart';
 import '../services/collaborateur_util.dart';
 import 'package:flutter/services.dart';
 import '../widget/take_picture.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import '../widget/enregistrer_vehicule.dart';
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
@@ -146,13 +148,36 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
         throw Exception("ID cible non disponible");
       }
       
+      // Compresser l'image avant de la télécharger
+      final Uint8List imageBytes = await imageFile.readAsBytes();
+      final Uint8List compressedBytes = await FlutterImageCompress.compressWithList(
+        imageBytes,
+        minHeight: 1024, // Hauteur maximale
+        minWidth: 1024,  // Largeur maximale
+        quality: 70,     // Qualité de compression (0-100)
+      );
+      
       final fileName = '${imageType}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final storageRef = _storage.ref().child(
-          'users/$targetId/vehicules/${_immatriculationController.text}/$fileName');
+      final immatriculation = _immatriculationController.text.isEmpty 
+          ? 'temp_${DateTime.now().millisecondsSinceEpoch}' 
+          : _immatriculationController.text;
+      
+      // Pour les collaborateurs, stocker dans leur propre dossier
+      // Les collaborateurs ont généralement accès à leur propre dossier
+      final String storagePath = status['isCollaborateur'] 
+          ? 'users/${userId}/vehicules/${immatriculation}/${fileName}'
+          : 'users/${targetId}/vehicules/${immatriculation}/${fileName}';
+          
+      final storageRef = _storage.ref().child(storagePath);
 
-      final uploadTask = storageRef.putFile(imageFile);
-      await uploadTask.timeout(const Duration(seconds: 30));
+      // Télécharger les données compressées
+      final uploadTask = storageRef.putData(
+        compressedBytes, 
+        SettableMetadata(contentType: 'image/jpeg')
+      );
+      await uploadTask.timeout(const Duration(seconds: 60));
 
+      // Obtenir l'URL de téléchargement
       return await storageRef.getDownloadURL();
     } catch (e) {
       print('Image upload error: $e');
@@ -279,7 +304,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     }
 
     // Préparer les données du véhicule
-    return {
+    Map<String, dynamic> vehicleData = {
       'userId': user.uid,
       'marque': _marqueController.text,
       'modele': _modeleController.text,
@@ -295,19 +320,21 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       'assuranceNom': _assuranceNomController.text,
       'assuranceNumero': _assuranceNumeroController.text,
       'entretienDate': _entretienDateController.text,
-      'entretienKilometrage': _entretienKilometrageController.text, // Ajouter le kilométrage d'entretien
+      'entretienKilometrage': _entretienKilometrageController.text,
       'entretienNotes': _entretienNotesController.text, // Ajouter les notes d'entretien
       'nettoyageInt': _nettoyageIntController.text,
       'nettoyageExt': _nettoyageExtController.text,
       'carburantManquant': _carburantManquantController.text,
-      'photoVehiculeUrl': photoVoitureUrl ?? '',
-      'photoCarteGriseUrl': photoCarteGriseUrl ?? '',
-      'photoAssuranceUrl': photoAssuranceUrl ?? '',
       'dateCreation': widget.vehicleData != null && widget.vehicleData!['dateCreation'] != null
           ? widget.vehicleData!['dateCreation']
           : FieldValue.serverTimestamp(),
       'dateModification': FieldValue.serverTimestamp(),
+      'photoVehiculeUrl': photoVoitureUrl ?? '',
+      'photoCarteGriseUrl': photoCarteGriseUrl ?? '',
+      'photoAssuranceUrl': photoAssuranceUrl ?? '',
     };
+    
+    return vehicleData;
   }
 
   Future<DocumentReference> _getVehicleDocRef(String docId) async {
