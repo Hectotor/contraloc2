@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:ContraLoc/USERS/abonnement_screen.dart';
-import 'package:ContraLoc/widget/CREATION DE CONTRAT/subscription_manager.dart';
+import 'package:ContraLoc/services/collaborateur_util.dart';
 
 class EtatVehiculeRetour extends StatefulWidget {
   final List<File> photos;
@@ -22,18 +22,16 @@ class EtatVehiculeRetour extends StatefulWidget {
 
 class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
   bool isPremiumUser = false;
-  late SubscriptionManager _subscriptionManager;
 
   @override
   void initState() {
     super.initState();
-    _subscriptionManager = SubscriptionManager();
     _initializeSubscription();
   }
 
   Future<void> _initializeSubscription() async {
-    await _subscriptionManager.initialize();
-    final isPremium = await _subscriptionManager.isPremiumUser();
+    // Vérifier le statut premium via CollaborateurUtil
+    final isPremium = await CollaborateurUtil.isPremiumUser();
     
     if (mounted) {
       setState(() {

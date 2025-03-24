@@ -55,6 +55,8 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   final TextEditingController _assuranceNomController = TextEditingController();
   final TextEditingController _assuranceNumeroController = TextEditingController();
   final TextEditingController _entretienDateController = TextEditingController();
+  final TextEditingController _entretienKilometrageController = TextEditingController(); // Nouveau contrôleur pour le kilométrage d'entretien
+  final TextEditingController _entretienNotesController = TextEditingController(); // Nouveau contrôleur pour les notes d'entretien
   final TextEditingController _carburantManquantController = TextEditingController();
   final TextEditingController _nettoyageIntController = TextEditingController();
   final TextEditingController _nettoyageExtController = TextEditingController();
@@ -89,6 +91,8 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     _assuranceNomController.text = data['assuranceNom'] ?? '';
     _assuranceNumeroController.text = data['assuranceNumero'] ?? '';
     _entretienDateController.text = data['entretienDate'] ?? '';
+    _entretienKilometrageController.text = data['entretienKilometrage'] ?? ''; // Initialiser avec les données existantes
+    _entretienNotesController.text = data['entretienNotes'] ?? ''; // Initialiser avec les données existantes
     _typeCarburant = data['typeCarburant'] ?? 'Essence';
     _boiteVitesses = data['boiteVitesses'] ?? 'Manuelle';
     _nettoyageIntController.text = data['nettoyageInt'] ?? '';
@@ -291,6 +295,8 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       'assuranceNom': _assuranceNomController.text,
       'assuranceNumero': _assuranceNumeroController.text,
       'entretienDate': _entretienDateController.text,
+      'entretienKilometrage': _entretienKilometrageController.text, // Ajouter le kilométrage d'entretien
+      'entretienNotes': _entretienNotesController.text, // Ajouter les notes d'entretien
       'nettoyageInt': _nettoyageIntController.text,
       'nettoyageExt': _nettoyageExtController.text,
       'carburantManquant': _carburantManquantController.text,
@@ -453,6 +459,10 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                       _assuranceNumeroController), 
                   _buildTextField(
                       "Date du prochain entretien", _entretienDateController),
+                  _buildTextField(
+                      "Kilométrage du prochain entretien", _entretienKilometrageController),
+                  _buildNotesField(
+                      "Notes d'entretien", _entretienNotesController),
                   _buildSectionTitle("Ajouter des images"),
                   _buildImagePicker("Photo de la voiture", _carPhoto,
                       () => _pickImage('car')),
@@ -507,7 +517,8 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       "N° téléphone l'assurance",
       "Carburant manquant (€)",
       "Frais de nettoyage intérieur (€)",
-      "Frais de nettoyage extérieur (€)"
+      "Frais de nettoyage extérieur (€)",
+      "Kilométrage du prochain entretien"
     ].contains(label)) {
       keyboardType = keyboardType ?? TextInputType.number;
       suffixIcon = IconButton(
@@ -587,6 +598,36 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           suffixIcon: suffixIcon,
         ),
+      ),
+    );
+  }
+
+  Widget _buildNotesField(String label, TextEditingController controller) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: const TextStyle(fontSize: 16, color: Color(0xFF08004D))),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: controller,
+            maxLines: 5, // Permet d'avoir plusieurs lignes
+            decoration: InputDecoration(
+              hintText: 'Entrez vos notes concernant l\'entretien',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF08004D)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF08004D), width: 2),
+              ),
+              contentPadding: const EdgeInsets.all(16),
+            ),
+          ),
+        ],
       ),
     );
   }

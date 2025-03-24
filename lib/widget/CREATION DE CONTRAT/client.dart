@@ -7,7 +7,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:ContraLoc/USERS/abonnement_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:ContraLoc/widget/CREATION%20DE%20CONTRAT/subscription_manager.dart'; // Import du gestionnaire d'abonnement
+import 'package:ContraLoc/services/collaborateur_util.dart'; // Import de l'utilitaire collaborateur
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
@@ -50,12 +50,10 @@ class _ClientPageState extends State<ClientPage> {
   File? _permisRecto;
   File? _permisVerso;
   bool isPremiumUser = false; // Nouvelle propriété
-  late SubscriptionManager _subscriptionManager; // Instance du gestionnaire d'abonnement
 
   @override
   void initState() {
     super.initState();
-    _subscriptionManager = SubscriptionManager(); // Initialiser le gestionnaire d'abonnement
     _initializeSubscription(); // Initialiser et vérifier le statut d'abonnement
     if (widget.contratId != null) {
       _loadClientData();
@@ -64,8 +62,8 @@ class _ClientPageState extends State<ClientPage> {
 
   // Méthode pour initialiser et vérifier le statut d'abonnement
   Future<void> _initializeSubscription() async {
-    await _subscriptionManager.initialize(); // Initialiser le gestionnaire
-    final isPremium = await _subscriptionManager.isPremiumUser(); // Vérifier le statut premium
+    // Vérifier le statut premium via CollaborateurUtil
+    final isPremium = await CollaborateurUtil.isPremiumUser();
     
     if (mounted) {
       setState(() {

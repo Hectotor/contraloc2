@@ -117,9 +117,24 @@ class _LocationPageState extends State<LocationPage> {
   Future<void> _fetchVehicleData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      // Déterminer si l'utilisateur est un collaborateur
+      String userDocId = user.uid;
+      String adminId = user.uid; // Par défaut, l'utilisateur est considéré comme admin
+      
+      // Vérifier si l'utilisateur est un collaborateur
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final userData = userDoc.data();
+      
+      if (userData != null && userData['role'] == 'collaborateur' && userData['adminId'] != null) {
+        // Si c'est un collaborateur, utiliser l'ID de l'admin
+        adminId = userData['adminId'];
+        print('Utilisateur collaborateur détecté, utilisation de l\'adminId: $adminId');
+      }
+      
+      // Récupérer les données du véhicule dans la collection de l'admin
       final vehiculeDoc = await _firestore
           .collection('users')
-          .doc(user.uid)
+          .doc(adminId)
           .collection('vehicules')
           .where('immatriculation', isEqualTo: widget.immatriculation)
           .get();
@@ -145,9 +160,10 @@ class _LocationPageState extends State<LocationPage> {
           String fetchedTypeLocation = vehicleData['typeLocation'] ?? 'Gratuite';
           _typeLocationController.text = fetchedTypeLocation;
         });
+      } else {
+        print('Aucun véhicule trouvé avec l\'immatriculation: ${widget.immatriculation}');
       }
     }
-
   }
 
   Future<void> _selectDateTime(TextEditingController controller) async {
