@@ -6,6 +6,7 @@ import '../widget/CREATION DE CONTRAT/client.dart'; // Assurez-vous que ce fichi
 import '../utils/animation.dart';
 import '../services/collaborateur_util.dart'; // Import du nouveau fichier
 import '../widget/MES CONTRATS/vehicle_access_manager.dart'; // Import du gestionnaire d'accès aux véhicules
+import '../services/connectivity_service.dart'; // Import du service de connectivité
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -24,6 +25,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isUserDataLoaded = false; // Variable pour suivre si les données utilisateur sont chargées
   late VehicleAccessManager _vehicleAccessManager; // Instance de notre gestionnaire d'accès aux véhicules
   bool _isVehicleManagerInitialized = false; // Variable pour suivre si le gestionnaire est initialisé
+  
+  // Service de connectivité
+  final ConnectivityService _connectivityService = ConnectivityService();
 
   @override
   void initState() {
@@ -36,6 +40,11 @@ class _HomeScreenState extends State<HomeScreen> {
     // Charger les données utilisateur et initialiser le gestionnaire de véhicules
     _initializeData();
     _setupSubscriptionCheck();
+    
+    // Initialiser le service de connectivité
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectivityService.initialize(context);
+    });
   }
   
   // Méthode pour charger les données utilisateur avec CollaborateurUtil
@@ -51,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      print('❌ Erreur lors du chargement des données utilisateur: $e');
+      print(' Erreur lors du chargement des données utilisateur: $e');
       if (mounted) {
         setState(() {
           _prenom = '';
@@ -77,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      print('❌ Erreur lors de l\'initialisation des données: $e');
+      print(' Erreur lors de l\'initialisation des données: $e');
       if (mounted) {
         setState(() {
           _isUserDataLoaded = true; // Marquer comme chargé même en cas d'erreur
@@ -114,19 +123,20 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _searchController.dispose(); // Libérer les ressources du contrôleur
+    _connectivityService.dispose(); // Arrêter le service de connectivité
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Modification ici
+      backgroundColor: Colors.white, 
       appBar: AppBar(
         title: _showSearchBar
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
-                cursorColor: Colors.white, // Définir la couleur du curseur en blanc
+                cursorColor: Colors.white, 
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'Rechercher un véhicule...',
@@ -156,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(
                     color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
               ),
-        backgroundColor: const Color(0xFF08004D), // Bleu nuit plus foncé
+        backgroundColor: const Color(0xFF08004D), 
         centerTitle: true,
         elevation: 0,
         actions: [
@@ -175,11 +185,10 @@ class _HomeScreenState extends State<HomeScreen> {
       body: !_isUserDataLoaded || !_isVehicleManagerInitialized 
           ? const Center(child: CircularProgressIndicator()) 
           : StreamBuilder<QuerySnapshot>(
-        stream: _vehicleAccessManager.getVehiclesStream(), // Utiliser le stream fourni par VehicleAccessManager
+        stream: _vehicleAccessManager.getVehiclesStream(), 
         builder: (context, snapshot) {
           // Gérer les différents états de connexion
           if (snapshot.connectionState == ConnectionState.waiting) {
-            // Pendant le chargement initial, afficher un indicateur de chargement
             return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -193,9 +202,8 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
           
-          // En cas d'erreur, afficher un message d'erreur
           if (snapshot.hasError) {
-            print('❌ Erreur dans le stream des véhicules: ${snapshot.error}');
+            print(' Erreur dans le stream des véhicules: ${snapshot.error}');
             return Center(
               child: Text(
                 'Erreur lors du chargement des véhicules',
@@ -206,7 +214,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
           final vehicles = snapshot.data?.docs ?? [];
 
-          // Uniquement afficher l'écran vide si nous avons reçu des données et qu'elles sont vides
           if (vehicles.isEmpty && snapshot.connectionState == ConnectionState.active) {
             return Stack(
               children: [
@@ -264,7 +271,6 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
 
-          // Filtrer les véhicules si une recherche est active
           List<QueryDocumentSnapshot> filteredVehicles = vehicles;
           if (_isSearching && _searchQuery.isNotEmpty) {
             filteredVehicles = vehicles.where((vehicle) {
@@ -313,10 +319,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     return GestureDetector(
                       onTap: () async {
-                        // Utiliser le gestionnaire d'accès aux véhicules pour récupérer le document
                         final doc = await _vehicleAccessManager.getVehicleDocument(vehicle.id);
 
-                        // Vérifier si le widget est toujours monté avant de naviguer
                         if (!mounted) return;
 
                         if (doc.exists) {
@@ -347,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        color: Colors.white, // Set background color to white
+                        color: Colors.white, 
                         child: Column(
                           children: [
                             Expanded(
@@ -432,7 +436,6 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
       ),
-      // Suppression du floatingActionButton
     );
   }
 }
