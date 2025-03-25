@@ -1,0 +1,48 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Fonctions de base
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Règle pour les fichiers des véhicules (pour tous les utilisateurs authentifiés)
+    match /users/{userId}/vehicules/{immatriculation}/{fileName} {
+      // Autoriser la lecture/écriture/suppression pour tous les utilisateurs authentifiés
+      // La vérification des permissions est faite côté application
+      allow read, write, delete: if isAuthenticated();
+    }
+    
+    // Règles pour les photos des véhicules (pour tous les utilisateurs authentifiés)
+    match /users/{adminId}/locations/{contratId}/{allPaths=**} {
+      // Autoriser la lecture/écriture/suppression pour tous les utilisateurs authentifiés
+      // La vérification des permissions est faite côté application
+      allow read, write, delete: if isAuthenticated();
+    }
+    
+    // Règles pour les logos (pour tous les utilisateurs authentifiés)
+    match /users/{adminId}/logos/{fileName} {
+      // Autoriser la lecture/écriture/suppression pour tous les utilisateurs authentifiés
+      // La vérification des permissions est faite côté application
+      allow read, write, delete: if isAuthenticated();
+    }
+    
+    // Règles pour les contrats
+    match /contrats/{userId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /users/{userId}/contrats/{fileName} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Règle par défaut : refuser l'accès à tous les fichiers non explicitement autorisés
+    match /{allPaths=**} {
+      allow read, write, delete: if false;
+    }
+  }
+}

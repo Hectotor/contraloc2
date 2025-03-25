@@ -467,6 +467,8 @@ class CollaborateurUtil {
   /// - permissionType: 'lecture', 'ecriture', ou 'suppression'
   static Future<bool> checkCollaborateurPermission(String permissionType) async {
     try {
+      print("🔍 Vérification de la permission '$permissionType'");
+      
       // Utiliser la fonction avec retentative pour vérifier le statut
       final status = await _executeWithRetry(
         operation: () => checkCollaborateurStatus(),
@@ -474,11 +476,15 @@ class CollaborateurUtil {
       
       // Si l'utilisateur n'est pas un collaborateur, on retourne true (admin a toutes les permissions)
       if (status['isCollaborateur'] != true) {
+        print("👑 Utilisateur admin: toutes les permissions accordées");
         return true;
       }
       
       final userId = status['userId'];
       final adminId = status['adminId'];
+      
+      print("👤 Vérification des permissions pour le collaborateur: $userId");
+      print("👥 Admin associé: $adminId");
       
       if (userId == null || adminId == null) {
         print("❌ Identifiants manquants pour la vérification des permissions");
@@ -487,6 +493,7 @@ class CollaborateurUtil {
       
       // Récupérer les données du collaborateur depuis son propre document user avec retentative
       // Cette approche respecte les règles de sécurité Firestore
+      print("📄 Tentative de récupération des permissions depuis le document utilisateur");
       final userDoc = await _executeWithRetry(
         operation: () => _firestore.collection('users').doc(userId).get(),
       );
@@ -501,31 +508,44 @@ class CollaborateurUtil {
       if (permissions == null) {
         print("❌ Permissions non définies dans le document utilisateur");
         
-        // Essayer de récupérer depuis la collection collaborateurs si on a les droits
+        // Essayer de récupérer depuis la collection authentification si on a les droits
         try {
+          print("📄 Tentative de récupération des permissions depuis la collection authentification");
+          print("📄 Chemin: /users/$adminId/authentification/$userId");
+          
           final collaborateurDoc = await _executeWithRetry(
             operation: () => _firestore
                 .collection('users')
                 .doc(adminId)
-                .collection('collaborateurs')
+                .collection('authentification')
                 .doc(userId)
                 .get(),
           );
           
           if (collaborateurDoc.exists) {
+            print("✅ Document collaborateur trouvé dans la collection authentification");
             final collabPermissions = collaborateurDoc.data()?['permissions'];
             if (collabPermissions != null) {
-              return collabPermissions[permissionType] == true;
+              final hasPermission = collabPermissions[permissionType] == true;
+              print("🔑 Permission '$permissionType': ${hasPermission ? 'OUI' : 'NON'}");
+              print("📋 Toutes les permissions: $collabPermissions");
+              return hasPermission;
+            } else {
+              print("❌ Champ 'permissions' non trouvé dans le document collaborateur");
             }
+          } else {
+            print("❌ Document collaborateur non trouvé dans la collection authentification");
           }
         } catch (e) {
-          print("⚠️ Impossible d'accéder aux permissions dans la collection collaborateurs: $e");
+          print("⚠️ Impossible d'accéder aux permissions dans la collection authentification: $e");
         }
         
         return false;
       }
       
-      return permissions[permissionType] == true;
+      final hasPermission = permissions[permissionType] == true;
+      print("🔑 Permission '$permissionType' depuis document utilisateur: ${hasPermission ? 'OUI' : 'NON'}");
+      return hasPermission;
     } catch (e) {
       print("❌ Erreur lors de la vérification des permissions: $e");
       return false;

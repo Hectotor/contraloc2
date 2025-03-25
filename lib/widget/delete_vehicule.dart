@@ -223,6 +223,34 @@ class DeleteVehicule {
           fileUrl.isNotEmpty &&
           (fileUrl.startsWith('gs://') ||
               fileUrl.startsWith('https://firebasestorage.googleapis.com'))) {
+        
+        // Vérifier le statut du collaborateur
+        final status = await CollaborateurUtil.checkCollaborateurStatus();
+        final userId = status['userId'];
+        final isCollaborateur = status['isCollaborateur'] == true;
+        
+        if (userId == null) {
+          print("❌ Utilisateur non connecté");
+          return;
+        }
+        
+        // Pour les collaborateurs, vérifier les permissions de suppression
+        if (isCollaborateur) {
+          final hasDeletePermission = await CollaborateurUtil.checkCollaborateurPermission('suppression');
+          if (!hasDeletePermission) {
+            print("❌ Permission de suppression refusée pour ce collaborateur");
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Vous n'avez pas la permission de supprimer les photos des véhicules."),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+        }
+        
         final ref = _storage.refFromURL(fileUrl);
         await ref.delete();
       }

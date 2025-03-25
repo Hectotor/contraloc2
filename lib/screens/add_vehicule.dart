@@ -130,14 +130,12 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
 
   Future<String?> _uploadImageToStorage(File imageFile, String imageType) async {
     try {
-      final user = _auth.currentUser;
-      if (user == null) throw Exception("User not authenticated");
-
       // Vérifier le statut du collaborateur
       final status = await CollaborateurUtil.checkCollaborateurStatus();
       final userId = status['userId'];
       
       if (userId == null) {
+        print("🔴 Erreur: Utilisateur non connecté");
         throw Exception("Utilisateur non connecté");
       }
       
@@ -145,7 +143,22 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
       
       if (targetId == null) {
+        print("🔴 Erreur: ID cible non disponible");
         throw Exception("ID cible non disponible");
+      }
+      
+      print("📝 Téléchargement d'image par ${status['isCollaborateur'] ? 'collaborateur' : 'admin'}");
+      print("📝 userId: $userId, targetId (adminId): $targetId");
+      
+      // Vérifier les permissions d'écriture pour les collaborateurs
+      if (status['isCollaborateur'] == true) {
+        final hasWritePermission = await CollaborateurUtil.checkCollaborateurPermission('ecriture');
+        print("🔑 Permission d'écriture pour le collaborateur: ${hasWritePermission ? 'OUI' : 'NON'}");
+        
+        if (!hasWritePermission) {
+          print("🔴 Erreur: Permission d'écriture refusée pour ce collaborateur");
+          throw Exception("Permission d'écriture refusée pour ce collaborateur");
+        }
       }
       
       // Compresser l'image avant de la télécharger
@@ -162,25 +175,46 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
           ? 'temp_${DateTime.now().millisecondsSinceEpoch}' 
           : _immatriculationController.text;
       
-      // Pour les collaborateurs, stocker dans leur propre dossier
-      // Les collaborateurs ont généralement accès à leur propre dossier
-      final String storagePath = status['isCollaborateur'] 
-          ? 'users/${userId}/vehicules/${immatriculation}/${fileName}'
-          : 'users/${targetId}/vehicules/${immatriculation}/${fileName}';
+      // Toujours stocker dans le dossier de l'administrateur
+      // Cela garantit que les collaborateurs peuvent accéder aux fichiers avec les bonnes permissions
+      final String storagePath = 'users/${targetId}/vehicules/${immatriculation}/${fileName}';
+      print("📁 Chemin de stockage: $storagePath");
           
       final storageRef = _storage.ref().child(storagePath);
+      
+      // Préparer les métadonnées
+      final metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {
+          'uploaded_by': userId,
+          'owner': targetId,
+          'timestamp': DateTime.now().toString(),
+          'collaborator': status['isCollaborateur'] == true ? 'true' : 'false'
+        }
+      );
+      print("📋 Métadonnées: ${metadata.customMetadata}");
 
       // Télécharger les données compressées
-      final uploadTask = storageRef.putData(
-        compressedBytes, 
-        SettableMetadata(contentType: 'image/jpeg')
-      );
+      print("⏳ Début du téléchargement...");
+      final uploadTask = storageRef.putData(compressedBytes, metadata);
+      
+      // Surveiller la progression du téléchargement
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        final progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        print("📊 Progression: ${progress.toStringAsFixed(1)}%");
+      });
+      
       await uploadTask.timeout(const Duration(seconds: 60));
+      print("✅ Téléchargement terminé avec succès");
 
       // Obtenir l'URL de téléchargement
       return await storageRef.getDownloadURL();
     } catch (e) {
-      print('Image upload error: $e');
+      print('🔴 Erreur détaillée lors du téléchargement de l\'image: $e');
+      if (e.toString().contains('unauthorized')) {
+        print('🔐 Problème d\'autorisation: Vérifiez les règles de sécurité Firebase Storage');
+        print('🔐 Vérifiez que le collaborateur a la permission "ecriture" dans la collection "authentification"');
+      }
       rethrow;
     }
   }
