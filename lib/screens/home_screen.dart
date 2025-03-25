@@ -165,13 +165,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   });
                 },
               )
-            : const Text(
-                "Mes véhicules",
-                style: TextStyle(
+            : Text(
+                "Bonjour $_prenom",
+                style: const TextStyle(
                     color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
               ),
         backgroundColor: const Color(0xFF08004D), 
-        centerTitle: true,
+        centerTitle: false,
         elevation: 0,
         actions: [
           if (!_showSearchBar)
