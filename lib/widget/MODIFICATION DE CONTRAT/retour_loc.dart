@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart'; // Importer la bibliothèque Intl pour utiliser DateFormat
 
-class RetourLoc extends StatelessWidget {
+class RetourLoc extends StatefulWidget {
   final TextEditingController dateFinEffectifController;
   final TextEditingController kilometrageRetourController;
   final Map<String, dynamic> data;
@@ -19,10 +19,21 @@ class RetourLoc extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    // Initialiser le contrôleur de date avec la date du jour
-    dateFinEffectifController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
+  State<RetourLoc> createState() => _RetourLocState();
+}
 
+class _RetourLocState extends State<RetourLoc> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialiser le contrôleur de date avec la date du jour une seule fois
+    if (widget.dateFinEffectifController.text.isEmpty) {
+      widget.dateFinEffectifController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -32,13 +43,13 @@ class RetourLoc extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         TextFormField(
-          controller: dateFinEffectifController,
+          controller: widget.dateFinEffectifController,
           readOnly: true,
           onTap: () async {
             final pickedDate = await showDatePicker(
               context: context,
               initialDate: DateTime.now(),
-              firstDate: dateDebut, // Date de début comme première date sélectionnable
+              firstDate: widget.dateDebut, // Date de début comme première date sélectionnable
               lastDate: DateTime(2100),
               locale: const Locale('fr', 'FR'),
               builder: (context, child) {
@@ -85,7 +96,7 @@ class RetourLoc extends StatelessWidget {
                 );
                 final formattedDateTime =
                     DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(dateTime);
-                dateFinEffectifController.text = formattedDateTime;
+                widget.dateFinEffectifController.text = formattedDateTime;
               }
             }
           },
@@ -104,7 +115,7 @@ class RetourLoc extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         TextFormField(
-          controller: kilometrageRetourController,
+          controller: widget.kilometrageRetourController,
           decoration: InputDecoration(
             labelText: "Kilométrage de retour",
             border: OutlineInputBorder(
@@ -128,9 +139,9 @@ class RetourLoc extends StatelessWidget {
               if (intValue == null) {
                 return "Veuillez entrer un nombre valide";
               }
-              if (data['kilometrageDepart'] != null &&
-                  data['kilometrageDepart'].isNotEmpty &&
-                  intValue < int.parse(data['kilometrageDepart'])) {
+              if (widget.data['kilometrageDepart'] != null &&
+                  widget.data['kilometrageDepart'].isNotEmpty &&
+                  intValue < int.parse(widget.data['kilometrageDepart'])) {
                 return "Ne peut pas être inférieur au kilométrage de départ";
               }
             }

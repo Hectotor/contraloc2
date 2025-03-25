@@ -19,10 +19,10 @@ import 'CREATION DE CONTRAT/commentaire.dart'; // Import the new commentaire.dar
 import 'chargement.dart'; // Import the new chargement.dart file
 import 'CREATION DE CONTRAT/signature.dart';
 import '../widget/CREATION DE CONTRAT/MAIL.DART';
+import 'package:flutter_image_compress/flutter_image_compress.dart'; // Import pour la compression d'image
 import 'CREATION DE CONTRAT/voiture_selectionne.dart'; // Import the new voiture_selectionne.dart file
 import 'CREATION DE CONTRAT/create_contrat.dart'; // Import the new create_contrat.dart file
 import 'CREATION DE CONTRAT/popup.dart'; // Import the new popup.dart file
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 class LocationPage extends StatefulWidget {
   final String marque;
@@ -621,29 +621,53 @@ class _LocationPageState extends State<LocationPage> {
       );
 
       if (compressedImage != null) {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) {
+        // Vérifier le statut du collaborateur
+        final status = await CollaborateurUtil.checkCollaborateurStatus();
+        final userId = status['userId'];
+        
+        if (userId == null) {
+          print("🔴 Erreur: Utilisateur non connecté");
           throw Exception("Utilisateur non connecté");
         }
+        
+        // Déterminer l'ID à utiliser (admin ou collaborateur)
+        final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
+        
+        if (targetId == null) {
+          print("🔴 Erreur: ID cible non disponible");
+          throw Exception("ID cible non disponible");
+        }
+        
+        print("📝 Téléchargement d'image par ${status['isCollaborateur'] ? 'collaborateur' : 'admin'}");
+        print("📝 userId: $userId, targetId (adminId): $targetId");
 
         String fileName =
             '${folder}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        // Stocker dans le dossier de l'utilisateur
-        Reference ref = FirebaseStorage.instance
-            .ref()
-            .child('users/${user.uid}/locations/$contratId/$folder/$fileName');
+        
+        // Stocker dans le dossier de l'administrateur si c'est un collaborateur
+        final String storagePath = 'users/${targetId}/locations/$contratId/$folder/$fileName';
+        print("📁 Chemin de stockage: $storagePath");
+        
+        Reference ref = FirebaseStorage.instance.ref().child(storagePath);
 
         // Create a temporary file for the compressed image
         final tempDir = await getTemporaryDirectory();
         final tempFile = File('${tempDir.path}/$fileName');
         await tempFile.writeAsBytes(compressedImage);
 
+        print("⏳ Début du téléchargement...");
+        // Téléchargement sans métadonnées
         await ref.putFile(tempFile);
+        print("✅ Téléchargement terminé avec succès");
+        
         return await ref.getDownloadURL();
       }
       throw Exception("Image compression failed");
     } catch (e) {
-      print('Erreur lors du traitement de l\'image : $e');
+      print('🔴 Erreur lors du traitement de l\'image : $e');
+      if (e.toString().contains('unauthorized')) {
+        print('🔐 Problème d\'autorisation: Vérifiez les règles de sécurité Firebase Storage');
+      }
       rethrow;
     }
   }

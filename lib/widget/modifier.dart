@@ -29,6 +29,8 @@ import 'navigation.dart'; // Import the NavigationPage
 import 'MODIFICATION DE CONTRAT/cloturer_location.dart'; // Import the popup
 import 'MODIFICATION DE CONTRAT/retour_envoie_pdf.dart'; // Nouvelle importation
 import 'package:ContraLoc/services/collaborateur_util.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart'; // Import FlutterImageCompress
+import 'package:path_provider/path_provider.dart'; // Import pour getTemporaryDirectory
 
 class ModifierScreen extends StatefulWidget {
   final String contratId;
@@ -90,21 +92,72 @@ class _ModifierScreenState extends State<ModifierScreen> {
     List<String> urls = [];
     int startIndex = _photosRetourUrls
         .length; // Commence à partir du nombre de photos existantes
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      throw Exception("Utilisateur non connecté");
+    
+    try {
+      // Vérifier le statut du collaborateur
+      final status = await CollaborateurUtil.checkCollaborateurStatus();
+      final userId = status['userId'];
+      
+      if (userId == null) {
+        print("🔴 Erreur: Utilisateur non connecté");
+        throw Exception("Utilisateur non connecté");
+      }
+      
+      // Déterminer l'ID à utiliser (admin ou collaborateur)
+      final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
+      
+      if (targetId == null) {
+        print("🔴 Erreur: ID cible non disponible");
+        throw Exception("ID cible non disponible");
+      }
+      
+      print("📝 Téléchargement de photos retour par ${status['isCollaborateur'] ? 'collaborateur' : 'admin'}");
+      print("📝 userId: $userId, targetId (adminId): $targetId");
+      
+      for (var photo in photos) {
+        // Compresser l'image avant de la télécharger
+        final compressedImage = await FlutterImageCompress.compressWithFile(
+          photo.absolute.path,
+          minWidth: 800,
+          minHeight: 800,
+          quality: 70, // Réduire davantage la qualité pour diminuer la taille
+        );
+        
+        if (compressedImage == null) {
+          print("🔴 Erreur: Échec de la compression de l'image");
+          continue;
+        }
+        
+        String fileName =
+            'retour_${DateTime.now().millisecondsSinceEpoch}_${startIndex + urls.length}.jpg';
+        
+        // Stocker dans le dossier de l'administrateur si c'est un collaborateur
+        final String storagePath = 'users/${targetId}/locations/${widget.contratId}/photos_retour/$fileName';
+        print("📁 Chemin de stockage: $storagePath");
+        
+        Reference ref = FirebaseStorage.instance.ref().child(storagePath);
+        
+        // Créer un fichier temporaire pour l'image compressée
+        final tempDir = await getTemporaryDirectory();
+        final tempFile = File('${tempDir.path}/$fileName');
+        await tempFile.writeAsBytes(compressedImage);
+        
+        print("⏳ Début du téléchargement...");
+        // Téléchargement sans métadonnées
+        await ref.putFile(tempFile);
+        print("✅ Téléchargement terminé avec succès");
+        
+        String downloadUrl = await ref.getDownloadURL();
+        urls.add(downloadUrl);
+      }
+      return urls;
+    } catch (e) {
+      print('🔴 Erreur lors du téléchargement des photos : $e');
+      if (e.toString().contains('unauthorized')) {
+        print('🔐 Problème d\'autorisation: Vérifiez les règles de sécurité Firebase Storage');
+      }
+      rethrow;
     }
-    for (var photo in photos) {
-      String fileName =
-          'retour_${DateTime.now().millisecondsSinceEpoch}_${startIndex + urls.length}.jpg';
-      Reference ref = FirebaseStorage.instance.ref().child(
-          'users/${user.uid}/locations/${widget.contratId}/photos_retour/$fileName');
-
-      await ref.putFile(photo);
-      String downloadUrl = await ref.getDownloadURL();
-      urls.add(downloadUrl);
-    }
-    return urls;
   }
 
   Future<void> _updateContrat() async {
