@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../utils/collaborateur_util.dart';
 
 class ChiffreAffaireScreen extends StatefulWidget {
   const ChiffreAffaireScreen({Key? key}) : super(key: key);
@@ -22,6 +21,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
   Map<String, double> _chiffreParVehicule = {};
   Map<String, double> _chiffreParPeriode = {};
   double _chiffreTotal = 0;
+  String? _error;
   
   // Périodes disponibles
   final List<String> _periodes = ['Jour', 'Mois', 'Année'];
@@ -45,18 +45,22 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     });
 
     try {
+      // Vérifier si l'utilisateur est connecté
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        setState(() {
+          _isLoading = false;
+          _error = "Utilisateur non connecté";
+        });
+        return;
+      }
 
       // Vérifier si l'utilisateur est un collaborateur
-      final isCollaborateur = await CollaborateurUtil.isCollaborateur();
-      String userId = user.uid;
-      String? adminId;
-
-      if (isCollaborateur) {
-        adminId = await CollaborateurUtil.getAdminId();
-        if (adminId == null) return;
-      }
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userData = userDoc.data();
+      final bool isCollaborateur = userData != null && userData['isCollaborateur'] == true;
+      final String? adminId = isCollaborateur ? userData['adminId'] as String? : null;
+      final String userId = user.uid;
 
       // Récupérer tous les contrats clôturés
       QuerySnapshot contratsSnapshot;
@@ -65,16 +69,14 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         contratsSnapshot = await FirebaseFirestore.instance
             .collection('users')
             .doc(adminId)
-            .collection('contrats')
-            .where('statut', isEqualTo: 'cloture')
+            .collection('chiffre_affaire')
             .get();
       } else {
         // Pour les utilisateurs normaux
         contratsSnapshot = await FirebaseFirestore.instance
             .collection('users')
             .doc(userId)
-            .collection('contrats')
-            .where('statut', isEqualTo: 'cloture')
+            .collection('chiffre_affaire')
             .get();
       }
 
@@ -118,49 +120,43 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         String vehiculeId = data['vehiculeId'] ?? '';
         String vehiculeInfo = data['vehiculeInfo'] ?? '';
         double montantTotal = double.tryParse(data['montantTotal'] ?? '0') ?? 0;
-        String dateFinEffective = data['dateFinEffectif'] ?? '';
-        DateTime? dateFin;
+        DateTime dateCloture = DateTime.parse(data['dateCloture'] ?? DateTime.now().toIso8601String());
         
-        // Parser la date de fin
-        if (dateFinEffective.isNotEmpty) {
-          try {
-            if (dateFinEffective.contains('à')) {
-              dateFin = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(dateFinEffective);
-            } else {
-              dateFin = DateTime.tryParse(dateFinEffective);
-            }
-          } catch (e) {
-            print('Erreur de parsing de date: $e');
-          }
-        }
+        // Ajouter à la liste des contrats
+        contrats.add({
+          'vehiculeId': vehiculeId,
+          'vehiculeInfo': vehiculeInfo,
+          'montantTotal': data['montantTotal'],
+          'dateFinEffectif': data['dateFinEffectif'],
+          'dateCloture': dateCloture,
+          'caution': data['caution'] ?? 0.0,
+          'coutKmSupplementaires': data['coutKmSupplementaires'] ?? 0.0,
+          'fraisNettoyageInterieur': data['fraisNettoyageInterieur'] ?? 0.0,
+          'fraisNettoyageExterieur': data['fraisNettoyageExterieur'] ?? 0.0,
+          'fraisCarburantManquant': data['fraisCarburantManquant'] ?? 0.0,
+          'fraisRayuresDommages': data['fraisRayuresDommages'] ?? 0.0,
+          'kilometrageRetour': data['kilometrageRetour'],
+        });
         
-        if (dateFin != null) {
-          contrats.add({
-            'vehiculeId': vehiculeId,
-            'vehiculeInfo': vehiculeInfo,
-            'montantTotal': montantTotal,
-            'dateFin': dateFin,
-          });
-          
-          chiffreTotal += montantTotal;
-        }
+        // Ajouter au chiffre d'affaire total
+        chiffreTotal += montantTotal;
       }
 
+      // Mettre à jour l'état
       setState(() {
         _contrats = contrats;
         _vehicules = vehicules;
         _chiffreTotal = chiffreTotal;
         _isLoading = false;
       });
-      
+
       // Calculer les chiffres par période et par véhicule
       _calculerChiffreParPeriode();
       _calculerChiffreParVehicule();
-      
     } catch (e) {
-      print('Erreur lors de la récupération des données: $e');
       setState(() {
         _isLoading = false;
+        _error = "Erreur lors de la récupération des données: $e";
       });
     }
   }
@@ -169,8 +165,8 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     Map<String, double> chiffreParPeriode = {};
     
     for (var contrat in _contrats) {
-      DateTime dateFin = contrat['dateFin'];
-      double montant = contrat['montantTotal'];
+      DateTime dateCloture = contrat['dateCloture'];
+      double montant = double.tryParse(contrat['montantTotal'] ?? '0') ?? 0;
       String vehiculeInfo = contrat['vehiculeInfo'];
       
       // Filtrer par véhicule si nécessaire
@@ -181,13 +177,13 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       String periode;
       if (_selectedPeriod == 'Jour') {
         // Format: 2025-03-26
-        periode = DateFormat('yyyy-MM-dd').format(dateFin);
+        periode = DateFormat('yyyy-MM-dd').format(dateCloture);
       } else if (_selectedPeriod == 'Mois') {
         // Format: 2025-03
-        periode = DateFormat('yyyy-MM').format(dateFin);
+        periode = DateFormat('yyyy-MM').format(dateCloture);
       } else {
         // Format: 2025
-        periode = DateFormat('yyyy').format(dateFin);
+        periode = DateFormat('yyyy').format(dateCloture);
       }
       
       if (chiffreParPeriode.containsKey(periode)) {
@@ -206,18 +202,18 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     Map<String, double> chiffreParVehicule = {};
     
     for (var contrat in _contrats) {
-      DateTime dateFin = contrat['dateFin'];
-      double montant = contrat['montantTotal'];
+      DateTime dateCloture = contrat['dateCloture'];
+      double montant = double.tryParse(contrat['montantTotal'] ?? '0') ?? 0;
       String vehiculeInfo = contrat['vehiculeInfo'];
       
       // Filtrer par période si nécessaire
       bool inclure = true;
       if (_selectedPeriod == 'Jour') {
-        inclure = DateFormat('yyyy-MM-dd').format(dateFin) == DateFormat('yyyy-MM-dd').format(DateTime.now());
+        inclure = DateFormat('yyyy-MM-dd').format(dateCloture) == DateFormat('yyyy-MM-dd').format(DateTime.now());
       } else if (_selectedPeriod == 'Mois') {
-        inclure = DateFormat('yyyy-MM').format(dateFin) == DateFormat('yyyy-MM').format(DateTime.now());
+        inclure = DateFormat('yyyy-MM').format(dateCloture) == DateFormat('yyyy-MM').format(DateTime.now());
       } else if (_selectedPeriod == 'Année') {
-        inclure = DateFormat('yyyy').format(dateFin) == DateFormat('yyyy').format(DateTime.now());
+        inclure = DateFormat('yyyy').format(dateCloture) == DateFormat('yyyy').format(DateTime.now());
       }
       
       if (!inclure) continue;
@@ -254,14 +250,16 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF08004D)))
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildResumeTab(),
-                _buildPeriodeTab(),
-                _buildVehiculeTab(),
-              ],
-            ),
+          : _error != null
+              ? Center(child: Text(_error!))
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildResumeTab(),
+                    _buildPeriodeTab(),
+                    _buildVehiculeTab(),
+                  ],
+                ),
     );
   }
   
@@ -448,19 +446,20 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              const Text('Période: ', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Véhicule: ', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(width: 8),
               DropdownButton<String>(
-                value: _selectedPeriod,
+                value: _selectedVehicule,
                 onChanged: (String? newValue) {
                   if (newValue != null) {
                     setState(() {
-                      _selectedPeriod = newValue;
+                      _selectedVehicule = newValue;
+                      _calculerChiffreParPeriode();
                       _calculerChiffreParVehicule();
                     });
                   }
                 },
-                items: _periodes.map<DropdownMenuItem<String>>((String value) {
+                items: _vehicules.map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
                     child: Text(value),
@@ -471,13 +470,114 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
           ),
         ),
         Expanded(
-          child: _chiffreParVehicule.isEmpty
-              ? const Center(child: Text('Aucune donnée disponible pour cette période'))
-              : ListView(
-                  children: _buildVehiculeListItems(),
-                ),
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator(color: Color(0xFF08004D)))
+              : _buildVehiculeDetailsList(),
         ),
       ],
+    );
+  }
+  
+  Widget _buildVehiculeDetailsList() {
+    final formatCurrency = NumberFormat.currency(locale: 'fr_FR', symbol: '€');
+    
+    // Filtrer les contrats par véhicule si nécessaire
+    List<Map<String, dynamic>> filteredContrats = _contrats;
+    if (_selectedVehicule != 'Tous') {
+      filteredContrats = _contrats.where((contrat) => 
+        contrat['vehiculeInfo'] == _selectedVehicule).toList();
+    }
+    
+    return ListView.builder(
+      itemCount: filteredContrats.length,
+      itemBuilder: (context, index) {
+        final contrat = filteredContrats[index];
+        final vehiculeInfo = contrat['vehiculeInfo'] ?? 'Véhicule inconnu';
+        final montantTotal = double.tryParse(contrat['montantTotal'] ?? '0') ?? 0;
+        final dateFinEffective = contrat['dateFinEffectif'] ?? '';
+        
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: ExpansionTile(
+            title: Text(vehiculeInfo, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('Date de clôture: $dateFinEffective'),
+            trailing: Text(
+              formatCurrency.format(montantTotal),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF08004D),
+              ),
+            ),
+            children: [
+              _buildContratDetails(contrat),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  
+  Widget _buildContratDetails(Map<String, dynamic> contrat) {
+    final formatCurrency = NumberFormat.currency(locale: 'fr_FR', symbol: '€');
+    
+    // Récupérer les détails des frais
+    final caution = contrat['caution'] ?? 0.0;
+    final coutKmSupplementaires = contrat['coutKmSupplementaires'] ?? 0.0;
+    final fraisNettoyageInterieur = contrat['fraisNettoyageInterieur'] ?? 0.0;
+    final fraisNettoyageExterieur = contrat['fraisNettoyageExterieur'] ?? 0.0;
+    final fraisCarburantManquant = contrat['fraisCarburantManquant'] ?? 0.0;
+    final fraisRayuresDommages = contrat['fraisRayuresDommages'] ?? 0.0;
+    final kilometrageRetour = contrat['kilometrageRetour'] ?? 'Non spécifié';
+    
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Divider(),
+          const SizedBox(height: 8),
+          Text('Kilométrage au retour: $kilometrageRetour km'),
+          const SizedBox(height: 16),
+          const Text('Détails des frais:', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          _buildFraisRow('Caution', caution),
+          _buildFraisRow('Kilomètres supplémentaires', coutKmSupplementaires),
+          _buildFraisRow('Nettoyage intérieur', fraisNettoyageInterieur),
+          _buildFraisRow('Nettoyage extérieur', fraisNettoyageExterieur),
+          _buildFraisRow('Carburant manquant', fraisCarburantManquant),
+          _buildFraisRow('Rayures et dommages', fraisRayuresDommages),
+          const Divider(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              const Text('Total: ', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                formatCurrency.format(double.tryParse(contrat['montantTotal'] ?? '0') ?? 0),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF08004D),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildFraisRow(String label, dynamic montant) {
+    final formatCurrency = NumberFormat.currency(locale: 'fr_FR', symbol: '€');
+    final montantDouble = montant is double ? montant : 0.0;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label),
+          Text(formatCurrency.format(montantDouble)),
+        ],
+      ),
     );
   }
   
@@ -520,46 +620,6 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         ),
       );
     }).toList();
-  }
-  
-  List<Widget> _buildVehiculeListItems() {
-    final formatCurrency = NumberFormat.currency(locale: 'fr_FR', symbol: '€');
-    List<MapEntry<String, double>> sortedEntries = _chiffreParVehicule.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value)); // Tri par montant décroissant
-    
-    return sortedEntries.map((entry) {
-      return Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: ListTile(
-          title: Text(
-            entry.key,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Text(
-            _getPeriodeLabel(),
-            style: const TextStyle(fontSize: 12),
-          ),
-          trailing: Text(
-            formatCurrency.format(entry.value),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: Color(0xFF08004D),
-            ),
-          ),
-        ),
-      );
-    }).toList();
-  }
-  
-  String _getPeriodeLabel() {
-    if (_selectedPeriod == 'Jour') {
-      return 'Aujourd\'hui';
-    } else if (_selectedPeriod == 'Mois') {
-      return 'Ce mois-ci';
-    } else {
-      return 'Cette année';
-    }
   }
   
   List<PieChartSectionData> _buildPieSections() {

@@ -291,14 +291,73 @@ class _ModifierScreenState extends State<ModifierScreen> {
         // Si c'est un collaborateur, utiliser la collection de l'admin
         try {
           await CollaborateurUtil.updateDocument(
-            collection: 'users',
-            docId: adminId,
-            subCollection: 'locations',
-            subDocId: widget.contratId,
+            collection: 'locations',
+            docId: widget.contratId,
             data: updateData,
             useAdminId: true,
           );
           print('✅ Contrat mis à jour dans la collection de l\'admin: $adminId');
+          
+          // Ajouter les informations dans la collection 'chiffre_affaire'
+          String vehiculeId = widget.data['vehiculeId'] ?? '';
+          String vehiculeInfo = '';
+          double montantTotal = 0.0;
+          
+          // Calculer le montant total
+          if (_fraisSupplementaires.isNotEmpty) {
+            montantTotal = _fraisSupplementaires['totalFrais'] ?? 0.0;
+          }
+          
+          // Récupérer les informations du véhicule si l'ID est disponible
+          if (vehiculeId.isNotEmpty) {
+            try {
+              final vehiculeDoc = await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(adminId)
+                  .collection('vehicules')
+                  .doc(vehiculeId)
+                  .get();
+              
+              if (vehiculeDoc.exists) {
+                Map<String, dynamic> vehiculeData = vehiculeDoc.data() as Map<String, dynamic>;
+                String marque = vehiculeData['marque'] ?? '';
+                String modele = vehiculeData['modele'] ?? '';
+                String immatriculation = vehiculeData['immatriculation'] ?? '';
+                
+                if (marque.isNotEmpty && modele.isNotEmpty) {
+                  vehiculeInfo = '$marque $modele ($immatriculation)';
+                }
+              }
+            } catch (e) {
+              print('⚠️ Erreur lors de la récupération des informations du véhicule: $e');
+            }
+          }
+          
+          // Créer un document dans la collection 'chiffre_affaire'
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('chiffre_affaire')
+              .doc(widget.contratId)
+              .set({
+                'vehiculeId': vehiculeId,
+                'vehiculeInfo': vehiculeInfo,
+                'montantTotal': montantTotal.toString(),
+                'dateFinEffectif': _dateFinEffectifController.text,
+                'dateCloture': DateTime.now().toIso8601String(),
+                'caution': _fraisSupplementaires['caution'] ?? 0.0,
+                'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
+                'fraisNettoyageInterieur': _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0,
+                'fraisNettoyageExterieur': _fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0,
+                'fraisCarburantManquant': _fraisSupplementaires['fraisCarburantManquant'] ?? 0.0,
+                'fraisRayuresDommages': _fraisSupplementaires['fraisRayuresDommages'] ?? 0.0,
+                'statut': 'cloture',
+                'kilometrageRetour': _kilometrageRetourController.text.isNotEmpty
+                    ? _kilometrageRetourController.text
+                    : null,
+              });
+          print('✅ Informations financières ajoutées dans la collection chiffre_affaire');
+          
         } catch (e) {
           print('❌ Erreur lors de la mise à jour du contrat par le collaborateur: $e');
           if (e.toString().contains('permission-denied')) {
@@ -316,6 +375,66 @@ class _ModifierScreenState extends State<ModifierScreen> {
             .doc(widget.contratId)
             .update(updateData);
         print('✅ Contrat mis à jour dans la collection de l\'utilisateur: $userId');
+        
+        // Ajouter les informations dans la collection 'chiffre_affaire'
+        String vehiculeId = widget.data['vehiculeId'] ?? '';
+        String vehiculeInfo = '';
+        double montantTotal = 0.0;
+        
+        // Calculer le montant total
+        if (_fraisSupplementaires.isNotEmpty) {
+          montantTotal = _fraisSupplementaires['totalFrais'] ?? 0.0;
+        }
+        
+        // Récupérer les informations du véhicule si l'ID est disponible
+        if (vehiculeId.isNotEmpty) {
+          try {
+            final vehiculeDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(userId)
+                .collection('vehicules')
+                .doc(vehiculeId)
+                .get();
+            
+            if (vehiculeDoc.exists) {
+              Map<String, dynamic> vehiculeData = vehiculeDoc.data() as Map<String, dynamic>;
+              String marque = vehiculeData['marque'] ?? '';
+              String modele = vehiculeData['modele'] ?? '';
+              String immatriculation = vehiculeData['immatriculation'] ?? '';
+              
+              if (marque.isNotEmpty && modele.isNotEmpty) {
+                vehiculeInfo = '$marque $modele ($immatriculation)';
+              }
+            }
+          } catch (e) {
+            print('⚠️ Erreur lors de la récupération des informations du véhicule: $e');
+          }
+        }
+        
+        // Créer un document dans la collection 'chiffre_affaire'
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('chiffre_affaire')
+            .doc(widget.contratId)
+            .set({
+              'vehiculeId': vehiculeId,
+              'vehiculeInfo': vehiculeInfo,
+              'montantTotal': montantTotal.toString(),
+              'dateFinEffectif': _dateFinEffectifController.text,
+              'dateCloture': DateTime.now().toIso8601String(),
+              'caution': _fraisSupplementaires['caution'] ?? 0.0,
+              'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
+              'fraisNettoyageInterieur': _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0,
+              'fraisNettoyageExterieur': _fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0,
+              'fraisCarburantManquant': _fraisSupplementaires['fraisCarburantManquant'] ?? 0.0,
+              'fraisRayuresDommages': _fraisSupplementaires['fraisRayuresDommages'] ?? 0.0,
+              'statut': 'cloture',
+              'kilometrageRetour': _kilometrageRetourController.text.isNotEmpty
+                  ? _kilometrageRetourController.text
+                  : null,
+            });
+        print('✅ Informations financières ajoutées dans la collection chiffre_affaire');
       }
 
       // Fermer le dialogue de chargement
@@ -450,20 +569,16 @@ class _ModifierScreenState extends State<ModifierScreen> {
           if (isCollaborateur) {
             // Si c'est un collaborateur, le contrat est dans la collection de l'admin
             contratDoc = await CollaborateurUtil.getDocument(
-              collection: 'users',
-              docId: targetId!, // ID de l'admin
-              subCollection: 'locations',
-              subDocId: widget.contratId,
+              collection: 'locations',
+              docId: widget.contratId,
               useAdminId: true,
             );
             print('📄 Récupération du contrat depuis la collection de l\'admin: $targetId');
           } else {
             // Si c'est un admin, le contrat est dans sa propre collection
             contratDoc = await CollaborateurUtil.getDocument(
-              collection: 'users',
-              docId: userId!,
-              subCollection: 'locations',
-              subDocId: widget.contratId,
+              collection: 'locations',
+              docId: widget.contratId,
               useAdminId: false,
             );
             print('📄 Récupération du contrat depuis la collection de l\'utilisateur: $userId');
@@ -488,10 +603,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
             // Si les conditions ne sont pas dans le contrat, récupérer les conditions personnalisées actuelles
             try {
               final conditionsDoc = await CollaborateurUtil.getDocument(
-                collection: 'users',
-                docId: targetId, // Utiliser l'ID de l'admin pour les collaborateurs
-                subCollection: 'contrats',
-                subDocId: 'userId',
+                collection: 'contrats',
+                docId: 'userId',
                 useAdminId: true,
               );
 
@@ -530,9 +643,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
         // Récupérer les données du véhicule
         final vehicleQuery = await CollaborateurUtil.getCollection(
-          collection: 'users',
-          docId: targetId!, // Utiliser l'ID de l'admin pour les collaborateurs
-          subCollection: 'vehicules',
+          collection: 'vehicules',
+          docId: userData['userId'] ?? '', // ID de l'utilisateur ou de l'admin
+          subCollection: 'vehicules', // La sous-collection à utiliser
           queryBuilder: (query) => query.where('immatriculation', isEqualTo: widget.data['immatriculation']),
           useAdminId: isCollaborateur, // Utiliser useAdminId=true pour les collaborateurs
         );
