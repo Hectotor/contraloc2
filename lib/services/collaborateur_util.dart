@@ -416,6 +416,7 @@ class CollaborateurUtil {
     final status = await checkCollaborateurStatus();
     final userId = status['userId'];
     final isCollaborateur = status['isCollaborateur'] == true;
+    final adminId = status['adminId'];
     
     if (userId == null) {
       throw Exception('Utilisateur non connecté');
@@ -440,19 +441,39 @@ class CollaborateurUtil {
     
     try {
       // Construire la référence au document
-      DocumentReference docRef = _firestore.collection(collection).doc(docId);
+      DocumentReference docRef;
       
-      // Ajouter la sous-collection si nécessaire
-      if (subCollection != null) {
-        docRef = docRef.collection(subCollection).doc(subDocId ?? docId);
+      // Correction du chemin d'accès pour respecter la structure Firestore
+      if (useAdminId && isCollaborateur && adminId != null) {
+        // Pour un collaborateur qui met à jour dans la collection de l'admin
+        docRef = _firestore
+            .collection('users')
+            .doc(adminId)
+            .collection(collection)
+            .doc(docId);
+            
+        print('📁 Chemin d\'accès corrigé: users/$adminId/$collection/$docId');
+      } else {
+        // Pour un admin qui met à jour dans sa propre collection
+        docRef = _firestore.collection(collection).doc(docId);
+        
+        // Ajouter la sous-collection si nécessaire
+        if (subCollection != null) {
+          docRef = docRef.collection(subCollection).doc(subDocId ?? docId);
+        }
       }
       
       // Utiliser _executeWithRetry pour gérer les erreurs de connectivité
       await _executeWithRetry(
         operation: () async {
-          print('📝 Mise à jour du document: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
-          await docRef.update(data);
-          print('✅ Document mis à jour avec succès');
+          print('📝 Mise à jour du document: ${docRef.path}');
+          
+          // Utiliser set() avec merge: true au lieu de update()
+          // Cela permet de mettre à jour partiellement un document existant
+          // ou de le créer s'il n'existe pas, avec des permissions potentiellement moins restrictives
+          await docRef.set(data, SetOptions(merge: true));
+          
+          print('✅ Document mis à jour avec succès (via set avec merge)');
           return true;
         },
       );

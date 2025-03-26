@@ -214,10 +214,8 @@ class RetourEnvoiePdf {
         if (isCollaborateur && adminId != null) {
           // Si c'est un collaborateur, utiliser la collection de l'admin
           await CollaborateurUtil.updateDocument(
-            collection: 'users',
-            docId: adminId,
-            subCollection: 'locations',
-            subDocId: contratId,
+            collection: 'locations',
+            docId: contratId,
             data: {
               'status': 'restitue',
               'dateRestitution': FieldValue.serverTimestamp(),

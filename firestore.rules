@@ -55,6 +55,11 @@ service cloud.firestore {
         allow read, write: if isAuthenticated() && isAuthorized(userId);
       }
       
+            // Gestion des chiffres d'affaires (accessible aux collaborateurs)
+      match /chiffre_affaire/{docId} {
+        allow read, write: if isAuthenticated() && isAuthorized(userId);
+      }
+      
       // Permettre aux collaborateurs d'accéder au document d'authentification de leur administrateur
       match /authentification/{authId} {
         allow read, write: if isAuthenticated() && isOwner(userId);
