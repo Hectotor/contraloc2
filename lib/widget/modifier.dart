@@ -69,6 +69,35 @@ class _ModifierScreenState extends State<ModifierScreen> {
   // Ajouter une variable pour stocker les frais supplémentaires
   Map<String, dynamic> _fraisSupplementaires = {};
 
+  // Méthode pour gérer la mise à jour des frais
+  void _handleFraisUpdated(Map<String, dynamic> frais) {
+    // Utiliser Future.microtask pour éviter les appels à setState pendant la construction
+    Future.microtask(() {
+      setState(() {
+        _fraisSupplementaires = frais;
+
+        // Mettre à jour les contrôleurs avec les valeurs des frais
+        if (frais['nettoyageInt'] != null && frais['nettoyageInt'].toString().isNotEmpty) {
+          _nettoyageIntController.text = frais['nettoyageInt'].toString();
+        }
+
+        if (frais['nettoyageExt'] != null && frais['nettoyageExt'].toString().isNotEmpty) {
+          _nettoyageExtController.text = frais['nettoyageExt'].toString();
+        }
+
+        if (frais['carburantManquant'] != null && frais['carburantManquant'].toString().isNotEmpty) {
+          _carburantManquantController.text = frais['carburantManquant'].toString();
+        }
+
+        if (frais['caution'] != null) {
+          _cautionController.text = frais['caution'].toString();
+        }
+
+        print('💰 Frais temporaires mis à jour: $_fraisSupplementaires');
+      });
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -95,28 +124,28 @@ class _ModifierScreenState extends State<ModifierScreen> {
     List<String> urls = [];
     int startIndex = _photosRetourUrls
         .length; // Commence à partir du nombre de photos existantes
-    
+
     try {
       // Vérifier le statut du collaborateur
       final status = await CollaborateurUtil.checkCollaborateurStatus();
       final userId = status['userId'];
-      
+
       if (userId == null) {
         print("🔴 Erreur: Utilisateur non connecté");
         throw Exception("Utilisateur non connecté");
       }
-      
+
       // Déterminer l'ID à utiliser (admin ou collaborateur)
       final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
-      
+
       if (targetId == null) {
         print("🔴 Erreur: ID cible non disponible");
         throw Exception("ID cible non disponible");
       }
-      
+
       print("📝 Téléchargement de photos retour par ${status['isCollaborateur'] ? 'collaborateur' : 'admin'}");
       print("📝 userId: $userId, targetId (adminId): $targetId");
-      
+
       for (var photo in photos) {
         // Compresser l'image avant de la télécharger
         final compressedImage = await FlutterImageCompress.compressWithFile(
@@ -125,31 +154,32 @@ class _ModifierScreenState extends State<ModifierScreen> {
           minHeight: 800,
           quality: 70, // Réduire davantage la qualité pour diminuer la taille
         );
-        
+
         if (compressedImage == null) {
           print("🔴 Erreur: Échec de la compression de l'image");
           continue;
         }
-        
+
         String fileName =
             'retour_${DateTime.now().millisecondsSinceEpoch}_${startIndex + urls.length}.jpg';
-        
+
         // Stocker dans le dossier de l'administrateur si c'est un collaborateur
         final String storagePath = 'users/${targetId}/locations/${widget.contratId}/photos_retour/$fileName';
+
         print("📁 Chemin de stockage: $storagePath");
-        
+
         Reference ref = FirebaseStorage.instance.ref().child(storagePath);
-        
+
         // Créer un fichier temporaire pour l'image compressée
         final tempDir = await getTemporaryDirectory();
         final tempFile = File('${tempDir.path}/$fileName');
         await tempFile.writeAsBytes(compressedImage);
-        
+
         print("⏳ Début du téléchargement...");
         // Téléchargement sans métadonnées
         await ref.putFile(tempFile);
         print("✅ Téléchargement terminé avec succès");
-        
+
         String downloadUrl = await ref.getDownloadURL();
         urls.add(downloadUrl);
       }
@@ -190,6 +220,11 @@ class _ModifierScreenState extends State<ModifierScreen> {
       return;
     }
 
+    // Mettre à jour l'état pour afficher l'indicateur de chargement
+    setState(() {
+      _isUpdatingContrat = true;
+    });
+
     // Afficher le dialogue de chargement
     showDialog(
       context: context,
@@ -224,6 +259,16 @@ class _ModifierScreenState extends State<ModifierScreen> {
         signatureRetourBase64 = base64Encode(signatureBytes!);
       }
 
+      // Préparer les données des frais supplémentaires finaux
+      Map<String, dynamic> fraisFinaux = {..._fraisSupplementaires};
+      
+      // Supprimer le marqueur temporaire
+      if (fraisFinaux.containsKey('temporaire')) {
+        fraisFinaux.remove('temporaire');
+      }
+      
+      print('💰 Sauvegarde des frais définitifs: $fraisFinaux');
+
       // Préparer les données de mise à jour
       final updateData = {
         'status': 'restitue',
@@ -238,21 +283,30 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'carburantManquant': _carburantManquantController.text,
         'signature_retour': signatureRetourBase64,
         // Ajouter les frais supplémentaires aux données mises à jour
-        'fraisSupplementaires': _fraisSupplementaires,
+        'fraisSupplementaires': fraisFinaux,
       };
 
       // Mettre à jour Firestore avec les informations de retour
       if (isCollaborateur && adminId != null) {
         // Si c'est un collaborateur, utiliser la collection de l'admin
-        await CollaborateurUtil.updateDocument(
-          collection: 'users',
-          docId: adminId,
-          subCollection: 'locations',
-          subDocId: widget.contratId,
-          data: updateData,
-          useAdminId: true,
-        );
-        print('✅ Contrat mis à jour dans la collection de l\'admin: $adminId');
+        try {
+          await CollaborateurUtil.updateDocument(
+            collection: 'users',
+            docId: adminId,
+            subCollection: 'locations',
+            subDocId: widget.contratId,
+            data: updateData,
+            useAdminId: true,
+          );
+          print('✅ Contrat mis à jour dans la collection de l\'admin: $adminId');
+        } catch (e) {
+          print('❌ Erreur lors de la mise à jour du contrat par le collaborateur: $e');
+          if (e.toString().contains('permission-denied')) {
+            throw Exception("Vous n'avez pas les permissions nécessaires pour clôturer ce contrat. Veuillez contacter l'administrateur.");
+          } else {
+            throw e;
+          }
+        }
       } else {
         // Si c'est un admin, utiliser sa propre collection
         await FirebaseFirestore.instance
@@ -299,6 +353,13 @@ class _ModifierScreenState extends State<ModifierScreen> {
             backgroundColor: Colors.red,
           ),
         );
+      }
+    } finally {
+      // Réinitialiser l'état du bouton
+      if (mounted) {
+        setState(() {
+          _isUpdatingContrat = false;
+        });
       }
     }
   }
@@ -369,18 +430,18 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
     int tentatives = 0;
     const maxTentatives = 5;
-    
+
     while (tentatives < maxTentatives) {
       try {
         tentatives++;
-        
+
         // Récupérer les informations nécessaires pour le PDF
         final status = await CollaborateurUtil.checkCollaborateurStatus();
         final userId = status['userId'];
         final isCollaborateur = status['isCollaborateur'] == true;
         final adminId = status['adminId'];
         final targetId = isCollaborateur ? adminId : userId;
-        
+
         print('🔍 Génération PDF - userId: $userId, targetId: $targetId, isCollaborateur: $isCollaborateur');
 
         // CORRECTION IMPORTANTE: Pour un collaborateur, le contrat doit être récupéré dans la collection de l'admin
@@ -416,10 +477,10 @@ class _ModifierScreenState extends State<ModifierScreen> {
         String conditions = ContratModifier.defaultContract;
         if (contratDoc.exists) {
           final contratData = contratDoc.data() as Map<String, dynamic>;
-          
+
           // Vérifier si les conditions sont sauvegardées dans le document du contrat
-          if (contratData.containsKey('conditions') && 
-              contratData['conditions'] is String && 
+          if (contratData.containsKey('conditions') &&
+              contratData['conditions'] is String &&
               contratData['conditions'].isNotEmpty) {
             conditions = contratData['conditions'];
             print('📄 Utilisation des conditions sauvegardées dans le contrat');
@@ -452,9 +513,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
         String? signatureRetourBase64;
         if (contratDoc.exists) {
           Map<String, dynamic> contratData = contratDoc.data() as Map<String, dynamic>;
-          
+
           // Essayer de récupérer la signature de retour
-          if (contratData.containsKey('signature_retour') && 
+          if (contratData.containsKey('signature_retour') &&
               contratData['signature_retour'] is String) {
             signatureRetourBase64 = contratData['signature_retour'];
           }
@@ -482,7 +543,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
           print('🚗 Véhicule trouvé: ${vehicleQuery.docs.first.id}');
         }
 
-        final vehicleData = vehicleQuery.docs.isNotEmpty 
+        final vehicleData = vehicleQuery.docs.isNotEmpty
             ? vehicleQuery.docs.first.data() as Map<String, dynamic>
             : <String, dynamic>{};
 
@@ -508,14 +569,14 @@ class _ModifierScreenState extends State<ModifierScreen> {
           widget.data['telephoneEntreprise'] ?? userData['telephone'] ?? '',
           widget.data['siretEntreprise'] ?? userData['siret'] ?? '',
           widget.data['commentaireRetour'] ?? '',
-          widget.data['typeCarburant'] ??'',
-          widget.data['boiteVitesses'] ??'',
-          widget.data['vin'] ??'',
-          widget.data['assuranceNom'] ??'',
-          widget.data['assuranceNumero'] ??'',
-          widget.data['franchise'] ??'',
-          widget.data['kilometrageSupp'] ??'',
-          widget.data['rayures'] ??'',
+          widget.data['typeCarburant'] ?? '',
+          widget.data['boiteVitesses'] ?? '',
+          widget.data['vin'] ?? '',
+          widget.data['assuranceNom'] ?? '',
+          widget.data['assuranceNumero'] ?? '',
+          widget.data['franchise'] ?? '',
+          widget.data['kilometrageSupp'] ?? '',
+          widget.data['rayures'] ?? '',
           widget.data['dateDebut'] ?? '',
           widget.data['dateFinTheorique'] ?? '',
           widget.data['dateFinEffectif'] ?? '',
@@ -537,27 +598,27 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
         // Ouvrir le PDF
         await OpenFilex.open(pdfPath);
-        
+
         // Si on arrive ici, tout s'est bien passé, on sort de la boucle
         break;
-        
+
       } catch (e) {
         // Gestion des erreurs
         print('Erreur lors de la génération du PDF : $e');
-        
-        final isConnectivityError = e.toString().contains('unavailable') || 
-                                   e.toString().contains('network error') ||
-                                   e.toString().contains('timeout');
-        
+
+        final isConnectivityError = e.toString().contains('unavailable') ||
+            e.toString().contains('network error') ||
+            e.toString().contains('timeout');
+
         // Si c'est la dernière tentative ou si ce n'est pas une erreur de connectivité
         if (tentatives >= maxTentatives || !isConnectivityError) {
           // Fermer le dialogue de chargement en cas d'erreur
           if (dialogShown && context.mounted) {
             Navigator.pop(context);
             dialogShown = false;
-            
+
             String errorMessage = 'Une erreur est survenue.';
-            
+
             if (isConnectivityError) {
               errorMessage = 'Problème de connexion au serveur. Vérifiez votre connexion internet et réessayez.';
             } else if (e.toString().contains('permission-denied')) {
@@ -565,7 +626,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
             } else {
               errorMessage = 'Erreur : ${e.toString()}';
             }
-            
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(errorMessage),
@@ -583,8 +644,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
         } else {
           // Attendre avant de réessayer
           final delayMs = 1000 * (1 << (tentatives - 1)); // Backoff exponentiel: 1s, 2s, 4s, 8s, 16s
+
           print('⏳ Tentative $tentatives échouée, nouvelle tentative dans ${delayMs}ms');
-          
+
           // Mettre à jour le message de chargement
           if (context.mounted) {
             if (dialogShown) {
@@ -597,7 +659,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
               builder: (context) => const Center(child: CircularProgressIndicator()),
             );
           }
-          
+
           await Future.delayed(Duration(milliseconds: delayMs));
         }
       }
@@ -684,14 +746,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                       data: widget.data,
                       selectDateTime: _selectDateTime,
                       dateDebut: _parseDateWithFallback(widget.data['dateDebut']),
-                      onFraisUpdated: (frais) {
-                        // Utiliser Future.microtask pour éviter les appels à setState pendant la construction
-                        Future.microtask(() {
-                          setState(() {
-                            _fraisSupplementaires = frais;
-                          });
-                        });
-                      },
+                      onFraisUpdated: _handleFraisUpdated,
                     ),
                     const SizedBox(height: 20),
                     EtatVehiculeRetour(

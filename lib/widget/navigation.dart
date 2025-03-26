@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../screens/home_screen.dart';
 import '../screens/contrat_screen.dart';
 import '../screens/user_screen.dart';
-import '../screens/add_vehicule.dart';
+
+import '../screens/chiffre_affaire_screen.dart';
 
 class NavigationPage extends StatefulWidget {
   final String? fromPage;
@@ -27,7 +28,7 @@ class _NavigationPageState extends State<NavigationPage> {
     _screens = [
       const HomeScreen(),
       ContratScreen(showSuccessMessage: widget.fromPage == 'fromLocation'),
-      const AddVehiculeScreen(),
+      const ChiffreAffaireScreen(),
       const UserScreen(),
     ];
     if (widget.fromPage == 'fromLocation') {
@@ -102,9 +103,9 @@ class _NavigationPageState extends State<NavigationPage> {
               label: "Contrats",
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.add_outlined),
-              activeIcon: Icon(Icons.add), // Icône pleine pour "Véhicule"
-              label: "Véhicules",
+              icon: Icon(Icons.bar_chart_outlined),
+              activeIcon: Icon(Icons.bar_chart), // Icône pleine pour "Chiffre d'affaire"
+              label: "Chiffre",
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),

@@ -40,14 +40,16 @@ class _RetourLocState extends State<RetourLoc> {
   void _handleFraisUpdated(Map<String, dynamic> frais) {
     // Utiliser Future.microtask pour éviter les appels à setState pendant la construction
     Future.microtask(() {
+      // Mettre à jour les données locales avec les frais
+      setState(() {
+        // Mettre à jour les données du widget avec les frais temporaires
+        widget.data.addAll(frais);
+      });
+      
       // Transmettre les frais mis à jour au composant parent
       if (widget.onFraisUpdated != null) {
         widget.onFraisUpdated!(frais);
       }
-      
-      setState(() {
-        // Mettre à jour les données locales si nécessaire
-      });
     });
   }
 

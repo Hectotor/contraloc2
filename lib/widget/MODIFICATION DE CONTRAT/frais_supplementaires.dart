@@ -47,6 +47,9 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
 
   // Total calculé
   double _total = 0.0;
+  
+  // Stockage temporaire des frais
+  Map<String, dynamic> _tempFrais = {};
 
   @override
   void initState() {
@@ -83,12 +86,12 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
       _fraisRayuresController.text = widget.data['fraisRayuresDommages']?.toString() ?? '0';
     }
 
-    // Initialiser les cases à cocher
+    // Initialiser les cases à cocher avec les valeurs sauvegardées
     _includeNettoyageInt = widget.data['includeNettoyageInterieur'] ?? false;
     _includeNettoyageExt = widget.data['includeNettoyageExterieur'] ?? false;
     _includeCarburant = widget.data['includeCarburantManquant'] ?? false;
     _includeRayures = widget.data['includeRayuresDommages'] ?? false;
-    _includeCoutTotal = widget.data['includeCoutTotalTheorique'] ?? false;
+    _includeCoutTotal = widget.data['includeCoutTotal'] ?? false;
     _includeCaution = widget.data['includeCaution'] ?? false;
     _includeCoutKmSupp = widget.data['includeCoutKmSupp'] ?? false;
 
@@ -274,7 +277,7 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
   // Méthode pour notifier le parent des changements
   void _notifierParent() {
     // Préparer les données à envoyer au parent
-    final updatedFrais = {
+    _tempFrais = {
       'coutTotal': _calculerCoutTotal(),
       'caution': double.tryParse(_cautionController.text) ?? 0.0,
       'coutKmSupplementaires': _calculerFraisKilometriques(),
@@ -282,6 +285,8 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
       'fraisNettoyageExterieur': double.tryParse(_fraisNettoyageExtController.text) ?? 0.0,
       'fraisCarburantManquant': double.tryParse(_fraisCarburantController.text) ?? 0.0,
       'fraisRayuresDommages': double.tryParse(_fraisRayuresController.text) ?? 0.0,
+      
+      // Utiliser des noms de propriétés cohérents pour les cases à cocher
       'includeNettoyageInterieur': _includeNettoyageInt,
       'includeNettoyageExterieur': _includeNettoyageExt,
       'includeCarburantManquant': _includeCarburant,
@@ -296,9 +301,10 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
       'nettoyageExt': _includeNettoyageExt ? _fraisNettoyageExtController.text : '',
       'carburantManquant': _includeCarburant ? _fraisCarburantController.text : '',
       'prixRayures': _includeRayures ? _fraisRayuresController.text : '',
+      'temporaire': true, // Marquer les frais comme temporaires
     };
     
-    widget.onFraisUpdated(updatedFrais);
+    widget.onFraisUpdated(_tempFrais);
   }
 
   // Méthode pour calculer le total et notifier le parent
@@ -316,9 +322,14 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              "Frais supplémentaires",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Frais supplémentaires",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
             const SizedBox(height: 20),
             
@@ -458,23 +469,24 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
             
             // Boutons d'action
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
                   child: const Text("Annuler"),
                 ),
-                const SizedBox(width: 10),
                 ElevatedButton(
                   onPressed: () {
                     _calculerTotal(); // Recalculer une dernière fois
-                    Navigator.of(context).pop(true); // Fermer avec confirmation
+                    Navigator.of(context).pop(true);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF08004D),
                   ),
                   child: const Text(
-                    "Confirmer",
+                    "Valider",
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
