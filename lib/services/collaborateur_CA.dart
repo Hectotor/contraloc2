@@ -277,7 +277,10 @@ class CollaborateurCA {
     double coutTotal = 0.0;
     
     // Additionner tous les frais
-  
+    
+    // Ajouter le prix de la location s'il est présent
+    coutTotal += fraisSupplementaires['prixLocation'] ?? 0.0;
+
     coutTotal += fraisSupplementaires['coutKmSupplementaires'] ?? 0.0;
     coutTotal += fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0;
     coutTotal += fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0;

@@ -186,7 +186,7 @@ class VehicleAccessManager {
     return serverSnapshot;
   }
   
-  // Méthode privée pour déterminer si les données du véhicule doivent être mises à jour
+  // Méthode pour déterminer si les données du véhicule doivent être mises à jour
   bool _shouldRefreshVehicleData(String vehicleId) {
     final lastUpdate = _lastVehicleUpdate[vehicleId];
     if (lastUpdate == null) {
@@ -224,7 +224,6 @@ class VehicleAccessManager {
       
       // Si des résultats sont trouvés dans le cache, les retourner
       if (!cacheSnapshot.docs.isEmpty) {
-        print('📋 Véhicule avec immatriculation $immatriculation récupéré depuis le cache');
         return cacheSnapshot;
       }
       

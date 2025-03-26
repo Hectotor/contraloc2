@@ -9,7 +9,7 @@ import '../services/collaborateur_util.dart';
 import 'package:flutter/services.dart';
 import '../widget/take_picture.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
-import '../widget/enregistrer_vehicule.dart';
+import '../ajouter_vehicule/enregistrer_vehicule.dart';
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
