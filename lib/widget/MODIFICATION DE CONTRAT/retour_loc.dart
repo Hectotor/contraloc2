@@ -170,11 +170,19 @@ class _RetourLocState extends State<RetourLoc> {
         // Bouton pour afficher le popup des frais supplémentaires
         ElevatedButton.icon(
           onPressed: () async {
+            // Récupérer les valeurs de kilométrage
+            double kilometrageInitial = double.tryParse(widget.data['kilometrageDepart'] ?? '0') ?? 0;
+            double kilometrageActuel = double.tryParse(widget.kilometrageRetourController.text) ?? 0;
+            double tarifKilometrique = double.tryParse(widget.data['kilometrageSupp'] ?? '0') ?? 0;
+            
             // Afficher le popup des frais supplémentaires
             await showFraisSupplementairesDialog(
               context,
               widget.data,
               _handleFraisUpdated,
+              kilometrageInitial,
+              kilometrageActuel,
+              tarifKilometrique,
             );
           },
           icon: const Icon(Icons.attach_money, color: Colors.white),
@@ -200,6 +208,9 @@ Future<void> showFraisSupplementairesDialog(
   BuildContext context,
   Map<String, dynamic> data,
   Function(Map<String, dynamic>) onFraisUpdated,
+  double kilometrageInitial,
+  double kilometrageActuel,
+  double tarifKilometrique,
 ) async {
   await showDialog(
     context: context,
@@ -211,6 +222,9 @@ Future<void> showFraisSupplementairesDialog(
         child: FraisSupplementaires(
           data: data,
           onFraisUpdated: onFraisUpdated,
+          kilometrageInitial: kilometrageInitial,
+          kilometrageActuel: kilometrageActuel,
+          tarifKilometrique: tarifKilometrique,
         ),
       );
     },

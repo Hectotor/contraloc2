@@ -4,11 +4,17 @@ import 'package:flutter/services.dart';
 class FraisSupplementaires extends StatefulWidget {
   final Map<String, dynamic> data;
   final Function(Map<String, dynamic>) onFraisUpdated;
+  final double kilometrageInitial;
+  final double kilometrageActuel;
+  final double tarifKilometrique;
 
   const FraisSupplementaires({
     Key? key,
     required this.data,
     required this.onFraisUpdated,
+    required this.kilometrageInitial,
+    required this.kilometrageActuel,
+    required this.tarifKilometrique,
   }) : super(key: key);
 
   @override
@@ -17,20 +23,22 @@ class FraisSupplementaires extends StatefulWidget {
 
 class _FraisSupplementairesState extends State<FraisSupplementaires> {
   // Contrôleurs pour les champs de texte
-  final TextEditingController _coutTotalTheoriqueController = TextEditingController();
+  final TextEditingController _coutTotalController = TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
-  final TextEditingController _coutKmSuppController = TextEditingController();
   final TextEditingController _fraisNettoyageIntController = TextEditingController();
   final TextEditingController _fraisNettoyageExtController = TextEditingController();
   final TextEditingController _fraisCarburantController = TextEditingController();
   final TextEditingController _fraisRayuresController = TextEditingController();
+
+  // Contrôleur spécifique pour les km supplémentaires
+  late TextEditingController _kmSuppDisplayController;
 
   // Variables pour les cases à cocher
   bool _includeNettoyageInt = false;
   bool _includeNettoyageExt = false;
   bool _includeCarburant = false;
   bool _includeRayures = false;
-  bool _includeCoutTotalTheorique = false;
+  bool _includeCoutTotal = false;
   bool _includeCaution = false;
   bool _includeCoutKmSupp = false;
 
@@ -40,10 +48,12 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
   @override
   void initState() {
     super.initState();
+    // Initialiser le contrôleur d'affichage des km supplémentaires
+    _kmSuppDisplayController = TextEditingController(text: _calculerFraisKilometriques().toStringAsFixed(2));
+    
     // Initialiser les contrôleurs avec les données existantes si disponibles
-    _coutTotalTheoriqueController.text = widget.data['coutTotalTheorique']?.toString() ?? '0';
+    _coutTotalController.text = widget.data['coutTotal']?.toString() ?? widget.data['coutTotalTheorique']?.toString() ?? '0';
     _cautionController.text = widget.data['caution']?.toString() ?? '0';
-    _coutKmSuppController.text = widget.data['coutKmSupplementaires']?.toString() ?? '0';
     
     // Initialiser les frais avec les valeurs du PDF si disponibles
     if (widget.data['nettoyageInt'] != null && widget.data['nettoyageInt'].toString().isNotEmpty) {
@@ -75,7 +85,7 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
     _includeNettoyageExt = widget.data['includeNettoyageExterieur'] ?? false;
     _includeCarburant = widget.data['includeCarburantManquant'] ?? false;
     _includeRayures = widget.data['includeRayuresDommages'] ?? false;
-    _includeCoutTotalTheorique = widget.data['includeCoutTotalTheorique'] ?? false;
+    _includeCoutTotal = widget.data['includeCoutTotalTheorique'] ?? false;
     _includeCaution = widget.data['includeCaution'] ?? false;
     _includeCoutKmSupp = widget.data['includeCoutKmSupp'] ?? false;
 
@@ -87,14 +97,36 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
       _notifierParent();
     });
   }
+
+  @override
+  void didUpdateWidget(FraisSupplementaires oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Vérifier si les propriétés de kilométrage ont changé
+    if (oldWidget.kilometrageActuel != widget.kilometrageActuel || 
+        oldWidget.kilometrageInitial != widget.kilometrageInitial || 
+        oldWidget.tarifKilometrique != widget.tarifKilometrique) {
+      // Mettre à jour le contrôleur d'affichage
+      _kmSuppDisplayController.text = _calculerFraisKilometriques().toStringAsFixed(2);
+      
+      // Recalculer le total
+      _calculerTotal();
+    }
+  }
+
+  @override
+  void dispose() {
+    _kmSuppDisplayController.dispose();
+    super.dispose();
+  }
   
   // Méthode pour calculer le total sans notifier le parent
   void _calculerTotalSansNotification() {
     double total = 0.0;
     
-    // Ajouter coût théorique si la case est cochée
-    if (_includeCoutTotalTheorique) {
-      total += double.tryParse(_coutTotalTheoriqueController.text) ?? 0.0;
+    // Ajouter coût total si la case est cochée
+    if (_includeCoutTotal) {
+      total += double.tryParse(_coutTotalController.text) ?? 0.0;
     }
     
     // Ajouter caution si la case est cochée
@@ -104,7 +136,7 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
     
     // Ajouter coût km supplémentaires si la case est cochée
     if (_includeCoutKmSupp) {
-      total += double.tryParse(_coutKmSuppController.text) ?? 0.0;
+      total += _calculerFraisKilometriques();
     }
     
     // Ajouter frais optionnels selon les cases cochées
@@ -128,14 +160,43 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
       _total = total;
     });
   }
+
+  double _calculerFraisKilometriques() {
+    double kilometrageAutorise = double.tryParse(widget.data['kilometrageAutorise'] ?? '0') ?? 0;
+    double kilometrage = widget.kilometrageActuel - widget.kilometrageInitial;
+    double kmSupplementaires = 0;
+    
+    // Si le kilométrage est inférieur au kilométrage initial, pas de frais
+    if (kilometrage < 0) {
+      kilometrage = 0;
+      return 0;
+    }
+    
+    // Calculer les kilomètres supplémentaires (au-delà du kilométrage autorisé)
+    if (kilometrage > kilometrageAutorise && kilometrageAutorise > 0) {
+      kmSupplementaires = kilometrage - kilometrageAutorise;
+    }
+    
+    // Calculer les frais en fonction du tarif kilométrique
+    double frais = kmSupplementaires * widget.tarifKilometrique;
+    
+    // Mettre à jour le contrôleur d'affichage si nous ne sommes pas dans initState
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _kmSuppDisplayController.text = frais.toStringAsFixed(2);
+      }
+    });
+    
+    return frais;
+  }
   
   // Méthode pour notifier le parent des changements
   void _notifierParent() {
     // Préparer les données à envoyer au parent
     final updatedFrais = {
-      'coutTotalTheorique': double.tryParse(_coutTotalTheoriqueController.text) ?? 0.0,
+      'coutTotal': double.tryParse(_coutTotalController.text) ?? 0.0,
       'caution': double.tryParse(_cautionController.text) ?? 0.0,
-      'coutKmSupplementaires': double.tryParse(_coutKmSuppController.text) ?? 0.0,
+      'coutKmSupplementaires': _calculerFraisKilometriques(),
       'fraisNettoyageInterieur': double.tryParse(_fraisNettoyageIntController.text) ?? 0.0,
       'fraisNettoyageExterieur': double.tryParse(_fraisNettoyageExtController.text) ?? 0.0,
       'fraisCarburantManquant': double.tryParse(_fraisCarburantController.text) ?? 0.0,
@@ -144,7 +205,7 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
       'includeNettoyageExterieur': _includeNettoyageExt,
       'includeCarburantManquant': _includeCarburant,
       'includeRayuresDommages': _includeRayures,
-      'includeCoutTotalTheorique': _includeCoutTotalTheorique,
+      'includeCoutTotal': _includeCoutTotal,
       'includeCaution': _includeCaution,
       'includeCoutKmSupp': _includeCoutKmSupp,
       'totalFrais': _total,
@@ -180,14 +241,14 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
             ),
             const SizedBox(height: 20),
             
-            // Coût total théorique
+            // Coût total
             _buildCheckboxField(
-              controller: _coutTotalTheoriqueController,
-              label: "Coût total théorique",
-              value: _includeCoutTotalTheorique,
+              controller: _coutTotalController,
+              label: "Coût total",
+              value: _includeCoutTotal,
               onChanged: (value) {
                 setState(() {
-                  _includeCoutTotalTheorique = value ?? false;
+                  _includeCoutTotal = value ?? false;
                   _calculerTotal();
                 });
               },
@@ -212,8 +273,8 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
             
             // Coût km supplémentaires
             _buildCheckboxField(
-              controller: _coutKmSuppController,
-              label: "Coût total km supplémentaires",
+              controller: _kmSuppDisplayController,
+              label: "Frais total km supplémentaires",
               value: _includeCoutKmSupp,
               onChanged: (value) {
                 setState(() {
@@ -222,6 +283,7 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
                 });
               },
               onTextChanged: (_) => _calculerTotal(),
+              readOnly: true, // Rendre le champ en lecture seule car calculé automatiquement
             ),
             const SizedBox(height: 10),
             
@@ -349,6 +411,7 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
     required bool value,
     required Function(bool?) onChanged,
     required Function(String) onTextChanged,
+    bool readOnly = false,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,6 +424,7 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
         Expanded(
           child: TextFormField(
             controller: controller,
+            readOnly: readOnly,
             decoration: InputDecoration(
               labelText: label,
               border: OutlineInputBorder(
@@ -385,6 +449,9 @@ Future<bool?> showFraisSupplementairesDialog(
   BuildContext context,
   Map<String, dynamic> data,
   Function(Map<String, dynamic>) onFraisUpdated,
+  double kilometrageInitial,
+  double kilometrageActuel,
+  double tarifKilometrique,
 ) {
   return showDialog<bool>(
     context: context,
@@ -396,6 +463,9 @@ Future<bool?> showFraisSupplementairesDialog(
         child: FraisSupplementaires(
           data: data,
           onFraisUpdated: onFraisUpdated,
+          kilometrageInitial: kilometrageInitial,
+          kilometrageActuel: kilometrageActuel,
+          tarifKilometrique: tarifKilometrique,
         ),
       );
     },
