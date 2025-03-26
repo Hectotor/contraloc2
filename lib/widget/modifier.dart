@@ -29,6 +29,7 @@ import 'navigation.dart'; // Import the NavigationPage
 import 'MODIFICATION DE CONTRAT/cloturer_location.dart'; // Import the popup
 import 'MODIFICATION DE CONTRAT/retour_envoie_pdf.dart'; // Nouvelle importation
 import 'package:ContraLoc/services/collaborateur_util.dart';
+import 'package:ContraLoc/services/collaborateur_CA.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart'; // Import FlutterImageCompress
 import 'package:path_provider/path_provider.dart'; // Import pour getTemporaryDirectory
 
@@ -319,109 +320,41 @@ class _ModifierScreenState extends State<ModifierScreen> {
           // Récupérer les informations du véhicule si l'ID est disponible
           if (vehiculeId.isNotEmpty) {
             try {
-              print('🚗 Tentative de récupération des informations du véhicule: $vehiculeId');
-              final vehiculeDoc = await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(adminId)
-                  .collection('vehicules')
-                  .doc(vehiculeId)
-                  .get();
-              
-              if (vehiculeDoc.exists) {
-                Map<String, dynamic> vehiculeData = vehiculeDoc.data() as Map<String, dynamic>;
-                String marque = vehiculeData['marque'] ?? '';
-                String modele = vehiculeData['modele'] ?? '';
-                String immatriculation = vehiculeData['immatriculation'] ?? '';
-                
-                // Créer un objet vehiculeInfoDetails pour une utilisation ultérieure
-                Map<String, dynamic> vehiculeInfoDetails = {
-                  'marque': marque,
-                  'modele': modele,
-                  'immatriculation': immatriculation,
-                  'photoVehiculeUrl': vehiculeData['photoVehiculeUrl'] ?? '',
-                };
-                
-                print('🚗 Informations du véhicule récupérées: ${vehiculeInfoDetails['marque']} ${vehiculeInfoDetails['modele']} (${vehiculeInfoDetails['immatriculation']})');
-              } else {
-                print('⚠️ Document véhicule non trouvé: $vehiculeId');
-              }
-            } catch (e) {
-              print('⚠️ Erreur lors de la récupération des informations du véhicule: $e');
-            }
-          }
-          
-          print('💰 Tentative d\'ajout dans la collection chiffre_affaire: ${widget.contratId}');
-          // Créer un document dans la collection 'chiffre_affaire'
-          try {
-            // Calculer le coût total (somme de tous les frais)
-            double coutTotal = 0.0;
-            coutTotal += _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0;
-            coutTotal += _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0;
-            coutTotal += _fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0;
-            coutTotal += _fraisSupplementaires['fraisCarburantManquant'] ?? 0.0;
-            coutTotal += _fraisSupplementaires['fraisRayuresDommages'] ?? 0.0;
-            coutTotal += _fraisSupplementaires['caution'] ?? 0.0;
-            
-            // Récupérer les informations détaillées du véhicule
-            Map<String, dynamic> vehiculeInfoDetails = {};
-            try {
-              final vehiculeDoc = await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(adminId)
-                  .collection('vehicules')
-                  .doc(vehiculeId)
-                  .get();
-              
-              if (vehiculeDoc.exists) {
-                vehiculeInfoDetails = {
-                  'marque': vehiculeDoc.data()?['marque'] ?? '',
-                  'modele': vehiculeDoc.data()?['modele'] ?? '',
-                  'immatriculation': vehiculeDoc.data()?['immatriculation'] ?? '',
-                  'photoVehiculeUrl': vehiculeDoc.data()?['photoVehiculeUrl'] ?? '',
-                };
-                print('🚗 Informations détaillées du véhicule récupérées');
-              }
-            } catch (e) {
-              print('⚠️ Erreur lors de la récupération des informations détaillées du véhicule: $e');
-            }
-            
-            Map<String, dynamic> chiffreData = {
-              'vehiculeInfo': vehiculeInfoDetails,
-              'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
-              'fraisNettoyageInterieur': _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0,
-              'fraisNettoyageExterieur': _fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0,
-              'fraisCarburantManquant': _fraisSupplementaires['fraisCarburantManquant'] ?? 0.0,
-              'fraisRayuresDommages': _fraisSupplementaires['fraisRayuresDommages'] ?? 0.0,
-              'caution': _fraisSupplementaires['caution'] ?? 0.0,
-              'coutTotal': coutTotal,
-              'dateCloture': DateTime.now().toIso8601String(),
-            };
-            
-            // Utiliser CollaborateurUtil pour ajouter le document
-            try {
-              await CollaborateurUtil.updateDocument(
-                collection: 'chiffre_affaire',
-                docId: widget.contratId,
-                data: chiffreData,
-                useAdminId: true,
+              // Utiliser CollaborateurCA pour récupérer les informations du véhicule
+              Map<String, dynamic> vehiculeInfoDetails = await CollaborateurCA.getVehiculeInfo(
+                vehiculeId: vehiculeId,
               );
-              print('✅ Informations financières ajoutées dans la collection chiffre_affaire');
-            } catch (updateError) {
-              print('❌ Erreur lors de l\'ajout dans chiffre_affaire via updateDocument: $updateError');
               
-              // Essayer avec set() directement si updateDocument échoue
-              print('⚠️ Tentative alternative avec set() direct');
-              await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(adminId)
-                  .collection('chiffre_affaire')
-                  .doc(widget.contratId)
-                  .set(chiffreData);
-              print('✅ Informations financières ajoutées dans la collection chiffre_affaire (méthode alternative)');
+              // Calculer le coût total
+              double coutTotal = CollaborateurCA.calculerCoutTotal(_fraisSupplementaires);
+              
+              // Préparer les données pour la collection chiffre_affaire
+              Map<String, dynamic> chiffreData = {
+                'vehiculeInfo': vehiculeInfoDetails,
+                'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
+                'fraisNettoyageInterieur': _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0,
+                'fraisNettoyageExterieur': _fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0,
+                'fraisCarburantManquant': _fraisSupplementaires['fraisCarburantManquant'] ?? 0.0,
+                'fraisRayuresDommages': _fraisSupplementaires['fraisRayuresDommages'] ?? 0.0,
+                'caution': _fraisSupplementaires['caution'] ?? 0.0,
+                'coutTotal': coutTotal,
+                'dateCloture': DateTime.now().toIso8601String(),
+              };
+              
+              // Utiliser CollaborateurCA pour ajouter le document
+              final success = await CollaborateurCA.ajouterOuMettreAJourChiffreAffaire(
+                contratId: widget.contratId,
+                data: chiffreData,
+              );
+              
+              if (success) {
+                print('✅ Informations financières ajoutées dans la collection chiffre_affaire');
+              } else {
+                print('❌ Erreur lors de l\'ajout dans chiffre_affaire');
+              }
+            } catch (e) {
+              print('❌ Erreur lors de l\'ajout dans chiffre_affaire: $e');
             }
-          } catch (chiffreError) {
-            print('❌ Erreur lors de l\'ajout dans chiffre_affaire: $chiffreError');
-            throw chiffreError;
           }
           
         } catch (e) {
@@ -445,40 +378,16 @@ class _ModifierScreenState extends State<ModifierScreen> {
         // Ajouter les informations dans la collection 'chiffre_affaire'
         String vehiculeId = widget.data['vehiculeId'] ?? '';
         
-        // Calculer le coût total
-        double coutTotal = 0.0;
-        coutTotal += _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0;
-        coutTotal += _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0;
-        coutTotal += _fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0;
-        coutTotal += _fraisSupplementaires['fraisCarburantManquant'] ?? 0.0;
-        coutTotal += _fraisSupplementaires['fraisRayuresDommages'] ?? 0.0;
-        coutTotal += _fraisSupplementaires['caution'] ?? 0.0;
-        
-        // Récupérer les informations détaillées du véhicule
-        Map<String, dynamic> vehiculeInfoDetails = {};
         try {
-          final vehiculeDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userId)
-              .collection('vehicules')
-              .doc(vehiculeId)
-              .get();
+          // Utiliser CollaborateurCA pour récupérer les informations du véhicule
+          Map<String, dynamic> vehiculeInfoDetails = await CollaborateurCA.getVehiculeInfo(
+            vehiculeId: vehiculeId,
+          );
           
-          if (vehiculeDoc.exists) {
-            vehiculeInfoDetails = {
-              'marque': vehiculeDoc.data()?['marque'] ?? '',
-              'modele': vehiculeDoc.data()?['modele'] ?? '',
-              'immatriculation': vehiculeDoc.data()?['immatriculation'] ?? '',
-              'photoVehiculeUrl': vehiculeDoc.data()?['photoVehiculeUrl'] ?? '',
-            };
-            print('🚗 Informations détaillées du véhicule récupérées');
-          }
-        } catch (e) {
-          print('⚠️ Erreur lors de la récupération des informations détaillées du véhicule: $e');
-        }
-        
-        // Créer un document dans la collection 'chiffre_affaire'
-        try {
+          // Calculer le coût total
+          double coutTotal = CollaborateurCA.calculerCoutTotal(_fraisSupplementaires);
+          
+          // Préparer les données pour la collection chiffre_affaire
           Map<String, dynamic> chiffreData = {
             'vehiculeInfo': vehiculeInfoDetails,
             'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
@@ -491,31 +400,21 @@ class _ModifierScreenState extends State<ModifierScreen> {
             'dateCloture': DateTime.now().toIso8601String(),
           };
           
-          // Utiliser CollaborateurUtil pour ajouter le document
-          try {
-            await CollaborateurUtil.updateDocument(
-              collection: 'chiffre_affaire',
-              docId: widget.contratId,
-              data: chiffreData,
-              useAdminId: true,
-            );
+          // Utiliser CollaborateurCA pour ajouter le document
+          final success = await CollaborateurCA.ajouterOuMettreAJourChiffreAffaire(
+            contratId: widget.contratId,
+            data: chiffreData,
+          );
+          
+          if (success) {
             print('✅ Informations financières ajoutées dans la collection chiffre_affaire');
-          } catch (updateError) {
-            print('❌ Erreur lors de l\'ajout dans chiffre_affaire via updateDocument: $updateError');
-            
-            // Essayer avec set() directement si updateDocument échoue
-            print('⚠️ Tentative alternative avec set() direct');
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(userId)
-                .collection('chiffre_affaire')
-                .doc(widget.contratId)
-                .set(chiffreData);
-            print('✅ Informations financières ajoutées dans la collection chiffre_affaire (méthode alternative)');
+          } else {
+            print('❌ Erreur lors de l\'ajout dans chiffre_affaire');
+            throw Exception('Erreur lors de l\'ajout dans chiffre_affaire');
           }
-        } catch (chiffreError) {
-          print('❌ Erreur lors de l\'ajout dans chiffre_affaire: $chiffreError');
-          throw chiffreError;
+        } catch (e) {
+          print('❌ Erreur lors de l\'ajout dans chiffre_affaire: $e');
+          throw e;
         }
       }
 

@@ -336,7 +336,7 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
             // Coût total
             _buildCheckboxField(
               controller: _coutTotalController,
-              label: "Coût de la location",
+              label: "Prix de la location",
               value: _includeCoutTotal,
               onChanged: (value) {
                 setState(() {
