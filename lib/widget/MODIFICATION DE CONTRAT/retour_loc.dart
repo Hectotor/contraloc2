@@ -31,8 +31,9 @@ class _RetourLocState extends State<RetourLoc> {
     super.initState();
     // Initialiser le contrôleur de date avec la date du jour une seule fois
     if (widget.dateFinEffectifController.text.isEmpty) {
-      widget.dateFinEffectifController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
-    }
+      final now = DateTime.now();
+      widget.dateFinEffectifController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(now);
+    } 
   }
 
   // Méthode pour gérer la mise à jour des frais
@@ -112,8 +113,10 @@ class _RetourLocState extends State<RetourLoc> {
                   pickedTime.hour,
                   pickedTime.minute,
                 );
+                
                 final formattedDateTime =
                     DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(dateTime);
+                
                 widget.dateFinEffectifController.text = formattedDateTime;
               }
             }

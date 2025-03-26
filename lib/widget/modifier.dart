@@ -72,7 +72,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
   @override
   void initState() {
     super.initState();
-    _dateFinEffectifController.text = DateFormat('EEEE d MMMM à HH:mm', 'fr_FR')
+    _dateFinEffectifController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR')
         .format(DateTime.now()); // Date et heure actuelles par défaut
     _commentaireRetourController.text = widget.data['commentaireRetour'] ?? '';
     _kilometrageRetourController.text = widget.data['kilometrageRetour'] ?? '';
