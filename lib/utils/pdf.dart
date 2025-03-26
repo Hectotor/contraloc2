@@ -357,7 +357,6 @@ Future<String> generatePdf(
               dureeTheorique: dureeTheorique,
               dureeEffectif: dureeEffectif,
               prixLocation: prixLocation,
-              prixRayures: rayures,
               coutTotalTheorique: coutTotalTheorique,
               coutTotal: coutTotal,
               boldFont: boldFont,

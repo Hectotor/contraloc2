@@ -44,10 +44,31 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
     _coutTotalTheoriqueController.text = widget.data['coutTotalTheorique']?.toString() ?? '0';
     _cautionController.text = widget.data['caution']?.toString() ?? '0';
     _coutKmSuppController.text = widget.data['coutKmSupplementaires']?.toString() ?? '0';
-    _fraisNettoyageIntController.text = widget.data['fraisNettoyageInterieur']?.toString() ?? '0';
-    _fraisNettoyageExtController.text = widget.data['fraisNettoyageExterieur']?.toString() ?? '0';
-    _fraisCarburantController.text = widget.data['fraisCarburantManquant']?.toString() ?? '0';
-    _fraisRayuresController.text = widget.data['fraisRayuresDommages']?.toString() ?? '0';
+    
+    // Initialiser les frais avec les valeurs du PDF si disponibles
+    if (widget.data['nettoyageInt'] != null && widget.data['nettoyageInt'].toString().isNotEmpty) {
+      _fraisNettoyageIntController.text = widget.data['nettoyageInt'].toString();
+    } else {
+      _fraisNettoyageIntController.text = widget.data['fraisNettoyageInterieur']?.toString() ?? '0';
+    }
+    
+    if (widget.data['nettoyageExt'] != null && widget.data['nettoyageExt'].toString().isNotEmpty) {
+      _fraisNettoyageExtController.text = widget.data['nettoyageExt'].toString();
+    } else {
+      _fraisNettoyageExtController.text = widget.data['fraisNettoyageExterieur']?.toString() ?? '0';
+    }
+    
+    if (widget.data['carburantManquant'] != null && widget.data['carburantManquant'].toString().isNotEmpty) {
+      _fraisCarburantController.text = widget.data['carburantManquant'].toString();
+    } else {
+      _fraisCarburantController.text = widget.data['fraisCarburantManquant']?.toString() ?? '0';
+    }
+    
+    if (widget.data['prixRayures'] != null && widget.data['prixRayures'].toString().isNotEmpty) {
+      _fraisRayuresController.text = widget.data['prixRayures'].toString();
+    } else {
+      _fraisRayuresController.text = widget.data['fraisRayuresDommages']?.toString() ?? '0';
+    }
 
     // Initialiser les cases à cocher
     _includeNettoyageInt = widget.data['includeNettoyageInterieur'] ?? false;
@@ -57,20 +78,6 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
     _includeCoutTotalTheorique = widget.data['includeCoutTotalTheorique'] ?? false;
     _includeCaution = widget.data['includeCaution'] ?? false;
     _includeCoutKmSupp = widget.data['includeCoutKmSupp'] ?? false;
-
-    // Récupérer les données de nettoyage, carburant et rayures du contrat si disponibles
-    if (widget.data['nettoyageInt'] != null && widget.data['nettoyageInt'].toString().isNotEmpty) {
-      _fraisNettoyageIntController.text = widget.data['nettoyageInt'].toString();
-    }
-    if (widget.data['nettoyageExt'] != null && widget.data['nettoyageExt'].toString().isNotEmpty) {
-      _fraisNettoyageExtController.text = widget.data['nettoyageExt'].toString();
-    }
-    if (widget.data['carburantManquant'] != null && widget.data['carburantManquant'].toString().isNotEmpty) {
-      _fraisCarburantController.text = widget.data['carburantManquant'].toString();
-    }
-    if (widget.data['prixRayures'] != null && widget.data['prixRayures'].toString().isNotEmpty) {
-      _fraisRayuresController.text = widget.data['prixRayures'].toString();
-    }
 
     // Calculer le total initial sans notifier le parent
     _calculerTotalSansNotification();
@@ -141,7 +148,8 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
       'includeCaution': _includeCaution,
       'includeCoutKmSupp': _includeCoutKmSupp,
       'totalFrais': _total,
-      // Ajouter les champs pour le PDF
+      
+      // Ajouter les champs pour le PDF avec le même format pour tous les frais
       'nettoyageInt': _includeNettoyageInt ? _fraisNettoyageIntController.text : '',
       'nettoyageExt': _includeNettoyageExt ? _fraisNettoyageExtController.text : '',
       'carburantManquant': _includeCarburant ? _fraisCarburantController.text : '',

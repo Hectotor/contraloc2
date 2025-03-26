@@ -350,7 +350,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       'caution': _cautionController.text,
       'franchise': _franchiseController.text,
       'kilometrageSupp': _kilometrageSuppController.text,
-      'rayures': _rayuresController.text,
+      'prixRayures': _rayuresController.text, // Ajout de prixRayures pour cohérence avec le PDF
       'assuranceNom': _assuranceNomController.text,
       'assuranceNumero': _assuranceNumeroController.text,
       'entretienDate': _entretienDateController.text,

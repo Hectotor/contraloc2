@@ -468,7 +468,7 @@ class _LocationPageState extends State<LocationPage> {
         'assuranceNom': _assuranceNomController.text,
         'assuranceNumero': _assuranceNumeroController.text,
         'franchise': _franchiseController.text,
-        'rayures': _rayuresController.text,
+        'prixRayures': _rayuresController.text,  // Ajout de prixRayures pour le PDF
         'prixLocation': _prixLocationController.text,
         'logoUrl': logoUrl,
         'nomEntreprise': nomEntreprise,
@@ -512,7 +512,7 @@ class _LocationPageState extends State<LocationPage> {
           'assuranceNom': _assuranceNomController.text,  
           'assuranceNumero': _assuranceNumeroController.text,  
           'franchise': _franchiseController.text,  
-          'rayures': _rayuresController.text,  
+          'prixRayures': _rayuresController.text,  // Ajout de prixRayures pour le PDF
           'kilometrageSupp': _kilometrageSuppController.text,  
           'kilometrageAutorise': _kilometrageAutoriseController.text,
           'typeLocation': _typeLocationController.text,

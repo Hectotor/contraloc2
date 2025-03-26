@@ -22,7 +22,6 @@ class PdfVoitureWidget {
     required int dureeTheorique,
     required int dureeEffectif,
     required String prixLocation,
-    required String prixRayures,
     required double? coutTotalTheorique,
     required double? coutTotal,
     required pw.Font boldFont,
@@ -71,7 +70,6 @@ class PdfVoitureWidget {
               dureeTheorique,
               dureeEffectif,
               prixLocation,
-              prixRayures,
               coutTotalTheorique,
               coutTotal,
               ttf),
@@ -135,7 +133,6 @@ class PdfVoitureWidget {
       int dureeTheorique,
       int dureeEffectif,
       String prixLocation,
-      String prixRayures,
       double? coutTotalTheorique,
       double? coutTotal,
       pw.Font ttf) {
@@ -472,7 +469,7 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Frais de rayures/dommages: $prixRayures €',
+                  child: pw.Text('Frais de rayures/dommages: ${data['prixRayures'] ?? ''} €',
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),

@@ -137,6 +137,7 @@ class RetourEnvoiePdf {
           'nettoyageInt': (contratData['nettoyageInt'] ?? '').toString(),
           'nettoyageExt': (contratData['nettoyageExt'] ?? '').toString(),
           'carburantManquant': (contratData['carburantManquant'] ?? '').toString(),
+          'prixRayures': (contratData['prixRayures'] ?? '').toString(),
           'caution': (contratData['caution'] ?? '').toString(),
           
           // Champs supplémentaires
