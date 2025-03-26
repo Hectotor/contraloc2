@@ -66,6 +66,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
       TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
 
+  // Ajouter une variable pour stocker les frais supplémentaires
+  Map<String, dynamic> _fraisSupplementaires = {};
+
   @override
   void initState() {
     super.initState();
@@ -234,6 +237,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'nettoyageExt': _nettoyageExtController.text,
         'carburantManquant': _carburantManquantController.text,
         'signature_retour': signatureRetourBase64,
+        // Ajouter les frais supplémentaires aux données mises à jour
+        'fraisSupplementaires': _fraisSupplementaires,
       };
 
       // Mettre à jour Firestore avec les informations de retour
@@ -679,6 +684,14 @@ class _ModifierScreenState extends State<ModifierScreen> {
                       data: widget.data,
                       selectDateTime: _selectDateTime,
                       dateDebut: _parseDateWithFallback(widget.data['dateDebut']),
+                      onFraisUpdated: (frais) {
+                        // Utiliser Future.microtask pour éviter les appels à setState pendant la construction
+                        Future.microtask(() {
+                          setState(() {
+                            _fraisSupplementaires = frais;
+                          });
+                        });
+                      },
                     ),
                     const SizedBox(height: 20),
                     EtatVehiculeRetour(

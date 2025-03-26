@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart'; // Importer la bibliothèque Intl pour utiliser DateFormat
+import 'frais_supplementaires.dart'; // Importer le popup des frais supplémentaires
 
 class RetourLoc extends StatefulWidget {
   final TextEditingController dateFinEffectifController;
@@ -8,6 +9,7 @@ class RetourLoc extends StatefulWidget {
   final Map<String, dynamic> data;
   final Future<void> Function(TextEditingController) selectDateTime;
   final DateTime dateDebut;
+  final Function(Map<String, dynamic>)? onFraisUpdated;
 
   const RetourLoc({
     Key? key,
@@ -16,6 +18,7 @@ class RetourLoc extends StatefulWidget {
     required this.data,
     required this.selectDateTime,
     required this.dateDebut,
+    this.onFraisUpdated,
   }) : super(key: key);
 
   @override
@@ -30,6 +33,21 @@ class _RetourLocState extends State<RetourLoc> {
     if (widget.dateFinEffectifController.text.isEmpty) {
       widget.dateFinEffectifController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
     }
+  }
+
+  // Méthode pour gérer la mise à jour des frais
+  void _handleFraisUpdated(Map<String, dynamic> frais) {
+    // Utiliser Future.microtask pour éviter les appels à setState pendant la construction
+    Future.microtask(() {
+      // Transmettre les frais mis à jour au composant parent
+      if (widget.onFraisUpdated != null) {
+        widget.onFraisUpdated!(frais);
+      }
+      
+      setState(() {
+        // Mettre à jour les données locales si nécessaire
+      });
+    });
   }
 
   @override
@@ -148,7 +166,53 @@ class _RetourLocState extends State<RetourLoc> {
             return null;
           },
         ),
+        const SizedBox(height: 10),
+        // Bouton pour afficher le popup des frais supplémentaires
+        ElevatedButton.icon(
+          onPressed: () async {
+            // Afficher le popup des frais supplémentaires
+            await showFraisSupplementairesDialog(
+              context,
+              widget.data,
+              _handleFraisUpdated,
+            );
+          },
+          icon: const Icon(Icons.attach_money, color: Colors.white),
+          label: const Text(
+            "Calculer les frais supplémentaires",
+            style: TextStyle(color: Colors.white),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF08004D),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
       ],
     );
   }
+}
+
+// Fonction pour afficher le popup des frais supplémentaires
+Future<void> showFraisSupplementairesDialog(
+  BuildContext context,
+  Map<String, dynamic> data,
+  Function(Map<String, dynamic>) onFraisUpdated,
+) async {
+  await showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: FraisSupplementaires(
+          data: data,
+          onFraisUpdated: onFraisUpdated,
+        ),
+      );
+    },
+  );
 }
