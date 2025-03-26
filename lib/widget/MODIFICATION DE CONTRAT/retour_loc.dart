@@ -192,17 +192,25 @@ class _RetourLocState extends State<RetourLoc> {
               dateFinEffective,
             );
           },
-          icon: const Icon(Icons.attach_money, color: Colors.white),
+          icon: const Icon(Icons.receipt_long, color: Colors.white),
           label: const Text(
-            "Calculer les frais supplémentaires",
-            style: TextStyle(color: Colors.white),
+            "Facturer la location",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
           ),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF08004D),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 30),
+            minimumSize: const Size(double.infinity, 56), // Prend toute la largeur disponible
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
             ),
+            elevation: 4,
+            shadowColor: const Color(0x8008004D),
           ),
         ),
       ],
