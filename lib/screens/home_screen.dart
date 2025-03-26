@@ -8,6 +8,7 @@ import '../widget/MES CONTRATS/vehicle_access_manager.dart'; // Import du gestio
 import '../services/connectivity_service.dart'; // Import du service de connectivité
 import '../screens/add_vehicule.dart'; // Import pour la redirection vers AddVehiculeScreen
 import '../widget/button_add_vehicle.dart'; // Import pour le bouton personnalisé
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -52,18 +53,46 @@ class _HomeScreenState extends State<HomeScreen> {
   // Méthode pour charger les données utilisateur avec CollaborateurUtil
   Future<void> _loadUserData() async {
     try {
-      // Utiliser CollaborateurUtil pour récupérer les données d'authentification
+      // Vérifier si l'utilisateur est un collaborateur
+      final status = await CollaborateurUtil.checkCollaborateurStatus();
+      final isCollaborateur = status['isCollaborateur'] == true;
+      
+      // Récupérer les données d'authentification (contient le nom de l'entreprise)
       final authData = await CollaborateurUtil.getAuthData();
+      String prenom = authData['prenom'] ?? '';
+      
+      if (isCollaborateur) {
+        // Pour un collaborateur, utiliser son prénom depuis son document utilisateur
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          try {
+            final userDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+            
+            if (userDoc.exists && userDoc.data() != null) {
+              final userData = userDoc.data()!;
+              if (userData.containsKey('prenom') && userData['prenom'] != null) {
+                prenom = userData['prenom'];
+                print('✅ Prénom du collaborateur récupéré: $prenom');
+              }
+            }
+          } catch (e) {
+            print('⚠️ Erreur lors de la récupération du prénom du collaborateur: $e');
+          }
+        }
+      }
       
       if (mounted) {
         setState(() {
-          _prenom = authData['prenom'] ?? '';
+          _prenom = prenom;
           _nomEntreprise = authData['nomEntreprise'] ?? '';
           _isUserDataLoaded = true;
         });
       }
     } catch (e) {
-      print(' Erreur lors du chargement des données utilisateur: $e');
+      print('❌ Erreur lors du chargement des données utilisateur: $e');
       if (mounted) {
         setState(() {
           _prenom = '';
@@ -170,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: const TextStyle(
                     color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
               ),
-        backgroundColor: const Color(0xFF08004D), 
+        backgroundColor: const Color(0xFF08004D),
         centerTitle: false,
         elevation: 0,
         actions: [
