@@ -164,11 +164,77 @@ class PdfVoitureWidget {
 
     double calculateCoutTotalTheorique(String dateDebutStr, String dateFinTheoriqueStr, String prixLocationStr) {
       try {
-        DateFormat formatter = DateFormat('EEEE dd MMMM yyyy à HH:mm', 'fr_FR');
-        DateTime dateDebut = formatter.parse(dateDebutStr);
-        DateTime dateFinTheorique = formatter.parse(dateFinTheoriqueStr);
-        double prixLocation = double.parse(prixLocationStr);
-        return (dateFinTheorique.difference(dateDebut).inDays) * prixLocation;
+        // Vérifier si les chaînes de date sont vides
+        if (dateDebutStr.isEmpty || dateFinTheoriqueStr.isEmpty) {
+          return 0.0;
+        }
+        
+        // Vérifier si le prix de location est valide
+        double prixLocation;
+        try {
+          prixLocation = double.parse(prixLocationStr);
+        } catch (e) {
+          print('Erreur lors du parsing du prix de location: $e');
+          return 0.0;
+        }
+        
+        // Essayer de parser les dates avec différents formats
+        DateTime dateDebut;
+        DateTime dateFinTheorique;
+        
+        try {
+          // Essayer d'abord avec le format complet
+          DateFormat formatterComplet = DateFormat('EEEE dd MMMM yyyy à HH:mm', 'fr_FR');
+          dateDebut = formatterComplet.parse(dateDebutStr);
+          dateFinTheorique = formatterComplet.parse(dateFinTheoriqueStr);
+        } catch (e) {
+          try {
+            // Essayer avec un format sans heure
+            DateFormat formatterSansHeure = DateFormat('EEEE dd MMMM yyyy', 'fr_FR');
+            dateDebut = formatterSansHeure.parse(dateDebutStr);
+            dateFinTheorique = formatterSansHeure.parse(dateFinTheoriqueStr);
+          } catch (e) {
+            try {
+              // Essayer avec un format ISO
+              dateDebut = DateTime.parse(dateDebutStr);
+              dateFinTheorique = DateTime.parse(dateFinTheoriqueStr);
+            } catch (e) {
+              print('Erreur lors du parsing des dates: $e');
+              return 0.0;
+            }
+          }
+        }
+        
+        // Récupérer le type de location
+        // Utiliser directement la variable typeLocationValue définie dans la méthode build
+        
+        // Afficher les dates et le type de location pour le débogage
+        print('DEBUG - Date début brute: ${dateDebut.toString()}');
+        print('DEBUG - Date fin brute: ${dateFinTheorique.toString()}');
+        print('DEBUG - Type de location: $typeLocationValue');
+        
+        // Forcer le calcul en mode journalier pour le test
+        // Calculer la différence en heures pour plus de précision
+        int differenceEnHeures = dateFinTheorique.difference(dateDebut).inHours;
+        
+        // Calculer le nombre de jours facturés
+        int joursFactures = 1; // Le premier jour est toujours facturé
+        
+        // Ajouter un jour pour chaque tranche de 24h complète
+        if (differenceEnHeures >= 24) {
+          joursFactures = 1 + (differenceEnHeures / 24).floor();
+        }
+        
+        // Ajouter des logs pour le débogage
+        print('Tentative de parsing de la date: "$dateDebutStr"');
+        print('Tentative de parsing de la date: "$dateFinTheoriqueStr"');
+        print('Date début: $dateDebut, Date fin: $dateFinTheorique');
+        print('Différence en heures: $differenceEnHeures');
+        print('Jours facturés (tranches de 24h): $joursFactures');
+        print('Prix location: $prixLocation, Coût total: ${prixLocation * joursFactures}');
+        
+        // Forcer le retour du calcul journalier pour le test
+        return prixLocation * joursFactures;
       } catch (e) {
         print('Erreur lors du calcul du coût total théorique: $e');
         return 0.0;
@@ -177,11 +243,77 @@ class PdfVoitureWidget {
 
     double calculateCoutTotalEffectif(String dateDebutStr, String dateFinEffectifStr, String prixLocationStr) {
       try {
-        DateFormat formatter = DateFormat('EEEE dd MMMM yyyy à HH:mm', 'fr_FR');
-        DateTime dateDebut = formatter.parse(dateDebutStr);
-        DateTime dateFinEffectif = formatter.parse(dateFinEffectifStr);
-        double prixLocation = double.parse(prixLocationStr);
-        return (dateFinEffectif.difference(dateDebut).inDays) * prixLocation;
+        // Vérifier si les chaînes de date sont vides
+        if (dateDebutStr.isEmpty || dateFinEffectifStr.isEmpty) {
+          return 0.0;
+        }
+        
+        // Vérifier si le prix de location est valide
+        double prixLocation;
+        try {
+          prixLocation = double.parse(prixLocationStr);
+        } catch (e) {
+          print('Erreur lors du parsing du prix de location: $e');
+          return 0.0;
+        }
+        
+        // Essayer de parser les dates avec différents formats
+        DateTime dateDebut;
+        DateTime dateFinEffectif;
+        
+        try {
+          // Essayer d'abord avec le format complet
+          DateFormat formatterComplet = DateFormat('EEEE dd MMMM yyyy à HH:mm', 'fr_FR');
+          dateDebut = formatterComplet.parse(dateDebutStr);
+          dateFinEffectif = formatterComplet.parse(dateFinEffectifStr);
+        } catch (e) {
+          try {
+            // Essayer avec un format sans heure
+            DateFormat formatterSansHeure = DateFormat('EEEE dd MMMM yyyy', 'fr_FR');
+            dateDebut = formatterSansHeure.parse(dateDebutStr);
+            dateFinEffectif = formatterSansHeure.parse(dateFinEffectifStr);
+          } catch (e) {
+            try {
+              // Essayer avec un format ISO
+              dateDebut = DateTime.parse(dateDebutStr);
+              dateFinEffectif = DateTime.parse(dateFinEffectifStr);
+            } catch (e) {
+              print('Erreur lors du parsing des dates: $e');
+              return 0.0;
+            }
+          }
+        }
+        
+        // Récupérer le type de location
+        // Utiliser directement la variable typeLocationValue définie dans la méthode build
+        
+        // Afficher les dates et le type de location pour le débogage
+        print('DEBUG - Date début brute: ${dateDebut.toString()}');
+        print('DEBUG - Date fin brute: ${dateFinEffectif.toString()}');
+        print('DEBUG - Type de location: $typeLocationValue');
+        
+        // Forcer le calcul en mode journalier pour le test
+        // Calculer la différence en heures pour plus de précision
+        int differenceEnHeures = dateFinEffectif.difference(dateDebut).inHours;
+        
+        // Calculer le nombre de jours facturés
+        int joursFactures = 1; // Le premier jour est toujours facturé
+        
+        // Ajouter un jour pour chaque tranche de 24h complète
+        if (differenceEnHeures >= 24) {
+          joursFactures = 1 + (differenceEnHeures / 24).floor();
+        }
+        
+        // Ajouter des logs pour le débogage
+        print('Tentative de parsing de la date: "$dateDebutStr"');
+        print('Tentative de parsing de la date: "$dateFinEffectifStr"');
+        print('Date début: $dateDebut, Date fin: $dateFinEffectif');
+        print('Différence en heures: $differenceEnHeures');
+        print('Jours facturés (tranches de 24h): $joursFactures');
+        print('Prix location: $prixLocation, Coût total: ${prixLocation * joursFactures}');
+        
+        // Forcer le retour du calcul journalier pour le test
+        return prixLocation * joursFactures;
       } catch (e) {
         print('Erreur lors du calcul du coût total effectif: $e');
         return 0.0;

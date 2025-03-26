@@ -175,6 +175,9 @@ class _RetourLocState extends State<RetourLoc> {
             double kilometrageActuel = double.tryParse(widget.kilometrageRetourController.text) ?? 0;
             double tarifKilometrique = double.tryParse(widget.data['kilometrageSupp'] ?? '0') ?? 0;
             
+            // Récupérer la date de fin effective
+            String dateFinEffective = widget.dateFinEffectifController.text;
+            
             // Afficher le popup des frais supplémentaires
             await showFraisSupplementairesDialog(
               context,
@@ -183,6 +186,7 @@ class _RetourLocState extends State<RetourLoc> {
               kilometrageInitial,
               kilometrageActuel,
               tarifKilometrique,
+              dateFinEffective,
             );
           },
           icon: const Icon(Icons.attach_money, color: Colors.white),
@@ -211,6 +215,7 @@ Future<void> showFraisSupplementairesDialog(
   double kilometrageInitial,
   double kilometrageActuel,
   double tarifKilometrique,
+  String dateFinEffective,
 ) async {
   await showDialog(
     context: context,
@@ -225,6 +230,7 @@ Future<void> showFraisSupplementairesDialog(
           kilometrageInitial: kilometrageInitial,
           kilometrageActuel: kilometrageActuel,
           tarifKilometrique: tarifKilometrique,
+          dateFinEffective: dateFinEffective,
         ),
       );
     },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart'; // Importer la bibliothèque intl pour utiliser DateFormat
 
 class FraisSupplementaires extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -7,6 +8,7 @@ class FraisSupplementaires extends StatefulWidget {
   final double kilometrageInitial;
   final double kilometrageActuel;
   final double tarifKilometrique;
+  final String dateFinEffective;
 
   const FraisSupplementaires({
     Key? key,
@@ -15,6 +17,7 @@ class FraisSupplementaires extends StatefulWidget {
     required this.kilometrageInitial,
     required this.kilometrageActuel,
     required this.tarifKilometrique,
+    required this.dateFinEffective,
   }) : super(key: key);
 
   @override
@@ -23,15 +26,15 @@ class FraisSupplementaires extends StatefulWidget {
 
 class _FraisSupplementairesState extends State<FraisSupplementaires> {
   // Contrôleurs pour les champs de texte
-  final TextEditingController _coutTotalController = TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
   final TextEditingController _fraisNettoyageIntController = TextEditingController();
   final TextEditingController _fraisNettoyageExtController = TextEditingController();
   final TextEditingController _fraisCarburantController = TextEditingController();
   final TextEditingController _fraisRayuresController = TextEditingController();
 
-  // Contrôleur spécifique pour les km supplémentaires
+  // Contrôleurs spécifiques pour les champs calculés automatiquement
   late TextEditingController _kmSuppDisplayController;
+  late TextEditingController _coutTotalController;
 
   // Variables pour les cases à cocher
   bool _includeNettoyageInt = false;
@@ -48,11 +51,11 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
   @override
   void initState() {
     super.initState();
-    // Initialiser le contrôleur d'affichage des km supplémentaires
+    // Initialiser les contrôleurs d'affichage
     _kmSuppDisplayController = TextEditingController(text: _calculerFraisKilometriques().toStringAsFixed(2));
+    _coutTotalController = TextEditingController(text: _calculerCoutTotal().toStringAsFixed(2));
     
     // Initialiser les contrôleurs avec les données existantes si disponibles
-    _coutTotalController.text = widget.data['coutTotal']?.toString() ?? widget.data['coutTotalTheorique']?.toString() ?? '0';
     _cautionController.text = widget.data['caution']?.toString() ?? '0';
     
     // Initialiser les frais avec les valeurs du PDF si disponibles
@@ -102,12 +105,14 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
   void didUpdateWidget(FraisSupplementaires oldWidget) {
     super.didUpdateWidget(oldWidget);
     
-    // Vérifier si les propriétés de kilométrage ont changé
+    // Vérifier si les propriétés ont changé
     if (oldWidget.kilometrageActuel != widget.kilometrageActuel || 
         oldWidget.kilometrageInitial != widget.kilometrageInitial || 
-        oldWidget.tarifKilometrique != widget.tarifKilometrique) {
-      // Mettre à jour le contrôleur d'affichage
+        oldWidget.tarifKilometrique != widget.tarifKilometrique ||
+        oldWidget.dateFinEffective != widget.dateFinEffective) {
+      // Mettre à jour les contrôleurs d'affichage
       _kmSuppDisplayController.text = _calculerFraisKilometriques().toStringAsFixed(2);
+      _coutTotalController.text = _calculerCoutTotal().toStringAsFixed(2);
       
       // Recalculer le total
       _calculerTotal();
@@ -117,6 +122,7 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
   @override
   void dispose() {
     _kmSuppDisplayController.dispose();
+    _coutTotalController.dispose();
     super.dispose();
   }
   
@@ -126,7 +132,7 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
     
     // Ajouter coût total si la case est cochée
     if (_includeCoutTotal) {
-      total += double.tryParse(_coutTotalController.text) ?? 0.0;
+      total += _calculerCoutTotal();
     }
     
     // Ajouter caution si la case est cochée
@@ -190,11 +196,86 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
     return frais;
   }
   
+  // Méthode pour calculer le coût total en fonction des données du contrat
+  double _calculerCoutTotal() {
+    try {
+      // Récupérer le prix de location depuis les données
+      double prixLocation = double.tryParse(widget.data['prixLocation'] ?? '0') ?? 0;
+      
+      // Récupérer et parser les dates
+      DateTime dateDebut;
+      DateTime dateFin;
+      
+      try {
+        // Essayer de parser la date de début
+        String dateDebutStr = widget.data['dateDebut'] ?? '';
+        if (dateDebutStr.contains('à')) {
+          // Format: "EEEE d MMMM yyyy à HH:mm"
+          dateDebut = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(dateDebutStr);
+        } else {
+          // Essayer d'autres formats courants
+          dateDebut = DateTime.tryParse(dateDebutStr) ?? DateTime.now();
+        }
+        
+        // Essayer de parser la date de fin effective
+        if (widget.dateFinEffective.isNotEmpty) {
+          if (widget.dateFinEffective.contains('à')) {
+            // Format: "EEEE d MMMM yyyy à HH:mm"
+            dateFin = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(widget.dateFinEffective);
+          } else {
+            // Essayer d'autres formats courants
+            dateFin = DateTime.tryParse(widget.dateFinEffective) ?? DateTime.now();
+          }
+        } else {
+          // Utiliser la date de fin théorique si la date effective n'est pas disponible
+          String dateFinStr = widget.data['dateFinTheorique'] ?? '';
+          if (dateFinStr.contains('à')) {
+            dateFin = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(dateFinStr);
+          } else {
+            dateFin = DateTime.tryParse(dateFinStr) ?? DateTime.now();
+          }
+        }
+      } catch (e) {
+        print('Erreur lors du parsing des dates: $e');
+        // En cas d'erreur, utiliser des valeurs par défaut
+        dateDebut = DateTime.now();
+        dateFin = DateTime.now().add(const Duration(days: 1));
+      }
+      
+      // Calculer la différence en heures pour plus de précision
+      int differenceEnHeures = dateFin.difference(dateDebut).inHours;
+      
+      // Calculer le nombre de jours facturés
+      int joursFactures = 1; // Le premier jour est toujours facturé
+      
+      // Ajouter un jour pour chaque tranche de 24h complète
+      if (differenceEnHeures >= 24) {
+        joursFactures = 1 + (differenceEnHeures / 24).floor();
+      }
+      
+      // Calculer le coût total
+      double coutTotal = prixLocation * joursFactures;
+      
+      // Mettre à jour le contrôleur d'affichage si nous ne sommes pas dans initState
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _coutTotalController.text = coutTotal.toStringAsFixed(2);
+        }
+      });
+      
+      return coutTotal;
+      
+    } catch (e) {
+      print('Erreur lors du calcul du coût total: $e');
+      return 0.0;
+    }
+  }
+  
   // Méthode pour notifier le parent des changements
   void _notifierParent() {
     // Préparer les données à envoyer au parent
     final updatedFrais = {
-      'coutTotal': double.tryParse(_coutTotalController.text) ?? 0.0,
+      'coutTotal': _calculerCoutTotal(),
       'caution': double.tryParse(_cautionController.text) ?? 0.0,
       'coutKmSupplementaires': _calculerFraisKilometriques(),
       'fraisNettoyageInterieur': double.tryParse(_fraisNettoyageIntController.text) ?? 0.0,
@@ -253,6 +334,7 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
                 });
               },
               onTextChanged: (_) => _calculerTotal(),
+              readOnly: true, // Rendre le champ en lecture seule car calculé automatiquement
             ),
             const SizedBox(height: 10),
             
@@ -452,6 +534,7 @@ Future<bool?> showFraisSupplementairesDialog(
   double kilometrageInitial,
   double kilometrageActuel,
   double tarifKilometrique,
+  String dateFinEffective,
 ) {
   return showDialog<bool>(
     context: context,
@@ -466,6 +549,7 @@ Future<bool?> showFraisSupplementairesDialog(
           kilometrageInitial: kilometrageInitial,
           kilometrageActuel: kilometrageActuel,
           tarifKilometrique: tarifKilometrique,
+          dateFinEffective: dateFinEffective,
         ),
       );
     },
