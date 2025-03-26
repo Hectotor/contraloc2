@@ -156,6 +156,13 @@ class _InfoLocState extends State<InfoLoc> {
         ),
         Row(
           children: [
+            Icon(Icons.directions_car, size: 16),
+            SizedBox(width: 8),
+            Expanded(child: Text("Distance autorisée: ${widget.data['kilometrageAutorise']} km")),
+          ],
+        ),
+        Row(
+          children: [
             Icon(Icons.category, size: 16),
             SizedBox(width: 8),
             Expanded(child: Text("Type de location: ${widget.data['typeLocation']}")),
