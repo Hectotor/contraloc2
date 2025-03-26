@@ -117,11 +117,16 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         
         // Récupérer les informations du véhicule
-        Map<String, dynamic> vehiculeDetails = data['vehiculeInfo'] as Map<String, dynamic>? ?? {};
-        String marque = vehiculeDetails['marque'] ?? '';
-        String modele = vehiculeDetails['modele'] ?? '';
-        String immatriculation = vehiculeDetails['immatriculation'] ?? '';
-        String vehiculeInfoStr = '$marque $modele ($immatriculation)';
+        Map<String, dynamic> vehiculeDetails = data['vehiculeDetails'] as Map<String, dynamic>? ?? {};
+        String vehiculeInfoStr = data['vehiculeInfoStr'] ?? '';
+        
+        // Si vehiculeInfoStr est vide, essayer de le construire à partir de vehiculeDetails
+        if (vehiculeInfoStr.isEmpty) {
+          String marque = vehiculeDetails['marque'] ?? '';
+          String modele = vehiculeDetails['modele'] ?? '';
+          String immatriculation = vehiculeDetails['immatriculation'] ?? '';
+          vehiculeInfoStr = '$marque $modele ($immatriculation)';
+        }
         
         // Récupérer les données financières
         double prixLocation = (data['prixLocation'] ?? 0.0).toDouble();

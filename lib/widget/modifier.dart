@@ -270,7 +270,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
       
       print('💰 Sauvegarde des frais définitifs: $fraisFinaux');
 
-      // Préparer les données de mise à jour
+      // Préparer les données de mise à jour pour la collection 'locations'
+      // IMPORTANT: On n'inclut pas les détails financiers ici, ils iront dans 'chiffre_affaire'
       final updateData = {
         'status': 'restitue',
         'dateFinEffectif': _dateFinEffectifController.text,
@@ -283,8 +284,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'nettoyageExt': _nettoyageExtController.text,
         'carburantManquant': _carburantManquantController.text,
         'signature_retour': signatureRetourBase64,
-        // Ajouter les frais supplémentaires aux données mises à jour
-        'fraisSupplementaires': fraisFinaux,
+        // On enregistre uniquement un indicateur que le contrat a été clôturé avec des frais
+        'contratCloture': true,
+        'dateClotureContrat': DateTime.now().toIso8601String(),
       };
 
       // Mettre à jour Firestore avec les informations de retour
@@ -317,106 +319,129 @@ class _ModifierScreenState extends State<ModifierScreen> {
           String vehiculeId = widget.data['vehiculeId'] ?? '';
           // Nous calculons maintenant le coût total directement dans la section chiffre_affaire
           
-          // Récupérer les informations du véhicule si l'ID est disponible
-          if (vehiculeId.isNotEmpty) {
-            try {
-              // Utiliser CollaborateurCA pour récupérer les informations du véhicule
-              Map<String, dynamic> vehiculeInfoDetails = await CollaborateurCA.getVehiculeInfo(
-                vehiculeId: vehiculeId,
-              );
-              
-              // Calculer le montant total
-              double montantTotal = CollaborateurCA.calculerMontantTotal(_fraisSupplementaires);
-              
-              // Préparer les données pour la collection chiffre_affaire
-              Map<String, dynamic> chiffreData = {
-                'vehiculeInfo': vehiculeInfoDetails,
-                'prixLocation': _fraisSupplementaires['prixLocation'] ?? 0.0,
-                'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
-                'fraisNettoyageInterieur': _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0,
-                'fraisNettoyageExterieur': _fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0,
-                'fraisCarburantManquant': _fraisSupplementaires['fraisCarburantManquant'] ?? 0.0,
-                'fraisRayuresDommages': _fraisSupplementaires['fraisRayuresDommages'] ?? 0.0,
-                'caution': _fraisSupplementaires['caution'] ?? 0.0,
-                'montantTotal': montantTotal,
-                'dateCloture': DateTime.now().toIso8601String(),
-              };
-              
-              // Utiliser CollaborateurCA pour ajouter le document
-              final success = await CollaborateurCA.ajouterOuMettreAJourChiffreAffaire(
-                contratId: widget.contratId,
-                data: chiffreData,
-              );
-              
-              if (success) {
-                print('✅ Informations financières ajoutées dans la collection chiffre_affaire');
-              } else {
-                print('❌ Erreur lors de l\'ajout dans chiffre_affaire');
-              }
-            } catch (e) {
-              print('❌ Erreur lors de l\'ajout dans chiffre_affaire: $e');
+          try {
+            // Utiliser CollaborateurCA pour récupérer les informations du véhicule
+            Map<String, dynamic> vehiculeInfoDetails = await CollaborateurCA.getVehiculeInfo(
+              vehiculeId: vehiculeId,
+            );
+            
+            // Calculer le montant total
+            double montantTotal = CollaborateurCA.calculerMontantTotal(_fraisSupplementaires);
+            
+            // Préparer les données pour la collection chiffre_affaire
+            Map<String, dynamic> chiffreData = {
+              'vehiculeDetails': vehiculeInfoDetails,
+              'vehiculeInfoStr': "${vehiculeInfoDetails['marque']} ${vehiculeInfoDetails['modele']} (${vehiculeInfoDetails['immatriculation']})",
+              'prixLocation': _fraisSupplementaires['prixLocation'] ?? 0.0,
+              'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
+              'fraisNettoyageInterieur': _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0,
+              'fraisNettoyageExterieur': _fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0,
+              'fraisCarburantManquant': _fraisSupplementaires['fraisCarburantManquant'] ?? 0.0,
+              'fraisRayuresDommages': _fraisSupplementaires['fraisRayuresDommages'] ?? 0.0,
+              'caution': _fraisSupplementaires['caution'] ?? 0.0,
+              'montantTotal': montantTotal,
+              'dateCloture': DateTime.now().toIso8601String(),
+              'contratId': widget.contratId,
+            };
+            
+            print('💰 Enregistrement des données financières dans chiffre_affaire');
+            print('📄 Données à enregistrer: ${chiffreData.keys.join(', ')}');
+            
+            // ENREGISTREMENT SIMPLIFIÉ DANS CHIFFRE_AFFAIRE
+            // Utiliser directement la méthode CollaborateurCA pour gérer l'enregistrement
+            final success = await CollaborateurCA.ajouterOuMettreAJourChiffreAffaire(
+              contratId: widget.contratId,
+              data: chiffreData,
+            );
+            
+            if (success) {
+              print('✅ Données financières enregistrées avec succès dans chiffre_affaire');
+            } else {
+              print('⚠️ Échec de l\'enregistrement dans chiffre_affaire');
+              throw Exception('Échec de l\'enregistrement des données financières');
             }
-          }
-          
-        } catch (e) {
-          print('❌ Erreur lors de la mise à jour du contrat par le collaborateur: $e');
-          if (e.toString().contains('permission-denied')) {
-            throw Exception("Vous n'avez pas les permissions nécessaires pour clôturer ce contrat. Veuillez contacter l'administrateur.");
-          } else {
+          } catch (e) {
+            print('❌ Erreur lors de l\'ajout dans chiffre_affaire: $e');
             throw e;
           }
+        } catch (vehiculeError) {
+          print('❌ Erreur lors de la récupération des informations du véhicule: $vehiculeError');
         }
       } else {
-        // Si c'est un admin, utiliser sa propre collection
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .collection('locations')
-            .doc(widget.contratId)
-            .update(updateData);
-        print('✅ Contrat mis à jour dans la collection de l\'utilisateur: $userId');
-        
-        // Ajouter les informations dans la collection 'chiffre_affaire'
-        String vehiculeId = widget.data['vehiculeId'] ?? '';
-        
+        // Si c'est un admin, utiliser la même logique que pour les collaborateurs
         try {
-          // Utiliser CollaborateurCA pour récupérer les informations du véhicule
-          Map<String, dynamic> vehiculeInfoDetails = await CollaborateurCA.getVehiculeInfo(
-            vehiculeId: vehiculeId,
-          );
+          print('🔄 Début de la mise à jour du contrat par l\'administrateur');
+          print('👤 ID Administrateur: ${FirebaseAuth.instance.currentUser?.uid}');
+          print('📄 ID Contrat: ${widget.contratId}');
           
-          // Calculer le montant total
-          double montantTotal = CollaborateurCA.calculerMontantTotal(_fraisSupplementaires);
+          // Vérifier si l'administrateur a la permission d'écriture dans sa propre collection
+          print('🔑 Vérification des permissions d\'écriture');
           
-          // Préparer les données pour la collection chiffre_affaire
-          Map<String, dynamic> chiffreData = {
-            'vehiculeInfo': vehiculeInfoDetails,
-            'prixLocation': _fraisSupplementaires['prixLocation'] ?? 0.0,
-            'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
-            'fraisNettoyageInterieur': _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0,
-            'fraisNettoyageExterieur': _fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0,
-            'fraisCarburantManquant': _fraisSupplementaires['fraisCarburantManquant'] ?? 0.0,
-            'fraisRayuresDommages': _fraisSupplementaires['fraisRayuresDommages'] ?? 0.0,
-            'caution': _fraisSupplementaires['caution'] ?? 0.0,
-            'montantTotal': montantTotal,
-            'dateCloture': DateTime.now().toIso8601String(),
-          };
+          print('📝 Tentative de mise à jour du document: locations/${widget.contratId}');
+          try {
+            await CollaborateurUtil.updateDocument(
+              collection: 'locations',
+              docId: widget.contratId,
+              data: updateData,
+              useAdminId: false,
+            );
+            print('✅ Contrat mis à jour dans la collection de l\'administrateur');
+          } catch (updateError) {
+            print('❌ Erreur lors de la mise à jour du document: $updateError');
+            throw updateError;
+          }
           
-          // Utiliser CollaborateurCA pour ajouter le document
-          final success = await CollaborateurCA.ajouterOuMettreAJourChiffreAffaire(
-            contratId: widget.contratId,
-            data: chiffreData,
-          );
+          // Ajouter les informations dans la collection 'chiffre_affaire'
+          String vehiculeId = widget.data['vehiculeId'] ?? '';
+          // Nous calculons maintenant le coût total directement dans la section chiffre_affaire
           
-          if (success) {
-            print('✅ Informations financières ajoutées dans la collection chiffre_affaire');
-          } else {
-            print('❌ Erreur lors de l\'ajout dans chiffre_affaire');
-            throw Exception('Erreur lors de l\'ajout dans chiffre_affaire');
+          try {
+            // Utiliser CollaborateurCA pour récupérer les informations du véhicule
+            Map<String, dynamic> vehiculeInfoDetails = await CollaborateurCA.getVehiculeInfo(
+              vehiculeId: vehiculeId,
+            );
+            
+            // Calculer le montant total
+            double montantTotal = CollaborateurCA.calculerMontantTotal(_fraisSupplementaires);
+            
+            // Préparer les données pour la collection chiffre_affaire
+            Map<String, dynamic> chiffreData = {
+              'vehiculeDetails': vehiculeInfoDetails,
+              'vehiculeInfoStr': "${vehiculeInfoDetails['marque']} ${vehiculeInfoDetails['modele']} (${vehiculeInfoDetails['immatriculation']})",
+              'prixLocation': _fraisSupplementaires['prixLocation'] ?? 0.0,
+              'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
+              'fraisNettoyageInterieur': _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0,
+              'fraisNettoyageExterieur': _fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0,
+              'fraisCarburantManquant': _fraisSupplementaires['fraisCarburantManquant'] ?? 0.0,
+              'fraisRayuresDommages': _fraisSupplementaires['fraisRayuresDommages'] ?? 0.0,
+              'caution': _fraisSupplementaires['caution'] ?? 0.0,
+              'montantTotal': montantTotal,
+              'dateCloture': DateTime.now().toIso8601String(),
+              'contratId': widget.contratId,
+            };
+            
+            print('💰 Enregistrement des données financières dans chiffre_affaire');
+            print('📄 Données à enregistrer: ${chiffreData.keys.join(', ')}');
+            
+            // ENREGISTREMENT SIMPLIFIÉ DANS CHIFFRE_AFFAIRE
+            // Utiliser directement la méthode CollaborateurCA pour gérer l'enregistrement
+            final success = await CollaborateurCA.ajouterOuMettreAJourChiffreAffaire(
+              contratId: widget.contratId,
+              data: chiffreData,
+            );
+            
+            if (success) {
+              print('✅ Données financières enregistrées avec succès dans chiffre_affaire');
+            } else {
+              print('⚠️ Échec de l\'enregistrement dans chiffre_affaire');
+              throw Exception('Échec de l\'enregistrement des données financières');
+            }
+          } catch (e) {
+            print('❌ Erreur lors de l\'ajout dans chiffre_affaire: $e');
+            throw e;
           }
         } catch (e) {
-          print('❌ Erreur lors de l\'ajout dans chiffre_affaire: $e');
-          throw e;
+          print('❌ Erreur lors de la mise à jour du contrat: $e');
         }
       }
 

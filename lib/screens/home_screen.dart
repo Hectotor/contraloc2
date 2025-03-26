@@ -165,6 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white, 
       appBar: AppBar(
+        automaticallyImplyLeading: false, // Désactive le bouton de retour automatique
         title: _showSearchBar
             ? TextField(
                 controller: _searchController,

@@ -24,6 +24,10 @@ class CollaborateurCA {
       final String? adminId = statusInfo['adminId'];
       final String userId = statusInfo['userId'] ?? _auth.currentUser?.uid ?? '';
 
+      print('🔍 DEBUG - ENREGISTREMENT CHIFFRE D\'AFFAIRE:');
+      print('📊 Statut utilisateur: isCollaborateur=$isCollaborateur, adminId=$adminId, userId=$userId');
+      print('📄 ContratId: $contratId');
+
       if (userId.isEmpty) {
         print('❌ Utilisateur non authentifié');
         return false;
@@ -41,12 +45,98 @@ class CollaborateurCA {
         print('👤 Chemin administrateur pour chiffre_affaire: $path');
       }
 
-      // Utiliser set avec merge pour éviter les problèmes de permissions
-      await _firestore.doc(path).set(data, SetOptions(merge: true));
-      print('✅ Document chiffre_affaire mis à jour avec succès: $contratId');
+      // Afficher les données qui seront enregistrées
+      print('📝 Données à enregistrer: ${data.keys.join(', ')}');
+      
+      // ESSAI DIRECT: Enregistrement direct dans Firestore
+      try {
+        print('🔄 TENTATIVE 1: Enregistrement direct avec set() et merge=true');
+        await _firestore.doc(path).set(data, SetOptions(merge: true));
+        print('✅ Succès de la TENTATIVE 1');
+      } catch (error1) {
+        print('❌ Échec de la TENTATIVE 1: $error1');
+        
+        // ESSAI ALTERNATIF: Utiliser la collection directement
+        try {
+          print('🔄 TENTATIVE 2: Enregistrement via collection().doc().set()');
+          String collectionPath = path.substring(0, path.lastIndexOf('/'));
+          String docId = path.substring(path.lastIndexOf('/') + 1);
+          print('📁 Collection path: $collectionPath');
+          print('📄 Document ID: $docId');
+          
+          await _firestore.collection(collectionPath).doc(docId).set(data);
+          print('✅ Succès de la TENTATIVE 2');
+        } catch (error2) {
+          print('❌ Échec de la TENTATIVE 2: $error2');
+          
+          // ESSAI DE SECOURS: Création manuelle de la collection si nécessaire
+          try {
+            print('🔄 TENTATIVE 3: Création manuelle de la hiérarchie complète');
+            // Construire le chemin complet
+            List<String> pathSegments = path.split('/');
+            String currentPath = '';
+            
+            // Parcourir les segments du chemin pour s'assurer que chaque niveau existe
+            for (int i = 0; i < pathSegments.length; i += 2) {
+              if (i + 1 < pathSegments.length) {
+                currentPath += '${pathSegments[i]}/';
+                String collectionPath = currentPath.substring(0, currentPath.length - 1);
+                String docId = pathSegments[i + 1];
+                currentPath += '$docId/';
+                
+                print('🔍 Vérification du chemin: $collectionPath/$docId');
+                
+                // Vérifier si le document existe
+                DocumentSnapshot docSnapshot = await _firestore.doc('$collectionPath/$docId').get();
+                if (!docSnapshot.exists && i + 2 < pathSegments.length) {
+                  // Créer un document vide si nécessaire pour la hiérarchie
+                  print('📝 Création du document intermédiaire: $collectionPath/$docId');
+                  await _firestore.doc('$collectionPath/$docId').set({});
+                }
+              }
+            }
+            
+            // Finalement, enregistrer les données dans le document final
+            await _firestore.doc(path).set(data);
+            print('✅ Succès de la TENTATIVE 3');
+          } catch (error3) {
+            print('❌ Échec de la TENTATIVE 3: $error3');
+            throw error3;
+          }
+        }
+      }
+      
+      // Vérification post-enregistrement
+      try {
+        print('🔍 VÉRIFICATION: Lecture du document après enregistrement');
+        final docSnapshot = await _firestore.doc(path).get();
+        if (docSnapshot.exists) {
+          print('✅ Document vérifié: EXISTE à $path');
+          print('📄 Contenu du document: ${docSnapshot.data()?.keys.join(', ')}');
+        } else {
+          print('⚠️ Document vérifié: N\'EXISTE PAS à $path');
+          
+          // Vérification supplémentaire: lister tous les documents de la collection
+          String collectionPath = path.substring(0, path.lastIndexOf('/'));
+          print('🔍 Vérification de la collection: $collectionPath');
+          
+          QuerySnapshot collectionSnapshot = await _firestore.collection(collectionPath).get();
+          print('📚 Nombre de documents dans la collection: ${collectionSnapshot.docs.length}');
+          
+          if (collectionSnapshot.docs.isNotEmpty) {
+            print('📋 Liste des IDs de documents:');
+            for (var doc in collectionSnapshot.docs) {
+              print('   - ${doc.id}');
+            }
+          }
+        }
+      } catch (verifyError) {
+        print('⚠️ Erreur lors de la vérification: $verifyError');
+      }
+      
       return true;
     } catch (e) {
-      print('❌ Erreur lors de la mise à jour du document chiffre_affaire: $e');
+      print('❌ ERREUR GLOBALE: $e');
       return false;
     }
   }
