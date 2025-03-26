@@ -325,20 +325,20 @@ class _ModifierScreenState extends State<ModifierScreen> {
                 vehiculeId: vehiculeId,
               );
               
-              // Calculer le coût total
-              double coutTotal = CollaborateurCA.calculerCoutTotal(_fraisSupplementaires);
+              // Calculer le montant total
+              double montantTotal = CollaborateurCA.calculerMontantTotal(_fraisSupplementaires);
               
               // Préparer les données pour la collection chiffre_affaire
               Map<String, dynamic> chiffreData = {
                 'vehiculeInfo': vehiculeInfoDetails,
-                'prixLocation': _fraisSupplementaires['coutTotal'] ?? 0.0,
+                'prixLocation': _fraisSupplementaires['prixLocation'] ?? 0.0,
                 'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
                 'fraisNettoyageInterieur': _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0,
                 'fraisNettoyageExterieur': _fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0,
                 'fraisCarburantManquant': _fraisSupplementaires['fraisCarburantManquant'] ?? 0.0,
                 'fraisRayuresDommages': _fraisSupplementaires['fraisRayuresDommages'] ?? 0.0,
                 'caution': _fraisSupplementaires['caution'] ?? 0.0,
-                'coutTotal': coutTotal,
+                'montantTotal': montantTotal,
                 'dateCloture': DateTime.now().toIso8601String(),
               };
               
@@ -385,20 +385,20 @@ class _ModifierScreenState extends State<ModifierScreen> {
             vehiculeId: vehiculeId,
           );
           
-          // Calculer le coût total
-          double coutTotal = CollaborateurCA.calculerCoutTotal(_fraisSupplementaires);
+          // Calculer le montant total
+          double montantTotal = CollaborateurCA.calculerMontantTotal(_fraisSupplementaires);
           
           // Préparer les données pour la collection chiffre_affaire
           Map<String, dynamic> chiffreData = {
             'vehiculeInfo': vehiculeInfoDetails,
-            'prixLocation': _fraisSupplementaires['coutTotal'] ?? 0.0,
+            'prixLocation': _fraisSupplementaires['prixLocation'] ?? 0.0,
             'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
             'fraisNettoyageInterieur': _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0,
             'fraisNettoyageExterieur': _fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0,
             'fraisCarburantManquant': _fraisSupplementaires['fraisCarburantManquant'] ?? 0.0,
             'fraisRayuresDommages': _fraisSupplementaires['fraisRayuresDommages'] ?? 0.0,
             'caution': _fraisSupplementaires['caution'] ?? 0.0,
-            'coutTotal': coutTotal,
+            'montantTotal': montantTotal,
             'dateCloture': DateTime.now().toIso8601String(),
           };
           

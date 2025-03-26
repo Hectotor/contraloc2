@@ -116,26 +116,39 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       for (var doc in contratsSnapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         
-        // Récupérer les données essentielles
-        String vehiculeId = data['vehiculeId'] ?? '';
-        String vehiculeInfo = data['vehiculeInfo'] ?? '';
-        double montantTotal = double.tryParse(data['montantTotal'] ?? '0') ?? 0;
+        // Récupérer les informations du véhicule
+        Map<String, dynamic> vehiculeDetails = data['vehiculeInfo'] as Map<String, dynamic>? ?? {};
+        String marque = vehiculeDetails['marque'] ?? '';
+        String modele = vehiculeDetails['modele'] ?? '';
+        String immatriculation = vehiculeDetails['immatriculation'] ?? '';
+        String vehiculeInfoStr = '$marque $modele ($immatriculation)';
+        
+        // Récupérer les données financières
+        double prixLocation = (data['prixLocation'] ?? 0.0).toDouble();
+        double coutKmSupplementaires = (data['coutKmSupplementaires'] ?? 0.0).toDouble();
+        double fraisNettoyageInterieur = (data['fraisNettoyageInterieur'] ?? 0.0).toDouble();
+        double fraisNettoyageExterieur = (data['fraisNettoyageExterieur'] ?? 0.0).toDouble();
+        double fraisCarburantManquant = (data['fraisCarburantManquant'] ?? 0.0).toDouble();
+        double fraisRayuresDommages = (data['fraisRayuresDommages'] ?? 0.0).toDouble();
+        double caution = (data['caution'] ?? 0.0).toDouble();
+        double montantTotal = (data['montantTotal'] ?? 0.0).toDouble();
+        
+        // Récupérer la date de clôture
         DateTime dateCloture = DateTime.parse(data['dateCloture'] ?? DateTime.now().toIso8601String());
         
         // Ajouter à la liste des contrats
         contrats.add({
-          'vehiculeId': vehiculeId,
-          'vehiculeInfo': vehiculeInfo,
-          'montantTotal': data['montantTotal'],
-          'dateFinEffectif': data['dateFinEffectif'],
+          'vehiculeInfoStr': vehiculeInfoStr,
+          'vehiculeDetails': vehiculeDetails,
+          'prixLocation': prixLocation,
+          'coutKmSupplementaires': coutKmSupplementaires,
+          'fraisNettoyageInterieur': fraisNettoyageInterieur,
+          'fraisNettoyageExterieur': fraisNettoyageExterieur,
+          'fraisCarburantManquant': fraisCarburantManquant,
+          'fraisRayuresDommages': fraisRayuresDommages,
+          'caution': caution,
+          'montantTotal': montantTotal,
           'dateCloture': dateCloture,
-          'caution': data['caution'] ?? 0.0,
-          'coutKmSupplementaires': data['coutKmSupplementaires'] ?? 0.0,
-          'fraisNettoyageInterieur': data['fraisNettoyageInterieur'] ?? 0.0,
-          'fraisNettoyageExterieur': data['fraisNettoyageExterieur'] ?? 0.0,
-          'fraisCarburantManquant': data['fraisCarburantManquant'] ?? 0.0,
-          'fraisRayuresDommages': data['fraisRayuresDommages'] ?? 0.0,
-          'kilometrageRetour': data['kilometrageRetour'],
         });
         
         // Ajouter au chiffre d'affaire total
@@ -166,8 +179,8 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     
     for (var contrat in _contrats) {
       DateTime dateCloture = contrat['dateCloture'];
-      double montant = double.tryParse(contrat['montantTotal'] ?? '0') ?? 0;
-      String vehiculeInfo = contrat['vehiculeInfo'];
+      double montant = contrat['montantTotal'];
+      String vehiculeInfo = contrat['vehiculeInfoStr'];
       
       // Filtrer par véhicule si nécessaire
       if (_selectedVehicule != 'Tous' && vehiculeInfo != _selectedVehicule) {
@@ -203,8 +216,8 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     
     for (var contrat in _contrats) {
       DateTime dateCloture = contrat['dateCloture'];
-      double montant = double.tryParse(contrat['montantTotal'] ?? '0') ?? 0;
-      String vehiculeInfo = contrat['vehiculeInfo'];
+      double montant = contrat['montantTotal'];
+      String vehiculeInfo = contrat['vehiculeInfoStr'];
       
       // Filtrer par période si nécessaire
       bool inclure = true;
@@ -485,22 +498,21 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     List<Map<String, dynamic>> filteredContrats = _contrats;
     if (_selectedVehicule != 'Tous') {
       filteredContrats = _contrats.where((contrat) => 
-        contrat['vehiculeInfo'] == _selectedVehicule).toList();
+        contrat['vehiculeInfoStr'] == _selectedVehicule).toList();
     }
     
     return ListView.builder(
       itemCount: filteredContrats.length,
       itemBuilder: (context, index) {
         final contrat = filteredContrats[index];
-        final vehiculeInfo = contrat['vehiculeInfo'] ?? 'Véhicule inconnu';
-        final montantTotal = double.tryParse(contrat['montantTotal'] ?? '0') ?? 0;
-        final dateFinEffective = contrat['dateFinEffectif'] ?? '';
+        final vehiculeInfo = contrat['vehiculeInfoStr'] ?? 'Véhicule inconnu';
+        final montantTotal = contrat['montantTotal'];
         
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: ExpansionTile(
             title: Text(vehiculeInfo, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('Date de clôture: $dateFinEffective'),
+            subtitle: Text('Date de clôture: ${contrat['dateCloture']}'),
             trailing: Text(
               formatCurrency.format(montantTotal),
               style: const TextStyle(
@@ -521,13 +533,13 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     final formatCurrency = NumberFormat.currency(locale: 'fr_FR', symbol: '€');
     
     // Récupérer les détails des frais
-    final caution = contrat['caution'] ?? 0.0;
-    final coutKmSupplementaires = contrat['coutKmSupplementaires'] ?? 0.0;
-    final fraisNettoyageInterieur = contrat['fraisNettoyageInterieur'] ?? 0.0;
-    final fraisNettoyageExterieur = contrat['fraisNettoyageExterieur'] ?? 0.0;
-    final fraisCarburantManquant = contrat['fraisCarburantManquant'] ?? 0.0;
-    final fraisRayuresDommages = contrat['fraisRayuresDommages'] ?? 0.0;
-    final kilometrageRetour = contrat['kilometrageRetour'] ?? 'Non spécifié';
+    final prixLocation = contrat['prixLocation'];
+    final coutKmSupplementaires = contrat['coutKmSupplementaires'];
+    final fraisNettoyageInterieur = contrat['fraisNettoyageInterieur'];
+    final fraisNettoyageExterieur = contrat['fraisNettoyageExterieur'];
+    final fraisCarburantManquant = contrat['fraisCarburantManquant'];
+    final fraisRayuresDommages = contrat['fraisRayuresDommages'];
+    final caution = contrat['caution'];
     
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -536,23 +548,20 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         children: [
           const Divider(),
           const SizedBox(height: 8),
-          Text('Kilométrage au retour: $kilometrageRetour km'),
-          const SizedBox(height: 16),
-          const Text('Détails des frais:', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          _buildFraisRow('Caution', caution),
+          _buildFraisRow('Prix de location', prixLocation),
           _buildFraisRow('Kilomètres supplémentaires', coutKmSupplementaires),
           _buildFraisRow('Nettoyage intérieur', fraisNettoyageInterieur),
           _buildFraisRow('Nettoyage extérieur', fraisNettoyageExterieur),
           _buildFraisRow('Carburant manquant', fraisCarburantManquant),
           _buildFraisRow('Rayures et dommages', fraisRayuresDommages),
+          _buildFraisRow('Caution', caution),
           const Divider(),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               const Text('Total: ', style: TextStyle(fontWeight: FontWeight.bold)),
               Text(
-                formatCurrency.format(double.tryParse(contrat['montantTotal'] ?? '0') ?? 0),
+                formatCurrency.format(contrat['montantTotal']),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF08004D),

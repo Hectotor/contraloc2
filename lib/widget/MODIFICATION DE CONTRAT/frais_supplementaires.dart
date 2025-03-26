@@ -203,7 +203,15 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
   double _calculerCoutTotal() {
     try {
       // Récupérer le prix de location depuis les données
-      double prixLocation = double.tryParse(widget.data['prixLocation'] ?? '0') ?? 0;
+      double prixLocation = 0.0;
+      
+      // Vérifier si prixLocation est une chaîne ou un nombre
+      var prixLocationData = widget.data['prixLocation'];
+      if (prixLocationData is String) {
+        prixLocation = double.tryParse(prixLocationData) ?? 0.0;
+      } else if (prixLocationData is num) {
+        prixLocation = prixLocationData.toDouble();
+      }
       
       // Récupérer et parser les dates
       DateTime dateDebut;
@@ -278,7 +286,7 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
   void _notifierParent() {
     // Préparer les données à envoyer au parent
     _tempFrais = {
-      'coutTotal': _calculerCoutTotal(),
+      'prixLocation': _calculerCoutTotal(),
       'caution': double.tryParse(_cautionController.text) ?? 0.0,
       'coutKmSupplementaires': _calculerFraisKilometriques(),
       'fraisNettoyageInterieur': double.tryParse(_fraisNettoyageIntController.text) ?? 0.0,

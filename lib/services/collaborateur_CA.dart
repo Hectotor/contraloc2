@@ -268,26 +268,26 @@ class CollaborateurCA {
     }
   }
 
-  /// Calcule le coût total à partir des frais supplémentaires
+  /// Calcule le montant total à partir des frais supplémentaires
   /// 
   /// [fraisSupplementaires] - Map contenant les différents frais
   /// 
-  /// Retourne le coût total
-  static double calculerCoutTotal(Map<String, dynamic> fraisSupplementaires) {
-    double coutTotal = 0.0;
+  /// Retourne le montant total
+  static double calculerMontantTotal(Map<String, dynamic> fraisSupplementaires) {
+    double montantTotal = 0.0;
     
     // Additionner tous les frais
     
     // Ajouter le prix de la location s'il est présent
-    coutTotal += fraisSupplementaires['prixLocation'] ?? 0.0;
+    montantTotal += fraisSupplementaires['prixLocation'] ?? 0.0;
 
-    coutTotal += fraisSupplementaires['coutKmSupplementaires'] ?? 0.0;
-    coutTotal += fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0;
-    coutTotal += fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0;
-    coutTotal += fraisSupplementaires['fraisCarburantManquant'] ?? 0.0;
-    coutTotal += fraisSupplementaires['fraisRayuresDommages'] ?? 0.0;
-    coutTotal += fraisSupplementaires['caution'] ?? 0.0;
+    montantTotal += fraisSupplementaires['coutKmSupplementaires'] ?? 0.0;
+    montantTotal += fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0;
+    montantTotal += fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0;
+    montantTotal += fraisSupplementaires['fraisCarburantManquant'] ?? 0.0;
+    montantTotal += fraisSupplementaires['fraisRayuresDommages'] ?? 0.0;
+    montantTotal += fraisSupplementaires['caution'] ?? 0.0;
     
-    return coutTotal;
+    return montantTotal;
   }
 }
