@@ -53,6 +53,7 @@ class _ContratScreenState extends State<ContratScreen>
     return Scaffold(
       backgroundColor: Colors.white, // Ajout ici
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text(
           "Mes Contrats",
           style: TextStyle(

@@ -105,7 +105,7 @@ class _NavigationPageState extends State<NavigationPage> {
             BottomNavigationBarItem(
               icon: Icon(Icons.bar_chart_outlined),
               activeIcon: Icon(Icons.bar_chart), // Icône pleine pour "Chiffre d'affaire"
-              label: "Chiffre",
+              label: "Chiffres",
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),

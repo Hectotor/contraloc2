@@ -328,13 +328,13 @@ class _ModifierScreenState extends State<ModifierScreen> {
               'modele': vehiculeInfoDetails['modele'] ?? '',
               'immatriculation': vehiculeInfoDetails['immatriculation'] ?? '',
               'photoVehiculeUrl': vehiculeInfoDetails['photoVehiculeUrl'] ?? '',
-              'prixLocation': _fraisSupplementaires['prixLocation'] ?? 0.0,
-              'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
-              'fraisNettoyageInterieur': _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0,
-              'fraisNettoyageExterieur': _fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0,
-              'fraisCarburantManquant': _fraisSupplementaires['fraisCarburantManquant'] ?? 0.0,
-              'fraisRayuresDommages': _fraisSupplementaires['fraisRayuresDommages'] ?? 0.0,
-              'caution': _fraisSupplementaires['caution'] ?? 0.0,
+              'prixLocation': _fraisSupplementaires['includeCoutTotal'] == true ? (_fraisSupplementaires['prixLocation'] ?? 0.0) : 0.0,
+              'coutKmSupplementaires': _fraisSupplementaires['includeCoutKmSupp'] == true ? (_fraisSupplementaires['coutKmSupplementaires'] ?? 0.0) : 0.0,
+              'fraisNettoyageInterieur': _fraisSupplementaires['includeNettoyageInterieur'] == true ? (_fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0) : 0.0,
+              'fraisNettoyageExterieur': _fraisSupplementaires['includeNettoyageExterieur'] == true ? (_fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0) : 0.0,
+              'fraisCarburantManquant': _fraisSupplementaires['includeCarburantManquant'] == true ? (_fraisSupplementaires['fraisCarburantManquant'] ?? 0.0) : 0.0,
+              'fraisRayuresDommages': _fraisSupplementaires['includeRayuresDommages'] == true ? (_fraisSupplementaires['fraisRayuresDommages'] ?? 0.0) : 0.0,
+              'caution': _fraisSupplementaires['includeCaution'] == true ? (_fraisSupplementaires['caution'] ?? 0.0) : 0.0,
               'montantTotal': montantTotal,
               'dateCloture': DateTime.now().toIso8601String(),
               'contratId': widget.contratId,
@@ -342,6 +342,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
             
             print('💰 Enregistrement des données financières dans chiffre_affaire');
             print('📄 Données à enregistrer: ${chiffreData.keys.join(', ')}');
+            print('📊 Statut des frais: ${_fraisSupplementaires.entries.where((e) => e.key.startsWith('include')).map((e) => '${e.key}: ${e.value}').join(', ')}');
             
             // ENREGISTREMENT SIMPLIFIÉ DANS CHIFFRE_AFFAIRE
             // Utiliser directement la méthode CollaborateurCA pour gérer l'enregistrement
@@ -403,13 +404,13 @@ class _ModifierScreenState extends State<ModifierScreen> {
               'modele': vehiculeInfoDetails['modele'] ?? '',
               'immatriculation': vehiculeInfoDetails['immatriculation'] ?? '',
               'photoVehiculeUrl': vehiculeInfoDetails['photoVehiculeUrl'] ?? '',
-              'prixLocation': _fraisSupplementaires['prixLocation'] ?? 0.0,
-              'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
-              'fraisNettoyageInterieur': _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0,
-              'fraisNettoyageExterieur': _fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0,
-              'fraisCarburantManquant': _fraisSupplementaires['fraisCarburantManquant'] ?? 0.0,
-              'fraisRayuresDommages': _fraisSupplementaires['fraisRayuresDommages'] ?? 0.0,
-              'caution': _fraisSupplementaires['caution'] ?? 0.0,
+              'prixLocation': _fraisSupplementaires['includeCoutTotal'] == true ? (_fraisSupplementaires['prixLocation'] ?? 0.0) : 0.0,
+              'coutKmSupplementaires': _fraisSupplementaires['includeCoutKmSupp'] == true ? (_fraisSupplementaires['coutKmSupplementaires'] ?? 0.0) : 0.0,
+              'fraisNettoyageInterieur': _fraisSupplementaires['includeNettoyageInterieur'] == true ? (_fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0) : 0.0,
+              'fraisNettoyageExterieur': _fraisSupplementaires['includeNettoyageExterieur'] == true ? (_fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0) : 0.0,
+              'fraisCarburantManquant': _fraisSupplementaires['includeCarburantManquant'] == true ? (_fraisSupplementaires['fraisCarburantManquant'] ?? 0.0) : 0.0,
+              'fraisRayuresDommages': _fraisSupplementaires['includeRayuresDommages'] == true ? (_fraisSupplementaires['fraisRayuresDommages'] ?? 0.0) : 0.0,
+              'caution': _fraisSupplementaires['includeCaution'] == true ? (_fraisSupplementaires['caution'] ?? 0.0) : 0.0,
               'montantTotal': montantTotal,
               'dateCloture': DateTime.now().toIso8601String(),
               'contratId': widget.contratId,
@@ -417,6 +418,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
             
             print('💰 Enregistrement des données financières dans chiffre_affaire');
             print('📄 Données à enregistrer: ${chiffreData.keys.join(', ')}');
+            print('📊 Statut des frais: ${_fraisSupplementaires.entries.where((e) => e.key.startsWith('include')).map((e) => '${e.key}: ${e.value}').join(', ')}');
             
             // ENREGISTREMENT SIMPLIFIÉ DANS CHIFFRE_AFFAIRE
             // Utiliser directement la méthode CollaborateurCA pour gérer l'enregistrement

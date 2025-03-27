@@ -308,17 +308,42 @@ class CollaborateurCA {
   static double calculerMontantTotal(Map<String, dynamic> fraisSupplementaires) {
     double montantTotal = 0.0;
     
-    // Additionner tous les frais
+    // N'additionner que les frais qui ont été sélectionnés par l'utilisateur
     
-    // Ajouter le prix de la location s'il est présent
-    montantTotal += fraisSupplementaires['prixLocation'] ?? 0.0;
+    // Ajouter le prix de la location s'il est sélectionné
+    if (fraisSupplementaires['includeCoutTotal'] == true) {
+      montantTotal += fraisSupplementaires['prixLocation'] ?? 0.0;
+    }
 
-    montantTotal += fraisSupplementaires['coutKmSupplementaires'] ?? 0.0;
-    montantTotal += fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0;
-    montantTotal += fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0;
-    montantTotal += fraisSupplementaires['fraisCarburantManquant'] ?? 0.0;
-    montantTotal += fraisSupplementaires['fraisRayuresDommages'] ?? 0.0;
-    montantTotal += fraisSupplementaires['caution'] ?? 0.0;
+    // Ajouter les frais kilométriques s'ils sont sélectionnés
+    if (fraisSupplementaires['includeCoutKmSupp'] == true) {
+      montantTotal += fraisSupplementaires['coutKmSupplementaires'] ?? 0.0;
+    }
+    
+    // Ajouter les frais de nettoyage intérieur s'ils sont sélectionnés
+    if (fraisSupplementaires['includeNettoyageInterieur'] == true) {
+      montantTotal += fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0;
+    }
+    
+    // Ajouter les frais de nettoyage extérieur s'ils sont sélectionnés
+    if (fraisSupplementaires['includeNettoyageExterieur'] == true) {
+      montantTotal += fraisSupplementaires['fraisNettoyageExterieur'] ?? 0.0;
+    }
+    
+    // Ajouter les frais de carburant manquant s'ils sont sélectionnés
+    if (fraisSupplementaires['includeCarburantManquant'] == true) {
+      montantTotal += fraisSupplementaires['fraisCarburantManquant'] ?? 0.0;
+    }
+    
+    // Ajouter les frais de rayures/dommages s'ils sont sélectionnés
+    if (fraisSupplementaires['includeRayuresDommages'] == true) {
+      montantTotal += fraisSupplementaires['fraisRayuresDommages'] ?? 0.0;
+    }
+    
+    // Ajouter la caution si elle est sélectionnée
+    if (fraisSupplementaires['includeCaution'] == true) {
+      montantTotal += fraisSupplementaires['caution'] ?? 0.0;
+    }
     
     return montantTotal;
   }
