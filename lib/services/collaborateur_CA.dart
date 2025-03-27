@@ -24,12 +24,7 @@ class CollaborateurCA {
       final String? adminId = statusInfo['adminId'];
       final String userId = statusInfo['userId'] ?? _auth.currentUser?.uid ?? '';
 
-      print('🔍 DEBUG - ENREGISTREMENT CHIFFRE D\'AFFAIRE:');
-      print('📊 Statut utilisateur: isCollaborateur=$isCollaborateur, adminId=$adminId, userId=$userId');
-      print('📄 ContratId: $contratId');
-
       if (userId.isEmpty) {
-        print('❌ Utilisateur non authentifié');
         return false;
       }
 
@@ -38,40 +33,24 @@ class CollaborateurCA {
       if (isCollaborateur && adminId != null && adminId.isNotEmpty) {
         // Pour un collaborateur, utiliser l'ID de l'administrateur
         path = 'users/$adminId/chiffre_affaire/$contratId';
-        print('👥 Chemin collaborateur pour chiffre_affaire: $path');
       } else {
         // Pour un administrateur, utiliser son propre ID
         path = 'users/$userId/chiffre_affaire/$contratId';
-        print('👤 Chemin administrateur pour chiffre_affaire: $path');
       }
-
-      // Afficher les données qui seront enregistrées
-      print('📝 Données à enregistrer: ${data.keys.join(', ')}');
       
       // ESSAI DIRECT: Enregistrement direct dans Firestore
       try {
-        print('🔄 TENTATIVE 1: Enregistrement direct avec set() et merge=true');
         await _firestore.doc(path).set(data, SetOptions(merge: true));
-        print('✅ Succès de la TENTATIVE 1');
       } catch (error1) {
-        print('❌ Échec de la TENTATIVE 1: $error1');
-        
         // ESSAI ALTERNATIF: Utiliser la collection directement
         try {
-          print('🔄 TENTATIVE 2: Enregistrement via collection().doc().set()');
           String collectionPath = path.substring(0, path.lastIndexOf('/'));
           String docId = path.substring(path.lastIndexOf('/') + 1);
-          print('📁 Collection path: $collectionPath');
-          print('📄 Document ID: $docId');
           
           await _firestore.collection(collectionPath).doc(docId).set(data);
-          print('✅ Succès de la TENTATIVE 2');
         } catch (error2) {
-          print('❌ Échec de la TENTATIVE 2: $error2');
-          
           // ESSAI DE SECOURS: Création manuelle de la collection si nécessaire
           try {
-            print('🔄 TENTATIVE 3: Création manuelle de la hiérarchie complète');
             // Construire le chemin complet
             List<String> pathSegments = path.split('/');
             String currentPath = '';
@@ -84,13 +63,10 @@ class CollaborateurCA {
                 String docId = pathSegments[i + 1];
                 currentPath += '$docId/';
                 
-                print('🔍 Vérification du chemin: $collectionPath/$docId');
-                
                 // Vérifier si le document existe
                 DocumentSnapshot docSnapshot = await _firestore.doc('$collectionPath/$docId').get();
                 if (!docSnapshot.exists && i + 2 < pathSegments.length) {
                   // Créer un document vide si nécessaire pour la hiérarchie
-                  print('📝 Création du document intermédiaire: $collectionPath/$docId');
                   await _firestore.doc('$collectionPath/$docId').set({});
                 }
               }
@@ -98,9 +74,7 @@ class CollaborateurCA {
             
             // Finalement, enregistrer les données dans le document final
             await _firestore.doc(path).set(data);
-            print('✅ Succès de la TENTATIVE 3');
           } catch (error3) {
-            print('❌ Échec de la TENTATIVE 3: $error3');
             throw error3;
           }
         }
@@ -108,35 +82,18 @@ class CollaborateurCA {
       
       // Vérification post-enregistrement
       try {
-        print('🔍 VÉRIFICATION: Lecture du document après enregistrement');
         final docSnapshot = await _firestore.doc(path).get();
-        if (docSnapshot.exists) {
-          print('✅ Document vérifié: EXISTE à $path');
-          print('📄 Contenu du document: ${docSnapshot.data()?.keys.join(', ')}');
-        } else {
-          print('⚠️ Document vérifié: N\'EXISTE PAS à $path');
-          
+        if (!docSnapshot.exists) {
           // Vérification supplémentaire: lister tous les documents de la collection
           String collectionPath = path.substring(0, path.lastIndexOf('/'));
-          print('🔍 Vérification de la collection: $collectionPath');
-          
-          QuerySnapshot collectionSnapshot = await _firestore.collection(collectionPath).get();
-          print('📚 Nombre de documents dans la collection: ${collectionSnapshot.docs.length}');
-          
-          if (collectionSnapshot.docs.isNotEmpty) {
-            print('📋 Liste des IDs de documents:');
-            for (var doc in collectionSnapshot.docs) {
-              print('   - ${doc.id}');
-            }
-          }
+          await _firestore.collection(collectionPath).get();
         }
       } catch (verifyError) {
-        print('⚠️ Erreur lors de la vérification: $verifyError');
+        // Ignorer les erreurs de vérification
       }
       
       return true;
     } catch (e) {
-      print('❌ ERREUR GLOBALE: $e');
       return false;
     }
   }
@@ -157,7 +114,6 @@ class CollaborateurCA {
       final String userId = statusInfo['userId'] ?? _auth.currentUser?.uid ?? '';
 
       if (userId.isEmpty) {
-        print('❌ Utilisateur non authentifié');
         return null;
       }
 
@@ -175,14 +131,11 @@ class CollaborateurCA {
       final docSnapshot = await _firestore.doc(path).get();
       
       if (docSnapshot.exists) {
-        print('✅ Document chiffre_affaire récupéré avec succès: $contratId');
         return docSnapshot.data() as Map<String, dynamic>;
       } else {
-        print('⚠️ Document chiffre_affaire non trouvé: $contratId');
         return null;
       }
     } catch (e) {
-      print('❌ Erreur lors de la récupération du document chiffre_affaire: $e');
       return null;
     }
   }
@@ -207,7 +160,6 @@ class CollaborateurCA {
       final String userId = statusInfo['userId'] ?? _auth.currentUser?.uid ?? '';
 
       if (userId.isEmpty) {
-        print('❌ Utilisateur non authentifié');
         return [];
       }
 
@@ -244,10 +196,8 @@ class CollaborateurCA {
         return data;
       }).toList();
       
-      print('✅ ${results.length} documents chiffre_affaire récupérés');
       return results;
     } catch (e) {
-      print('❌ Erreur lors de la récupération des documents chiffre_affaire: $e');
       return [];
     }
   }
@@ -268,7 +218,6 @@ class CollaborateurCA {
       final String userId = statusInfo['userId'] ?? _auth.currentUser?.uid ?? '';
 
       if (userId.isEmpty) {
-        print('❌ Utilisateur non authentifié');
         return false;
       }
 
@@ -277,7 +226,6 @@ class CollaborateurCA {
         // Vérifier si le collaborateur a des permissions d'écriture (suffisant pour la suppression)
         final hasPermission = await CollaborateurUtil.checkCollaborateurPermission('ecriture');
         if (!hasPermission) {
-          print('❌ Le collaborateur n\'a pas la permission de supprimer des documents');
           return false;
         }
       }
@@ -294,21 +242,19 @@ class CollaborateurCA {
 
       // Supprimer le document
       await _firestore.doc(path).delete();
-      print('✅ Document chiffre_affaire supprimé avec succès: $contratId');
       return true;
     } catch (e) {
-      print('❌ Erreur lors de la suppression du document chiffre_affaire: $e');
       return false;
     }
   }
 
   /// Récupère les informations détaillées d'un véhicule
   /// 
-  /// [vehiculeId] - L'ID du véhicule
+  /// [immatriculation] - L'immatriculation du véhicule
   /// 
   /// Retourne un Map contenant les informations du véhicule
   static Future<Map<String, dynamic>> getVehiculeInfo({
-    required String vehiculeId,
+    required String immatriculation,
   }) async {
     try {
       // Vérifier le statut du collaborateur
@@ -317,26 +263,25 @@ class CollaborateurCA {
       final String? adminId = statusInfo['adminId'];
       final String userId = statusInfo['userId'] ?? _auth.currentUser?.uid ?? '';
 
-      if (userId.isEmpty || vehiculeId.isEmpty) {
-        print('❌ Utilisateur non authentifié ou ID véhicule manquant');
+      if (userId.isEmpty || immatriculation.isEmpty) {
         return {};
       }
 
-      // Construire le chemin du document en fonction du statut
-      String path;
-      if (isCollaborateur && adminId != null && adminId.isNotEmpty) {
-        // Pour un collaborateur, utiliser l'ID de l'administrateur
-        path = 'users/$adminId/vehicules/$vehiculeId';
-      } else {
-        // Pour un administrateur, utiliser son propre ID
-        path = 'users/$userId/vehicules/$vehiculeId';
-      }
+      // Déterminer l'ID à utiliser (admin ou utilisateur)
+      final String targetId = isCollaborateur && adminId != null && adminId.isNotEmpty 
+          ? adminId 
+          : userId;
 
-      // Récupérer le document
-      final docSnapshot = await _firestore.doc(path).get();
+      // Récupérer le document en utilisant l'immatriculation
+      final querySnapshot = await _firestore
+          .collection('users')
+          .doc(targetId)
+          .collection('vehicules')
+          .where('immatriculation', isEqualTo: immatriculation)
+          .get();
       
-      if (docSnapshot.exists) {
-        final vehiculeData = docSnapshot.data() as Map<String, dynamic>;
+      if (querySnapshot.docs.isNotEmpty) {
+        final vehiculeData = querySnapshot.docs.first.data();
         
         // Extraire les informations pertinentes
         final Map<String, dynamic> vehiculeInfo = {
@@ -346,14 +291,11 @@ class CollaborateurCA {
           'photoVehiculeUrl': vehiculeData['photoVehiculeUrl'] ?? '',
         };
         
-        print('✅ Informations du véhicule récupérées avec succès: $vehiculeId');
         return vehiculeInfo;
       } else {
-        print('⚠️ Véhicule non trouvé: $vehiculeId');
         return {};
       }
     } catch (e) {
-      print('❌ Erreur lors de la récupération des informations du véhicule: $e');
       return {};
     }
   }

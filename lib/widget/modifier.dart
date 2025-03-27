@@ -167,7 +167,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
         // Stocker dans le dossier de l'administrateur si c'est un collaborateur
         final String storagePath = 'users/${targetId}/locations/${widget.contratId}/photos_retour/$fileName';
 
-        print("📁 Chemin de stockage: $storagePath");
 
         Reference ref = FirebaseStorage.instance.ref().child(storagePath);
 
@@ -176,10 +175,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
         final tempFile = File('${tempDir.path}/$fileName');
         await tempFile.writeAsBytes(compressedImage);
 
-        print("⏳ Début du téléchargement...");
         // Téléchargement sans métadonnées
         await ref.putFile(tempFile);
-        print("✅ Téléchargement terminé avec succès");
 
         String downloadUrl = await ref.getDownloadURL();
         urls.add(downloadUrl);
@@ -316,13 +313,10 @@ class _ModifierScreenState extends State<ModifierScreen> {
           }
           
           // Ajouter les informations dans la collection 'chiffre_affaire'
-          String vehiculeId = widget.data['vehiculeId'] ?? '';
-          // Nous calculons maintenant le coût total directement dans la section chiffre_affaire
-          
           try {
             // Utiliser CollaborateurCA pour récupérer les informations du véhicule
             Map<String, dynamic> vehiculeInfoDetails = await CollaborateurCA.getVehiculeInfo(
-              vehiculeId: vehiculeId,
+              immatriculation: widget.data['immatriculation'] ?? '',
             );
             
             // Calculer le montant total
@@ -330,8 +324,10 @@ class _ModifierScreenState extends State<ModifierScreen> {
             
             // Préparer les données pour la collection chiffre_affaire
             Map<String, dynamic> chiffreData = {
-              'vehiculeDetails': vehiculeInfoDetails,
-              'vehiculeInfoStr': "${vehiculeInfoDetails['marque']} ${vehiculeInfoDetails['modele']} (${vehiculeInfoDetails['immatriculation']})",
+              'marque': vehiculeInfoDetails['marque'] ?? '',
+              'modele': vehiculeInfoDetails['modele'] ?? '',
+              'immatriculation': vehiculeInfoDetails['immatriculation'] ?? '',
+              'photoVehiculeUrl': vehiculeInfoDetails['photoVehiculeUrl'] ?? '',
               'prixLocation': _fraisSupplementaires['prixLocation'] ?? 0.0,
               'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
               'fraisNettoyageInterieur': _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0,
@@ -392,13 +388,10 @@ class _ModifierScreenState extends State<ModifierScreen> {
           }
           
           // Ajouter les informations dans la collection 'chiffre_affaire'
-          String vehiculeId = widget.data['vehiculeId'] ?? '';
-          // Nous calculons maintenant le coût total directement dans la section chiffre_affaire
-          
           try {
             // Utiliser CollaborateurCA pour récupérer les informations du véhicule
             Map<String, dynamic> vehiculeInfoDetails = await CollaborateurCA.getVehiculeInfo(
-              vehiculeId: vehiculeId,
+              immatriculation: widget.data['immatriculation'] ?? '',
             );
             
             // Calculer le montant total
@@ -406,8 +399,10 @@ class _ModifierScreenState extends State<ModifierScreen> {
             
             // Préparer les données pour la collection chiffre_affaire
             Map<String, dynamic> chiffreData = {
-              'vehiculeDetails': vehiculeInfoDetails,
-              'vehiculeInfoStr': "${vehiculeInfoDetails['marque']} ${vehiculeInfoDetails['modele']} (${vehiculeInfoDetails['immatriculation']})",
+              'marque': vehiculeInfoDetails['marque'] ?? '',
+              'modele': vehiculeInfoDetails['modele'] ?? '',
+              'immatriculation': vehiculeInfoDetails['immatriculation'] ?? '',
+              'photoVehiculeUrl': vehiculeInfoDetails['photoVehiculeUrl'] ?? '',
               'prixLocation': _fraisSupplementaires['prixLocation'] ?? 0.0,
               'coutKmSupplementaires': _fraisSupplementaires['coutKmSupplementaires'] ?? 0.0,
               'fraisNettoyageInterieur': _fraisSupplementaires['fraisNettoyageInterieur'] ?? 0.0,
