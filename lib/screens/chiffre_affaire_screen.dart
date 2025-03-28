@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:fl_chart/fl_chart.dart';
-import '../CHIFFRES/popup_filtre.dart';
 import '../CHIFFRES/chiffre_affaire_card.dart';
 import '../CHIFFRES/repartition_vehicule_card.dart';
+import '../CHIFFRES/evolution_chiffre_card.dart';
+import '../CHIFFRES/popup_filtre.dart';
 
 class ChiffreAffaireScreen extends StatefulWidget {
   const ChiffreAffaireScreen({Key? key}) : super(key: key);
@@ -524,78 +524,12 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
           const SizedBox(height: 24),
           
           // Évolution du chiffre d'affaires
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Évolution du chiffre d\'affaire',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 300,
-                    child: _chiffreParPeriode.isEmpty
-                        ? const Center(child: Text('Aucune donnée disponible'))
-                        : LineChart(
-                            LineChartData(
-                              gridData: FlGridData(show: true),
-                              titlesData: FlTitlesData(
-                                leftTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    reservedSize: 40,
-                                    getTitlesWidget: (value, meta) {
-                                      if (value == 0) return const Text('0€');
-                                      return Text('${value.toInt()}€');
-                                    },
-                                  ),
-                                ),
-                                bottomTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    reservedSize: 30,
-                                    getTitlesWidget: (value, meta) {
-                                      if (value % 1 == 0 && value >= 0 && value < _buildLineSpots().length) {
-                                        return Text(value.toInt().toString());
-                                      }
-                                      return const Text('');
-                                    },
-                                  ),
-                                ),
-                                topTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false),
-                                ),
-                                rightTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false),
-                                ),
-                              ),
-                              borderData: FlBorderData(show: true),
-                              lineBarsData: [
-                                LineChartBarData(
-                                  spots: _buildLineSpots(),
-                                  isCurved: true,
-                                  color: const Color(0xFF08004D),
-                                  barWidth: 4,
-                                  isStrokeCapRound: true,
-                                  dotData: FlDotData(show: true),
-                                  belowBarData: BarAreaData(
-                                    show: true,
-                                    color: const Color(0xFF08004D).withOpacity(0.2),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                  ),
-                ],
-              ),
-            ),
+          EvolutionChiffreCard(
+            chiffreParPeriode: _chiffreParPeriode,
+            anneeSelectionnee: int.parse(_selectedYear),
           ),
+          
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -762,20 +696,6 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         ),
       );
     }).toList();
-  }
-  
-  List<FlSpot> _buildLineSpots() {
-    List<MapEntry<String, double>> sortedEntries = _chiffreParPeriode.entries.toList()
-      ..sort((a, b) => a.key.compareTo(a.key)); // Tri par date croissante
-    
-    // Limiter à 10 points pour la lisibilité
-    if (sortedEntries.length > 10) {
-      sortedEntries = sortedEntries.sublist(sortedEntries.length - 10);
-    }
-    
-    return List.generate(sortedEntries.length, (index) {
-      return FlSpot(index.toDouble(), sortedEntries[index].value);
-    });
   }
   
   // Afficher la boîte de dialogue des filtres
