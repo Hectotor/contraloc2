@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../CHIFFRES/popup_filtre.dart';
+import '../CHIFFRES/chiffre_affaire_card.dart';
+import '../CHIFFRES/repartition_vehicule_card.dart';
 
 class ChiffreAffaireScreen extends StatefulWidget {
   const ChiffreAffaireScreen({Key? key}) : super(key: key);
@@ -430,8 +432,6 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
   }
   
   Widget _buildResumeTab() {
-    final formatCurrency = NumberFormat.currency(locale: 'fr_FR', symbol: '€');
-    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -502,143 +502,23 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
           const SizedBox(height: 10),
           
           // Chiffre d'affaires de la période sélectionnée
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Chiffre d\'affaire',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    formatCurrency.format(_chiffrePeriodeSelectionnee),
-                    style: const TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF08004D),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (_vehiculePlusRentable.isNotEmpty)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 8),
-                        const Divider(),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Véhicule le plus rentable:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(Icons.directions_car, color: Color(0xFF08004D)),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        '$_marqueVehiculePlusRentable $_modeleVehiculePlusRentable',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text('Immatriculation: $_immatriculationVehiculePlusRentable'),
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text('Chiffre d\'affaires:'),
-                                    Text(
-                                      formatCurrency.format(_montantVehiculePlusRentable),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF08004D),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text('Pourcentage du total:'),
-                                    Text(
-                                      '${_pourcentageVehiculePlusRentable.toStringAsFixed(1)}%',
-                                      style: const TextStyle(
-                                        fontStyle: FontStyle.italic,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
+          ChiffreAffaireCard(
+            chiffrePeriodeSelectionnee: _chiffrePeriodeSelectionnee,
+            vehiculePlusRentable: _vehiculePlusRentable,
+            marqueVehiculePlusRentable: _marqueVehiculePlusRentable,
+            modeleVehiculePlusRentable: _modeleVehiculePlusRentable,
+            immatriculationVehiculePlusRentable: _immatriculationVehiculePlusRentable,
+            montantVehiculePlusRentable: _montantVehiculePlusRentable,
+            pourcentageVehiculePlusRentable: _pourcentageVehiculePlusRentable,
           ),
           
           const SizedBox(height: 24),
           
           // Répartition par véhicule
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Répartition par véhicule',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 300,
-                    child: _chiffreParVehicule.isEmpty
-                        ? const Center(child: Text('Aucune donnée disponible'))
-                        : PieChart(
-                            PieChartData(
-                              sectionsSpace: 2,
-                              centerSpaceRadius: 40,
-                              sections: _buildPieSections(),
-                              pieTouchData: PieTouchData(
-                                touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                                  // Interaction avec le graphique
-                                },
-                              ),
-                            ),
-                          ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Légende du graphique
-                  ..._buildPieChartLegend(),
-                ],
-              ),
-            ),
+          RepartitionVehiculeCard(
+            chiffreParVehicule: _chiffreParVehicule,
+            chiffreTotal: _chiffreTotal,
+            chiffrePeriodeSelectionnee: _chiffrePeriodeSelectionnee,
           ),
           
           const SizedBox(height: 24),
@@ -719,80 +599,6 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         ],
       ),
     );
-  }
-  
-  // Méthode pour construire la légende du graphique en camembert
-  List<Widget> _buildPieChartLegend() {
-    final formatCurrency = NumberFormat.currency(locale: 'fr_FR', symbol: '€');
-    List<MapEntry<String, double>> sortedEntries = _chiffreParVehicule.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    
-    // Limiter à 5 entrées pour la lisibilité
-    if (sortedEntries.length > 5) {
-      double autresMontant = 0;
-      for (int i = 5; i < sortedEntries.length; i++) {
-        autresMontant += sortedEntries[i].value;
-      }
-      sortedEntries = sortedEntries.sublist(0, 5);
-      if (autresMontant > 0) {
-        sortedEntries.add(MapEntry('Autres', autresMontant));
-      }
-    }
-    
-    // Couleurs pour les sections
-    final List<Color> colors = [
-      const Color(0xFF08004D),
-      const Color(0xFF1A237E),
-      const Color(0xFF303F9F),
-      const Color(0xFF3949AB),
-      const Color(0xFF5C6BC0),
-      const Color(0xFF7986CB),
-    ];
-    
-    return sortedEntries.asMap().entries.map((entry) {
-      final index = entry.key;
-      final vehicule = entry.value.key;
-      final montant = entry.value.value;
-      final percentage = (montant / _chiffrePeriodeSelectionnee) * 100;
-      
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: colors[index % colors.length],
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                vehicule,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              formatCurrency.format(montant),
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF08004D),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '${percentage.toStringAsFixed(1)}%',
-              style: const TextStyle(
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      );
-    }).toList();
   }
   
   Widget _buildPeriodeTab() {
@@ -907,7 +713,6 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
   }
   
   List<Widget> _buildPeriodeListItems() {
-    final formatCurrency = NumberFormat.currency(locale: 'fr_FR', symbol: '€');
     List<MapEntry<String, double>> sortedEntries = _chiffreParPeriode.entries.toList()
       ..sort((a, b) => b.key.compareTo(b.key)); // Tri par date décroissante
     
@@ -947,7 +752,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           trailing: Text(
-            formatCurrency.format(entry.value),
+            NumberFormat.currency(locale: 'fr_FR', symbol: '€').format(entry.value),
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
@@ -957,50 +762,6 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         ),
       );
     }).toList();
-  }
-  
-  List<PieChartSectionData> _buildPieSections() {
-    List<MapEntry<String, double>> sortedEntries = _chiffreParVehicule.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    
-    // Limiter à 5 sections pour la lisibilité
-    if (sortedEntries.length > 5) {
-      double autresMontant = 0;
-      for (int i = 5; i < sortedEntries.length; i++) {
-        autresMontant += sortedEntries[i].value;
-      }
-      sortedEntries = sortedEntries.sublist(0, 5);
-      if (autresMontant > 0) {
-        sortedEntries.add(MapEntry('Autres', autresMontant));
-      }
-    }
-    
-    // Couleurs pour les sections
-    final List<Color> colors = [
-      const Color(0xFF08004D),
-      const Color(0xFF1A237E),
-      const Color(0xFF303F9F),
-      const Color(0xFF3949AB),
-      const Color(0xFF5C6BC0),
-      const Color(0xFF7986CB),
-    ];
-    
-    return List.generate(sortedEntries.length, (index) {
-      final entry = sortedEntries[index];
-      final percentage = (entry.value / _chiffreTotal) * 100;
-      
-      return PieChartSectionData(
-        color: colors[index % colors.length],
-        value: entry.value,
-        title: '${percentage.toStringAsFixed(1)}%',
-        radius: 100,
-        titleStyle: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
-      );
-    });
   }
   
   List<FlSpot> _buildLineSpots() {
