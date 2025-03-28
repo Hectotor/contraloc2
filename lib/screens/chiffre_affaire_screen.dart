@@ -36,12 +36,16 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
   
   // Données calculées
   Map<String, double> _chiffreParVehicule = {};
+  Map<String, Map<String, dynamic>> _detailsVehicules = {}; // Pour stocker les détails des véhicules
   Map<String, double> _chiffreParPeriode = {};
   double _chiffreTotal = 0;
   double _chiffrePeriodeSelectionnee = 0;
   
   // Statistiques
   String _vehiculePlusRentable = '';
+  String _marqueVehiculePlusRentable = '';
+  String _modeleVehiculePlusRentable = '';
+  String _immatriculationVehiculePlusRentable = '';
   double _montantVehiculePlusRentable = 0;
   double _pourcentageVehiculePlusRentable = 0;
   
@@ -121,17 +125,23 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       for (var doc in contratsSnapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         
-        // Récupérer les informations du véhicule
-        Map<String, dynamic> vehiculeDetails = data['vehiculeDetails'] as Map<String, dynamic>? ?? {};
-        String vehiculeInfoStr = data['vehiculeInfoStr'] ?? '';
+        // Récupérer les informations du véhicule directement des données du contrat
+        String marque = data['marque'] ?? '';
+        String modele = data['modele'] ?? '';
+        String immatriculation = data['immatriculation'] ?? '';
+        String vehiculeInfoStr = '';
         
-        // Si vehiculeInfoStr est vide, essayer de le construire à partir de vehiculeDetails
-        if (vehiculeInfoStr.isEmpty) {
-          String marque = vehiculeDetails['marque'] ?? '';
-          String modele = vehiculeDetails['modele'] ?? '';
-          String immatriculation = vehiculeDetails['immatriculation'] ?? '';
+        if (marque.isNotEmpty && modele.isNotEmpty) {
           vehiculeInfoStr = '$marque $modele ($immatriculation)';
         }
+        
+        // Créer un objet vehiculeDetails à partir des données du contrat
+        Map<String, dynamic> vehiculeDetails = {
+          'marque': marque,
+          'modele': modele,
+          'immatriculation': immatriculation,
+          'photoVehiculeUrl': data['photoVehiculeUrl'] ?? '',
+        };
         
         // Récupérer les données financières
         double prixLocation = (data['prixLocation'] ?? 0.0).toDouble();
@@ -167,10 +177,8 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
           'caution': caution,
           'montantTotal': montantTotal,
           'dateCloture': dateCloture,
-          'contratId': data['contratId'] ?? '',
         });
         
-        // Ajouter au chiffre d'affaire total
         chiffreTotal += montantTotal;
       }
 
@@ -267,39 +275,59 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
   
   void _calculerChiffreParVehicule() {
     Map<String, double> chiffreParVehicule = {};
+    Map<String, Map<String, dynamic>> detailsVehicules = {};
     
     for (var contrat in _contrats) {
       DateTime dateCloture = contrat['dateCloture'];
-      double montant = 0;
-      if (_filtresCalcul['prixLocation']!) montant += contrat['prixLocation'];
-      if (_filtresCalcul['coutKmSupplementaires']!) montant += contrat['coutKmSupplementaires'];
-      if (_filtresCalcul['fraisNettoyageInterieur']!) montant += contrat['fraisNettoyageInterieur'];
-      if (_filtresCalcul['fraisNettoyageExterieur']!) montant += contrat['fraisNettoyageExterieur'];
-      if (_filtresCalcul['fraisCarburantManquant']!) montant += contrat['fraisCarburantManquant'];
-      if (_filtresCalcul['fraisRayuresDommages']!) montant += contrat['fraisRayuresDommages'];
-      if (_filtresCalcul['caution']!) montant += contrat['caution'];
-      
-      // Filtrer par année si nécessaire
-      if (dateCloture.year.toString() != _selectedYear) {
-        continue;
-      }
-      
-      // Vérifier si la date correspond à la période sélectionnée
       if (!_estDansPeriodeSelectionnee(dateCloture)) {
         continue;
       }
       
-      String vehiculeInfoStr = contrat['vehiculeInfoStr'];
+      String vehiculeInfoStr = contrat['vehiculeInfoStr'] ?? '';
+      if (vehiculeInfoStr.isEmpty) continue;
+      
+      // Récupérer les détails du véhicule
+      Map<String, dynamic> vehiculeDetails = contrat['vehiculeDetails'] ?? {};
+      
+      // Calculer le montant en fonction des filtres sélectionnés
+      double montant = 0;
+      if (_filtresCalcul['prixLocation'] == true) {
+        montant += contrat['prixLocation'] ?? 0;
+      }
+      if (_filtresCalcul['coutKmSupplementaires'] == true) {
+        montant += contrat['coutKmSupplementaires'] ?? 0;
+      }
+      if (_filtresCalcul['fraisNettoyageInterieur'] == true) {
+        montant += contrat['fraisNettoyageInterieur'] ?? 0;
+      }
+      if (_filtresCalcul['fraisNettoyageExterieur'] == true) {
+        montant += contrat['fraisNettoyageExterieur'] ?? 0;
+      }
+      if (_filtresCalcul['fraisCarburantManquant'] == true) {
+        montant += contrat['fraisCarburantManquant'] ?? 0;
+      }
+      if (_filtresCalcul['fraisRayuresDommages'] == true) {
+        montant += contrat['fraisRayuresDommages'] ?? 0;
+      }
+      if (_filtresCalcul['caution'] == true) {
+        montant += contrat['caution'] ?? 0;
+      }
       
       if (chiffreParVehicule.containsKey(vehiculeInfoStr)) {
         chiffreParVehicule[vehiculeInfoStr] = (chiffreParVehicule[vehiculeInfoStr] ?? 0) + montant;
       } else {
         chiffreParVehicule[vehiculeInfoStr] = montant;
       }
+      
+      // Stocker les détails du véhicule s'ils ne sont pas déjà enregistrés
+      if (!detailsVehicules.containsKey(vehiculeInfoStr) && vehiculeDetails.isNotEmpty) {
+        detailsVehicules[vehiculeInfoStr] = vehiculeDetails;
+      }
     }
     
     setState(() {
       _chiffreParVehicule = chiffreParVehicule;
+      _detailsVehicules = detailsVehicules;
     });
   }
   
@@ -311,6 +339,34 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       
       setState(() {
         _vehiculePlusRentable = vehiculePlusRentable.key;
+        
+        // Récupérer les détails du véhicule le plus rentable
+        if (_detailsVehicules.containsKey(_vehiculePlusRentable)) {
+          Map<String, dynamic> details = _detailsVehicules[_vehiculePlusRentable]!;
+          _marqueVehiculePlusRentable = details['marque'] ?? '';
+          _modeleVehiculePlusRentable = details['modele'] ?? '';
+          _immatriculationVehiculePlusRentable = details['immatriculation'] ?? '';
+        } else {
+          // Essayer d'extraire les informations du nom du véhicule
+          List<String> parts = _vehiculePlusRentable.split(' ');
+          if (parts.length >= 2) {
+            _marqueVehiculePlusRentable = parts[0];
+            
+            // Extraire le modèle (tout sauf la marque et l'immatriculation entre parenthèses)
+            String reste = _vehiculePlusRentable.substring(_marqueVehiculePlusRentable.length).trim();
+            int indexParenthese = reste.lastIndexOf('(');
+            if (indexParenthese > 0) {
+              _modeleVehiculePlusRentable = reste.substring(0, indexParenthese).trim();
+              
+              // Extraire l'immatriculation
+              String immat = reste.substring(indexParenthese);
+              _immatriculationVehiculePlusRentable = immat.replaceAll('(', '').replaceAll(')', '').trim();
+            } else {
+              _modeleVehiculePlusRentable = reste;
+            }
+          }
+        }
+        
         _montantVehiculePlusRentable = vehiculePlusRentable.value;
         _pourcentageVehiculePlusRentable = _chiffrePeriodeSelectionnee > 0 
             ? (vehiculePlusRentable.value / _chiffrePeriodeSelectionnee) * 100 
@@ -480,26 +536,62 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
-                        Text(_vehiculePlusRentable),
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              formatCurrency.format(_montantVehiculePlusRentable),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF08004D),
-                              ),
+                        Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.directions_car, color: Color(0xFF08004D)),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '$_marqueVehiculePlusRentable $_modeleVehiculePlusRentable',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text('Immatriculation: $_immatriculationVehiculePlusRentable'),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Chiffre d\'affaires:'),
+                                    Text(
+                                      formatCurrency.format(_montantVehiculePlusRentable),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF08004D),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Pourcentage du total:'),
+                                    Text(
+                                      '${_pourcentageVehiculePlusRentable.toStringAsFixed(1)}%',
+                                      style: const TextStyle(
+                                        fontStyle: FontStyle.italic,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                              ],
                             ),
-                            Text(
-                              '${_pourcentageVehiculePlusRentable.toStringAsFixed(1)}% du total',
-                              style: const TextStyle(
-                                fontStyle: FontStyle.italic,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ],
                     ),
