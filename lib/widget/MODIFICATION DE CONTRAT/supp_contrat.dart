@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import '../../services/collaborateur_util.dart';
 
 class SuppContrat {
@@ -24,7 +23,7 @@ class SuppContrat {
                   children: const [
                     CircularProgressIndicator(),
                     SizedBox(height: 16),
-                    Text('Suppression en cours...'),
+                    Text('Marquage pour suppression en cours...'),
                   ],
                 ),
               ),
@@ -69,7 +68,7 @@ class SuppContrat {
       // Déterminer l'ID à utiliser (admin pour les collaborateurs)
       final targetId = isCollaborateur ? adminId : userId;
 
-      // Récupérer les données du contrat pour les photos
+      // Récupérer les données du contrat
       final contratDoc = await CollaborateurUtil.getDocument(
         collection: 'users',
         docId: targetId!,
@@ -78,61 +77,41 @@ class SuppContrat {
         useAdminId: isCollaborateur,
       );
 
-      // Sauvegarder les URLs des photos
-      List<String> photosToDelete = [];
+      // Au lieu de supprimer le contrat, marquer comme "supprimé"
       if (contratDoc.exists) {
-        final data = contratDoc.data() as Map<String, dynamic>?;
-        
-        if (data != null) {
-          // Ajouter les photos standard
-          if (data['photos'] != null) {
-            photosToDelete.addAll(List<String>.from(data['photos']));
-          }
+        // Mettre à jour le document avec le statut "supprimé"
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(targetId)
+            .collection('locations')
+            .doc(contratId)
+            .update({
+              'statussupprime': 'supprimé',
+              'dateSuppression': DateTime.now().toIso8601String(),
+              // Calculer la date de suppression définitive (90 jours plus tard)
+              'dateSuppressionDefinitive': DateTime.now().add(const Duration(days: 90)).toIso8601String(),
+            });
 
-          // Ajouter les photos de retour
-          if (data['photosRetourUrls'] != null) {
-            photosToDelete.addAll(List<String>.from(data['photosRetourUrls']));
-          }
-
-          // Ajouter les photos de permis
-          if (data['permisRecto'] != null) {
-            photosToDelete.add(data['permisRecto']);
-          }
-          if (data['permisVerso'] != null) {
-            photosToDelete.add(data['permisVerso']);
-          }
+        // Fermer le dialogue de chargement
+        if (dialogContext != null && dialogContext!.mounted) {
+          Navigator.pop(dialogContext!);
         }
-      }
 
-      // Supprimer d'abord les photos
-      await Future.wait(photosToDelete.map((photoUrl) async {
-        if (photoUrl.isNotEmpty &&
-            photoUrl.startsWith('https://firebasestorage.googleapis.com')) {
-          try {
-            final ref = FirebaseStorage.instance.refFromURL(photoUrl);
-            await ref.delete();
-          } catch (e) {
-            print('Erreur lors de la suppression de la photo: $e');
-          }
+        // Retourner à l'écran précédent
+        if (context.mounted) {
+          Navigator.pop(context);
+          
+          // Afficher un message de confirmation
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Le contrat a été marqué pour suppression et sera définitivement supprimé dans 90 jours.'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
         }
-      }));
-
-      // Ensuite supprimer le contrat
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(targetId)
-          .collection('locations')
-          .doc(contratId)
-          .delete();
-
-      // Fermer le dialogue de chargement
-      if (dialogContext != null && dialogContext!.mounted) {
-        Navigator.pop(dialogContext!);
-      }
-
-      // Retourner à l'écran précédent
-      if (context.mounted) {
-        Navigator.pop(context);
+      } else {
+        throw Exception("Le contrat n'existe pas");
       }
     } catch (e) {
       // Fermer le dialogue de chargement en cas d'erreur
@@ -144,14 +123,14 @@ class SuppContrat {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur lors de la suppression : $e'),
+            content: Text('Erreur lors du marquage pour suppression : $e'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 2),
           ),
         );
       }
 
-      print('Erreur lors de la suppression : $e');
+      print('Erreur lors du marquage pour suppression : $e');
     }
   }
 
@@ -167,7 +146,7 @@ class SuppContrat {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         content: const Text(
-          "Êtes-vous sûr de vouloir supprimer ce contrat ? Cette action est irréversible.",
+          "Êtes-vous sûr de vouloir supprimer ce contrat ? Il sera marqué comme supprimé et définitivement effacé dans 90 jours.",
         ),
         actions: [
           TextButton(

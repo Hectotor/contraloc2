@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class FirestoreService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -117,5 +118,91 @@ class FirestoreService {
         .collection('locations')
         .doc(contratId)
         .delete();
+  }
+
+  static Future<void> checkAndDeleteExpiredContracts() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    try {
+      // Récupérer tous les contrats marqués comme supprimés
+      final QuerySnapshot snapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('locations')
+          .where('statussupprime', isEqualTo: 'supprimé')
+          .get();
+
+      final now = DateTime.now();
+      final batch = _firestore.batch();
+      bool hasDeletions = false;
+
+      // Vérifier chaque contrat
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        
+        // Vérifier si la date de suppression définitive est passée
+        if (data['dateSuppressionDefinitive'] != null) {
+          final dateSuppressionDefinitive = DateTime.parse(data['dateSuppressionDefinitive']);
+          
+          if (now.isAfter(dateSuppressionDefinitive)) {
+            // Ajouter le document à supprimer au batch
+            batch.delete(doc.reference);
+            hasDeletions = true;
+            
+            // Supprimer également les photos associées si nécessaire
+            await _deleteContractPhotos(data);
+          }
+        }
+      }
+
+      // Exécuter le batch si des suppressions sont nécessaires
+      if (hasDeletions) {
+        await batch.commit();
+      }
+
+      print('Vérification des contrats expirés terminée. ${hasDeletions ? "Des contrats ont été supprimés définitivement." : "Aucun contrat à supprimer."}');
+    } catch (e) {
+      print('Erreur lors de la vérification des contrats expirés: $e');
+    }
+  }
+
+  // Méthode auxiliaire pour supprimer les photos d'un contrat
+  static Future<void> _deleteContractPhotos(Map<String, dynamic> contractData) async {
+    try {
+      final photosToDelete = <String>[];
+      
+      // Ajouter les photos standard
+      if (contractData['photos'] != null) {
+        photosToDelete.addAll(List<String>.from(contractData['photos']));
+      }
+
+      // Ajouter les photos de retour
+      if (contractData['photosRetourUrls'] != null) {
+        photosToDelete.addAll(List<String>.from(contractData['photosRetourUrls']));
+      }
+
+      // Ajouter les photos de permis
+      if (contractData['permisRecto'] != null) {
+        photosToDelete.add(contractData['permisRecto']);
+      }
+      if (contractData['permisVerso'] != null) {
+        photosToDelete.add(contractData['permisVerso']);
+      }
+
+      // Supprimer chaque photo
+      for (final photoUrl in photosToDelete) {
+        if (photoUrl.isNotEmpty && photoUrl.startsWith('https://firebasestorage.googleapis.com')) {
+          try {
+            final ref = FirebaseStorage.instance.refFromURL(photoUrl);
+            await ref.delete();
+          } catch (e) {
+            print('Erreur lors de la suppression de la photo: $e');
+          }
+        }
+      }
+    } catch (e) {
+      print('Erreur lors de la suppression des photos: $e');
+    }
   }
 }

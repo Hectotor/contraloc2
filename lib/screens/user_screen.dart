@@ -94,6 +94,7 @@ class _UserScreenState extends State<UserScreen> {
               _telephoneController.text = data['telephone'] ?? '';
               _adresseController.text = data['adresse'] ?? '';
               _siretController.text = data['siret'] ?? '';
+              _nomEntrepriseController.text = data['nomEntreprise'] ?? '';
               _logoUrl = data['logoUrl'] as String?;
               _isUserDataLoaded = true; // Set the flag to true after loading data
             });
