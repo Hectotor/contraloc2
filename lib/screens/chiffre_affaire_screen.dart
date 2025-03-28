@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../CHIFFRES/popup_filtre.dart';
 
 class ChiffreAffaireScreen extends StatefulWidget {
   const ChiffreAffaireScreen({Key? key}) : super(key: key);
@@ -17,6 +18,17 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
   String _selectedPeriod = 'Mois';
   String _selectedVehicule = 'Tous';
   String _selectedYear = DateTime.now().year.toString();
+  
+  // Filtres pour le calcul du chiffre d'affaire
+  Map<String, bool> _filtresCalcul = {
+    'prixLocation': true,
+    'coutKmSupplementaires': true,
+    'fraisNettoyageInterieur': true,
+    'fraisNettoyageExterieur': true,
+    'fraisCarburantManquant': true,
+    'fraisRayuresDommages': true,
+    'caution': true,
+  };
   
   List<Map<String, dynamic>> _contrats = [];
   List<String> _vehicules = ['Tous'];
@@ -199,11 +211,17 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     
     for (var contrat in _contrats) {
       DateTime dateCloture = contrat['dateCloture'];
-      double montant = contrat['montantTotal'];
-      String vehiculeInfo = contrat['vehiculeInfoStr'];
+      double montant = 0;
+      if (_filtresCalcul['prixLocation']!) montant += contrat['prixLocation'];
+      if (_filtresCalcul['coutKmSupplementaires']!) montant += contrat['coutKmSupplementaires'];
+      if (_filtresCalcul['fraisNettoyageInterieur']!) montant += contrat['fraisNettoyageInterieur'];
+      if (_filtresCalcul['fraisNettoyageExterieur']!) montant += contrat['fraisNettoyageExterieur'];
+      if (_filtresCalcul['fraisCarburantManquant']!) montant += contrat['fraisCarburantManquant'];
+      if (_filtresCalcul['fraisRayuresDommages']!) montant += contrat['fraisRayuresDommages'];
+      if (_filtresCalcul['caution']!) montant += contrat['caution'];
       
       // Filtrer par véhicule si nécessaire
-      if (_selectedVehicule != 'Tous' && vehiculeInfo != _selectedVehicule) {
+      if (_selectedVehicule != 'Tous' && contrat['vehiculeInfoStr'] != _selectedVehicule) {
         continue;
       }
       
@@ -252,38 +270,31 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     
     for (var contrat in _contrats) {
       DateTime dateCloture = contrat['dateCloture'];
-      double montant = contrat['montantTotal'];
-      String vehiculeInfo = contrat['vehiculeInfoStr'];
+      double montant = 0;
+      if (_filtresCalcul['prixLocation']!) montant += contrat['prixLocation'];
+      if (_filtresCalcul['coutKmSupplementaires']!) montant += contrat['coutKmSupplementaires'];
+      if (_filtresCalcul['fraisNettoyageInterieur']!) montant += contrat['fraisNettoyageInterieur'];
+      if (_filtresCalcul['fraisNettoyageExterieur']!) montant += contrat['fraisNettoyageExterieur'];
+      if (_filtresCalcul['fraisCarburantManquant']!) montant += contrat['fraisCarburantManquant'];
+      if (_filtresCalcul['fraisRayuresDommages']!) montant += contrat['fraisRayuresDommages'];
+      if (_filtresCalcul['caution']!) montant += contrat['caution'];
       
       // Filtrer par année si nécessaire
       if (dateCloture.year.toString() != _selectedYear) {
         continue;
       }
       
-      // Filtrer par période si nécessaire
-      bool inclure = true;
-      if (_selectedPeriod == 'Jour') {
-        inclure = DateFormat('yyyy-MM-dd').format(dateCloture) == DateFormat('yyyy-MM-dd').format(DateTime.now());
-      } else if (_selectedPeriod == 'Semaine') {
-        int weekNumber = ((dateCloture.difference(DateTime(dateCloture.year, 1, 1)).inDays) / 7).floor() + 1;
-        int currentWeekNumber = ((DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays) / 7).floor() + 1;
-        inclure = weekNumber == currentWeekNumber && dateCloture.year == DateTime.now().year;
-      } else if (_selectedPeriod == 'Mois') {
-        inclure = DateFormat('yyyy-MM').format(dateCloture) == DateFormat('yyyy-MM').format(DateTime.now());
-      } else if (_selectedPeriod == 'Trimestre') {
-        int trimestre = ((dateCloture.month - 1) / 3).floor() + 1;
-        int currentTrimestre = ((DateTime.now().month - 1) / 3).floor() + 1;
-        inclure = trimestre == currentTrimestre && dateCloture.year == DateTime.now().year;
-      } else if (_selectedPeriod == 'Année') {
-        inclure = DateFormat('yyyy').format(dateCloture) == _selectedYear;
+      // Vérifier si la date correspond à la période sélectionnée
+      if (!_estDansPeriodeSelectionnee(dateCloture)) {
+        continue;
       }
       
-      if (!inclure) continue;
+      String vehiculeInfoStr = contrat['vehiculeInfoStr'];
       
-      if (chiffreParVehicule.containsKey(vehiculeInfo)) {
-        chiffreParVehicule[vehiculeInfo] = (chiffreParVehicule[vehiculeInfo] ?? 0) + montant;
+      if (chiffreParVehicule.containsKey(vehiculeInfoStr)) {
+        chiffreParVehicule[vehiculeInfoStr] = (chiffreParVehicule[vehiculeInfoStr] ?? 0) + montant;
       } else {
-        chiffreParVehicule[vehiculeInfo] = montant;
+        chiffreParVehicule[vehiculeInfoStr] = montant;
       }
     }
     
@@ -306,6 +317,26 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
             : 0;
       });
     }
+  }
+
+  // Vérifier si une date est dans la période sélectionnée
+  bool _estDansPeriodeSelectionnee(DateTime date) {
+    if (_selectedPeriod == 'Jour') {
+      return DateFormat('yyyy-MM-dd').format(date) == DateFormat('yyyy-MM-dd').format(DateTime.now());
+    } else if (_selectedPeriod == 'Semaine') {
+      int weekNumber = ((date.difference(DateTime(date.year, 1, 1)).inDays) / 7).floor() + 1;
+      int currentWeekNumber = ((DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays) / 7).floor() + 1;
+      return weekNumber == currentWeekNumber && date.year == DateTime.now().year;
+    } else if (_selectedPeriod == 'Mois') {
+      return DateFormat('yyyy-MM').format(date) == DateFormat('yyyy-MM').format(DateTime.now());
+    } else if (_selectedPeriod == 'Trimestre') {
+      int trimestre = ((date.month - 1) / 3).floor() + 1;
+      int currentTrimestre = ((DateTime.now().month - 1) / 3).floor() + 1;
+      return trimestre == currentTrimestre && date.year == DateTime.now().year;
+    } else if (_selectedPeriod == 'Année') {
+      return DateFormat('yyyy').format(date) == _selectedYear;
+    }
+    return true;
   }
 
   @override
@@ -351,51 +382,66 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Sélecteurs de période et d'année
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 10,
             children: [
-              const Text('Période: ', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(width: 8),
-              DropdownButton<String>(
-                value: _selectedPeriod,
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _selectedPeriod = newValue;
-                      _calculerTousLesChiffres();
-                    });
-                  }
-                },
-                items: _periodes.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Période: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 8),
+                  DropdownButton<String>(
+                    value: _selectedPeriod,
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          _selectedPeriod = newValue;
+                          _calculerTousLesChiffres();
+                        });
+                      }
+                    },
+                    items: _periodes.map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ),
-              const SizedBox(width: 24),
-              const Text('Année: ', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(width: 8),
-              DropdownButton<String>(
-                value: _selectedYear,
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _selectedYear = newValue;
-                      _calculerTousLesChiffres();
-                    });
-                  }
-                },
-                items: _years.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Année: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 8),
+                  DropdownButton<String>(
+                    value: _selectedYear,
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          _selectedYear = newValue;
+                          _calculerTousLesChiffres();
+                        });
+                      }
+                    },
+                    items: _years.map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.filter_list, color: Color(0xFF08004D)),
+                onPressed: _afficherFiltresDialog,
+                tooltip: 'Filtres de calcul',
               ),
             ],
           ),
-
           
           const SizedBox(height: 10),
           
@@ -877,5 +923,23 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     return List.generate(sortedEntries.length, (index) {
       return FlSpot(index.toDouble(), sortedEntries[index].value);
     });
+  }
+  
+  // Afficher la boîte de dialogue des filtres
+  void _afficherFiltresDialog() {
+    afficherFiltresDialog(
+      context: context,
+      filtresCalcul: _filtresCalcul,
+      onFiltresChanged: (newFiltres) {
+        setState(() {
+          _filtresCalcul = newFiltres;
+        });
+      },
+      onApply: () {
+        setState(() {
+          _calculerTousLesChiffres();
+        });
+      },
+    );
   }
 }
