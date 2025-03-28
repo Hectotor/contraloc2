@@ -27,10 +27,10 @@ class ChiffreAffaireCard extends StatelessWidget {
 
     return Card(
       elevation: 8,
-      shadowColor: Colors.blue.withOpacity(0.3),
+      shadowColor: const Color(0xFF08004D).withOpacity(0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.blue.shade100, width: 1),
+        side: BorderSide(color: const Color(0xFF08004D).withOpacity(0.3), width: 1),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -40,7 +40,7 @@ class ChiffreAffaireCard extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [
               Colors.white,
-              Colors.blue.shade50,
+              Colors.white,
             ],
           ),
         ),
@@ -131,11 +131,9 @@ class ChiffreAffaireCard extends StatelessWidget {
   Widget _buildVehiculePlusRentableSection(NumberFormat formatCurrency) {
     // Couleurs pour les indicateurs de performance
     final List<Color> performanceColors = [
-      Colors.green.shade400,
+
       Colors.teal.shade400,
-      Colors.blue.shade400,
-      Colors.purple.shade400,
-      Colors.orange.shade400,
+
     ];
     
     // Choisir une couleur basée sur le pourcentage
