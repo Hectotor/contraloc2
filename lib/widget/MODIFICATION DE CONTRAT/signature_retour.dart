@@ -43,48 +43,40 @@ class SignatureRetourWidget extends StatefulWidget {
   }
 
   @override
-  _SignatureRetourWidgetState createState() => _SignatureRetourWidgetState();
+  State<SignatureRetourWidget> createState() => _SignatureRetourWidgetState();
 }
 
 class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
-  bool _acceptedRetour = false;
-
   @override
   void initState() {
     super.initState();
-    widget.controller.addListener(() {
-      if (widget.controller.isNotEmpty) {
-        _captureSignature();
-      }
-    });
+    widget.controller.addListener(_captureSignature);
   }
 
-  Future<void> _captureSignature() async {
-    final signatureBytes = await widget.controller.toPngBytes();
-    if (signatureBytes != null) {
-      final base64Signature = base64Encode(signatureBytes);
-      
-      // Mettre à jour l'état local
-      setState(() {
+  void _captureSignature() {
+    if (widget.controller.isNotEmpty) {
+      widget.controller.toPngBytes().then((bytes) {
+        if (bytes != null) {
+          final base64 = base64Encode(bytes);
+          if (widget.onSignatureChanged != null) {
+            widget.onSignatureChanged!(base64);
+          }
+        }
       });
-
-      // Appel des callbacks
-      widget.onSignatureCaptured?.call(base64Signature);
-      widget.onSignatureChanged?.call(base64Signature);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Vérifier si nom ou prénom est présent
-    bool hasName = (widget.nom != null && widget.nom!.isNotEmpty) || 
-                   (widget.prenom != null && widget.prenom!.isNotEmpty);
-
-    // Si pas de nom ni de prénom, retourner un widget vide
-    if (!hasName) {
+    // Vérifier si au moins le nom OU le prénom est présent
+    bool hasClientInfo = (widget.nom != null && widget.nom!.isNotEmpty) || 
+                         (widget.prenom != null && widget.prenom!.isNotEmpty);
+    
+    // Si nom ET prénom sont vides, ne rien afficher
+    if (!hasClientInfo) {
       return const SizedBox.shrink();
     }
-
+    
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(10),
@@ -99,21 +91,35 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
           Text(
             'Signature de Retour',
             style: TextStyle(
-              fontSize: 16, 
+              fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF08004D),
+              color: const Color(0xFF08004D),
             ),
           ),
           const SizedBox(height: 10),
+          // Afficher le nom et prénom
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'Client: ${widget.prenom ?? ''} ${widget.nom ?? ''}',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF08004D),
+              ),
+            ),
+          ),
           Row(
             children: [
               Checkbox(
-                value: _acceptedRetour,
+                value: widget.accepted,
                 onChanged: (bool? value) {
-                  setState(() {
-                    _acceptedRetour = value ?? false;
-                  });
-                  widget.onRetourAcceptedChanged(_acceptedRetour);
+                  widget.onRetourAcceptedChanged(value ?? false);
                 },
                 activeColor: const Color(0xFF08004D),
                 shape: RoundedRectangleBorder(
@@ -124,14 +130,14 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
                 child: Text(
                   'Je confirme la signature de retour',
                   style: TextStyle(
-                    color: _acceptedRetour ? Colors.black87 : Colors.grey,
+                    color: widget.accepted ? Colors.black87 : Colors.grey,
                     fontSize: 14,
                   ),
                 ),
               ),
             ],
           ),
-          if (_acceptedRetour) ...[
+          if (widget.accepted) ...[
             const SizedBox(height: 10),
             Container(
               width: double.infinity,

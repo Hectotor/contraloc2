@@ -765,6 +765,9 @@ class _LocationPageState extends State<LocationPage> {
                         _commentaireController), 
                 const SizedBox(height: 20),
                 
+                // Afficher le conteneur de signature si au moins le nom OU le prénom est présent
+                if ((widget.nom != null && widget.nom!.isNotEmpty) || 
+                    (widget.prenom != null && widget.prenom!.isNotEmpty)) 
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(10),

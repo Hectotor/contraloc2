@@ -68,13 +68,15 @@ class _SignatureWidgetState extends State<SignatureWidget> {
 
   @override
   Widget build(BuildContext context) {
-    bool hasName = (widget.nom != null && widget.nom!.isNotEmpty) || 
-                   (widget.prenom != null && widget.prenom!.isNotEmpty);
-
-    if (!hasName) {
+    // Vérifier si au moins le nom OU le prénom est présent
+    bool hasClientInfo = (widget.nom != null && widget.nom!.isNotEmpty) || 
+                         (widget.prenom != null && widget.prenom!.isNotEmpty);
+    
+    // Si nom ET prénom sont vides, ne rien afficher
+    if (!hasClientInfo) {
       return const SizedBox.shrink();
     }
-
+    
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(10),

@@ -659,6 +659,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
                         controller: _commentaireRetourController),
                     const SizedBox(height: 20),
                     const SizedBox(height: 10),
+                    // Afficher le conteneur de signature si au moins le nom OU le prénom est présent
+                    if ((widget.data['nom'] != null && widget.data['nom'].toString().isNotEmpty) || 
+                        (widget.data['prenom'] != null && widget.data['prenom'].toString().isNotEmpty))
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(10),
@@ -746,7 +749,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                               );
                             }, 
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF08004D), 
+                        backgroundColor: Colors.black, 
                         minimumSize: const Size(double.infinity, 50),
                       ),
                       child: _isUpdatingContrat
