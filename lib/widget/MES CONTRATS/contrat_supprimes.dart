@@ -72,7 +72,6 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
             .doc(effectiveUserId)
             .collection('locations')
             .where('statussupprime', isEqualTo: 'supprimé')
-            .orderBy('dateCreation', descending: true)
             .snapshots();
       });
     }
@@ -87,7 +86,6 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
         .doc(effectiveUserId)
         .collection('locations')
         .where('statussupprime', isEqualTo: 'supprimé')
-        .orderBy('dateCreation', descending: true)
         .snapshots();
   }
 
@@ -335,28 +333,69 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
                                   padding: const EdgeInsets.all(16.0),
                                   child: Row(
                                     children: [
-                                      Container(
-                                        width: MediaQuery.of(context).size.width * 0.2,
-                                        height: MediaQuery.of(context).size.width * 0.2,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(12),
-                                          color: Colors.grey[100],
-                                        ),
-                                        child: (photoUrl != null && photoUrl.isNotEmpty)
-                                            ? ClipRRect(
-                                                borderRadius: BorderRadius.circular(12),
-                                                child: Image.network(
-                                                  photoUrl,
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              )
-                                            : const Center(
-                                                child: Icon(
-                                                  Icons.directions_car,
-                                                  size: 40,
-                                                  color: Color(0xFF08004D),
+                                      Column(
+                                        children: [
+                                          Builder(builder: (context) {
+                                            // Calcul du nombre de jours restants
+                                            final now = DateTime.now();
+                                            DateTime dateSuppressionDefinitive;
+                                            
+                                            try {
+                                              if (data['dateSuppressionDefinitive'] is Timestamp) {
+                                                // Si c'est un Timestamp
+                                                dateSuppressionDefinitive = (data['dateSuppressionDefinitive'] as Timestamp).toDate();
+                                              } else if (data['dateSuppressionDefinitive'] is String) {
+                                                // Si c'est une chaine de caractères
+                                                dateSuppressionDefinitive = DateTime.parse(data['dateSuppressionDefinitive'] as String);
+                                              } else {
+                                                // Valeur par défaut si le champ est null ou d'un autre type
+                                                dateSuppressionDefinitive = now.add(Duration(days: 90));
+                                              }
+                                            } catch (e) {
+                                              // En cas d'erreur de parsing, utiliser une valeur par défaut
+                                              print('Erreur de parsing de la date: $e');
+                                              dateSuppressionDefinitive = now.add(Duration(days: 90));
+                                            }
+                                            
+                                            final difference = dateSuppressionDefinitive.difference(now);
+                                            final daysRemaining = difference.inDays;
+                                            
+                                            return Container(
+                                              margin: EdgeInsets.only(bottom: 8),
+                                              child: Text(
+                                                "J-$daysRemaining",
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.red,
                                                 ),
                                               ),
+                                            );
+                                          }),
+                                          Container(
+                                            width: MediaQuery.of(context).size.width * 0.2,
+                                            height: MediaQuery.of(context).size.width * 0.2,
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(12),
+                                              color: Colors.grey[100],
+                                            ),
+                                            child: (photoUrl != null && photoUrl.isNotEmpty)
+                                                ? ClipRRect(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    child: Image.network(
+                                                      photoUrl,
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                  )
+                                                : const Center(
+                                                    child: Icon(
+                                                      Icons.directions_car,
+                                                      size: 40,
+                                                      color: Color(0xFF08004D),
+                                                    ),
+                                                  ),
+                                          ),
+                                        ],
                                       ),
                                       const SizedBox(width: 16),
                                       Expanded(
@@ -371,40 +410,86 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
                                                 color: Color(0xFF08004D),
                                               ),
                                             ),
-                                            const SizedBox(height: 8),
-                                            Row(
+                                            const SizedBox(height: 4),
+                                            Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                Icon(Icons.calendar_today, 
-                                                  size: 16,
-                                                  color: Color(0xFF08004D),
+                                                Row(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Icon(Icons.calendar_today, 
+                                                      size: 16,
+                                                      color: Color(0xFF08004D),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      "Date de début",
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        color: Colors.grey[700],
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
-                                                const SizedBox(width: 4),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        "Date de début",
-                                                        style: TextStyle(
-                                                          fontSize: 14,
-                                                          color: Colors.grey[700],
-                                                        ),
+                                                Text(
+                                                  "${data['dateDebut'] ?? ''}",
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: Colors.grey[900],
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Row(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Icon(Icons.event_available, 
+                                                      size: 16,
+                                                      color: Color(0xFF08004D),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      "Date de restitution",
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        color: Colors.grey[700],
                                                       ),
-                                                      Text(
-                                                        "${data['dateDebut'] ?? ''}",
-                                                        style: TextStyle(
-                                                          fontSize: 14,
-                                                          fontWeight: FontWeight.w500,
-                                                          color: Colors.grey[900],
-                                                        ),
-                                                      ),
-                                                    ],
+                                                    ),
+                                                  ],
+                                                ),
+                                                Text(
+                                                  "${data['dateFinEffectif'] ?? data['dateRestitution'] ?? 'Non restitué'}",
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: Colors.grey[900],
                                                   ),
                                                 ),
                                               ],
                                             ),
                                             const SizedBox(height: 4),
+                                            Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Icon(Icons.directions_car_filled_outlined,
+                                                  size: 16,
+                                                  color: Color(0xFF08004D),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Expanded(
+                                                  child: Text(
+                                                    "${data['marque'] ?? ''} ${data['modele'] ?? ''}",
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.w500,
+                                                      color: Colors.grey[900],
+                                                    ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
                                             Row(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
@@ -438,22 +523,6 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
                                               ],
                                             ),
                                           ],
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.red[50],
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.red[200]!),
-                                        ),
-                                        child: Text(
-                                          "Supprimé",
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.red[700],
-                                          ),
                                         ),
                                       ),
                                     ],
