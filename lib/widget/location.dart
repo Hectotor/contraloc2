@@ -1,8 +1,6 @@
-import 'dart:convert'; // Ajout de l'import pour base64Encode
 import 'package:ContraLoc/utils/pdf.dart';
 import 'package:ContraLoc/USERS/contrat_condition.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:signature/signature.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
 import '../widget/navigation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -17,7 +15,7 @@ import 'CREATION DE CONTRAT/etat_vehicule.dart';
 //import '../screens/contrat_screen.dart';
 import 'CREATION DE CONTRAT/commentaire.dart'; // Import the new commentaire.dart
 import 'chargement.dart'; // Import the new chargement.dart file
-import 'CREATION DE CONTRAT/signature.dart';
+import 'CREATION DE CONTRAT/signature.dart'; // Import pour la popup de signature
 import '../widget/CREATION DE CONTRAT/MAIL.DART';
 import 'package:flutter_image_compress/flutter_image_compress.dart'; // Import pour la compression d'image
 import 'CREATION DE CONTRAT/voiture_selectionne.dart'; // Import the new voiture_selectionne.dart file
@@ -77,7 +75,6 @@ class _LocationPageState extends State<LocationPage> {
   String _signatureBase64 = ''; // Add a state variable for signature
   bool _isSigning = false;
 
-  late final SignatureController _signatureController;
   final TextEditingController _prixLocationController = TextEditingController();
   final TextEditingController _nettoyageIntController = TextEditingController();
   final TextEditingController _nettoyageExtController = TextEditingController();
@@ -98,11 +95,6 @@ class _LocationPageState extends State<LocationPage> {
   @override
   void initState() {
     super.initState();
-    _signatureController = SignatureController(
-      penStrokeWidth: 5,
-      penColor: Colors.black,
-      exportBackgroundColor: Colors.white,
-    );
 
     // Initialiser la date de début avec l'année
     _dateDebutController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
@@ -485,8 +477,6 @@ class _LocationPageState extends State<LocationPage> {
           throw Exception('Données utilisateur non trouvées');
         }
 
-        final signatureAller = await _signatureController.toPngBytes();
-
         final pdfParams = {  
           'nom': widget.nom,  
           'prenom': widget.prenom,  
@@ -500,7 +490,6 @@ class _LocationPageState extends State<LocationPage> {
           'immatriculation': widget.immatriculation,  
           'commentaire': _commentaireController.text,  
           'photos': vehiculeUrls,  
-          'signatureAller': signatureAller,  
           'signatureBase64': _signatureBase64,  
           'nettoyageInt': _nettoyageIntController.text,  
           'nettoyageExt': _nettoyageExtController.text,  
@@ -592,22 +581,15 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   Future<void> _captureSignature() async {
-    if (!_signatureController.isNotEmpty) {
-      print('Aucune signature dessinée');
+    // Avec la nouvelle approche, la signature est déjà capturée dans _signatureBase64
+    // lors de la fermeture de la popup, donc nous n'avons plus besoin de la capturer ici
+    if (_signatureBase64.isEmpty) {
+      print('Aucune signature disponible');
       return;
     }
-
-    try {
-      final signatureBytes = await _signatureController.toPngBytes();
-      if (signatureBytes != null) {
-        setState(() {
-          _signatureBase64 = base64Encode(signatureBytes);
-          print('Signature capturée en base64');
-        });
-      }
-    } catch (e) {
-      print('Erreur lors de la capture de la signature : $e');
-    }
+    
+    print('Signature déjà capturée en base64');
+    // La signature est déjà dans _signatureBase64, pas besoin de faire autre chose
   }
 
   Future<String> _compressAndUploadPhoto(
@@ -686,7 +668,6 @@ class _LocationPageState extends State<LocationPage> {
 
   @override
   void dispose() {
-    _signatureController.dispose();
     _prixLocationController.dispose();
     super.dispose();
   }
@@ -831,28 +812,108 @@ class _LocationPageState extends State<LocationPage> {
                     controller:
                         _commentaireController), // Add CommentaireWidget
                 const SizedBox(height: 20),
-                SignatureWidget(
-                  nom: widget.nom,
-                  prenom: widget.prenom,
-                  controller: _signatureController,
-                  accepted: _acceptedConditions,
-                  onAcceptedChanged: (bool value) {
-                    setState(() {
-                      _acceptedConditions = value;
-                    });
-                  },
-                  onSignatureChanged: (String signature) {
-                    setState(() {
-                      _signatureBase64 = signature;
-                    });
-                  },
-                  onSigningStatusChanged: (bool isSigning) {
-                    setState(() {
-                      _isSigning = isSigning;
-                    });
-                  },
+                
+                // Remplacer le widget de signature par un bouton qui ouvre la popup
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Signature de Location',
+                        style: TextStyle(
+                          fontSize: 16, 
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF08004D),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: _acceptedConditions,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                _acceptedConditions = value ?? false;
+                              });
+                            },
+                            activeColor: const Color(0xFF08004D),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              "Je reconnais avoir pris connaissance des termes et conditions de location.",
+                              style: TextStyle(
+                                color: _acceptedConditions ? Colors.black87 : Colors.grey,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_acceptedConditions) ...[
+                        const SizedBox(height: 15),
+                        // Afficher la signature si elle existe
+                        if (_signatureBase64.isNotEmpty) ...[
+                          Container(
+                            width: double.infinity,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Image.memory(
+                              Uri.parse('data:image/png;base64,$_signatureBase64').data!.contentAsBytes(),
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                        // Bouton pour ouvrir la popup de signature
+                        Center(
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              // Appeler la méthode statique pour afficher la popup de signature
+                              final signature = await SignatureWidget.showSignatureDialog(
+                                context,
+                                nom: widget.nom,
+                                prenom: widget.prenom,
+                                existingSignature: _signatureBase64,
+                              );
+                              
+                              // Si l'utilisateur a validé la signature, la mettre à jour
+                              if (signature != null) {
+                                setState(() {
+                                  _signatureBase64 = signature;
+                                });
+                              }
+                            },
+                            icon: const Icon(Icons.edit),
+                            label: Text(_signatureBase64.isEmpty ? 'Signer le contrat' : 'Modifier la signature'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF08004D),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-
+                
                 const SizedBox(height: 50),
                 Padding(
                   padding: const EdgeInsets.only(
