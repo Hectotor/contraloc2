@@ -72,13 +72,32 @@ class VehicleAccessManager {
           }
           
           // Une fois initialisé, récupérer les données
-          final snapshot = await _firestore
-              .collection('users')
-              .doc(effectiveUserId)
-              .collection('vehicules')
-              .get(GetOptions(source: Source.serverAndCache)); // Utiliser le cache si disponible
-              
-          return snapshot;
+          print('Récupération initiale des véhicules pour $effectiveUserId');
+          try {
+            final snapshot = await _firestore
+                .collection('users')
+                .doc(effectiveUserId)
+                .collection('vehicules')
+                .get(GetOptions(source: Source.cache))
+                .timeout(Duration(seconds: 2), onTimeout: () {
+                  print('Cache timeout, récupération depuis le serveur');
+                  return _firestore
+                      .collection('users')
+                      .doc(effectiveUserId)
+                      .collection('vehicules')
+                      .get();
+                });
+            print('Données initiales récupérées avec succès: ${snapshot.docs.length} véhicules');
+            return snapshot;
+          } catch (e) {
+            print('Erreur lors de la récupération initiale: $e');
+            // En cas d'erreur, essayer directement depuis le serveur
+            return _firestore
+                .collection('users')
+                .doc(effectiveUserId)
+                .collection('vehicules')
+                .get();
+          }
         })
       ).asyncExpand((snapshot) {
         // Une fois que nous avons les données initiales, retourner le stream continu
@@ -87,6 +106,7 @@ class VehicleAccessManager {
           return Stream.empty();
         }
         
+        print('Configuration du stream continu pour $effectiveUserId');
         return _firestore
             .collection('users')
             .doc(effectiveUserId)
