@@ -122,42 +122,76 @@ class _ContratModifierState extends State<ContratModifier> {
           : FirebaseAuth.instance.currentUser?.uid ?? '';
       
       if (targetId.isNotEmpty) {
-        // Utiliser CollaborateurUtil pour récupérer le document
-        final doc = await CollaborateurUtil.getDocument(
-          collection: 'users',
-          docId: targetId,
-          subCollection: 'contrats',
-          subDocId: 'userId',
-          useAdminId: true,
-        );
-
-        // Safely access the data
-        final data = doc.data();
-        setState(() {
-          if (data != null && data is Map<String, dynamic>) {
-            _controller.text = data['texte'] ?? ContratModifier.defaultContract;
-          } else {
-            _controller.text = ContratModifier.defaultContract;
+        try {
+          // Essayer de récupérer le document avec un timeout
+          final doc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(targetId)
+              .collection('contrats')
+              .doc('userId')
+              .withConverter(
+                fromFirestore: (snapshot, _) => snapshot.data(),
+                toFirestore: (data, _) => data as Map<String, dynamic>,
+              )
+              .get(const GetOptions(source: Source.cache)); // Priorité à la cache
+          
+          if (mounted) {
+            setState(() {
+              _controller.text = doc.data()?['texte'] ?? ContratModifier.defaultContract;
+            });
           }
-        });
+        } catch (e) {
+          print('⚠️ Tentative de cache échouée, nouvelle tentative avec le serveur: $e');
+          try {
+            // Si la cache échoue, essayer le serveur avec timeout
+            final doc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(targetId)
+                .collection('contrats')
+                .doc('userId')
+                .withConverter(
+                  fromFirestore: (snapshot, _) => snapshot.data(),
+                  toFirestore: (data, _) => data as Map<String, dynamic>,
+                )
+                .get(const GetOptions(source: Source.server));
+            
+            if (mounted) {
+              setState(() {
+                _controller.text = doc.data()?['texte'] ?? ContratModifier.defaultContract;
+              });
+            }
+          } catch (e) {
+            print('❌ Erreur après 2 tentatives: $e');
+            if (mounted) {
+              setState(() {
+                _controller.text = ContratModifier.defaultContract;
+              });
+            }
+          }
+        }
       } else {
+        if (mounted) {
+          setState(() {
+            _controller.text = ContratModifier.defaultContract;
+          });
+        }
+      }
+    } catch (e) {
+      print('❌ Erreur récupération document: $e');
+      if (mounted) {
         setState(() {
           _controller.text = ContratModifier.defaultContract;
         });
       }
-    } catch (e) {
-      print('Error loading contract: $e');
-      setState(() {
-        _controller.text = ContratModifier.defaultContract;
-      });
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
-  // Modifier la méthode _saveContract
   Future<void> _saveContract() async {
     if (!isPremiumUser) {
       _showPremiumDialog();
@@ -173,7 +207,7 @@ class _ContratModifierState extends State<ContratModifier> {
           : userId;
       
       if (targetId.isNotEmpty) {
-        // Vérifier si l'utilisateur est un collaborateur avec des permissions d'écriture
+        // Vérifier les permissions
         bool hasWritePermission = true;
         if (collaborateurStatus['isCollaborateur'] == true) {
           final permissions = collaborateurStatus['permissions'];
@@ -192,32 +226,36 @@ class _ContratModifierState extends State<ContratModifier> {
           return;
         }
         
-        // Utiliser CollaborateurUtil pour mettre à jour le document
+        // Sauvegarder avec timeout
         await FirebaseFirestore.instance
             .collection('users')
             .doc(targetId)
             .collection('contrats')
             .doc('userId')
             .set({
-          'texte': _controller.text,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-        
+              'texte': _controller.text,
+              'dateModification': FieldValue.serverTimestamp(),
+            });
+            
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Contrat sauvegardé avec succès'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Erreur sauvegarde contrat: $e');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Contrat enregistré avec succès.'),
-            backgroundColor: Colors.blueAccent,
+            content: Text('Erreur lors de la sauvegarde du contrat'),
+            backgroundColor: Colors.redAccent,
           ),
         );
       }
-    } catch (e) {
-      print('Erreur lors de la sauvegarde du contrat: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors de la sauvegarde: ${e.toString()}'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
     }
   }
 
