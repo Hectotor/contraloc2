@@ -7,20 +7,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
-import 'package:firebase_storage/firebase_storage.dart'; // Import Firebase Storage
+import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'package:firebase_storage/firebase_storage.dart'; 
 // ignore: depend_on_referenced_packages
-import 'package:intl/intl.dart'; // Import intl for date formatting
+import 'package:intl/intl.dart'; 
 import 'CREATION DE CONTRAT/etat_vehicule.dart';
-//import '../screens/contrat_screen.dart';
-import 'CREATION DE CONTRAT/commentaire.dart'; // Import the new commentaire.dart
-import 'chargement.dart'; // Import the new chargement.dart file
-import 'CREATION DE CONTRAT/signature.dart'; // Import pour la popup de signature
+import 'CREATION DE CONTRAT/commentaire.dart'; 
+import 'chargement.dart'; 
 import '../widget/CREATION DE CONTRAT/MAIL.DART';
-import 'package:flutter_image_compress/flutter_image_compress.dart'; // Import pour la compression d'image
-import 'CREATION DE CONTRAT/voiture_selectionne.dart'; // Import the new voiture_selectionne.dart file
-import 'CREATION DE CONTRAT/create_contrat.dart'; // Import the new create_contrat.dart file
-import 'CREATION DE CONTRAT/popup.dart'; // Import the new popup.dart file
+import 'package:flutter_image_compress/flutter_image_compress.dart'; 
+import 'CREATION DE CONTRAT/voiture_selectionne.dart'; 
+import 'CREATION DE CONTRAT/create_contrat.dart'; 
+import 'CREATION DE CONTRAT/popup.dart'; 
+import 'popup_signature.dart'; 
 
 class LocationPage extends StatefulWidget {
   final String marque;
@@ -66,13 +65,13 @@ class _LocationPageState extends State<LocationPage> {
       TextEditingController();
   final TextEditingController _commentaireController = TextEditingController();
   final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance; // Firestore instance
+      FirebaseFirestore.instance; 
 
   final List<File> _photos = [];
-  int _pourcentageEssence = 50; // Niveau d'essence par défaut
-  bool _isLoading = false; // Add a state variable for loading
-  bool _acceptedConditions = false; // Add a state variable for acceptance
-  String _signatureBase64 = ''; // Add a state variable for signature
+  int _pourcentageEssence = 50; 
+  bool _isLoading = false; 
+  bool _acceptedConditions = false; 
+  String _signatureBase64 = ''; 
   bool _isSigning = false;
 
   final TextEditingController _prixLocationController = TextEditingController();
@@ -96,33 +95,26 @@ class _LocationPageState extends State<LocationPage> {
   void initState() {
     super.initState();
 
-    // Initialiser la date de début avec l'année
     _dateDebutController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
     
-    // Initialiser _typeLocationController avec la valeur par défaut
     _typeLocationController.text = "Gratuite";
 
-    // Récupérer le prix de location depuis les données du véhicule
     _fetchVehicleData();
   }
 
   Future<void> _fetchVehicleData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      // Déterminer si l'utilisateur est un collaborateur
-      String adminId = user.uid; // Par défaut, l'utilisateur est considéré comme admin
+      String adminId = user.uid; 
       
-      // Vérifier si l'utilisateur est un collaborateur
       final userDoc = await _firestore.collection('users').doc(user.uid).get();
       final userData = userDoc.data();
       
       if (userData != null && userData['role'] == 'collaborateur' && userData['adminId'] != null) {
-        // Si c'est un collaborateur, utiliser l'ID de l'admin
         adminId = userData['adminId'];
         print('Utilisateur collaborateur détecté, utilisation de l\'adminId: $adminId');
       }
       
-      // Récupérer les données du véhicule dans la collection de l'admin
       final vehiculeDoc = await _firestore
           .collection('users')
           .doc(adminId)
@@ -147,7 +139,6 @@ class _LocationPageState extends State<LocationPage> {
           _typeCarburantController.text = vehicleData['typeCarburant'] ?? '';
           _boiteVitessesController.text = vehicleData['boiteVitesses'] ?? '';
           _cautionController.text = vehicleData['caution'] ?? '';
-          // Synchroniser les deux variables pour typeLocation
           String fetchedTypeLocation = vehicleData['typeLocation'] ?? 'Gratuite';
           _typeLocationController.text = fetchedTypeLocation;
         });
@@ -163,15 +154,15 @@ class _LocationPageState extends State<LocationPage> {
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      locale: const Locale('fr', 'FR'), // Set locale to French
+      locale: const Locale('fr', 'FR'), 
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF08004D), // Couleur de sélection
-              onPrimary: Colors.white, // Couleur du texte sélectionné
-              surface: Colors.white, // Couleur de fond du calendrier
-              onSurface: Color(0xFF08004D), // Couleur du texte
+              primary: Color(0xFF08004D), 
+              onPrimary: Colors.white, 
+              surface: Colors.white, 
+              onSurface: Color(0xFF08004D), 
             ),
             dialogBackgroundColor: Colors.white,
           ),
@@ -187,10 +178,10 @@ class _LocationPageState extends State<LocationPage> {
           return Theme(
             data: Theme.of(context).copyWith(
               colorScheme: const ColorScheme.light(
-                primary: Color(0xFF08004D), // Couleur des boutons et sélection
-                onPrimary: Colors.white, // Couleur du texte sélectionné
-                surface: Colors.white, // Couleur de fond
-                onSurface: Color(0xFF08004D), // Couleur du texte
+                primary: Color(0xFF08004D), 
+                onPrimary: Colors.white, 
+                surface: Colors.white, 
+                onSurface: Color(0xFF08004D), 
               ),
               dialogBackgroundColor: Colors.white,
             ),
@@ -215,7 +206,6 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   Future<void> _validerContrat() async {
-    // Capture de la signature avant la validation
     await _captureSignature();
 
     if (_typeLocationController.text == "Payante" && _prixLocationController.text.isEmpty) {
@@ -241,7 +231,7 @@ class _LocationPageState extends State<LocationPage> {
     }
 
     setState(() {
-      _isLoading = true; // Set loading state to true
+      _isLoading = true; 
     });
 
     try {
@@ -254,7 +244,6 @@ class _LocationPageState extends State<LocationPage> {
         return;
       }
 
-      // Vérifier si l'utilisateur est un collaborateur
       final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
       final String userId = collaborateurStatus['userId'] ?? user.uid;
       final String targetId = collaborateurStatus['isCollaborateur'] 
@@ -263,12 +252,10 @@ class _LocationPageState extends State<LocationPage> {
 
       print(' Création contrat - userId: $userId, targetId: $targetId');
 
-      // D'abord, uploader toutes les photos et obtenir les URLs
       String? permisRectoUrl;
       String? permisVersoUrl;
       List<String> vehiculeUrls = [];
 
-      // Générer un ID unique pour le contrat
       final contratId = widget.contratId ?? _firestore
           .collection('users')
           .doc(userId)
@@ -276,7 +263,6 @@ class _LocationPageState extends State<LocationPage> {
           .doc()
           .id;
 
-      // Upload permis photos d'abord
       if (widget.permisRecto != null) {
         permisRectoUrl = await _compressAndUploadPhoto(
             widget.permisRecto!, 'permis_recto', contratId);
@@ -286,16 +272,13 @@ class _LocationPageState extends State<LocationPage> {
             widget.permisVerso!, 'permis_verso', contratId);
       }
 
-      // Upload des photos du véhicule
       for (var photo in _photos) {
         String url = await _compressAndUploadPhoto(photo, 'photos', contratId);
         vehiculeUrls.add(url);
       }
 
-      // Récupérer les conditions depuis la collection 'users'
       String conditions = '';
       try {
-        // Utiliser CollaborateurUtil pour récupérer les conditions
         final conditionsDoc = await CollaborateurUtil.getDocument(
           collection: 'users',
           docId: targetId,
@@ -308,7 +291,6 @@ class _LocationPageState extends State<LocationPage> {
           final data = conditionsDoc.data() as Map<String, dynamic>?;
           conditions = data?['texte'] ?? '';
         } else {
-          // Essayer avec l'ID de l'utilisateur comme document ID
           final conditionsUserDoc = await CollaborateurUtil.getDocument(
             collection: 'users',
             docId: targetId,
@@ -321,38 +303,33 @@ class _LocationPageState extends State<LocationPage> {
             final data = conditionsUserDoc.data() as Map<String, dynamic>?;
             conditions = data?['texte'] ?? '';
           } else {
-            // Utiliser les conditions par défaut si aucune condition personnalisée n'existe
             final defaultConditionsDoc = await _firestore.collection('contrats').doc('default').get();
             conditions = (defaultConditionsDoc.data())?['texte'] ?? ContratModifier.defaultContract;
           }
         }
       } catch (e) {
         print('Erreur lors de la récupération des conditions: $e');
-        // Utiliser les conditions par défaut en cas d'erreur
         conditions = ContratModifier.defaultContract;
       }
 
-      // Récupérer les données utilisateur avec CollaborateurUtil avant de créer le contrat
       final userData = await CollaborateurUtil.getAuthData();
       
-      // S'assurer que toutes les données sont présentes
       final nomEntreprise = userData['nomEntreprise'] ?? '';
       final adresseEntreprise = userData['adresse'] ?? '';
       final telephoneEntreprise = userData['telephone'] ?? '';
       final siretEntreprise = userData['siret'] ?? '';
       final logoUrl = userData['logoUrl'] ?? '';
 
-      // Créer le contrat dans la collection de l'utilisateur
       await _firestore
           .collection('users')
-          .doc(targetId) // Utiliser targetId au lieu de userId pour stocker dans la collection de l'admin
+          .doc(targetId) 
           .collection('locations')
           .doc(contratId)
           .set({
-        'userId': userId, // Conserver l'ID de l'utilisateur qui a créé le contrat
-        'adminId': targetId, // Ajouter l'ID de l'admin pour référence
-        'createdBy': userId, // Ajouter qui a créé le contrat (collaborateur ou admin)
-        'isCollaborateur': collaborateurStatus['isCollaborateur'] ?? false, // Indiquer si créé par un collaborateur
+        'userId': userId, 
+        'adminId': targetId, 
+        'createdBy': userId, 
+        'isCollaborateur': collaborateurStatus['isCollaborateur'] ?? false, 
         'nom': widget.nom ?? '',
         'prenom': widget.prenom ?? '',
         'adresse': widget.adresse ?? '',
@@ -371,14 +348,12 @@ class _LocationPageState extends State<LocationPage> {
         'commentaire': _commentaireController.text,
         'photos': vehiculeUrls,
         'status': (() {
-          // Par défaut, le statut est 'en_cours'
           String status = 'en_cours';
           if (_dateDebutController.text.isNotEmpty) {
             try {
               final now = DateTime.now();
               final parsedDate = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(_dateDebutController.text);
               
-              // Ajouter l'année actuelle à la date parsée
               final dateWithCurrentYear = DateTime(
                 now.year,
                 parsedDate.month,
@@ -387,15 +362,12 @@ class _LocationPageState extends State<LocationPage> {
                 parsedDate.minute,
               );
               
-              // Si le mois est déjà passé cette année, on ajoute un an
               final dateToCompare = dateWithCurrentYear.isBefore(now) && 
                                    parsedDate.month < now.month ? 
                                    DateTime(now.year + 1, parsedDate.month, parsedDate.day, 
                                            parsedDate.hour, parsedDate.minute) : 
                                    dateWithCurrentYear;
               
-              // On met 'réservé' uniquement si la date est dans le futur
-              // et que ce n'est pas aujourd'hui
               if (dateToCompare.isAfter(now) && 
                   !(dateToCompare.year == now.year && 
                     dateToCompare.month == now.month && 
@@ -442,17 +414,17 @@ class _LocationPageState extends State<LocationPage> {
           return null;
         })(),
         'dateCreation':
-            FieldValue.serverTimestamp(), // Ajouter la date de création
+            FieldValue.serverTimestamp(), 
         'numeroPermis': widget.numeroPermis ??
-            '', // Assurez-vous que numeroPermis est bien stocké
+            '', 
         'immatriculationClient': widget.immatriculationClient ??
-            '', // Assurez-vous que immatriculationClient est bien stocké
+            '', 
         'nettoyageInt': _nettoyageIntController.text,
         'nettoyageExt': _nettoyageExtController.text,
         'carburantManquant': _carburantManquantController.text,
         'kilometrageAutorise': _kilometrageAutoriseController.text,
         'caution': _cautionController.text,
-        'signature_aller': _signatureBase64, // Modification ici
+        'signature_aller': _signatureBase64, 
         'kilometrageSupp': _kilometrageSuppController.text,
         'typeCarburant':  _typeCarburantController.text,
         'boiteVitesses':  _boiteVitessesController.text,
@@ -460,23 +432,17 @@ class _LocationPageState extends State<LocationPage> {
         'assuranceNom': _assuranceNomController.text,
         'assuranceNumero': _assuranceNumeroController.text,
         'franchise': _franchiseController.text,
-        'prixRayures': _rayuresController.text,  // Ajout de prixRayures pour le PDF
+        'prixRayures': _rayuresController.text,  
         'prixLocation': _prixLocationController.text,
         'logoUrl': logoUrl,
         'nomEntreprise': nomEntreprise,
         'adresseEntreprise': adresseEntreprise,
         'telephoneEntreprise': telephoneEntreprise,
         'siretEntreprise': siretEntreprise,
-        'conditions': conditions, // Sauvegarder les conditions directement dans le document du contrat
+        'conditions': conditions, 
       });
 
-      // Si un email client est disponible, générer et envoyer le PDF
       if (widget.email != null && widget.email!.isNotEmpty) {
-        // Les données utilisateur sont déjà récupérées ci-dessus
-        if (userData.isEmpty) {
-          throw Exception('Données utilisateur non trouvées');
-        }
-
         final pdfParams = {  
           'nom': widget.nom,  
           'prenom': widget.prenom,  
@@ -501,7 +467,7 @@ class _LocationPageState extends State<LocationPage> {
           'assuranceNom': _assuranceNomController.text,  
           'assuranceNumero': _assuranceNumeroController.text,  
           'franchise': _franchiseController.text,  
-          'prixRayures': _rayuresController.text,  // Ajout de prixRayures pour le PDF
+          'prixRayures': _rayuresController.text,  
           'kilometrageSupp': _kilometrageSuppController.text,  
           'kilometrageAutorise': _kilometrageAutoriseController.text,
           'typeLocation': _typeLocationController.text,
@@ -513,16 +479,16 @@ class _LocationPageState extends State<LocationPage> {
 
         final pdfPath = await generatePdf(  
           pdfParams,  
-          '', // dateFinEffectif  
-          '', // kilometrageRetour  
-          '', // commentaireRetour  
-          [], // photosRetour  
+          '', 
+          '', 
+          '', 
+          [], 
           nomEntreprise,  
           logoUrl,  
           adresseEntreprise,  
           telephoneEntreprise,  
           siretEntreprise,  
-          '', // commentaireRetourData  
+          '', 
           _typeCarburantController.text,  
           _boiteVitessesController.text,  
           _vinController.text,  
@@ -533,7 +499,7 @@ class _LocationPageState extends State<LocationPage> {
           _rayuresController.text,  
           _dateDebutController.text,  
           _dateFinTheoriqueController.text,  
-          '', // dateFinEffectifData  
+          '', 
           _kilometrageDepartController.text,  
           _kilometrageAutoriseController.text,  
           _pourcentageEssence.toString(),  
@@ -542,7 +508,6 @@ class _LocationPageState extends State<LocationPage> {
           condition: conditions,  
         );
 
-        // Envoyer le PDF par email
         await EmailService.sendEmailWithPdf(
           pdfPath: pdfPath,
           email: widget.email!,
@@ -555,7 +520,6 @@ class _LocationPageState extends State<LocationPage> {
         );
       }
 
-      // Remplacer la redirection par navigation vers NavigationPage
       if (context.mounted) {
         Popup.showSuccess(context).then((_) {
           Navigator.pushReplacement(
@@ -571,7 +535,7 @@ class _LocationPageState extends State<LocationPage> {
       print('Erreur lors de la validation du contrat : $e');
       if (context.mounted) {
         setState(() {
-          _isLoading = false; // Set loading state to false
+          _isLoading = false; 
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erreur : ${e.toString()}')),
@@ -581,15 +545,12 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   Future<void> _captureSignature() async {
-    // Avec la nouvelle approche, la signature est déjà capturée dans _signatureBase64
-    // lors de la fermeture de la popup, donc nous n'avons plus besoin de la capturer ici
     if (_signatureBase64.isEmpty) {
       print('Aucune signature disponible');
       return;
     }
     
     print('Signature déjà capturée en base64');
-    // La signature est déjà dans _signatureBase64, pas besoin de faire autre chose
   }
 
   Future<String> _compressAndUploadPhoto(
@@ -603,7 +564,6 @@ class _LocationPageState extends State<LocationPage> {
       );
 
       if (compressedImage != null) {
-        // Vérifier le statut du collaborateur
         final status = await CollaborateurUtil.checkCollaborateurStatus();
         final userId = status['userId'];
         
@@ -612,7 +572,6 @@ class _LocationPageState extends State<LocationPage> {
           throw Exception("Utilisateur non connecté");
         }
         
-        // Déterminer l'ID à utiliser (admin ou collaborateur)
         final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
         
         if (targetId == null) {
@@ -626,19 +585,16 @@ class _LocationPageState extends State<LocationPage> {
         String fileName =
             '${folder}_${DateTime.now().millisecondsSinceEpoch}.jpg';
         
-        // Stocker dans le dossier de l'administrateur si c'est un collaborateur
         final String storagePath = 'users/${targetId}/locations/$contratId/$folder/$fileName';
         print("📁 Chemin de stockage: $storagePath");
         
         Reference ref = FirebaseStorage.instance.ref().child(storagePath);
 
-        // Create a temporary file for the compressed image
         final tempDir = await getTemporaryDirectory();
         final tempFile = File('${tempDir.path}/$fileName');
         await tempFile.writeAsBytes(compressedImage);
 
         print("⏳ Début du téléchargement...");
-        // Téléchargement sans métadonnées
         await ref.putFile(tempFile);
         print("✅ Téléchargement terminé avec succès");
         
@@ -675,18 +631,18 @@ class _LocationPageState extends State<LocationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Ajout ici
+      backgroundColor: Colors.white, 
       appBar: AppBar(
         title: const Text(
           "Détails de la Location",
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: const Color(0xFF08004D), // Bleu nuit
+        backgroundColor: const Color(0xFF08004D), 
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            Navigator.pop(context); // Revenir à la page précédente
+            Navigator.pop(context); 
           },
         ),
       ),
@@ -709,14 +665,13 @@ class _LocationPageState extends State<LocationPage> {
                   child: (() {
                     String dateText = _dateDebutController.text;
                     if (dateText.isEmpty) {
-                      return SizedBox.shrink(); // Ne rien afficher si le champ est vide
+                      return SizedBox.shrink(); 
                     }
 
                     try {
                       final now = DateTime.now();
                       final parsedDate = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(dateText);
                       
-                      // Ajouter l'année actuelle à la date parsée
                       final dateWithCurrentYear = DateTime(
                         now.year,
                         parsedDate.month,
@@ -725,15 +680,12 @@ class _LocationPageState extends State<LocationPage> {
                         parsedDate.minute,
                       );
                       
-                      // Si le mois est déjà passé cette année, on ajoute un an
                       final dateToCompare = dateWithCurrentYear.isBefore(now) && 
                                            parsedDate.month < now.month ? 
                                            DateTime(now.year + 1, parsedDate.month, parsedDate.day, 
                                                    parsedDate.hour, parsedDate.minute) : 
                                            dateWithCurrentYear;
                       
-                      // On met 'réservé' uniquement si la date est dans le futur
-                      // et que ce n'est pas aujourd'hui
                       if (dateToCompare.isAfter(now) && 
                           !(dateToCompare.year == now.year && 
                             dateToCompare.month == now.month && 
@@ -744,10 +696,10 @@ class _LocationPageState extends State<LocationPage> {
                           style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900),
                         );
                       } else {
-                        return SizedBox.shrink(); // Ne rien afficher si la condition n'est pas remplie
+                        return SizedBox.shrink(); 
                       }
                     } catch (e) {
-                      return SizedBox.shrink(); // Ne rien afficher en cas d'erreur de parsing
+                      return SizedBox.shrink(); 
                     }
                   }()),
                 ),
@@ -810,10 +762,9 @@ class _LocationPageState extends State<LocationPage> {
                 const SizedBox(height: 20),
                 CommentaireWidget(
                     controller:
-                        _commentaireController), // Add CommentaireWidget
+                        _commentaireController), 
                 const SizedBox(height: 20),
                 
-                // Remplacer le widget de signature par un bouton qui ouvre la popup
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(10),
@@ -861,7 +812,6 @@ class _LocationPageState extends State<LocationPage> {
                       ),
                       if (_acceptedConditions) ...[
                         const SizedBox(height: 15),
-                        // Afficher la signature si elle existe
                         if (_signatureBase64.isNotEmpty) ...[
                           Container(
                             width: double.infinity,
@@ -878,19 +828,18 @@ class _LocationPageState extends State<LocationPage> {
                           ),
                           const SizedBox(height: 10),
                         ],
-                        // Bouton pour ouvrir la popup de signature
                         Center(
                           child: ElevatedButton.icon(
                             onPressed: () async {
-                              // Appeler la méthode statique pour afficher la popup de signature
-                              final signature = await SignatureWidget.showSignatureDialog(
+                              final signature = await PopupSignature.showSignatureDialog(
                                 context,
+                                title: 'Signature du contrat',
+                                checkboxText: 'J\'accepte les conditions de location',
                                 nom: widget.nom,
                                 prenom: widget.prenom,
                                 existingSignature: _signatureBase64,
                               );
                               
-                              // Si l'utilisateur a validé la signature, la mettre à jour
                               if (signature != null) {
                                 setState(() {
                                   _signatureBase64 = signature;
@@ -917,7 +866,7 @@ class _LocationPageState extends State<LocationPage> {
                 const SizedBox(height: 50),
                 Padding(
                   padding: const EdgeInsets.only(
-                      bottom: 40.0), // Ajout d'un padding en bas
+                      bottom: 40.0), 
                   child: ElevatedButton(
                     onPressed: (widget.nom == null ||
                             widget.nom!.isEmpty ||
@@ -927,7 +876,7 @@ class _LocationPageState extends State<LocationPage> {
                         ? _validerContrat
                         : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF08004D), // Bleu nuit
+                      backgroundColor: const Color(0xFF08004D), 
                       minimumSize: const Size(double.infinity, 50),
                     ),
                     child: Text(
@@ -938,14 +887,14 @@ class _LocationPageState extends State<LocationPage> {
                           color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight
-                              .normal), // Augmenter la taille de la police
+                              .normal), 
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          if (_isLoading) Chargement(), // Show loading indicator
+          if (_isLoading) Chargement(), 
         ],
       ),
     );

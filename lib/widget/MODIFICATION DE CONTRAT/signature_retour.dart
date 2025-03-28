@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:signature/signature.dart';
+import '../popup_signature.dart';
 
 class SignatureRetourWidget extends StatefulWidget {
   final String? nom;
@@ -21,6 +22,25 @@ class SignatureRetourWidget extends StatefulWidget {
     this.onSignatureCaptured,
     this.onSignatureChanged,
   }) : super(key: key);
+
+  /// Affiche le widget de signature de retour dans une popup
+  /// Retourne la signature en base64 si l'utilisateur valide, null sinon
+  static Future<String?> showSignatureRetourDialog(
+    BuildContext context, {
+    String? nom,
+    String? prenom,
+    String? existingSignature,
+  }) async {
+    // Rediriger vers la nouvelle implémentation dans PopupSignature
+    return PopupSignature.showSignatureDialog(
+      context,
+      title: 'Signature de Retour',
+      checkboxText: 'Je confirme la signature de retour',
+      nom: nom,
+      prenom: prenom,
+      existingSignature: existingSignature,
+    );
+  }
 
   @override
   _SignatureRetourWidgetState createState() => _SignatureRetourWidgetState();
