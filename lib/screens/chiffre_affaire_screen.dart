@@ -313,13 +313,15 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text('Chiffre d\'affaire', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF08004D),
-        bottom: TabBar(
+        elevation: 0,
+        toolbarHeight: kToolbarHeight,
+        title: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
+          indicatorSize: TabBarIndicatorSize.label,
           tabs: const [
             Tab(text: 'Résumé'),
             Tab(text: 'Par période'),
