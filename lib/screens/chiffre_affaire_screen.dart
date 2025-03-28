@@ -6,6 +6,7 @@ import '../CHIFFRES/chiffre_affaire_card.dart';
 import '../CHIFFRES/repartition_vehicule_card.dart';
 import '../CHIFFRES/evolution_chiffre_card.dart';
 import '../CHIFFRES/popup_filtre.dart';
+import '../CHIFFRES/periode.dart';
 
 class ChiffreAffaireScreen extends StatefulWidget {
   const ChiffreAffaireScreen({Key? key}) : super(key: key);
@@ -18,8 +19,8 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
   late TabController _tabController;
   bool _isLoading = true;
   String _selectedPeriod = 'Mois';
-  String _selectedVehicule = 'Tous';
   String _selectedYear = DateTime.now().year.toString();
+  String _selectedMonth = 'Tous';
   
   // Filtres pour le calcul du chiffre d'affaire
   Map<String, bool> _filtresCalcul = {
@@ -33,7 +34,6 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
   };
   
   List<Map<String, dynamic>> _contrats = [];
-  List<String> _vehicules = ['Tous'];
   List<String> _years = [];
   
   // Données calculées
@@ -193,7 +193,6 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       // Mettre à jour l'état
       setState(() {
         _contrats = contrats;
-        _vehicules = vehicules;
         _chiffreTotal = chiffreTotal;
         _years = sortedYears;
         _isLoading = false;
@@ -230,11 +229,6 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       if (_filtresCalcul['fraisRayuresDommages']!) montant += contrat['fraisRayuresDommages'];
       if (_filtresCalcul['caution']!) montant += contrat['caution'];
       
-      // Filtrer par véhicule si nécessaire
-      if (_selectedVehicule != 'Tous' && contrat['vehiculeInfoStr'] != _selectedVehicule) {
-        continue;
-      }
-      
       // Filtrer par année si nécessaire
       if (dateCloture.year.toString() != _selectedYear) {
         continue;
@@ -266,7 +260,22 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         chiffreParPeriode[periode] = montant;
       }
       
-      chiffrePeriodeSelectionnee += montant;
+      // Pour l'onglet Période, calculer le chiffre d'affaires total pour le mois sélectionné
+      if (_tabController.index == 1) {
+        // Si un mois spécifique est sélectionné, vérifier si ce contrat correspond au mois sélectionné
+        if (_selectedMonth != 'Tous') {
+          int moisSelectionne = getMonthNumber(_selectedMonth);
+          if (moisSelectionne > 0 && dateCloture.month == moisSelectionne) {
+            chiffrePeriodeSelectionnee += montant;
+          }
+        } else {
+          // Si tous les mois sont sélectionnés, ajouter tous les contrats de l'année sélectionnée
+          chiffrePeriodeSelectionnee += montant;
+        }
+      } else {
+        // Pour l'onglet Résumé, utiliser la logique existante
+        chiffrePeriodeSelectionnee += montant;
+      }
     }
     
     setState(() {
@@ -377,8 +386,20 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     }
   }
 
-  // Vérifier si une date est dans la période sélectionnée
   bool _estDansPeriodeSelectionnee(DateTime date) {
+    // Vérifier l'année sélectionnée
+    if (date.year.toString() != _selectedYear) {
+      return false;
+    }
+    
+    // Vérifier le mois sélectionné si on est dans l'onglet Période (_tabController.index == 1)
+    if (_tabController.index == 1 && _selectedMonth != 'Tous') {
+      int moisSelectionne = getMonthNumber(_selectedMonth);
+      if (moisSelectionne > 0 && date.month != moisSelectionne) {
+        return false;
+      }
+    }
+    
     if (_selectedPeriod == 'Jour') {
       return DateFormat('yyyy-MM-dd').format(date) == DateFormat('yyyy-MM-dd').format(DateTime.now());
     } else if (_selectedPeriod == 'Semaine') {
@@ -395,6 +416,25 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       return DateFormat('yyyy').format(date) == _selectedYear;
     }
     return true;
+  }
+
+  // Convertir le nom du mois en numéro
+  int getMonthNumber(String monthName) {
+    switch (monthName) {
+      case 'Janvier': return 1;
+      case 'Février': return 2;
+      case 'Mars': return 3;
+      case 'Avril': return 4;
+      case 'Mai': return 5;
+      case 'Juin': return 6;
+      case 'Juillet': return 7;
+      case 'Août': return 8;
+      case 'Septembre': return 9;
+      case 'Octobre': return 10;
+      case 'Novembre': return 11;
+      case 'Décembre': return 12;
+      default: return 0;
+    }
   }
 
   @override
@@ -536,168 +576,35 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
   }
   
   Widget _buildPeriodeTab() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const Text('Période: ', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(width: 8),
-              DropdownButton<String>(
-                value: _selectedPeriod,
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _selectedPeriod = newValue;
-                      _calculerTousLesChiffres();
-                    });
-                  }
-                },
-                items: _periodes.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
-              const Spacer(),
-              const Text('Véhicule: ', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(width: 8),
-              DropdownButton<String>(
-                value: _selectedVehicule,
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _selectedVehicule = newValue;
-                      _calculerTousLesChiffres();
-                    });
-                  }
-                },
-                items: _vehicules.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(
-                      value,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  );
-                }).toList(),
-              ),
-              const Spacer(),
-              const Text('Année: ', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(width: 8),
-              DropdownButton<String>(
-                value: _selectedYear,
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _selectedYear = newValue;
-                      _calculerTousLesChiffres();
-                    });
-                  }
-                },
-                items: _years.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
-            ],
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          PeriodeTab(
+            selectedMonth: _selectedMonth,
+            selectedYear: _selectedYear,
+            years: _years,
+            onMonthChanged: (String newMonth) {
+              setState(() {
+                _selectedMonth = newMonth;
+                _calculerTousLesChiffres();
+              });
+            },
+            onYearChanged: (String newYear) {
+              setState(() {
+                _selectedYear = newYear;
+                _calculerTousLesChiffres();
+              });
+            },
+            chiffrePeriodeSelectionnee: _chiffrePeriodeSelectionnee,
+            onFilterPressed: _afficherFiltresDialog,
           ),
-        ),
-        // Affichage du chiffre d'affaires pour la période sélectionnée
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Chiffre d\'affaire total pour la période:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Text(
-                    NumberFormat.currency(locale: 'fr_FR', symbol: '€').format(_chiffrePeriodeSelectionnee),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: Color(0xFF08004D),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: _chiffreParPeriode.isEmpty
-              ? const Center(child: Text('Aucune donnée disponible pour cette période'))
-              : ListView(
-                  children: _buildPeriodeListItems(),
-                ),
-        ),
-      ],
+        ],
+      ),
     );
   }
-  
-  List<Widget> _buildPeriodeListItems() {
-    List<MapEntry<String, double>> sortedEntries = _chiffreParPeriode.entries.toList()
-      ..sort((a, b) => b.key.compareTo(b.key)); // Tri par date décroissante
-    
-    return sortedEntries.map((entry) {
-      String periodeFormatee;
-      
-      if (_selectedPeriod == 'Jour') {
-        // Convertir 2025-03-26 en mercredi 26 mars 2025
-        DateTime date = DateFormat('yyyy-MM-dd').parse(entry.key);
-        periodeFormatee = DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(date);
-      } else if (_selectedPeriod == 'Semaine') {
-        // Convertir 2025-W12 en semaine 12 de 2025
-        String year = entry.key.split('-')[0];
-        int weekNumber = int.parse(entry.key.split('-')[1].replaceFirst('S', ''));
-        DateTime date = DateTime.parse('$year-01-01');
-        periodeFormatee = 'Semaine $weekNumber de ${date.year}';
-      } else if (_selectedPeriod == 'Mois') {
-        // Convertir 2025-03 en mars 2025
-        DateTime date = DateFormat('yyyy-MM').parse(entry.key);
-        periodeFormatee = DateFormat('MMMM yyyy', 'fr_FR').format(date);
-      } else if (_selectedPeriod == 'Trimestre') {
-        // Convertir 2025-Q1 en trimestre 1 de 2025
-        String year = entry.key.split('-')[0];
-        int trimestre = int.parse(entry.key.split('-')[1].replaceFirst('T', ''));
-        DateTime date = DateTime.parse('$year-01-01');
-        periodeFormatee = 'Trimestre $trimestre de ${date.year}';
-      } else {
-        // Année reste telle quelle
-        periodeFormatee = entry.key;
-      }
-      
-      return Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: ListTile(
-          title: Text(
-            periodeFormatee,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          trailing: Text(
-            NumberFormat.currency(locale: 'fr_FR', symbol: '€').format(entry.value),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: Color(0xFF08004D),
-            ),
-          ),
-        ),
-      );
-    }).toList();
-  }
-  
+
   // Afficher la boîte de dialogue des filtres
   void _afficherFiltresDialog() {
     afficherFiltresDialog(

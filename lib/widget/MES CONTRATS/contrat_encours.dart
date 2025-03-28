@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../modifier.dart';
 import 'package:ContraLoc/widget/MES%20CONTRATS/vehicle_access_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'search_filtre.dart';
 
 class ContratEnCours extends StatefulWidget {
   final String searchText;
@@ -25,6 +26,7 @@ class _ContratEnCoursState extends State<ContratEnCours> {
     super.initState();
     _vehicleAccessManager = VehicleAccessManager();
     _initializeAccess();
+    _searchController.text = widget.searchText;
   }
   
   // Méthode pour initialiser les gestionnaires d'accès
@@ -89,6 +91,11 @@ class _ContratEnCoursState extends State<ContratEnCours> {
         .snapshots();
   }
 
+  // Méthode pour filtrer les contrats en fonction du texte de recherche
+  bool _filterContract(DocumentSnapshot doc, String searchText) {
+    return SearchFiltre.filterContract(doc, searchText);
+  }
+
   Future<String?> _getVehiclePhotoUrl(String immatriculation) async {
     final cacheKey = immatriculation;
     if (_photoUrlCache.containsKey(cacheKey)) {
@@ -115,7 +122,6 @@ class _ContratEnCoursState extends State<ContratEnCours> {
 
   @override
   Widget build(BuildContext context) {
-    _searchController.text = widget.searchText;
     
     return Scaffold(
       body: Container(
@@ -150,7 +156,9 @@ class _ContratEnCoursState extends State<ContratEnCours> {
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 15),
                   ),
-                  onChanged: (value) => setState(() {}),
+                  onChanged: (value) {
+                    setState(() {});
+                  },
                 ),
               ),
             ),
@@ -205,15 +213,7 @@ class _ContratEnCoursState extends State<ContratEnCours> {
                   final contrats = snapshot.data!.docs;
 
                   final filteredContrats = contrats.where((contrat) {
-                    final data = contrat.data() as Map<String, dynamic>;
-                    final clientName = "${data['nom'] ?? ''} ${data['prenom'] ?? ''}".toLowerCase();
-                    final dateDebut = data['dateDebut'] ?? '';
-                    final immatriculation = data['immatriculation']?.toLowerCase() ?? '';
-                    final searchText = _searchController.text.toLowerCase();
-                    
-                    return clientName.contains(searchText) ||
-                        dateDebut.toString().contains(searchText) ||
-                        immatriculation.contains(searchText);
+                    return _filterContract(contrat, _searchController.text);
                   }).toList();
 
                   return ListView.builder(
