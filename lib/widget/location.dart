@@ -277,35 +277,43 @@ class _LocationPageState extends State<LocationPage> {
         vehiculeUrls.add(url);
       }
 
-      String conditions = '';
+      String conditions = '';  
       try {
-        final conditionsDoc = await CollaborateurUtil.getDocument(
-          collection: 'users',
-          docId: targetId,
-          subCollection: 'contrats',
-          subDocId: 'userId',
-          useAdminId: true,
-        );
-
-        if (conditionsDoc.exists) {
-          final data = conditionsDoc.data() as Map<String, dynamic>?;
-          conditions = data?['texte'] ?? '';
-        } else {
-          final conditionsUserDoc = await CollaborateurUtil.getDocument(
+        // Vérifier d'abord si le document existe avant d'essayer de le récupérer
+        final userDocRef = _firestore.collection('users').doc(targetId);
+        final contratDocRef = userDocRef.collection('contrats').doc('userId');
+        
+        // Vérifier si le document existe sans déclencher d'erreur en cas d'absence
+        final docExists = await _firestore.runTransaction<bool>((transaction) async {
+          try {
+            final docSnapshot = await transaction.get(contratDocRef);
+            return docSnapshot.exists;
+          } catch (e) {
+            // En cas d'erreur de connectivité, supposer que le document n'existe pas
+            print('Vérification de l\'existence du document impossible: $e');
+            return false;
+          }
+        }).timeout(const Duration(seconds: 5), onTimeout: () => false);
+        
+        if (docExists) {
+          // Le document existe, on peut le récupérer
+          final conditionsDoc = await CollaborateurUtil.getDocument(
             collection: 'users',
             docId: targetId,
             subCollection: 'contrats',
-            subDocId: targetId,
+            subDocId: 'userId',
             useAdminId: true,
           );
 
-          if (conditionsUserDoc.exists) {
-            final data = conditionsUserDoc.data() as Map<String, dynamic>?;
+          if (conditionsDoc.exists) {
+            final data = conditionsDoc.data() as Map<String, dynamic>?;
             conditions = data?['texte'] ?? '';
-          } else {
-            final defaultConditionsDoc = await _firestore.collection('contrats').doc('default').get();
-            conditions = (defaultConditionsDoc.data())?['texte'] ?? ContratModifier.defaultContract;
           }
+        } else {
+          // Le document n'existe pas, essayer d'autres sources
+          print('Document de conditions personnalisées non trouvé, utilisation des conditions par défaut');
+          final defaultConditionsDoc = await _firestore.collection('contrats').doc('default').get();
+          conditions = (defaultConditionsDoc.data())?['texte'] ?? ContratModifier.defaultContract;
         }
       } catch (e) {
         print('Erreur lors de la récupération des conditions: $e');
@@ -568,25 +576,25 @@ class _LocationPageState extends State<LocationPage> {
         final userId = status['userId'];
         
         if (userId == null) {
-          print("🔴 Erreur: Utilisateur non connecté");
+          print(" Erreur: Utilisateur non connecté");
           throw Exception("Utilisateur non connecté");
         }
         
         final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
         
         if (targetId == null) {
-          print("🔴 Erreur: ID cible non disponible");
+          print(" Erreur: ID cible non disponible");
           throw Exception("ID cible non disponible");
         }
         
-        print("📝 Téléchargement d'image par ${status['isCollaborateur'] ? 'collaborateur' : 'admin'}");
-        print("📝 userId: $userId, targetId (adminId): $targetId");
+        print(" Téléchargement d'image par ${status['isCollaborateur'] ? 'collaborateur' : 'admin'}");
+        print(" userId: $userId, targetId (adminId): $targetId");
 
         String fileName =
             '${folder}_${DateTime.now().millisecondsSinceEpoch}.jpg';
         
         final String storagePath = 'users/${targetId}/locations/$contratId/$folder/$fileName';
-        print("📁 Chemin de stockage: $storagePath");
+        print(" Chemin de stockage: $storagePath");
         
         Reference ref = FirebaseStorage.instance.ref().child(storagePath);
 
@@ -594,17 +602,17 @@ class _LocationPageState extends State<LocationPage> {
         final tempFile = File('${tempDir.path}/$fileName');
         await tempFile.writeAsBytes(compressedImage);
 
-        print("⏳ Début du téléchargement...");
+        print(" Début du téléchargement...");
         await ref.putFile(tempFile);
-        print("✅ Téléchargement terminé avec succès");
+        print(" Téléchargement terminé avec succès");
         
         return await ref.getDownloadURL();
       }
       throw Exception("Image compression failed");
     } catch (e) {
-      print('🔴 Erreur lors du traitement de l\'image : $e');
+      print(' Erreur lors du traitement de l\'image : $e');
       if (e.toString().contains('unauthorized')) {
-        print('🔐 Problème d\'autorisation: Vérifiez les règles de sécurité Firebase Storage');
+        print(' Problème d\'autorisation: Vérifiez les règles de sécurité Firebase Storage');
       }
       rethrow;
     }
