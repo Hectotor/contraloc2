@@ -289,24 +289,23 @@ class _UserScreenState extends State<UserScreen> {
             );
           },
         ),
-        const SizedBox(height: 16),
         
-        // Carte "Gérer mon abonnement"
-        _buildFeatureCard(
-          title: "Gérer mon abonnement",
-          description: "Consulter et modifier votre formule d'abonnement",
-          icon: Icons.subscriptions,
-          color: Colors.green[700]!,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AbonnementScreen()),
-            );
-          },
-        ),
-        
-        // Cartes visibles uniquement pour les administrateurs
+        // Carte "Gérer mon abonnement" - visible uniquement pour les administrateurs
         if (!_isCollaborateur) ...[  
+          const SizedBox(height: 16),
+          _buildFeatureCard(
+            title: "Gérer mon abonnement",
+            description: "Consulter et modifier votre formule d'abonnement",
+            icon: Icons.subscriptions,
+            color: Colors.green[700]!,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AbonnementScreen()),
+              );
+            },
+          ),
+          
           const SizedBox(height: 16),
           // Carte "Ajouter un collaborateur"
           _buildFeatureCard(

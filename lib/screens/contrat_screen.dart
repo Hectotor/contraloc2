@@ -98,44 +98,49 @@ class _ContratScreenState extends State<ContratScreen>
     if (effectiveUserId == null) return;
     
     try {
-      // Compter les contrats en cours
-      final activeSnapshot = await FirebaseFirestore.instance
+      // Faire une seule requête pour récupérer tous les contrats
+      final allContractsSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(effectiveUserId)
           .collection('locations')
-          .where('status', isEqualTo: 'en_cours')
           .get();
       
-      // Compter les contrats restitués
-      final returnedSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(effectiveUserId)
-          .collection('locations')
-          .where('status', isEqualTo: 'restitue')
-          .get();
+      // Compter localement les contrats par catégorie
+      int activeCount = 0;
+      int returnedCount = 0;
+      int calendarCount = 0;
+      int deletedCount = 0;
       
-      // Compter les événements du calendrier (tous les contrats)
-      final calendarSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(effectiveUserId)
-          .collection('locations')
-          .where('status', isEqualTo: 'réservé')
-          .get();
-      
-      // Compter les contrats supprimés
-      final deletedSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(effectiveUserId)
-          .collection('locations')
-          .where('statussupprime', isEqualTo: 'supprimé')
-          .get();
+      for (var doc in allContractsSnapshot.docs) {
+        final data = doc.data();
+        
+        // Vérifier si le contrat est marqué comme supprimé
+        if (data['statussupprime'] == 'supprimé') {
+          deletedCount++;
+          continue; // Passer au contrat suivant car il est supprimé
+        }
+        
+        // Compter selon le statut
+        switch (data['status']) {
+          case 'en_cours':
+            activeCount++;
+            break;
+          case 'restitue':
+            returnedCount++;
+            break;
+          case 'réservé':
+            calendarCount++;
+            break;
+            
+        }
+      }
       
       if (mounted) {
         setState(() {
-          _activeContractsCount = activeSnapshot.docs.length;
-          _returnedContractsCount = returnedSnapshot.docs.length;
-          _calendarEventsCount = calendarSnapshot.docs.length;
-          _deletedContractsCount = deletedSnapshot.docs.length;
+          _activeContractsCount = activeCount;
+          _returnedContractsCount = returnedCount;
+          _calendarEventsCount = calendarCount;
+          _deletedContractsCount = deletedCount;
         });
       }
     } catch (e) {
