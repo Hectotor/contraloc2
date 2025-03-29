@@ -18,7 +18,7 @@ import '../widget/CREATION DE CONTRAT/MAIL.DART';
 import 'package:flutter_image_compress/flutter_image_compress.dart'; 
 import 'CREATION DE CONTRAT/voiture_selectionne.dart'; 
 import 'CREATION DE CONTRAT/create_contrat.dart'; 
-import 'CREATION DE CONTRAT/popup.dart'; 
+import 'CREATION DE CONTRAT/popup_felicitation.dart'; 
 import 'popup_signature.dart'; 
 
 class LocationPage extends StatefulWidget {
@@ -33,7 +33,8 @@ class LocationPage extends StatefulWidget {
   final File? permisRecto;
   final File? permisVerso;
   final String? numeroPermis;
-  final String? immatriculationClient;
+  final String? immatriculationVehiculeClient;
+  final String? kilometrageVehiculeClient;
   final String? contratId;
 
   const LocationPage({
@@ -49,7 +50,8 @@ class LocationPage extends StatefulWidget {
     this.permisRecto,
     this.permisVerso,
     this.numeroPermis,
-    this.immatriculationClient,
+    this.immatriculationVehiculeClient,
+    this.kilometrageVehiculeClient,
     this.contratId,
   }) : super(key: key);
 
@@ -425,7 +427,9 @@ class _LocationPageState extends State<LocationPage> {
             FieldValue.serverTimestamp(), 
         'numeroPermis': widget.numeroPermis ??
             '', 
-        'immatriculationClient': widget.immatriculationClient ??
+        'immatriculationVehiculeClient': widget.immatriculationVehiculeClient ??
+            '', 
+        'kilometrageVehiculeClient': widget.kilometrageVehiculeClient ??
             '', 
         'nettoyageInt': _nettoyageIntController.text,
         'nettoyageExt': _nettoyageExtController.text,
@@ -458,7 +462,8 @@ class _LocationPageState extends State<LocationPage> {
           'telephone': widget.telephone,  
           'email': widget.email,  
           'numeroPermis': widget.numeroPermis,  
-          'immatriculationClient': widget.immatriculationClient,  
+          'immatriculationVehiculeClient': widget.immatriculationVehiculeClient,
+          'kilometrageVehiculeClient': widget.kilometrageVehiculeClient,  
           'marque': widget.marque,  
           'modele': widget.modele,  
           'immatriculation': widget.immatriculation,  

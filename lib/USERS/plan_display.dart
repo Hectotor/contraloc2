@@ -29,65 +29,80 @@ class PlanData {
       price: "0€/mois",
       features: [
         {"text": "1 voiture", "isAvailable": true},
-        {"text": "10 contrats/mois", "isAvailable": true},
-        {"text": "États des lieux sans photos", "isAvailable": true},
-        {"text": "Prise de photos", "isAvailable": false},
-      ],
-    ),
-    PlanData(
-      title: "Offre Pro",
-      price: "9.99€/mois",
-      features: [
-        {"text": "5 voitures", "isAvailable": true},
-        {"text": "10 contrats/mois", "isAvailable": true},
+        {"text": "Contrats illimités", "isAvailable": true},
         {"text": "États des lieux simplifiés", "isAvailable": true},
+        {"text": "Suivi chiffres d'affaires", "isAvailable": true},
         {"text": "Prise de photos", "isAvailable": false},
+        {"text": "Modification des conditions du contrat", "isAvailable": false},
+        {"text": "Ajouter des collaborateurs", "isAvailable": false},
       ],
     ),
     PlanData(
       title: "Offre Premium",
       price: "19.99€/mois",
       features: [
-        {"text": "Voitures illimitées", "isAvailable": true},
+        {"text": "10 voitures", "isAvailable": true},
         {"text": "Contrats illimités", "isAvailable": true},
         {"text": "États des lieux simplifiés", "isAvailable": true},
+        {"text": "Suivi chiffres d'affaires", "isAvailable": true},
         {"text": "Prise de photos", "isAvailable": true},
         {"text": "Modification des conditions du contrat", "isAvailable": true},
+        {"text": "Ajouter des collaborateurs", "isAvailable": false},
+      ],
+    ),
+    PlanData(
+      title: "Offre Premium Plus",
+      price: "39.99€/mois",
+      features: [
+        {"text": "20 voitures", "isAvailable": true},
+        {"text": "Contrats illimités", "isAvailable": true},
+        {"text": "États des lieux simplifiés", "isAvailable": true},
+        {"text": "Suivi chiffres d'affaires", "isAvailable": true},
+        {"text": "Prise de photos", "isAvailable": true},
+        {"text": "Modification des conditions du contrat", "isAvailable": true},
+        {"text": "Ajouter des collaborateurs", "isAvailable": true},
       ],
     ),
   ];
 
   static List<PlanData> yearlyPlans = [
-    // Version annuelle des plans avec les mêmes features mais prix différents
     PlanData(
       title: "Offre Gratuite",
       price: "0€/an",
       features: [
         {"text": "1 voiture", "isAvailable": true},
-        {"text": "10 contrats/mois", "isAvailable": true},
-        {"text": "États des lieux simplifiés", "isAvailable": true},
-        {"text": "Prise de photos", "isAvailable": false},
-      ],
-    ),
-    PlanData(
-      title: "Offre Pro Annuel", // Assurez-vous que le titre correspond
-      price: "119.99€/an",
-      features: [
-        {"text": "5 voitures", "isAvailable": true},
-        {"text": "10 contrats/mois", "isAvailable": true},
-        {"text": "États des lieux simplifiés", "isAvailable": true},
-        {"text": "Prise de photos", "isAvailable": false},
-      ],
-    ),
-    PlanData(
-      title: "Offre Premium Annuel", // Assurez-vous que le titre correspond
-      price: "239.99€/an",
-      features: [
-        {"text": "Voitures illimitées", "isAvailable": true},
         {"text": "Contrats illimités", "isAvailable": true},
         {"text": "États des lieux simplifiés", "isAvailable": true},
+        {"text": "Suivi chiffres d'affaires", "isAvailable": true},
+        {"text": "Prise de photos", "isAvailable": false},
+        {"text": "Modification des conditions du contrat", "isAvailable": false},
+        {"text": "Ajouter des collaborateurs", "isAvailable": false},
+      ],
+    ),
+    PlanData(
+      title: "Offre Premium",
+      price: "239.99€/an",
+      features: [
+        {"text": "10 voitures", "isAvailable": true},
+        {"text": "Contrats illimités", "isAvailable": true},
+        {"text": "États des lieux simplifiés", "isAvailable": true},
+        {"text": "Suivi chiffres d'affaires", "isAvailable": true},
         {"text": "Prise de photos", "isAvailable": true},
         {"text": "Modification des conditions du contrat", "isAvailable": true},
+        {"text": "Ajouter des collaborateurs", "isAvailable": false},
+      ],
+    ),
+    PlanData(
+      title: "Offre Premium Plus Annuel",
+      price: "479.99€/an",
+      features: [
+        {"text": "20 voitures", "isAvailable": true},
+        {"text": "Contrats illimités", "isAvailable": true},
+        {"text": "États des lieux simplifiés", "isAvailable": true},
+        {"text": "Suivi chiffres d'affaires", "isAvailable": true},
+        {"text": "Prise de photos", "isAvailable": true},
+        {"text": "Modification des conditions du contrat", "isAvailable": true},
+        {"text": "Ajouter des collaborateurs", "isAvailable": true},
       ],
     ),
   ];
@@ -148,28 +163,34 @@ class PlanDisplayState extends State<PlanDisplay> {
             activePlans.clear();
             activePlans["Offre Premium"] = false;
             activePlans["Offre Premium Annuel"] = false;
-            activePlans["Offre Pro"] = false;
-            activePlans["Offre Pro Annuel"] = false;
             activePlans["Offre Gratuite"] = false;
+            activePlans["Offre Premium Plus"] = false;
+            activePlans["Offre Premium Plus Annuel"] = false;
 
             // On prend l'abonnement le plus élevé entre les deux sources
             bool isPremiumMonthly = cb_subscription == 'premium-monthly_access' || subscription_id == 'premium-monthly_access';
             bool isPremiumYearly = cb_subscription == 'premium-yearly_access' || subscription_id == 'premium-yearly_access';
             bool isProMonthly = cb_subscription == 'pro-monthly_access' || subscription_id == 'pro-monthly_access';
             bool isProYearly = cb_subscription == 'pro-yearly_access' || subscription_id == 'pro-yearly_access';
+            bool isPremiumPlusMonthly = cb_subscription == 'premium-plus-monthly_access' || subscription_id == 'premium-plus-monthly_access';
+            bool isPremiumPlusYearly = cb_subscription == 'premium-plus-yearly_access' || subscription_id == 'premium-plus-yearly_access';
 
             // Set only the active plan to true
-            if (isPremiumMonthly) {
+            if (isPremiumPlusMonthly) {
+              activePlans["Offre Premium Plus"] = true;
+            } 
+            else if (isPremiumPlusYearly) {
+              activePlans["Offre Premium Plus Annuel"] = true;
+            }
+            else if (isPremiumMonthly) {
               activePlans["Offre Premium"] = true;
             } 
             else if (isPremiumYearly) {
               activePlans["Offre Premium Annuel"] = true;
             }
-            else if (isProMonthly) {
-              activePlans["Offre Pro"] = true;
-            }
-            else if (isProYearly) {
-              activePlans["Offre Pro Annuel"] = true;
+            else if (isProMonthly || isProYearly) {
+              // Rediriger les anciens abonnements Pro vers Premium
+              activePlans["Offre Premium"] = true;
             }
             else {
               activePlans["Offre Gratuite"] = true;
@@ -209,16 +230,16 @@ class PlanDisplayState extends State<PlanDisplay> {
     bool isActivePlan = activePlans[plan.title] ?? false;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 0),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
-            spreadRadius: 2,
-            blurRadius: 15,
-            offset: const Offset(0, 3),
+            spreadRadius: 3,
+            blurRadius: 20,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -226,7 +247,7 @@ class PlanDisplayState extends State<PlanDisplay> {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            padding: const EdgeInsets.symmetric(vertical: 20),
             decoration: BoxDecoration(
               color: Colors.white,
             ),
@@ -237,18 +258,18 @@ class PlanDisplayState extends State<PlanDisplay> {
                   plan.title,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 26,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF08004D),
                     letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Text(
                   plan.price,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 24,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFFFFC300),
                   ),
@@ -256,20 +277,20 @@ class PlanDisplayState extends State<PlanDisplay> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Expanded(
             child: ListView(
               children: plan.features.map(_buildFeatureRow).toList(),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           if (plan.title == "Offre Gratuite" && !isActivePlan)
             Text(
               '',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.grey[600],
-                fontSize: 14,
+                fontSize: 16,
                 fontStyle: FontStyle.italic,
               ),
             )
@@ -318,7 +339,7 @@ class PlanDisplayState extends State<PlanDisplay> {
             child: CarouselSlider.builder(
               itemCount: plans.length,
               options: CarouselOptions(
-                height: 400,
+                height: 600,
                 enlargeCenterPage: true,
                 onPageChanged: (index, reason) {
                   if (widget.onPageChanged != null) {
@@ -386,6 +407,10 @@ class PlanDisplayState extends State<PlanDisplay> {
         baseUrl = isMonthly
             ? "https://buy.stripe.com/9AQ7wl1pKc8J41O28b"  // Premium mensuel
             : "https://buy.stripe.com/aEUcQFb0kc8Jbug5kk";  // Premium annuel
+      } else if (planTitle.contains("Premium Plus")) {
+        baseUrl = isMonthly
+            ? "https://buy.stripe.com/28o9EtgkEa0BaqcfZ0"  // Premium Plus mensuel
+            : "https://buy.stripe.com/6oE4k92tOdcN8i4145";      // Premium Plus annuel
       } else {
         baseUrl = isMonthly
             ? "https://buy.stripe.com/6oE4k92tOdcN8i4145"  // Pro mensuel

@@ -99,18 +99,17 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     return Scaffold(
       backgroundColor: Colors.white, // Ajout du fond blanc
       appBar: AppBar(
-        title: const Text(
-          "Mon abonnement",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-          ),
-        ),
         backgroundColor: const Color(0xFF08004D),
         iconTheme: const IconThemeData(
             color: Colors.white), // Ajout pour le bouton retour
         centerTitle: true, // Optionnel : pour centrer le titre
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildToggleButton(true, "Mensuel", Icons.calendar_today),
+            _buildToggleButton(false, "Annuel", Icons.calendar_month),
+          ],
+        ),
       ),
       body: Container(
         color: Colors.white, // Ajout du fond blanc au container principal
@@ -118,17 +117,6 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
           children: [
             Column(
               children: [
-                // Toggle mensuel/annuel
-                Container(
-                  margin: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      _buildToggleButton(true, "Mensuel", Icons.calendar_today),
-                      _buildToggleButton(false, "Annuel", Icons.calendar_month),
-                    ],
-                  ),
-                ),
-
                 // Affichage des plans
                 Expanded(
                   child: PlanDisplay(
@@ -188,32 +176,39 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
 
   Widget _buildToggleButton(bool isMonthlyButton, String text, IconData icon) {
     final bool isSelected = isMonthly == isMonthlyButton;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => isMonthly = isMonthlyButton),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF08004D) : Colors.white,
-            borderRadius: BorderRadius.horizontal(
-              left: Radius.circular(isMonthlyButton ? 12 : 0),
-              right: Radius.circular(!isMonthlyButton ? 12 : 0),
+    return InkWell(
+      onTap: () => setState(() => isMonthly = isMonthlyButton),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : const Color(0xFF08004D),
+          borderRadius: BorderRadius.horizontal(
+            left: Radius.circular(isMonthlyButton ? 12 : 0),
+            right: Radius.circular(!isMonthlyButton ? 12 : 0),
+          ),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF08004D) : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? const Color(0xFF08004D) : Colors.white,
+              size: 20,
             ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: isSelected ? Colors.white : Colors.grey),
-              const SizedBox(width: 8),
-              Text(
-                text,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.grey,
-                  fontWeight: FontWeight.bold,
-                ),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: TextStyle(
+                color: isSelected ? const Color(0xFF08004D) : Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

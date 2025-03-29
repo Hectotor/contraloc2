@@ -8,6 +8,7 @@ import 'package:ContraLoc/USERS/abonnement_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart'; // Import de l'utilitaire collaborateur
+import 'popup_vehicule_client.dart';
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
@@ -39,16 +40,18 @@ class ClientPage extends StatefulWidget {
 }
 
 class _ClientPageState extends State<ClientPage> {
-  final TextEditingController _nomController = TextEditingController();
   final TextEditingController _prenomController = TextEditingController();
+  final TextEditingController _nomController = TextEditingController();
   final TextEditingController _adresseController = TextEditingController();
   final TextEditingController _telephoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _numeroPermisController = TextEditingController();
-  final TextEditingController immatriculationClientController = TextEditingController();
+  final TextEditingController _immatriculationVehiculeClientController = TextEditingController();
+  final TextEditingController _kilometrageVehiculeClientController = TextEditingController();
 
   File? _permisRecto;
   File? _permisVerso;
+  bool _showPermisFields = false;
   bool isPremiumUser = false; // Nouvelle propriété
 
   @override
@@ -92,7 +95,8 @@ class _ClientPageState extends State<ClientPage> {
             _telephoneController.text = data['telephone'] ?? '';
             _emailController.text = data['email'] ?? '';
             _numeroPermisController.text = data['numeroPermis'] ?? '';
-            immatriculationClientController.text = data['immatriculationClient'] ?? '';
+            _immatriculationVehiculeClientController.text = data['immatriculationClient'] ?? '';
+            _kilometrageVehiculeClientController.text = data['kilometrageClient'] ?? '';
           });
         }
       }
@@ -260,7 +264,8 @@ class _ClientPageState extends State<ClientPage> {
               permisRecto: _permisRecto,
               permisVerso: _permisVerso,
               numeroPermis:_numeroPermisController.text,
-              immatriculationClient: immatriculationClientController.text, // Ajout de numeroPermis
+              immatriculationVehiculeClient: _immatriculationVehiculeClientController.text, // Ajout de numeroPermis
+              kilometrageVehiculeClient: _kilometrageVehiculeClientController.text, // Ajout de kilometrage
               contratId: widget.contratId, // Ajout de contratId
             ),
           ),
@@ -272,8 +277,6 @@ class _ClientPageState extends State<ClientPage> {
       );
     }
   }
-
-  bool _showPermisFields = false; // Ajouter cette variable d'état
 
   ElevatedButton buildPhotoButton() {
     return ElevatedButton.icon(
@@ -300,77 +303,158 @@ class _ClientPageState extends State<ClientPage> {
     );
   }
 
+  void _showVehicleDialog() {
+    showVehiculeClientDialog(
+      context: context,
+      immatriculationVehiculeClient: _immatriculationVehiculeClientController.text,
+      kilometrageVehiculeClient: _kilometrageVehiculeClientController.text,
+      onSave: (immatriculation, kilometrage) {
+        setState(() {
+          _immatriculationVehiculeClientController.text = immatriculation;
+          _kilometrageVehiculeClientController.text = kilometrage;
+        });
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Ajout ici
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          "Informations du Client",
-          style: TextStyle(color: Colors.white), // Set color to white
-        ),
-        backgroundColor: const Color(0xFF08004D), // Bleu nuit
-        centerTitle: true,
+        backgroundColor: const Color(0xFF08004D),
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            Navigator.pop(context); // Revenir à la page précédente
+            Navigator.pop(context);
           },
         ),
+        title: const Text(""),
       ),
       body: SingleChildScrollView(
-        physics:
-            const BouncingScrollPhysics(), // Ajout de l'effet de défilement élastique
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16.0,
-          vertical: 24.0, // Augmentation du padding vertical général
-        ),
+        physics: const BouncingScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildTextField("Prénom", _prenomController),
-            _buildTextField("Nom", _nomController),
-            _buildGooglePlacesInput(),
-            _buildTextField("Téléphone", _telephoneController,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(15),
-                ]),
-            _buildTextField("Email", _emailController,
-                keyboardType: TextInputType.emailAddress),
-            _buildTextField("N° Permis", _numeroPermisController),
-            _buildTextField("Immatriculation véhicule client", immatriculationClientController),
-            const SizedBox(height: 20),
-            buildPhotoButton(),
-            if (_showPermisFields && isPremiumUser) ...[
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            // Form section
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildImageUploader(
-                      "Permis Recto", _permisRecto, () => _pickImage(true)),
-                  _buildImageUploader(
-                      "Permis Verso", _permisVerso, () => _pickImage(false)),
+                  const Text(
+                    "Informations personnelles",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF08004D),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField("Prénom", _prenomController),
+                  _buildTextField("Nom", _nomController),
+                  _buildGooglePlacesInput(),
+                  _buildTextField("Téléphone", _telephoneController,
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(15),
+                      ]),
+                  _buildTextField("Email", _emailController,
+                      keyboardType: TextInputType.emailAddress),
+                  
+
+                  const Text(
+                    "Informations du permis",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF08004D),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField("N° Permis", _numeroPermisController),
+                  buildPhotoButton(),
+                  
+                  if (_showPermisFields && isPremiumUser) ...[  
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildImageUploader(
+                            "Permis Recto", _permisRecto, () => _pickImage(true)),
+                        _buildImageUploader(
+                            "Permis Verso", _permisVerso, () => _pickImage(false)),
+                      ],
+                    ),
+                  ],
+                  
+                  const SizedBox(height: 30),
+                  ElevatedButton.icon(
+                    onPressed: _showVehicleDialog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF000000),
+                      minimumSize: const Size(double.infinity, 56),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 2,
+                    ),
+                    icon: const Icon(
+                      Icons.directions_car,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          "Véhicule client",
+                          style: TextStyle(
+                            color: Colors.white, 
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (_immatriculationVehiculeClientController.text.isNotEmpty || 
+                            _kilometrageVehiculeClientController.text.isNotEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 30),
+                            child: Icon(
+                              Icons.check_circle,
+                              color: Colors.white,
+                              size: 25,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 40),
+                  ElevatedButton(
+                    onPressed: _saveClientInfo,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF08004D),
+                      minimumSize: const Size(double.infinity, 56),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: const Text(
+                      "Suivant",
+                      style: TextStyle(
+                        color: Colors.white, 
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
                 ],
               ),
-            ],
-            const SizedBox(height: 80), // Augmentation de l'espacement
-            ElevatedButton(
-              onPressed: _saveClientInfo,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF08004D),
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: const Text(
-                "Suivant",
-                style: TextStyle(color: Colors.white, fontSize: 20),
-              ),
             ),
-            const SizedBox(height: 60), // Marge supplémentaire en bas
           ],
         ),
       ),
