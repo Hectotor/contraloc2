@@ -19,8 +19,7 @@ class SubscriptionService {
           user.uid,
           'free',
           false,
-          1,  // Limite de base pour compte gratuit
-          10,  // Limite de contrats pour compte gratuit
+          1,  
         );
         print('✨ Statut mis à jour vers compte gratuit');
         return;
@@ -29,21 +28,20 @@ class SubscriptionService {
       bool isActive = false;
       String subscriptionId = 'free';
       int numberOfCars = 1;
-      int limiteContrat = 10;
 
       final activeEntitlements = customerInfo.entitlements.active.keys;
       print('📱 Entitlements actifs trouvés: $activeEntitlements');
 
-      // Modification ici: vérifier d'abord si l'utilisateur a un accès pro
-      if (activeEntitlements.contains('pro-monthly_access') ||
+      // Vérifier d'abord si l'utilisateur a un accès Platinum
+      if (activeEntitlements.contains('platinum-monthly_access') ||
+          activeEntitlements.contains('platinum-yearly_access') ||
+          activeEntitlements.contains('pro-monthly_access') ||
           activeEntitlements.contains('pro-yearly_access')) {
-        print('✨ Accès Pro détecté');
+        print('✨ Accès Platinum détecté');
         isActive = true;
-        // Modification ici : utiliser exactement la même chaîne que l'entitlement
-        subscriptionId =
-            'pro-monthly_access'; // Au lieu de RevenueCatService.entitlementProMonthly
-        numberOfCars = 5;
-        limiteContrat = 10;
+        // Utiliser exactement la même chaîne que l'entitlement
+        subscriptionId = 'platinum-monthly_access'; 
+        numberOfCars = 20; 
       }
       // Ensuite vérifier l'accès premium
       else if (activeEntitlements.contains('premium-monthly_access') ||
@@ -53,27 +51,24 @@ class SubscriptionService {
         subscriptionId = activeEntitlements.contains('premium-monthly_access')
             ? RevenueCatService.entitlementPremiumMonthly
             : RevenueCatService.entitlementPremiumYearly;
-        numberOfCars = 999;
-        limiteContrat = 999;
+        numberOfCars = 10; 
       }
 
       print('📱 Mise à jour avec subscriptionId: $subscriptionId');
       print('📱 Statut actif: $isActive');
       print('📱 Nombre de véhicules: $numberOfCars');
-      print('📱 Limite de contrats: $limiteContrat');
 
       await updateFirestoreSubscription(
         user.uid,
         subscriptionId,
         isActive,
         numberOfCars,
-        limiteContrat,
       );
       print(
           '✅ Mise à jour Firestore réussie pour l\'abonnement: $subscriptionId');
     } catch (e) {
       print('❌ Erreur mise à jour abonnement: $e');
-      throw e; // Rethrow to handle in UI
+      throw e; 
     }
   }
 
@@ -82,7 +77,6 @@ class SubscriptionService {
     String subscriptionId,
     bool isActive,
     int numberOfCars,
-    int limiteContrat,
   ) async {
     final userDoc = FirebaseFirestore.instance
         .collection('users')
@@ -94,7 +88,6 @@ class SubscriptionService {
       'subscriptionId': subscriptionId,
       'isSubscriptionActive': isActive,
       'numberOfCars': numberOfCars,
-      'limiteContrat': limiteContrat,
       'lastUpdateDate': FieldValue.serverTimestamp(),
     };
 

@@ -4,7 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../location.dart'; // Import de la page location
 import 'package:flutter/services.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
-import 'package:ContraLoc/USERS/abonnement_screen.dart';
+import 'package:ContraLoc/USERS/Subscription/abonnement_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart'; // Import de l'utilitaire collaborateur
@@ -330,7 +330,7 @@ class _ClientPageState extends State<ClientPage> {
             Navigator.pop(context);
           },
         ),
-        title: const Text(""),
+        title: const Text("Client"),
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),

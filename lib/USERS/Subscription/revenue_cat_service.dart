@@ -6,14 +6,14 @@ import 'package:ContraLoc/widget/chargement.dart';
 
 class RevenueCatService {
   // Identifiants iOS
-  static const String _proMonthlyIOS = 'ProMonthlySubscription';
-  static const String _proYearlyIOS = 'ProYearlySubscription';
+  static const String _platinumMonthlyIOS = 'PlatinumMonthlySubscription';
+  static const String _platinumYearlyIOS = 'PlatinumYearlySubscription';
   static const String _premiumMonthlyIOS = 'PremiumMonthlySubscription';
   static const String _premiumYearlyIOS = 'PremiumYearlySubscription';
 
   // Identifiants Android
-  static const String _proMonthlyAndroid = 'offre_contraloc:pro-monthly';
-  static const String _proYearlyAndroid = 'offre_contraloc:pro-yearly';
+  static const String _platinumMonthlyAndroid = 'offre_contraloc:platinum-monthly';
+  static const String _platinumYearlyAndroid = 'offre_contraloc:platinum-yearly';
   static const String _premiumMonthlyAndroid = 'offre_contraloc:premium-monthly';
   static const String _premiumYearlyAndroid = 'offre_contraloc:premium-yearly';
 
@@ -22,14 +22,14 @@ class RevenueCatService {
     // iOS Mappings
     'PremiumMonthlySubscription': 'premium-monthly_access',
     'PremiumYearlySubscription': 'premium-yearly_access',
-    'ProMonthlySubscription': 'pro-monthly_access',
-    'ProYearlySubscription': 'pro-yearly_access',
+    'PlatinumMonthlySubscription': 'platinum-monthly_access',
+    'PlatinumYearlySubscription': 'platinum-yearly_access',
     
     // Android Mappings
     'offre_contraloc:premium-monthly': 'premium-monthly_access',
     'offre_contraloc:premium-yearly': 'premium-yearly_access',
-    'offre_contraloc:pro-monthly': 'pro-monthly_access',
-    'offre_contraloc:pro-yearly': 'pro-yearly_access',
+    'offre_contraloc:platinum-monthly': 'platinum-monthly_access',
+    'offre_contraloc:platinum-yearly': 'platinum-yearly_access',
   };
 
   // Méthode de mapping générique
@@ -41,27 +41,27 @@ class RevenueCatService {
   static String getProductId(String plan, bool isMonthly) {
     print(' Sélection du produit :');
     print('   Plan: $plan');
-    print('   Durée: ${isMonthly ? "Mensuel" : "Annuel"}');
+    print('   Durée: ${isMonthly ? "Mensuelle" : "Annuelle"}');
 
     if (Platform.isAndroid) {
       if (plan.contains("Premium")) {
         return isMonthly 
           ? _premiumMonthlyAndroid 
           : _premiumYearlyAndroid;
-      } else if (plan.contains("Pro")) {
+      } else if (plan.contains("Platinum")) {
         return isMonthly 
-          ? _proMonthlyAndroid 
-          : _proYearlyAndroid;
+          ? _platinumMonthlyAndroid 
+          : _platinumYearlyAndroid;
       }
     } else {
       if (plan.contains("Premium")) {
         return isMonthly 
           ? _premiumMonthlyIOS 
           : _premiumYearlyIOS;
-      } else if (plan.contains("Pro")) {
+      } else if (plan.contains("Platinum")) {
         return isMonthly 
-          ? _proMonthlyIOS 
-          : _proYearlyIOS;
+          ? _platinumMonthlyIOS 
+          : _platinumYearlyIOS;
       }
     }
 
@@ -76,9 +76,9 @@ class RevenueCatService {
       
       // Liste de tous les IDs de produits
       final allProductIds = [
-        _proMonthlyIOS, _proYearlyIOS, 
+        _platinumMonthlyIOS, _platinumYearlyIOS, 
         _premiumMonthlyIOS, _premiumYearlyIOS,
-        _proMonthlyAndroid, _proYearlyAndroid,
+        _platinumMonthlyAndroid, _platinumYearlyAndroid,
         _premiumMonthlyAndroid, _premiumYearlyAndroid
       ];
 
@@ -127,14 +127,14 @@ class RevenueCatService {
   }
 
   // Getters pour obtenir le bon ID selon la plateforme
-  static String get entitlementProMonthly {
-    if (Platform.isIOS) return mapSubscriptionId(_proMonthlyIOS);
-    return mapSubscriptionId(_proMonthlyAndroid);
+  static String get entitlementPlatinumMonthly {
+    if (Platform.isIOS) return mapSubscriptionId(_platinumMonthlyIOS);
+    return mapSubscriptionId(_platinumMonthlyAndroid);
   }
 
-  static String get entitlementProYearly {
-    if (Platform.isIOS) return mapSubscriptionId(_proYearlyIOS);
-    return mapSubscriptionId(_proYearlyAndroid);
+  static String get entitlementPlatinumYearly {
+    if (Platform.isIOS) return mapSubscriptionId(_platinumYearlyIOS);
+    return mapSubscriptionId(_platinumYearlyAndroid);
   }
 
   static String get entitlementPremiumMonthly {
@@ -150,20 +150,20 @@ class RevenueCatService {
   // Constantes pour les packages
   static const String PACKAGE_PREMIUM_YEARLY = 'premium_yearly';
   static const String PACKAGE_PREMIUM_MONTHLY = 'premium_monthly';
-  static const String PACKAGE_PRO_YEARLY = 'pro_yearly';
-  static const String PACKAGE_PRO_MONTHLY = 'pro_monthly';
+  static const String PACKAGE_PLATINUM_YEARLY = 'platinum_yearly';
+  static const String PACKAGE_PLATINUM_MONTHLY = 'platinum_monthly';
 
   // Identifiants des produits par plateforme
   static final Map<String, String> productIds = {
     // iOS Products
-    'ios_pro_monthly': _proMonthlyIOS,
-    'ios_pro_yearly': _proYearlyIOS,
+    'ios_platinum_monthly': _platinumMonthlyIOS,
+    'ios_platinum_yearly': _platinumYearlyIOS,
     'ios_premium_monthly': _premiumMonthlyIOS,
     'ios_premium_yearly': _premiumYearlyIOS,
     
     // Android Products
-    'android_pro_monthly': _proMonthlyAndroid,
-    'android_pro_yearly': _proYearlyAndroid,
+    'android_platinum_monthly': _platinumMonthlyAndroid,
+    'android_platinum_yearly': _platinumYearlyAndroid,
     'android_premium_monthly': _premiumMonthlyAndroid,
     'android_premium_yearly': _premiumYearlyAndroid,
   };
@@ -238,18 +238,18 @@ class RevenueCatService {
       print(' État RevenueCat: ${activeEntitlements.length} abonnement(s) actif(s)');
       print(' Entitlements actifs: $activeEntitlements');
 
-      // Si plusieurs abonnements sont actifs, prioriser Premium sur Pro
+      // Si plusieurs abonnements sont actifs, prioriser Platinum sur Premium
       if (activeEntitlements.length > 1) {
         // Créer une copie de customerInfo avec uniquement l'abonnement prioritaire
-        if (hasPremiumAccess(customerInfo)) {
+        if (hasPlatinumAccess(customerInfo)) {
+          // Garder uniquement l'abonnement Platinum
+          customerInfo.entitlements.active.removeWhere(
+            (key, _) => !key.contains('platinum'),
+          );
+        } else if (hasPremiumAccess(customerInfo)) {
           // Garder uniquement l'abonnement Premium
           customerInfo.entitlements.active.removeWhere(
             (key, _) => !key.contains('premium'),
-          );
-        } else if (hasProAccess(customerInfo)) {
-          // Garder uniquement l'abonnement Pro
-          customerInfo.entitlements.active.removeWhere(
-            (key, _) => !key.contains('pro'),
           );
         }
         print(' Après priorisation: ${customerInfo.entitlements.active.keys}');
@@ -262,10 +262,10 @@ class RevenueCatService {
     }
   }
 
-  static bool hasProAccess(CustomerInfo customerInfo) {
+  static bool hasPlatinumAccess(CustomerInfo customerInfo) {
     return customerInfo.entitlements.active.keys
       .map(mapSubscriptionId)
-      .any((id) => id.contains('pro-'));
+      .any((id) => id.contains('platinum-'));
   }
 
   static bool hasPremiumAccess(CustomerInfo customerInfo) {

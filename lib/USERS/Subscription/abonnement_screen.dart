@@ -1,10 +1,10 @@
-import 'package:ContraLoc/services/subscription_service.dart';
+import 'package:ContraLoc/USERS/Subscription/subscription_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show PlatformException;
-import '../services/revenue_cat_service.dart';
-import 'question_user.dart';
+import 'revenue_cat_service.dart';
+import '../question_user.dart';
 import 'plan_display.dart';
-import 'felicitation.dart';
+import '../felicitation.dart';
 
 class AbonnementScreen extends StatefulWidget {
   const AbonnementScreen({Key? key}) : super(key: key);
@@ -32,10 +32,10 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
           _currentEntitlement = 'premium-monthly_access';
         } else if (activeEntitlements.contains('premium-yearly_access')) {
           _currentEntitlement = 'premium-yearly_access';
-        } else if (activeEntitlements.contains('pro-monthly_access')) {
-          _currentEntitlement = 'pro-monthly_access';
-        } else if (activeEntitlements.contains('pro-yearly_access')) {
-          _currentEntitlement = 'pro-yearly_access';
+        } else if (activeEntitlements.contains('platinum-monthly_access')) {
+          _currentEntitlement = 'platinum-monthly_access';
+        } else if (activeEntitlements.contains('platinum-yearly_access')) {
+          _currentEntitlement = 'platinum-yearly_access';
         } else {
           _currentEntitlement = 'free';
         }
@@ -106,8 +106,8 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildToggleButton(true, "Mensuel", Icons.calendar_today),
-            _buildToggleButton(false, "Annuel", Icons.calendar_month),
+            _buildToggleButton(true, "Mensuelle", Icons.calendar_today),
+            _buildToggleButton(false, "Annuelle", Icons.calendar_month),
           ],
         ),
       ),

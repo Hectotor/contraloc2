@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import '../widget/take_picture.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../ajouter_vehicule/enregistrer_vehicule.dart';
+import '../ajouter_vehicule/check_vehicle_limit.dart';
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
@@ -277,6 +278,18 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
           setState(() => _isLoading = false);
           return;
         }
+
+        // Vérifier la limite de véhicules pour les nouveaux véhicules uniquement
+        print("🚗 Vérification de la limite de véhicules...");
+        final vehicleLimitChecker = VehicleLimitChecker(context);
+        final canAddVehicle = await vehicleLimitChecker.checkVehicleLimit();
+        
+        if (!canAddVehicle) {
+          print("⚠️ Limite de véhicules atteinte. Impossible d'ajouter un nouveau véhicule.");
+          setState(() => _isLoading = false);
+          return;
+        }
+        print("👍 Limite de véhicules OK. Poursuite de l'enregistrement.");
 
         final docId = _immatriculationController.text;
         final vehicleRef = await _getVehicleDocRef(docId);

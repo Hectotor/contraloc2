@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../screens/login.dart';
+import '../SCREENS/login.dart';
 
 class PopupDeconnexion {
   static Future<void> showLogoutConfirmationDialog(BuildContext context) async {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import '../screens/add_vehicule.dart';
+import '../SCREENS/add_vehicule.dart';
 import '../services/collaborateur_util.dart';
 
 class DeleteVehicule {

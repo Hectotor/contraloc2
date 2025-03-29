@@ -6,7 +6,7 @@ import '../widget/CREATION DE CONTRAT/client.dart'; // Assurez-vous que ce fichi
 import '../services/collaborateur_util.dart'; // Import du nouveau fichier
 import '../widget/MES CONTRATS/vehicle_access_manager.dart'; // Import du gestionnaire d'accès aux véhicules
 import '../services/connectivity_service.dart'; // Import du service de connectivité
-import '../screens/add_vehicule.dart'; // Import pour la redirection vers AddVehiculeScreen
+import 'add_vehicule.dart'; // Import pour la redirection vers AddVehiculeScreen
 import '../HOME/button_add_vehicle.dart'; // Import pour le bouton personnalisé
 import 'package:firebase_auth/firebase_auth.dart';
 

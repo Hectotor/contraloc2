@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../screens/home_screen.dart';
-import '../screens/contrat_screen.dart';
-import '../screens/user_screen.dart';
+import '../SCREENS/home_screen.dart';
+import '../SCREENS/contrat_screen.dart';
+import '../SCREENS/user_screen.dart';
 
-import '../screens/chiffre_affaire_screen.dart';
+import '../SCREENS/chiffre_affaire_screen.dart';
 
 class NavigationPage extends StatefulWidget {
   final String? fromPage;

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import '../screens/login.dart'; // Import de l'écran de connexion
+import '../SCREENS/login.dart'; // Import de l'écran de connexion
 import '../widget/chargement.dart'; // Import de l'écran de chargement
 
 class SupprimerCompte extends StatelessWidget {

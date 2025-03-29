@@ -38,7 +38,7 @@ class PlanData {
       ],
     ),
     PlanData(
-      title: "Offre Premium",
+      title: "Offre Premium Mensuelle",
       price: "19.99€/mois",
       features: [
         {"text": "10 voitures", "isAvailable": true},
@@ -51,7 +51,7 @@ class PlanData {
       ],
     ),
     PlanData(
-      title: "Offre Premium Plus",
+      title: "Offre Platinum Mensuelle",
       price: "39.99€/mois",
       features: [
         {"text": "20 voitures", "isAvailable": true},
@@ -80,7 +80,7 @@ class PlanData {
       ],
     ),
     PlanData(
-      title: "Offre Premium",
+      title: "Offre Premium Annuelle",
       price: "239.99€/an",
       features: [
         {"text": "10 voitures", "isAvailable": true},
@@ -93,7 +93,7 @@ class PlanData {
       ],
     ),
     PlanData(
-      title: "Offre Premium Plus Annuel",
+      title: "Offre Platinum Annuelle",
       price: "479.99€/an",
       features: [
         {"text": "20 voitures", "isAvailable": true},
@@ -161,36 +161,30 @@ class PlanDisplayState extends State<PlanDisplay> {
           setState(() {
             // Reset all plans to false first
             activePlans.clear();
-            activePlans["Offre Premium"] = false;
-            activePlans["Offre Premium Annuel"] = false;
+            activePlans["Offre Premium Mensuelle"] = false;
+            activePlans["Offre Premium Annuelle"] = false;
             activePlans["Offre Gratuite"] = false;
-            activePlans["Offre Premium Plus"] = false;
-            activePlans["Offre Premium Plus Annuel"] = false;
+            activePlans["Offre Platinum Mensuelle"] = false;
+            activePlans["Offre Platinum Annuelle"] = false;
 
             // On prend l'abonnement le plus élevé entre les deux sources
             bool isPremiumMonthly = cb_subscription == 'premium-monthly_access' || subscription_id == 'premium-monthly_access';
             bool isPremiumYearly = cb_subscription == 'premium-yearly_access' || subscription_id == 'premium-yearly_access';
-            bool isProMonthly = cb_subscription == 'pro-monthly_access' || subscription_id == 'pro-monthly_access';
-            bool isProYearly = cb_subscription == 'pro-yearly_access' || subscription_id == 'pro-yearly_access';
-            bool isPremiumPlusMonthly = cb_subscription == 'premium-plus-monthly_access' || subscription_id == 'premium-plus-monthly_access';
-            bool isPremiumPlusYearly = cb_subscription == 'premium-plus-yearly_access' || subscription_id == 'premium-plus-yearly_access';
+            bool isPlatinumMonthly = cb_subscription == 'platinum-monthly_access' || subscription_id == 'platinum-monthly_access';
+            bool isPlatinumYearly = cb_subscription == 'platinum-yearly_access' || subscription_id == 'platinum-yearly_access';
 
             // Set only the active plan to true
-            if (isPremiumPlusMonthly) {
-              activePlans["Offre Premium Plus"] = true;
+            if (isPlatinumMonthly) {
+              activePlans["Offre Platinum Mensuelle"] = true;
             } 
-            else if (isPremiumPlusYearly) {
-              activePlans["Offre Premium Plus Annuel"] = true;
+            else if (isPlatinumYearly) {
+              activePlans["Offre Platinum Annuelle"] = true;
             }
             else if (isPremiumMonthly) {
-              activePlans["Offre Premium"] = true;
+              activePlans["Offre Premium Mensuelle"] = true;
             } 
             else if (isPremiumYearly) {
-              activePlans["Offre Premium Annuel"] = true;
-            }
-            else if (isProMonthly || isProYearly) {
-              // Rediriger les anciens abonnements Pro vers Premium
-              activePlans["Offre Premium"] = true;
+              activePlans["Offre Premium Annuelle"] = true;
             }
             else {
               activePlans["Offre Gratuite"] = true;
@@ -403,18 +397,17 @@ class PlanDisplayState extends State<PlanDisplay> {
       
       // Construire l'URL Stripe avec les metadata utilisateur
       String baseUrl;
-      if (planTitle.contains("Premium")) {
+      if (planTitle.contains("Premium") && !planTitle.contains("Platinum")) {
         baseUrl = isMonthly
             ? "https://buy.stripe.com/9AQ7wl1pKc8J41O28b"  // Premium mensuel
             : "https://buy.stripe.com/aEUcQFb0kc8Jbug5kk";  // Premium annuel
-      } else if (planTitle.contains("Premium Plus")) {
+      } else if (planTitle.contains("Platinum")) {
         baseUrl = isMonthly
-            ? "https://buy.stripe.com/28o9EtgkEa0BaqcfZ0"  // Premium Plus mensuel
-            : "https://buy.stripe.com/6oE4k92tOdcN8i4145";      // Premium Plus annuel
+            ? "https://buy.stripe.com/28o9EtgkEa0BaqcfZ0"  // Platinum mensuel
+            : "https://buy.stripe.com/6oE4k92tOdcN8i4145";      // Platinum annuel
       } else {
-        baseUrl = isMonthly
-            ? "https://buy.stripe.com/6oE4k92tOdcN8i4145"  // Pro mensuel
-            : "https://buy.stripe.com/28o9EtgkEa0BaqcfZ0";      // Pro annuel
+        // Offre gratuite ou autre
+        baseUrl = "https://buy.stripe.com/9AQ7wl1pKc8J41O28b";  // Redirection vers Premium mensuel par défaut
       }
 
       // Créer l'URL avec les paramètres

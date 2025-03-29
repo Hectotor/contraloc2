@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'package:ContraLoc/firebase_options.dart';
-import 'package:ContraLoc/services/revenue_cat_service.dart';
+import 'package:ContraLoc/USERS/Subscription/revenue_cat_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'package:flutter/services.dart'; // Import SystemChrome
-import 'screens/splash_screen.dart';
-import 'package:ContraLoc/services/subscription_service.dart'; // Import SubscriptionService
+import 'SCREENS/splash_screen.dart';
+import 'package:ContraLoc/USERS/Subscription/subscription_service.dart'; // Import SubscriptionService
 
 
 Future<Map<String, String>> fetchRevenueCatKeys() async {

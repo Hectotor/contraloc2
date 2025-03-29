@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
 
-import 'abonnement_screen.dart';
+import 'Subscription/abonnement_screen.dart';
 
 class ContratModifier extends StatefulWidget {
   // Rendre defaultContract accessible

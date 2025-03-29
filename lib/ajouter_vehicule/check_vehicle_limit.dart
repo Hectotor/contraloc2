@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:ContraLoc/USERS/abonnement_screen.dart';
+import '../services/collaborateur_util.dart';
+import 'package:ContraLoc/USERS/Subscription/abonnement_screen.dart';
 
 class VehicleLimitChecker {
   final BuildContext context;
@@ -129,46 +130,73 @@ class VehicleLimitChecker {
   }
 
   Future<bool> checkVehicleLimit({bool isUpdating = false, bool isVehicleUpdate = false}) async {
-    final user = _auth.currentUser;
-    if (user == null) return false;
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        print("❌ Utilisateur non connecté");
+        return false;
+      }
 
-    // Récupérer le nombre de véhicules actuels
-    final vehiclesSnapshot = await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('vehicules')
-        .get();
-    final currentVehicleCount = vehiclesSnapshot.docs.length;
+      // Vérifier si l'utilisateur est un collaborateur
+      final status = await CollaborateurUtil.checkCollaborateurStatus();
+      final isCollaborateur = status['isCollaborateur'] ?? false;
+      final adminId = status['adminId'];
+      
+      // Déterminer l'ID à utiliser (admin ou utilisateur courant)
+      final targetId = isCollaborateur ? adminId : user.uid;
+      
+      if (targetId == null) {
+        print("❌ ID cible non disponible");
+        return false;
+      }
+      
+      // Compter le nombre de véhicules actuels
+      final vehiclesSnapshot = await _firestore
+          .collection('users')
+          .doc(targetId)
+          .collection('vehicules')
+          .get();
 
-    // Si c'est une mise à jour, ne pas vérifier la limite
-    if (isUpdating || isVehicleUpdate) return true;
+      final currentVehicleCount = vehiclesSnapshot.docs.length;
 
-    // Récupérer la limite de l'abonnement
-    final userDoc = await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('authentification')
-        .doc(user.uid)
-        .get();
-    final subscriptionId = userDoc.data()?['subscriptionId'] ?? 'free';
-    final cb_subscription = userDoc.data()?['cb_subscription'] ?? 'free';
-    int vehicleLimit = 1; // Par défaut, abonnement gratuit
-    if (subscriptionId == 'pro-monthly_access' || 
-        subscriptionId == 'pro-yearly_access' ||
-        cb_subscription == 'pro-monthly_access' || 
-        cb_subscription == 'pro-yearly_access') {
-      vehicleLimit = 5;
-    } else if (subscriptionId == 'premium-monthly_access' || 
-               subscriptionId == 'premium-yearly_access' ||
-               cb_subscription == 'premium-monthly_access' || 
-               cb_subscription == 'premium-yearly_access') {
-      vehicleLimit = 999;
-    }
+      // Si c'est une mise à jour, ne pas vérifier la limite
+      if (isUpdating || isVehicleUpdate) return true;
 
-    if (currentVehicleCount >= vehicleLimit) {
-      _showVehicleLimitDialog();
+      // Récupérer la limite de l'abonnement directement depuis les champs numberOfCars ou cb_nb_car
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(targetId)
+          .collection('authentification')
+          .doc(targetId)
+          .get();
+      
+      print('📊 Vérification des limites pour ${isCollaborateur ? "l'administrateur" : "l'utilisateur"}: $targetId');
+      
+      // Récupérer la limite directement depuis les champs stockés
+      int vehicleLimit = userDoc.data()?['numberOfCars'] ?? 1; // Valeur par défaut: 1
+      final cb_nb_car = userDoc.data()?['cb_nb_car']; // Peut être null
+      
+      print('📊 Limite de véhicules initiale: $vehicleLimit');
+      print('📊 Limite de véhicules cb_nb_car: $cb_nb_car');
+      print('📊 Nombre de véhicules actuels: $currentVehicleCount');
+      
+      // Si cb_nb_car existe et est supérieur à numberOfCars, utiliser cette valeur
+      if (cb_nb_car != null && cb_nb_car > vehicleLimit) {
+        vehicleLimit = cb_nb_car;
+        print('📊 Utilisation de la limite cb_nb_car: $vehicleLimit');
+      }
+
+      if (currentVehicleCount >= vehicleLimit) {
+        print('❌ Vérification de limite de véhicules échouée: $currentVehicleCount/$vehicleLimit');
+        _showVehicleLimitDialog();
+        return false;
+      }
+
+      print('✔️ Vérification de limite de véhicules OK: $currentVehicleCount/$vehicleLimit');
+      return true;
+    } catch (e) {
+      print('❌ Erreur lors de la vérification de la limite de véhicules: $e');
       return false;
     }
-    return true;
   }
 }
