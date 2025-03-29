@@ -15,6 +15,7 @@ class FirestoreService {
         .doc(userId)
         .collection('locations')
         .where('status', isEqualTo: 'en_cours')
+        // Ne pas filtrer par statussupprime car le champ peut ne pas exister
         .orderBy('dateCreation', descending: true)
         .snapshots();
   }
@@ -29,6 +30,7 @@ class FirestoreService {
         .doc(userId)
         .collection('locations')
         .where('status', isEqualTo: 'restitue')
+        // Ne pas filtrer par statussupprime car le champ peut ne pas exister
         .orderBy('dateRestitution', descending: true)
         .snapshots();
   }

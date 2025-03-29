@@ -117,6 +117,14 @@ class _ContratRestituesState extends State<ContratRestitues> {
 
   // Méthode pour filtrer les contrats en fonction du texte de recherche
   bool _filterContract(DocumentSnapshot doc, String searchText) {
+    // Vérifier si le contrat est marqué comme supprimé
+    if (doc.data() is Map<String, dynamic>) {
+      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      if (data.containsKey('statussupprime') && data['statussupprime'] == 'supprimé') {
+        return false; // Ne pas afficher les contrats supprimés
+      }
+    }
+    
     return SearchFiltre.filterContract(doc, searchText);
   }
 
