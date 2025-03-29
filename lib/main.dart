@@ -10,6 +10,8 @@ import 'package:flutter/services.dart'; // Import SystemChrome
 import 'SCREENS/splash_screen.dart';
 import 'package:ContraLoc/USERS/Subscription/subscription_service.dart'; // Import SubscriptionService
 
+// Clé de navigateur globale pour la navigation sans contexte
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<Map<String, String>> fetchRevenueCatKeys() async {
   try {
@@ -92,6 +94,7 @@ class MyApp extends StatelessWidget {
         return OrientationBuilder(
           builder: (context, orientation) {
             return MaterialApp(
+              navigatorKey: navigatorKey, // Utilisation de la clé de navigateur globale
               title: 'Contraloc',
               debugShowCheckedModeBanner: false,
               theme: ThemeData(

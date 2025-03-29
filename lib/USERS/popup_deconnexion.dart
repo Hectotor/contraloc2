@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../SCREENS/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/collaborateur_util.dart';
+import '../main.dart'; // Import pour accéder à navigatorKey
 
 class PopupDeconnexion {
   static Future<void> showLogoutConfirmationDialog(BuildContext context) async {
@@ -95,18 +96,14 @@ class PopupDeconnexion {
       }
       
       // 5. Rediriger vers la page de connexion et effacer la pile de navigation
-      // Ajouter un petit délai pour s'assurer que le contexte est stable
-      if (context.mounted) {
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (context.mounted) {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const LoginPage()),
-              (route) => false,
-            );
-          }
-        });
-      }
+      // Utiliser un délai plus long pour s'assurer que le contexte est stable
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Utiliser le navigateur global pour la redirection
+      navigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+        (route) => false, // Supprime toutes les routes précédentes
+      );
     } catch (e) {
       // Fermer la boîte de dialogue de chargement en cas d'erreur
       if (context.mounted) {
@@ -115,7 +112,7 @@ class PopupDeconnexion {
           SnackBar(content: Text('Erreur lors de la déconnexion: $e')),
         );
       }
-      print('❌ Erreur lors de la déconnexion: $e');
+      print('→ Erreur lors de la déconnexion: $e');
     }
   }
 }
