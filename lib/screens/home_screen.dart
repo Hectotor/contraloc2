@@ -66,16 +66,34 @@ class _HomeScreenState extends State<HomeScreen> {
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
           try {
-            final userDoc = await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .get();
-            
-            if (userDoc.exists && userDoc.data() != null) {
-              final userData = userDoc.data()!;
-              if (userData.containsKey('prenom') && userData['prenom'] != null) {
-                prenom = userData['prenom'];
-                print('✅ Prénom du collaborateur récupéré: $prenom');
+            // Essayer d'abord depuis le cache
+            try {
+              final userDoc = await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get(const GetOptions(source: Source.cache));
+              
+              if (userDoc.exists && userDoc.data() != null) {
+                final userData = userDoc.data()!;
+                if (userData.containsKey('prenom') && userData['prenom'] != null) {
+                  prenom = userData['prenom'];
+                  print('✅ Prénom du collaborateur récupéré depuis le cache: $prenom');
+                }
+              }
+            } catch (cacheError) {
+              print('⚠️ Tentative de cache échouée, nouvelle tentative avec le serveur: $cacheError');
+              // Si la cache échoue, essayer le serveur
+              final userDoc = await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get(const GetOptions(source: Source.server));
+              
+              if (userDoc.exists && userDoc.data() != null) {
+                final userData = userDoc.data()!;
+                if (userData.containsKey('prenom') && userData['prenom'] != null) {
+                  prenom = userData['prenom'];
+                  print('✅ Prénom du collaborateur récupéré depuis le serveur: $prenom');
+                }
               }
             }
           } catch (e) {
@@ -131,10 +149,23 @@ class _HomeScreenState extends State<HomeScreen> {
   
   // Méthode pour initialiser le gestionnaire d'accès aux véhicules
   Future<void> _initializeVehicleAccess() async {
-    await _vehicleAccessManager.initialize();
-    // Forcer une mise à jour de l'interface après l'initialisation
-    if (mounted) {
-      setState(() {});
+    try {
+      print('🔄 Initialisation du gestionnaire d\'accès aux véhicules...');
+      await _vehicleAccessManager.initialize();
+      print('✅ Gestionnaire d\'accès aux véhicules initialisé avec succès');
+      
+      // Forcer une mise à jour de l'interface après l'initialisation
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('❌ Erreur lors de l\'initialisation du gestionnaire d\'accès aux véhicules: $e');
+      // Même en cas d'erreur, on marque comme initialisé pour éviter un écran de chargement infini
+      if (mounted) {
+        setState(() {
+          _isVehicleManagerInitialized = true;
+        });
+      }
     }
   }
 

@@ -27,24 +27,24 @@ class VehicleAccessManager {
     
     try {
       // Vérifier si l'utilisateur est un collaborateur
-      final userDoc = await _firestore.collection('users').doc(user.uid).get();
-      
-      if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
-        // C'est un collaborateur, récupérer l'ID de l'admin
-        print('👥 Collaborateur détecté pour accès véhicules');
+      // Essayer d'abord depuis le cache
+      try {
+        print('📊 Tentative de récupération des données utilisateur depuis le cache...');
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .get(GetOptions(source: Source.cache));
         
-        final adminId = userDoc.data()?['adminId'];
-        if (adminId != null) {
-          print('👥 Utilisation des véhicules de l\'administrateur: $adminId');
-          _targetUserId = adminId;
-        } else {
-          print('⚠️ Collaborateur sans adminId, utilisation de son propre ID');
-          _targetUserId = user.uid;
-        }
-      } else {
-        // C'est un administrateur, utiliser son propre ID
-        print('👤 Administrateur détecté, utilisation de son propre ID');
-        _targetUserId = user.uid;
+        _processUserDocument(userDoc, user);
+      } catch (cacheError) {
+        print('⚠️ Tentative de cache échouée, nouvelle tentative avec le serveur: $cacheError');
+        // Si la cache échoue, essayer le serveur
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .get(GetOptions(source: Source.server));
+        
+        _processUserDocument(userDoc, user);
       }
       
       _isInitialized = true;
@@ -53,6 +53,27 @@ class VehicleAccessManager {
       // En cas d'erreur, utiliser l'ID de l'utilisateur actuel par défaut
       _targetUserId = user.uid;
       _isInitialized = true;
+    }
+  }
+  
+  // Méthode auxiliaire pour traiter le document utilisateur
+  void _processUserDocument(DocumentSnapshot userDoc, User user) {
+    if (userDoc.exists && userDoc.data() is Map<String, dynamic> && (userDoc.data() as Map<String, dynamic>)['role'] == 'collaborateur') {
+      // C'est un collaborateur, récupérer l'ID de l'admin
+      print('👥 Collaborateur détecté pour accès véhicules');
+      
+      final adminId = (userDoc.data() as Map<String, dynamic>)['adminId'];
+      if (adminId != null) {
+        print('👥 Utilisation des véhicules de l\'administrateur: $adminId');
+        _targetUserId = adminId;
+      } else {
+        print('⚠️ Collaborateur sans adminId, utilisation de son propre ID');
+        _targetUserId = user.uid;
+      }
+    } else {
+      // C'est un administrateur, utiliser son propre ID
+      print('👤 Administrateur détecté, utilisation de son propre ID');
+      _targetUserId = user.uid;
     }
   }
   

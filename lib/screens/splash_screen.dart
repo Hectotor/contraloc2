@@ -12,6 +12,7 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
@@ -19,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     
     // Configuration de l'animation
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1800),
       vsync: this,
     );
     
@@ -28,7 +29,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeIn,
+      curve: Interval(0.0, 0.6, curve: Curves.easeOut),
+    ));
+    
+    _scaleAnimation = Tween<double>(
+      begin: 0.85,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Interval(0.3, 0.8, curve: Curves.easeOutBack),
     ));
     
     // Démarrer l'animation
@@ -58,112 +67,100 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF08004D),
-              const Color(0xFF08004D).withOpacity(0.8),
-              const Color(0xFF1A237E),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo avec effet de pulsation
-                  TweenAnimationBuilder(
-                    tween: Tween<double>(begin: 0.8, end: 1.0),
-                    duration: const Duration(milliseconds: 1000),
-                    curve: Curves.easeInOut,
-                    builder: (context, double value, child) {
-                      return Transform.scale(
-                        scale: value,
-                        child: child,
-                      );
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.2),
-                            blurRadius: 20,
-                            spreadRadius: 5,
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _fadeAnimation.value,
+                child: Transform.scale(
+                  scale: _scaleAnimation.value,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Logo avec effet d'ombre douce
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0xFF08004D).withOpacity(0.15),
+                              blurRadius: 25,
+                              spreadRadius: 0,
+                              offset: Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(100),
+                          child: Image.asset(
+                            'assets/icon/logoCon.png',
+                            width: 180,
+                            height: 180,
+                            fit: BoxFit.cover,
                           ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(100),
-                        child: Image.asset(
-                          'assets/icon/logoCon.png',
-                          width: 200,
-                          height: 200,
-                          fit: BoxFit.cover,
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  
-                  // Titre avec effet de fade
-                  ShaderMask(
-                    shaderCallback: (bounds) => LinearGradient(
-                      colors: [Colors.white, Colors.white.withOpacity(0.8)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ).createShader(bounds),
-                    child: const Text(
-                      'ContraLoc',
-                      style: TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  
-                  // Sous-titre animé
-                  DefaultTextStyle(
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white.withOpacity(0.8),
-                      letterSpacing: 0.5,
-                    ),
-                    child: AnimatedTextKit(
-                      animatedTexts: [
-                        TypewriterAnimatedText(
-                          'Simplifiez votre gestion locative',
-                          speed: const Duration(milliseconds: 100),
+                      const SizedBox(height: 40),
+                      
+                      // Titre avec dégradé subtil
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: [Color(0xFF08004D), Color(0xFF1A237E)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ).createShader(bounds),
+                        child: const Text(
+                          'ContraLoc',
+                          style: TextStyle(
+                            fontSize: 42,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: 1.2,
+                          ),
                         ),
-                      ],
-                      isRepeatingAnimation: false,
-                    ),
-                  ),
-                  const SizedBox(height: 50),
-                  
-                  // Indicateur de chargement personnalisé
-                  SizedBox(
-                    width: 50,
-                    height: 50,
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.white.withOpacity(0.8),
                       ),
-                      strokeWidth: 3,
-                    ),
+                      const SizedBox(height: 15),
+                      
+                      // Sous-titre animé avec couleur plus douce
+                      DefaultTextStyle(
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF08004D).withOpacity(0.7),
+                          letterSpacing: 0.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        child: AnimatedTextKit(
+                          animatedTexts: [
+                            TypewriterAnimatedText(
+                              'Simplifiez votre gestion locative',
+                              speed: const Duration(milliseconds: 80),
+                            ),
+                          ],
+                          isRepeatingAnimation: false,
+                        ),
+                      ),
+                      const SizedBox(height: 60),
+                      
+                      // Indicateur de chargement modernisé
+                      SizedBox(
+                        width: 45,
+                        height: 45,
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(0xFF08004D).withOpacity(0.6),
+                          ),
+                          strokeWidth: 2.5,
+                          backgroundColor: Color(0xFF08004D).withOpacity(0.1),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
       ),
