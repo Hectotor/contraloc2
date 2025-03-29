@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/collaborateur_util.dart';
+import '../../services/collaborateur_util.dart';
 
 class AdminLogoWidget extends StatefulWidget {
   final double width;

@@ -6,10 +6,10 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'tampon.dart';
 import 'logo.dart';
-import 'admin_logo_widget.dart';
-import 'admin_info_widget.dart';
-import 'admin_tampon_widget.dart';
-import 'collaborateur_info_widget.dart';
+import 'collaborator/admin_logo_widget.dart';
+import 'collaborator/admin_info_widget.dart';
+import 'collaborator/admin_tampon_widget.dart';
+import 'collaborator/collaborateur_info_widget.dart';
 import '../services/collaborateur_util.dart';
 
 class ProfileScreen extends StatefulWidget {

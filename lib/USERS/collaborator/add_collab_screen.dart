@@ -23,6 +23,15 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
   bool _obscureConfirmPassword = true;
   bool _obscureAdminPassword = true;
 
+  // Fonction pour capitaliser la première lettre de chaque mot
+  String capitalizeWords(String input) {
+    if (input.isEmpty) return input;
+    return input.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
+
   Future<void> _createCollaborator(String email, String password) async {
     try {
       // Stocker les informations de l'administrateur
@@ -74,8 +83,8 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
             .set({
           'uid': collaboratorId,
           'email': email,
-          'nom': _nomController.text.trim(),
-          'prenom': _prenomController.text.trim(),
+          'nom': capitalizeWords(_nomController.text.trim()),
+          'prenom': capitalizeWords(_prenomController.text.trim()),
           'adminId': adminId,
           'role': 'collaborateur',
           'permissions': {

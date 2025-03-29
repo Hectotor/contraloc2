@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/collaborateur_util.dart';
+import '../../services/collaborateur_util.dart';
 
 class AdminInfoWidget extends StatefulWidget {
   final bool showTitle;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/collaborateur_util.dart';
-import 'tampon.dart';
+import '../../services/collaborateur_util.dart';
+import '../tampon.dart';
 
 class AdminTamponWidget extends StatefulWidget {
   final double width;
