@@ -336,42 +336,47 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      "Nouveau Client",
-                      style: TextStyle(color: Color(0xFF08004D), fontSize: 18),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.person_add, color: Color(0xFF08004D)),
+                        SizedBox(width: 10),
+                        Text(
+                          "Nouveau Utilisateur",
+                          style: TextStyle(color: Color(0xFF08004D), fontSize: 18),
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 100),
+
+                  // Texte de bas de page (déplacé ici pour être scrollable)
+                  if (!isKeyboardVisible && !_isLoading)
+                    Column(
+                      children: const [
+                        Text(
+                          "Fabriqué en France 🇫🇷",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        SizedBox(height: 5),
+                        Text(
+                          "Depuis 2020 - Contraloc.fr",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
           ),
           if (_isLoading)
             const Chargement(),
-          if (!isKeyboardVisible && !_isLoading) // Ajouter cette condition
-            Positioned(
-              bottom: 20,
-              left: 0,
-              right: 0,
-              child: Column(
-                children: const [
-                  Text(
-                    "Fabriqué en France 🇫🇷",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  SizedBox(height: 5),
-                  Text(
-                    "Depuis 2020 - Contraloc.fr",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );
