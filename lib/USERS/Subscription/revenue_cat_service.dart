@@ -201,6 +201,13 @@ class RevenueCatService {
     }
   }
 
+  /// Réinitialise l'état d'initialisation de RevenueCat
+  /// À appeler après une déconnexion complète
+  static void resetInitializationState() {
+    _isInitialized = false;
+    print(' RevenueCat état d\'initialisation réinitialisé');
+  }
+
   static Future<void> ensureInitialized() async {
     if (!_isInitialized) {
       throw Exception('RevenueCat n\'est pas initialisé. Appelez initialize() d\'abord.');

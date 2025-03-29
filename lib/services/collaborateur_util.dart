@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ContraLoc/USERS/Subscription/revenue_cat_service.dart';
 
 /// Utilitaire pour gérer l'accès aux données pour les collaborateurs
 class CollaborateurUtil {
@@ -601,6 +603,59 @@ class CollaborateurUtil {
         await Future.delayed(delay);
         delay *= 2; // Backoff exponentiel
       }
+    }
+  }
+  
+  /// Efface toutes les données en cache et les préférences locales
+  /// Utilisé lors de la déconnexion pour garantir une déconnexion complète
+  static Future<void> clearCache() async {
+    try {
+      print("🧹 Nettoyage du cache et des préférences...");
+      
+      // 1. Déconnecter RevenueCat et réinitialiser son état
+      try {
+        // Essayer de déconnecter RevenueCat, mais ne pas bloquer si ça échoue
+        await RevenueCatService.logout().timeout(
+          const Duration(seconds: 2),
+          onTimeout: () {
+            print("⚠️ Timeout lors de la déconnexion RevenueCat");
+            return;
+          },
+        );
+        // Réinitialiser l'état d'initialisation de RevenueCat
+        RevenueCatService.resetInitializationState();
+      } catch (e) {
+        print("⚠️ Erreur lors de la déconnexion RevenueCat: $e");
+        // Réinitialiser quand même l'état d'initialisation
+        RevenueCatService.resetInitializationState();
+      }
+      
+      // 2. Effacer les préférences partagées
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      
+      // 3. Tenter de nettoyer le cache Firestore de manière sécurisée
+      try {
+        // Désactiver la persistance pour les futures sessions
+        // Note: clearPersistence() peut échouer si des listeners sont actifs
+        // mais ce n'est pas bloquant pour la déconnexion
+        await _firestore.terminate();
+        await _firestore.clearPersistence().timeout(
+          const Duration(seconds: 2),
+          onTimeout: () {
+            print("⚠️ Timeout lors du nettoyage du cache Firestore, mais ce n'est pas bloquant");
+            return;
+          },
+        );
+      } catch (firestoreError) {
+        print("⚠️ Impossible de nettoyer complètement le cache Firestore: $firestoreError");
+        // Ne pas bloquer la déconnexion si le nettoyage du cache échoue
+      }
+      
+      print("✅ Cache et préférences effacés avec succès");
+    } catch (e) {
+      print("❌ Erreur lors du nettoyage du cache: $e");
+      // Ne pas relancer l'erreur pour ne pas bloquer la déconnexion
     }
   }
 }
