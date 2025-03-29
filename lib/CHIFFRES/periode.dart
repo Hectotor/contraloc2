@@ -9,6 +9,8 @@ class PeriodeTab extends StatelessWidget {
   final Function(String) onYearChanged;
   final double chiffrePeriodeSelectionnee;
   final VoidCallback? onFilterPressed;
+  final Map<String, double> chiffreParVehicule;
+  final Map<String, Map<String, dynamic>> detailsVehicules;
 
   const PeriodeTab({
     Key? key,
@@ -18,6 +20,8 @@ class PeriodeTab extends StatelessWidget {
     required this.onMonthChanged,
     required this.onYearChanged,
     required this.chiffrePeriodeSelectionnee,
+    required this.chiffreParVehicule,
+    required this.detailsVehicules,
     this.onFilterPressed,
   }) : super(key: key);
 
@@ -126,7 +130,174 @@ class PeriodeTab extends StatelessWidget {
             ),
           ),
         ),
+        // Classement des véhicules par chiffre d'affaires
+        Expanded(
+          child: _buildVehiculeRanking(),
+        ),
       ],
+    );
+  }
+
+  Widget _buildVehiculeRanking() {
+    // Trier les véhicules par chiffre d'affaires décroissant
+    final sortedVehicules = chiffreParVehicule.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    if (sortedVehicules.isEmpty) {
+      return const Center(
+        child: Text(
+          'Aucune donnée disponible pour cette période',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF08004D).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.emoji_events_rounded,
+                    color: Color(0xFF08004D),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Classement des véhicules',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: sortedVehicules.length,
+              itemBuilder: (context, index) {
+                final vehicule = sortedVehicules[index];
+                final vehiculeInfo = vehicule.key;
+                final chiffre = vehicule.value;
+                final details = detailsVehicules[vehiculeInfo];
+                final rank = index + 1;
+
+                // Couleurs pour les 3 premiers
+                Color rankColor;
+                Color rankBgColor;
+                IconData? medalIcon;
+
+                switch (rank) {
+                  case 1:
+                    rankColor = Colors.amber.shade800;
+                    rankBgColor = Colors.amber.shade100;
+                    medalIcon = Icons.looks_one;
+                    break;
+                  case 2:
+                    rankColor = Colors.blueGrey.shade600;
+                    rankBgColor = Colors.blueGrey.shade100;
+                    medalIcon = Icons.looks_two;
+                    break;
+                  case 3:
+                    rankColor = Colors.brown.shade600;
+                    rankBgColor = Colors.brown.shade100;
+                    medalIcon = Icons.looks_3;
+                    break;
+                  default:
+                    rankColor = Colors.grey.shade700;
+                    rankBgColor = Colors.grey.shade100;
+                    medalIcon = null;
+                }
+
+                return Card(
+                  elevation: rank <= 3 ? 4 : 2,
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: rank <= 3
+                        ? BorderSide(color: rankColor.withOpacity(0.5), width: 1)
+                        : BorderSide.none,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: rank <= 3
+                          ? LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white,
+                                rankBgColor.withOpacity(0.2),
+                              ],
+                            )
+                          : null,
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: rankBgColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: medalIcon != null
+                              ? Icon(medalIcon, color: rankColor, size: 24)
+                              : Text(
+                                  '$rank',
+                                  style: TextStyle(
+                                    color: rankColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      title: Text(
+                        vehiculeInfo.replaceAll(RegExp(r'\(.*?\)'), '').trim(),
+                        style: TextStyle(
+                          fontWeight: rank <= 3 ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 16,
+                        ),
+                      ),
+                      subtitle: Text(
+                        details != null 
+                            ? 'Immatriculation: ${details['immatriculation'] ?? 'Non disponible'}'
+                            : vehiculeInfo.contains('(') && vehiculeInfo.contains(')') 
+                                ? 'Immatriculation: ${vehiculeInfo.substring(vehiculeInfo.lastIndexOf('(') + 1, vehiculeInfo.lastIndexOf(')'))}'
+                                : 'Immatriculation: Non disponible',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      trailing: Text(
+                        NumberFormat.currency(locale: 'fr_FR', symbol: '€').format(chiffre),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: rank <= 3 ? rankColor : Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

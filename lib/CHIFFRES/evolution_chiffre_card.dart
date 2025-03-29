@@ -15,103 +15,226 @@ class EvolutionChiffreCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+      elevation: 8,
+      shadowColor: const Color(0xFF08004D).withOpacity(0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: const Color(0xFF08004D).withOpacity(0.1), width: 1),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              Colors.grey.shade50,
+            ],
+          ),
+        ),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Évolution du chiffre d\'affaire',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            // Titre avec icône
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF08004D).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.trending_up_rounded,
+                    color: Color(0xFF08004D),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Évolution du CA',
+                  style: TextStyle(
+                    fontSize: 20, 
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            SizedBox(
+            const SizedBox(height: 24),
+            
+            // Graphique
+            Container(
               height: 300,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
               child: chiffreParPeriode.isEmpty
-                  ? const Center(child: Text('Aucune donnée disponible'))
-                  : BarChart(
-                      BarChartData(
-                        alignment: BarChartAlignment.spaceAround,
-                        maxY: _getMaxValue() * 1.2, // 20% de marge au-dessus
-                        barTouchData: BarTouchData(
-                          touchTooltipData: BarTouchTooltipData(
-                            getTooltipColor: (group) => Colors.grey.shade800,
-                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                              return BarTooltipItem(
-                                '${_getMonthName(groupIndex)}\n${NumberFormat.currency(locale: 'fr_FR', symbol: '€').format(rod.toY)}',
-                                const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              );
-                            },
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.bar_chart_outlined,
+                            size: 48,
+                            color: Colors.grey.shade400,
                           ),
-                        ),
-                        titlesData: FlTitlesData(
-                          show: true,
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 30,
-                              getTitlesWidget: (value, meta) {
-                                const moisAbrev = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-                                final index = value.toInt();
-                                if (index >= 0 && index < moisAbrev.length) {
-                                  return Text(
-                                    moisAbrev[index],
-                                    style: const TextStyle(
-                                      color: Color(0xFF08004D),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  );
-                                }
-                                return const Text('');
-                              },
+                          const SizedBox(height: 16),
+                          Text(
+                            'Aucune donnée disponible',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 60,
-                              getTitlesWidget: (value, meta) {
-                                if (value == 0) return const Text('0€');
-                                return Text(
-                                  NumberFormat.compact(locale: 'fr_FR').format(value) + '€',
-                                  style: const TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12,
+                        ],
+                      ),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: BarChart(
+                        BarChartData(
+                          alignment: BarChartAlignment.spaceAround,
+                          maxY: _getMaxValue() * 1.2, // 20% de marge au-dessus
+                          barTouchData: BarTouchData(
+                            enabled: true,
+                            touchTooltipData: BarTouchTooltipData(
+                              getTooltipColor: (group) => const Color(0xFF08004D).withOpacity(0.9),
+                              tooltipRoundedRadius: 8,
+                              tooltipPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                                return BarTooltipItem(
+                                  '${_getMonthName(groupIndex)}\n${NumberFormat.currency(locale: 'fr_FR', symbol: '€').format(rod.toY)}',
+                                  const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
                                   ),
                                 );
                               },
                             ),
                           ),
-                          topTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
+                          titlesData: FlTitlesData(
+                            show: true,
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 30,
+                                getTitlesWidget: (value, meta) {
+                                  const moisAbrev = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+                                  final index = value.toInt();
+                                  if (index >= 0 && index < moisAbrev.length) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Text(
+                                        moisAbrev[index],
+                                        style: const TextStyle(
+                                          color: Color(0xFF08004D),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return const Text('');
+                                },
+                              ),
+                            ),
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 60,
+                                getTitlesWidget: (value, meta) {
+                                  if (value == 0) {
+                                    return const Padding(
+                                      padding: EdgeInsets.only(right: 8),
+                                      child: Text(
+                                        '0€',
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: Text(
+                                      NumberFormat.compact(locale: 'fr_FR').format(value) + '€',
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            topTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            rightTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
                           ),
-                          rightTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
+                          borderData: FlBorderData(
+                            show: false,
                           ),
+                          gridData: FlGridData(
+                            show: true,
+                            horizontalInterval: _getMaxValue() / 5,
+                            getDrawingHorizontalLine: (value) {
+                              return FlLine(
+                                color: Colors.grey.shade200,
+                                strokeWidth: 1,
+                                dashArray: [5, 5],
+                              );
+                            },
+                          ),
+                          barGroups: _buildBarGroups(),
                         ),
-                        borderData: FlBorderData(
-                          show: false,
-                        ),
-                        gridData: FlGridData(
-                          show: true,
-                          horizontalInterval: _getMaxValue() / 5,
-                          getDrawingHorizontalLine: (value) {
-                            return FlLine(
-                              color: Colors.grey.shade300,
-                              strokeWidth: 1,
-                              dashArray: [5, 5],
-                            );
-                          },
-                        ),
-                        barGroups: _buildBarGroups(),
                       ),
                     ),
+            ),
+            
+            // Légende ou informations supplémentaires
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.grey.shade700),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      'Chiffre d\'affaire mensuel pour l\'année $anneeSelectionnee',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -149,16 +272,31 @@ class EvolutionChiffreCard extends StatelessWidget {
     
     // Créer les groupes de barres
     return List.generate(12, (index) {
+      final double value = montantParMois[index] ?? 0;
+      final double maxValue = _getMaxValue();
+      final double percentage = maxValue > 0 ? value / maxValue : 0;
+      
+      // Degré de couleur en fonction de la valeur
+      final Color barColor = ColorTween(
+        begin: const Color(0xFF1A237E),
+        end: const Color(0xFF3949AB),
+      ).lerp(percentage) ?? const Color(0xFF08004D);
+      
       return BarChartGroupData(
         x: index,
         barRods: [
           BarChartRodData(
-            toY: montantParMois[index] ?? 0,
-            color: const Color(0xFF08004D),
+            toY: value,
+            color: barColor,
             width: 16,
             borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(4),
-              topRight: Radius.circular(4),
+              topLeft: Radius.circular(6),
+              topRight: Radius.circular(6),
+            ),
+            backDrawRodData: BackgroundBarChartRodData(
+              show: true,
+              toY: maxValue * 1.1,
+              color: Colors.grey.shade100,
             ),
           ),
         ],

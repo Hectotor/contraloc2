@@ -146,12 +146,15 @@ class RepartitionVehiculeCard extends StatelessWidget {
       }
     }
     
+    // Calculer le total des valeurs dans les sections pour assurer que les pourcentages totalisent 100%
+    double totalSections = sortedEntries.fold(0, (sum, entry) => sum + entry.value);
+    
     // Générer des couleurs distinctes pour chaque section
     final List<Color> colors = _getOrderedColors(sortedEntries.length);
     
     return List.generate(sortedEntries.length, (index) {
       final entry = sortedEntries[index];
-      final percentage = (entry.value / chiffreTotal) * 100;
+      final percentage = totalSections > 0 ? (entry.value / totalSections) * 100 : 0;
       
       return PieChartSectionData(
         color: colors[index],
@@ -193,11 +196,14 @@ class RepartitionVehiculeCard extends StatelessWidget {
     // Générer des couleurs distinctes pour chaque entrée
     final List<Color> colors = _getOrderedColors(sortedEntries.length);
     
+    // Calculer le total des valeurs dans les entrées pour assurer que les pourcentages totalisent 100%
+    double totalEntries = sortedEntries.fold(0, (sum, entry) => sum + entry.value);
+    
     return sortedEntries.asMap().entries.map((entry) {
       final index = entry.key;
       final vehicule = entry.value.key;
       final montant = entry.value.value;
-      final percentage = (montant / chiffrePeriodeSelectionnee) * 100;
+      final percentage = totalEntries > 0 ? (montant / totalEntries) * 100 : 0;
       
       // Extraire l'immatriculation si elle est entre parenthèses
       String vehiculeName = vehicule;

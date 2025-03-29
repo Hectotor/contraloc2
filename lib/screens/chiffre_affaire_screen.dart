@@ -576,32 +576,26 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
   }
   
   Widget _buildPeriodeTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          PeriodeTab(
-            selectedMonth: _selectedMonth,
-            selectedYear: _selectedYear,
-            years: _years,
-            onMonthChanged: (String newMonth) {
-              setState(() {
-                _selectedMonth = newMonth;
-                _calculerTousLesChiffres();
-              });
-            },
-            onYearChanged: (String newYear) {
-              setState(() {
-                _selectedYear = newYear;
-                _calculerTousLesChiffres();
-              });
-            },
-            chiffrePeriodeSelectionnee: _chiffrePeriodeSelectionnee,
-            onFilterPressed: _afficherFiltresDialog,
-          ),
-        ],
-      ),
+    return PeriodeTab(
+      selectedMonth: _selectedMonth,
+      selectedYear: _selectedYear,
+      years: _years,
+      onMonthChanged: (String newMonth) {
+        setState(() {
+          _selectedMonth = newMonth;
+          _calculerTousLesChiffres();
+        });
+      },
+      onYearChanged: (String newYear) {
+        setState(() {
+          _selectedYear = newYear;
+          _calculerTousLesChiffres();
+        });
+      },
+      chiffrePeriodeSelectionnee: _chiffrePeriodeSelectionnee,
+      onFilterPressed: _afficherFiltresDialog,
+      chiffreParVehicule: _chiffreParVehicule,
+      detailsVehicules: _detailsVehicules,
     );
   }
 
