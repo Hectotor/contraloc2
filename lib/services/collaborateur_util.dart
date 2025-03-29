@@ -24,29 +24,34 @@ class CollaborateurUtil {
     }
 
     try {
-      // Utiliser _executeWithRetry pour gérer les erreurs de connectivité
+      // Utiliser une approche plus rapide pour la récupération des données
       final userDoc = await _executeWithRetry(
         operation: () async {
           try {
-            // Essayer d'abord depuis le cache
-            final docCache = await _firestore.collection('users').doc(user.uid).get(GetOptions(source: Source.cache));
-            
-            if (docCache.exists) {
-              print('📋 Statut collaborateur récupéré depuis le cache');
-              return docCache;
+            // Essayer d'abord depuis le cache avec un timeout court
+            try {
+              final docCache = await _firestore.collection('users').doc(user.uid)
+                  .get(GetOptions(source: Source.cache))
+                  .timeout(const Duration(milliseconds: 300));
+              
+              if (docCache.exists) {
+                print('📋 Statut collaborateur récupéré depuis le cache');
+                return docCache;
+              }
+            } catch (cacheError) {
+              // Ignorer les erreurs de cache et passer directement au serveur
+              print('⚠️ Cache non disponible, passage direct au serveur');
             }
             
-            // Si pas dans le cache, essayer depuis le serveur
+            // Si pas dans le cache ou erreur de cache, essayer directement depuis le serveur
+            print('🔄 Récupération du statut collaborateur depuis le serveur...');
             return await _firestore.collection('users').doc(user.uid).get();
           } catch (e) {
-            // Si c'est une erreur de cache, essayer directement depuis le serveur
-            if (e.toString().contains('Failed to get document from cache')) {
-              print('⚠️ Cache non disponible pour le statut collaborateur, tentative depuis le serveur');
-              return await _firestore.collection('users').doc(user.uid).get();
-            }
+            print('❌ Erreur lors de la récupération du statut: $e');
             rethrow;
           }
-        }
+        },
+        maxRetries: 2, // Moins de tentatives pour cette vérification initiale
       );
       
       if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
@@ -579,8 +584,8 @@ class CollaborateurUtil {
   /// en cas d'erreur temporaire de connectivité
   static Future<T> _executeWithRetry<T>({
     required Future<T> Function() operation,
-    int maxRetries = 5,
-    Duration initialDelay = const Duration(seconds: 1),
+    int maxRetries = 3,
+    Duration initialDelay = const Duration(milliseconds: 500),
   }) async {
     int attempts = 0;
     Duration delay = initialDelay;
@@ -601,7 +606,7 @@ class CollaborateurUtil {
         
         print("⚠️ Tentative $attempts échouée, nouvelle tentative dans ${delay.inMilliseconds}ms: $e");
         await Future.delayed(delay);
-        delay *= 2; // Backoff exponentiel
+        delay *= 1.5;
       }
     }
   }

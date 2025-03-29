@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
-import '../services/revenue_cat_service.dart'; // Import RevenueCat Service
+import '../USERS/Subscription/revenue_cat_service.dart'; // Import RevenueCat Service
 import 'popup_mail_confir.dart'; // Import du widget PopupMailConfirmation
 
 // Définition de UpperCaseTextFormatter

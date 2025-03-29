@@ -77,15 +77,17 @@ class PopupDeconnexion {
         ),
       );
 
-      // 1. Effacer le cache du collaborateur
+      // 1. Déconnecter Firebase Auth d'abord pour éviter les problèmes d'authentification
+      await FirebaseAuth.instance.signOut();
+      
+      // 2. Effacer le cache du collaborateur
       await CollaborateurUtil.clearCache();
       
-      // 2. Effacer les préférences partagées
+      // 3. Effacer les préférences partagées
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
       
-      // 3. Déconnecter Firebase Auth
-      await FirebaseAuth.instance.signOut();
+      print('👋 Déconnexion complète effectuée avec succès');
       
       // 4. Fermer la boîte de dialogue de chargement
       if (context.mounted) {
@@ -93,15 +95,18 @@ class PopupDeconnexion {
       }
       
       // 5. Rediriger vers la page de connexion et effacer la pile de navigation
+      // Ajouter un petit délai pour s'assurer que le contexte est stable
       if (context.mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginPage()),
-          (route) => false,
-        );
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (context.mounted) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const LoginPage()),
+              (route) => false,
+            );
+          }
+        });
       }
-      
-      print('👋 Déconnexion complète effectuée avec succès');
     } catch (e) {
       // Fermer la boîte de dialogue de chargement en cas d'erreur
       if (context.mounted) {

@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/revenue_cat_service.dart';
+import '../USERS/Subscription/revenue_cat_service.dart';
 import '../widget/inscription.dart'; // Import de la page d'inscription
 import '../widget/navigation.dart'; // Import de la page de navigation
 import '../utils/welcome_mail.dart'; // Ajout de l'import pour WelcomeMail
@@ -59,7 +59,15 @@ class _LoginPageState extends State<LoginPage> {
 
       // Identifier l'utilisateur avec RevenueCat
       if (userCredential.user != null) {
-        await RevenueCatService.login(userCredential.user!.uid);
+        // Force la réinitialisation de RevenueCat avant de tenter de se connecter
+        try {
+          await RevenueCatService.forceReInitialize();
+          await RevenueCatService.login(userCredential.user!.uid);
+          print(' RevenueCat login réussi après réinitialisation forcée');
+        } catch (revenueCatError) {
+          print(' Erreur RevenueCat (non bloquante): $revenueCatError');
+          // Continuer même si RevenueCat échoue
+        }
         
         // Récupérer les données de l'utilisateur pour l'email de bienvenue
         final userData = await FirebaseFirestore.instance

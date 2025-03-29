@@ -3,6 +3,7 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:ContraLoc/widget/chargement.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RevenueCatService {
   // Identifiants iOS
@@ -208,6 +209,29 @@ class RevenueCatService {
     print(' RevenueCat état d\'initialisation réinitialisé');
   }
 
+  /// Force la réinitialisation de RevenueCat, même si déjà initialisé
+  /// Utile lors de la reconnexion après déconnexion
+  static Future<void> forceReInitialize() async {
+    try {
+      _isInitialized = false; // Force la réinitialisation
+      
+      // Récupérer les clés API depuis Firestore
+      final apiKeys = await _fetchRevenueCatKeys();
+      
+      // Réinitialiser RevenueCat
+      await initialize(
+        androidApiKey: apiKeys['android']!,
+        iosApiKey: apiKeys['ios']!,
+      );
+      
+      print(' RevenueCat réinitialisé avec succès');
+    } catch (e) {
+      print(' Erreur lors de la réinitialisation de RevenueCat: $e');
+      throw Exception('Impossible de réinitialiser RevenueCat: $e');
+    }
+  }
+
+  /// Vérifie si RevenueCat est initialisé, sinon lance une exception
   static Future<void> ensureInitialized() async {
     if (!_isInitialized) {
       throw Exception('RevenueCat n\'est pas initialisé. Appelez initialize() d\'abord.');
@@ -215,24 +239,79 @@ class RevenueCatService {
   }
 
   static Future<void> login(String userId) async {
-    await ensureInitialized();
     try {
+      // Vérifier si RevenueCat est initialisé, sinon le réinitialiser
+      if (!_isInitialized) {
+        print(' RevenueCat n\'est pas initialisé, tentative de réinitialisation...');
+        await forceReInitialize();
+      }
+      
+      // Connecter l'utilisateur
       await Purchases.logIn(userId);
       print(' RevenueCat login réussi pour: $userId');
     } catch (e) {
       print(' Erreur RevenueCat login: $e');
-      rethrow;
+      // Ne pas relancer certaines erreurs non critiques pour éviter de bloquer l'application
+      if (e.toString().contains('RevenueCat n\'est pas initialisé')) {
+        print(' Tentative de réinitialisation forcée de RevenueCat...');
+        try {
+          await forceReInitialize();
+          await Purchases.logIn(userId);
+          print(' RevenueCat login réussi après réinitialisation forcée pour: $userId');
+        } catch (reinitError) {
+          print(' Erreur lors de la réinitialisation forcée: $reinitError');
+          // Ne pas bloquer la connexion même si RevenueCat échoue
+        }
+      } else if (!e.toString().contains('already logged in')) {
+        // Relancer les erreurs qui ne sont pas des erreurs de "déjà connecté"
+        rethrow;
+      }
+    }
+  }
+  
+  // Méthode privée pour récupérer les clés API RevenueCat
+  static Future<Map<String, String>> _fetchRevenueCatKeys() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('api_keys')
+          .doc('revenuecat')
+          .get();
+
+      final data = snapshot.data();
+      if (data == null) throw Exception('Clés API RevenueCat introuvables.');
+
+      return {
+        'android': data['android_api_key'] ?? '',
+        'ios': data['ios_api_key'] ?? '',
+      };
+    } catch (e) {
+      print(' Erreur lors de la récupération des clés RevenueCat: $e');
+      throw Exception('Impossible de récupérer les clés RevenueCat: $e');
     }
   }
 
   static Future<void> logout() async {
-    await ensureInitialized();
     try {
+      // Si RevenueCat n'est pas initialisé, on ne peut pas faire de logout
+      // mais on peut quand même réinitialiser l'état
+      if (!_isInitialized) {
+        resetInitializationState();
+        print(' RevenueCat état réinitialisé (déjà non initialisé)');
+        return;
+      }
+      
+      // Déconnecter l'utilisateur de RevenueCat
       await Purchases.logOut();
+      
+      // Réinitialiser l'état pour la prochaine connexion
+      resetInitializationState();
+      
       print(' RevenueCat logout réussi');
     } catch (e) {
       print(' Erreur RevenueCat logout: $e');
-      rethrow;
+      // Réinitialiser l'état même en cas d'erreur
+      resetInitializationState();
+      // Ne pas relancer l'erreur pour éviter de bloquer la déconnexion
     }
   }
 
