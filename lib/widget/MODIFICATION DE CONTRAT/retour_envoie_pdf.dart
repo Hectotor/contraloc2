@@ -190,6 +190,7 @@ class RetourEnvoiePdf {
           email: (contratData['email'] ?? '').toString(),
           marque: (contratData['marque'] ?? '').toString(),
           modele: (contratData['modele'] ?? '').toString(),
+          immatriculation: (contratData['immatriculation'] ?? '').toString(),
           context: context,
           prenom: (contratData['prenom'] ?? '').toString(),
           nom: (contratData['nom'] ?? '').toString(),

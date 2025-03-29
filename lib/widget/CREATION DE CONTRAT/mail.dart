@@ -11,6 +11,7 @@ class EmailService {
     required String email,
     required String marque,
     required String modele,
+    required String immatriculation,
     required BuildContext context,
     String? prenom,
     String? nom,
@@ -18,6 +19,7 @@ class EmailService {
     String? adresse,
     String? telephone,
     String? logoUrl,
+    bool sendCopyToAdmin = true,
   }) async {
     try {
       // Récupérer les données de l'utilisateur
@@ -29,6 +31,7 @@ class EmailService {
       // Vérifier si l'utilisateur est un collaborateur
       String targetUserId = user.uid;
       bool isCollaborateur = false;
+      String? adminEmail;
       
       try {
         final userDoc = await FirebaseFirestore.instance
@@ -42,11 +45,41 @@ class EmailService {
           if (adminId != null) {
             print('👥 Collaborateur détecté, utilisation des données de l\'administrateur: $adminId');
             targetUserId = adminId;
+            
+            // Récupérer l'email de l'administrateur
+            if (sendCopyToAdmin) {
+              try {
+                final adminUserDoc = await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(adminId)
+                    .get();
+                adminEmail = adminUserDoc.data()?['email'];
+                print('📧 Email administrateur récupéré: $adminEmail');
+              } catch (e) {
+                print('❌ Erreur lors de la récupération de l\'email administrateur: $e');
+              }
+            }
+          }
+        } else if (sendCopyToAdmin) {
+          // Si c'est l'admin lui-même, utiliser son propre email
+          adminEmail = userDoc.data()?['email'] ?? user.email;
+          print('📧 Email administrateur (utilisateur actuel): $adminEmail');
+          
+          // Si toujours null, utiliser l'email de l'utilisateur Firebase
+          if (adminEmail == null && user.email != null) {
+            adminEmail = user.email;
+            print('📧 Utilisation de l\'email Firebase comme fallback: $adminEmail');
           }
         }
       } catch (e) {
         print('❌ Erreur lors de la vérification du rôle: $e');
         // Continuer avec l'ID de l'utilisateur actuel
+        
+        // Tenter d'utiliser l'email Firebase comme fallback
+        if (sendCopyToAdmin && user.email != null) {
+          adminEmail = user.email;
+          print('📧 Utilisation de l\'email Firebase comme fallback après erreur: $adminEmail');
+        }
       }
 
       // Essayer d'abord de récupérer depuis le cache pour éviter les erreurs de permission
@@ -144,7 +177,7 @@ class EmailService {
       final message = Message()
         ..from = Address(smtpEmail, nomEntreprise ?? 'Contraloc')
         ..recipients.add(email)
-        ..subject = '🚗 Votre contrat de location $marque $modele'
+        ..subject = '🚗 Votre contrat de location $marque $modele $immatriculation'
         ..headers = {
           'Message-ID':
               '<${DateTime.now().millisecondsSinceEpoch}@contraloc.fr>',
@@ -193,6 +226,58 @@ class EmailService {
 
       final sendReport = await send(message, server);
       print('Rapport d\'envoi : ${sendReport.toString()}');
+
+      // Envoyer une copie à l'administrateur si demandé et si l'email est disponible
+      if (sendCopyToAdmin && adminEmail != null && adminEmail != email) {
+        print('📨 Tentative d\'envoi d\'une copie à l\'administrateur: $adminEmail');
+        try {
+          final adminMessage = Message()
+            ..from = Address(smtpEmail, nomEntreprise ?? 'Contraloc')
+            ..recipients.add(adminEmail)
+            ..subject = '[COPIE] Contrat de location $marque $modele $immatriculation pour $prenom $nom'
+            ..headers = {
+              'Message-ID':
+                  '<${DateTime.now().millisecondsSinceEpoch + 1}@contraloc.fr>',
+              'X-Mailer': 'Contraloc Mailer',
+              'Return-Path': '<$smtpEmail>',
+              'List-Unsubscribe': '<mailto:$smtpEmail>',
+              'Feedback-ID': 'contraloc:${DateTime.now().millisecondsSinceEpoch + 1}'
+            }
+            ..html = '''
+              <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.6;">
+                <div style="background-color: #08004D; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
+                  <h1 style="margin: 0; font-size: 24px; color: #FFFFFF;">${nomEntreprise ?? "Contraloc"} - Copie de contrat</h1>
+                </div>
+
+                <div style="padding: 20px; background-color: #EFEFEF; border-radius: 0 0 10px 10px;">
+                  <p>Bonjour,</p>
+                  
+                  <p>Voici une copie du contrat de location qui a été envoyé à <strong>$prenom $nom</strong> pour le véhicule <strong>$marque $modele $immatriculation</strong>. 📝</p>
+                  
+                  <p>Ce message est une copie automatique envoyée à l'administrateur pour archivage.</p>
+
+                  <br>
+                  <div style="display: flex; align-items: center;">
+                    ${logoUrl != null ? '<img src="$logoUrl" alt="Logo" style="width: 70px; height: auto; margin-right: 15px;" />' : ''}
+                    <div>
+                      <p style="margin: 0; font-weight: bold; font-size: 16px; color: #08004D;">${nomEntreprise ?? "Contraloc"}</p>
+                      ${adresse != null ? '<p style="margin: 0; color #555;">Adresse: $adresse</p>' : ''}
+                      ${telephone != null ? '<p style="margin: 0; color: #555;">Téléphone : $telephone</p>' : ''}
+                    </div>
+                  </div>
+                  <p style="text-align: center; font-size: 12px; color: #777; margin-top: 20px;">contraloc.fr</p>
+                </div>
+              </div>
+            '''
+            ..attachments.add(FileAttachment(File(pdfPath)));
+
+          await send(adminMessage, server);
+          print('Copie du contrat envoyée à l\'administrateur: $adminEmail');
+        } catch (e) {
+          print('Erreur lors de l\'envoi de la copie à l\'administrateur: $e');
+          // Ne pas bloquer le processus si l'envoi de la copie échoue
+        }
+      }
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

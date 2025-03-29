@@ -526,6 +526,7 @@ class _LocationPageState extends State<LocationPage> {
           email: widget.email!,
           marque: widget.marque,
           modele: widget.modele,
+          immatriculation: widget.immatriculation,
           context: context,
           prenom: widget.prenom,
           nom: widget.nom,

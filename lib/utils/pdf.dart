@@ -272,6 +272,16 @@ Future<String> generatePdf(
     }
   }
 
+  // Générer un numéro de contrat unique basé sur la date et l'immatriculation
+  final now = DateTime.now();
+  final dateFormatted = '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year}';
+  final timeFormatted = '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+  final immatriculation = data['immatriculation'] ?? '';
+  final immatriculationPart = immatriculation.replaceAll('-', '').replaceAll(' ', '').toUpperCase();
+  final clientNom = data['nom'] ?? '';
+  final clientInitial = clientNom.isNotEmpty ? clientNom[0].toUpperCase() : 'X';
+  final numeroContrat = 'CTR-$dateFormatted-$timeFormatted-$clientInitial${immatriculationPart.substring(0, immatriculationPart.length > 3 ? 3 : immatriculationPart.length)}';
+
   pdf.addPage(
     pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
@@ -292,38 +302,65 @@ Future<String> generatePdf(
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Container(
-                  width: 50,
-                  child: logoImage != null
-                    ? pw.ClipRRect(
-                        horizontalRadius: 8,
-                        verticalRadius: 8,
-                        child: pw.Container(
-                          height: 50,
-                          child: pw.Image(logoImage, fit: pw.BoxFit.contain),
-                        ),
-                      )
-                    : pw.Container(),
+                pw.Expanded(
+                  flex: 1,
+                  child: pw.Container(
+                    alignment: pw.Alignment.centerLeft,
+                    child: logoImage != null
+                      ? pw.SizedBox(
+                          width: 50,
+                          child: pw.Container(
+                            height: 50,
+                            child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+                          ),
+                        )
+                      : pw.Container(),
+                  ),
                 ),
-                pw.Column(
-                  children: [
-                    pw.Text('CONTRAT DE LOCATION',
-                        style: pw.TextStyle(
-                          fontSize: 18,
-                          font: boldFont,
-                          color: PdfColors.black,
-                        ),
-                        textAlign: pw.TextAlign.center),
-                    pw.Text(nomEntreprise,
-                        style: pw.TextStyle(
-                          fontSize: 12,
-                          font: boldFont,
-                          color: PdfColors.black,
-                        ),
-                        textAlign: pw.TextAlign.center),
-                  ],
+                pw.Expanded(
+                  flex: 2,
+                  child: pw.Column(
+                    children: [
+                      pw.Text('CONTRAT DE LOCATION',
+                          style: pw.TextStyle(
+                            fontSize: 18,
+                            font: boldFont,
+                            color: PdfColors.black,
+                          ),
+                          textAlign: pw.TextAlign.center),
+                      pw.Text(nomEntreprise,
+                          style: pw.TextStyle(
+                            fontSize: 12,
+                            font: boldFont,
+                            color: PdfColors.black,
+                          ),
+                          textAlign: pw.TextAlign.center),
+                    ],
+                  ),
                 ),
-                pw.Container(width: 50),
+                pw.Expanded(
+                  flex: 1,
+                  child: pw.Container(
+                    alignment: pw.Alignment.centerRight,
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text('N° de contrat:',
+                            style: pw.TextStyle(
+                              fontSize: 10,
+                              font: boldFont,
+                              color: PdfColors.black,
+                            )),
+                        pw.Text(numeroContrat,
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              font: boldFont,
+                              color: PdfColors.black,
+                            )),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
             pw.SizedBox(height: 15),
