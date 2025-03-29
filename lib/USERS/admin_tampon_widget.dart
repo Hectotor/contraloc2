@@ -121,14 +121,16 @@ class _AdminTamponWidgetState extends State<AdminTamponWidget> {
     return Container(
       padding: widget.padding,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            'Tampon de l\'entreprise',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: Theme.of(context).primaryColor,
+          Center(
+            child: Text(
+              'Tampon de l\'entreprise',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Theme.of(context).primaryColor,
+              ),
             ),
           ),
           const SizedBox(height: 10),
