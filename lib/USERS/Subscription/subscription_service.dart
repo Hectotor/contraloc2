@@ -99,4 +99,35 @@ class SubscriptionService {
     }
   }
 
+  /// Active l'abonnement gratuit directement dans Firestore
+  static Future<void> activateFreeSubscription() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      print('🔄 Activation de l\'abonnement gratuit...');
+      
+      final userDoc = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('authentification')
+          .doc(user.uid);
+
+      final data = {
+        'subscriptionId': 'Gratuit',
+        'isSubscriptionActive': true,
+        'numberOfCars': 1,
+        'stripeSubscriptionId': '',
+        'stripeStatus': 'active',
+        'subscriptionSource': '',  // Pas de source spécifique pour l'offre gratuite
+        'lastUpdateDate': FieldValue.serverTimestamp(),
+      };
+
+      await userDoc.set(data, SetOptions(merge: true));
+      print('✨ Abonnement gratuit activé avec succès');
+    } catch (e) {
+      print('❌ Erreur lors de l\'activation de l\'abonnement gratuit: $e');
+      throw e;
+    }
+  }
 }

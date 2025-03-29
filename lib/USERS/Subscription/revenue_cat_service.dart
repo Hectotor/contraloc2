@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:ContraLoc/widget/chargement.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class RevenueCatService {
   // Identifiants iOS
@@ -410,6 +411,12 @@ class RevenueCatService {
       print(' Achat réussi');
       print(' Entitlements actifs: ${customerInfo.entitlements.active.keys}');
       
+      // Mettre à jour Firestore avec les détails de l'abonnement
+      final userId = await Purchases.appUserID;
+      if (userId.isNotEmpty) {
+        await updateFirebaseFromRevenueCat(userId, customerInfo);
+      }
+      
       return customerInfo;
     } on PlatformException catch (e) {
       // Gestion spécifique de l'annulation par l'utilisateur
@@ -543,6 +550,72 @@ class RevenueCatService {
       );
 
       return null;
+    }
+  }
+
+  /// Ouvre les paramètres d'abonnement de l'appareil
+  static Future<void> openSubscriptionManagementScreen() async {
+    try {
+      // Récupérer les informations du client
+      final customerInfo = await Purchases.getCustomerInfo();
+      
+      // Vérifier si l'URL de gestion est disponible
+      final managementURL = customerInfo.managementURL;
+      
+      if (managementURL != null && managementURL.isNotEmpty) {
+        // Ouvrir l'URL de gestion dans le navigateur
+        if (await canLaunch(managementURL)) {
+          await launch(managementURL);
+          print('📊 URL de gestion des abonnements ouverte: $managementURL');
+        } else {
+          print('❌ Impossible d\'ouvrir l\'URL de gestion: $managementURL');
+        }
+      } else {
+        print('❌ Aucune URL de gestion disponible');
+      }
+    } catch (e) {
+      print('❌ Erreur lors de l\'ouverture des paramètres d\'abonnement: $e');
+    }
+  }
+
+  // Mettre à jour Firestore avec les informations de RevenueCat
+  static Future<void> updateFirebaseFromRevenueCat(String userId, CustomerInfo customerInfo) async {
+    try {
+      // Déterminer le type d'abonnement et le nombre de véhicules
+      String planType = 'free';
+      int numberOfCars = 1;
+      
+      // Vérifier si l'utilisateur a un abonnement Platinum
+      if (hasPlatinumAccess(customerInfo)) {
+        planType = isYearlyPlan(customerInfo) ? 'platinum-yearly_access' : 'platinum-monthly_access';
+        numberOfCars = 20;
+      }
+      // Sinon, vérifier si l'utilisateur a un abonnement Premium
+      else if (hasPremiumAccess(customerInfo)) {
+        planType = isYearlyPlan(customerInfo) ? 'premium-yearly_access' : 'premium-monthly_access';
+        numberOfCars = 10;
+      }
+      
+      // Mettre à jour Firestore
+      await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('authentification')
+        .doc(userId)
+        .set({
+          'subscriptionId': planType,
+          'isSubscriptionActive': true,
+          'numberOfCars': numberOfCars,
+          'stripeSubscriptionId': '',  // Pas de Stripe ID pour RevenueCat
+          'stripeStatus': 'active',    // On considère comme actif
+          'subscriptionSource': 'revenueCat',  // Identifier la source comme RevenueCat
+          'lastUpdateDate': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      
+      print(' Firebase mis à jour avec succès depuis RevenueCat');
+    } catch (e) {
+      print(' Erreur mise à jour Firebase depuis RevenueCat: $e');
+      throw e;
     }
   }
 }

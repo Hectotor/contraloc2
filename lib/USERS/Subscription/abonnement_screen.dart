@@ -48,16 +48,27 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final customerInfo =
-          await RevenueCatService.purchaseProduct(plan, isMonthly);
-
-      if (customerInfo != null) {
-        // Add this line to update Firestore
-        await SubscriptionService.updateSubscriptionStatus();
-
+      // Traiter l'offre gratuite directement sans passer par RevenueCat
+      if (plan == "Offre Gratuite") {
+        print('📊 Activation de l\'offre gratuite');
+        await SubscriptionService.activateFreeSubscription();
+        
         if (!mounted) return;
         await _checkCurrentEntitlement();
         _showActivationPopup();
+      } else {
+        // Pour les offres payantes, continuer à utiliser RevenueCat
+        final customerInfo =
+            await RevenueCatService.purchaseProduct(plan, isMonthly);
+
+        if (customerInfo != null) {
+          // Add this line to update Firestore
+          await SubscriptionService.updateSubscriptionStatus();
+
+          if (!mounted) return;
+          await _checkCurrentEntitlement();
+          _showActivationPopup();
+        }
       }
     } catch (e) {
       print('❌ Erreur achat: $e');
