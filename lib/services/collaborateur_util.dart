@@ -65,8 +65,7 @@ class CollaborateurUtil {
         };
       }
     } catch (e) {
-      print('❌ Erreur lors de la vérification du statut collaborateur: $e');
-      // En cas d'erreur, supposer que l'utilisateur n'est pas un collaborateur
+      print('❌ Erreur lors de la vérification du statut collaborateur: $e');      // En cas d'erreur, supposer que l'utilisateur n'est pas un collaborateur
       // mais renvoyer quand même son ID pour permettre l'accès à ses propres données
     }
     
@@ -566,11 +565,6 @@ class CollaborateurUtil {
       final userDoc = await _executeWithRetry(
         operation: () => _firestore.collection('users').doc(userId).get(),
       );
-      
-      if (!userDoc.exists) {
-        print("❌ Document utilisateur non trouvé");
-        return false;
-      }
       
       // Vérifier si le document contient des permissions
       final permissions = userDoc.data()?['permissions'];

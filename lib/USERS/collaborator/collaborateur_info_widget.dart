@@ -23,7 +23,7 @@ class CollaborateurInfoWidget extends StatefulWidget {
     this.showAdresse = true,
     this.titleStyle,
     this.infoStyle,
-    this.padding = const EdgeInsets.all(8.0),
+    this.padding = const EdgeInsets.all(16.0),
   }) : super(key: key);
 
   @override
@@ -97,12 +97,6 @@ class _CollaborateurInfoWidgetState extends State<CollaborateurInfoWidget> {
       );
     }
 
-    // Définir les styles par défaut si non fournis
-    final titleStyle = widget.titleStyle ?? 
-        const TextStyle(fontWeight: FontWeight.bold, fontSize: 16);
-    final infoStyle = widget.infoStyle ?? 
-        const TextStyle(fontSize: 14);
-
     return Container(
       padding: widget.padding,
       child: Column(
@@ -111,126 +105,104 @@ class _CollaborateurInfoWidgetState extends State<CollaborateurInfoWidget> {
         children: [
           if (widget.showTitle)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text(
-                'Mes informations personnelles',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Theme.of(context).primaryColor,
-                ),
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.person,
+                    color: const Color(0xFF1A237E),
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Mes informations personnelles',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: const Color(0xFF1A237E),
+                    ),
+                  ),
+                ],
               ),
             ),
-          if (widget.showNom && _collaborateurInfo['nom'] != null && _collaborateurInfo['nom'].isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4.0),
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Nom: ',
-                      style: titleStyle.copyWith(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                    TextSpan(
-                      text: _collaborateurInfo['nom'],
-                      style: infoStyle.copyWith(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                  ],
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
-              ),
+              ],
             ),
-          if (widget.showPrenom && _collaborateurInfo['prenom'] != null && _collaborateurInfo['prenom'].isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4.0),
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Prénom: ',
-                      style: titleStyle.copyWith(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                    TextSpan(
-                      text: _collaborateurInfo['prenom'],
-                      style: infoStyle.copyWith(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (widget.showNom && _collaborateurInfo['nom'] != null && _collaborateurInfo['nom'].isNotEmpty)
+                  _buildInfoRow(
+                    icon: Icons.badge,
+                    label: 'Nom',
+                    value: _collaborateurInfo['nom'],
+                  ),
+                if (widget.showPrenom && _collaborateurInfo['prenom'] != null && _collaborateurInfo['prenom'].isNotEmpty)
+                  _buildInfoRow(
+                    icon: Icons.person_outline,
+                    label: 'Prénom',
+                    value: _collaborateurInfo['prenom'],
+                  ),
+                if (widget.showEmail && _collaborateurInfo['email'] != null && _collaborateurInfo['email'].isNotEmpty)
+                  _buildInfoRow(
+                    icon: Icons.email_outlined,
+                    label: 'Email',
+                    value: _collaborateurInfo['email'],
+                  ),
+                if (widget.showTelephone && _collaborateurInfo['telephone'] != null && _collaborateurInfo['telephone'].isNotEmpty)
+                  _buildInfoRow(
+                    icon: Icons.phone_outlined,
+                    label: 'Téléphone',
+                    value: _collaborateurInfo['telephone'],
+                  ),
+                if (widget.showAdresse && _collaborateurInfo['adresse'] != null && _collaborateurInfo['adresse'].isNotEmpty)
+                  _buildInfoRow(
+                    icon: Icons.location_on_outlined,
+                    label: 'Adresse',
+                    value: _collaborateurInfo['adresse'],
+                  ),
+              ],
             ),
-          if (widget.showEmail && _collaborateurInfo['email'] != null && _collaborateurInfo['email'].isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4.0),
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Email: ',
-                      style: titleStyle.copyWith(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                    TextSpan(
-                      text: _collaborateurInfo['email'],
-                      style: infoStyle.copyWith(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({required IconData icon, required String label, required String value}) {
+    final titleStyle = widget.titleStyle ?? 
+        const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Color(0xFF424242));
+    final infoStyle = widget.infoStyle ?? 
+        const TextStyle(fontSize: 16, color: Color(0xFF1A237E));
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: const Color(0xFF1A237E)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: titleStyle),
+                const SizedBox(height: 4),
+                Text(value, style: infoStyle),
+              ],
             ),
-          if (widget.showTelephone && _collaborateurInfo['telephone'] != null && _collaborateurInfo['telephone'].isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4.0),
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Téléphone: ',
-                      style: titleStyle.copyWith(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                    TextSpan(
-                      text: _collaborateurInfo['telephone'],
-                      style: infoStyle.copyWith(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          if (widget.showAdresse && _collaborateurInfo['adresse'] != null && _collaborateurInfo['adresse'].isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4.0),
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Adresse: ',
-                      style: titleStyle.copyWith(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                    TextSpan(
-                      text: _collaborateurInfo['adresse'],
-                      style: infoStyle.copyWith(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          ),
         ],
       ),
     );

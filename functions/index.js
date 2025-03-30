@@ -25,3 +25,46 @@ exports.stripeWebhook = functions
     // Appeler le gestionnaire de webhook
     return stripeWebhookHandler(req, res);
   });
+
+// Fonction pour créer automatiquement un document utilisateur pour les collaborateurs
+exports.createCollaboratorUserDocument = functions.firestore
+  .onDocumentCreated('/users/{adminId}/collaborateurs/{collaboratorId}', async (event) => {
+    try {
+      const snapshot = event.data;
+      if (!snapshot) {
+        console.log('Pas de données disponibles');
+        return { success: false, error: 'Pas de données disponibles' };
+      }
+      
+      const collaboratorData = snapshot.data();
+      const { adminId, uid } = collaboratorData;
+      
+      // Vérifier si le document utilisateur existe déjà
+      const userDoc = await admin.firestore().collection('users').doc(uid).get();
+      
+      if (!userDoc.exists) {
+        console.log(`Création du document utilisateur pour le collaborateur ${uid}`);
+        
+        // Créer le document utilisateur pour le collaborateur
+        await admin.firestore().collection('users').doc(uid).set({
+          role: 'collaborateur',
+          adminId: adminId,
+          email: collaboratorData.email,
+          nom: collaboratorData.nom,
+          prenom: collaboratorData.prenom,
+          permissions: collaboratorData.permissions,
+          emailVerifie: false,
+          dateCreation: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        
+        console.log(`Document utilisateur créé avec succès pour le collaborateur ${uid}`);
+        return { success: true };
+      } else {
+        console.log(`Le document utilisateur pour le collaborateur ${uid} existe déjà`);
+        return { success: true, alreadyExists: true };
+      }
+    } catch (error) {
+      console.error(`Erreur lors de la création du document utilisateur: ${error}`);
+      return { success: false, error: error.message };
+    }
+  });

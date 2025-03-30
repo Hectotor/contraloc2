@@ -17,11 +17,9 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
   final TextEditingController _confirmPasswordController = TextEditingController();
   final TextEditingController _nomController = TextEditingController();
   final TextEditingController _prenomController = TextEditingController();
-  final TextEditingController _adminPasswordController = TextEditingController(); // Ajout du contrôleur pour le mot de passe de l'administrateur
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _obscureAdminPassword = true;
 
   // Fonction pour capitaliser la première lettre de chaque mot
   String capitalizeWords(String input) {
@@ -41,7 +39,6 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
       }
       final String adminId = adminUser.uid;
       final String adminEmail = adminUser.email ?? "";
-      String? adminPassword = _adminPasswordController.text;
 
       // Créer une instance temporaire de Firebase
       FirebaseApp tempApp = await Firebase.initializeApp(
@@ -70,7 +67,7 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
           // Reconnecter l'administrateur si nécessaire
           await FirebaseAuth.instance.signInWithEmailAndPassword(
             email: adminEmail,
-            password: adminPassword,
+            password: "",
           );
         }
 
@@ -399,68 +396,6 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
                       }
                       if (value != _passwordController.text) {
                         return 'Les mots de passe ne correspondent pas';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 30),
-                  
-                  // Titre de section
-                  const Text(
-                    "Confirmation administrateur",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF08004D),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    "Veuillez entrer votre mot de passe pour confirmer cette action",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF555555),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Champ Mot de passe admin
-                  TextFormField(
-                    controller: _adminPasswordController,
-                    obscureText: _obscureAdminPassword,
-                    decoration: InputDecoration(
-                      labelText: 'Votre mot de passe',
-                      prefixIcon: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFF08004D)),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureAdminPassword ? Icons.visibility_off : Icons.visibility,
-                          color: const Color(0xFF08004D),
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscureAdminPassword = !_obscureAdminPassword;
-                          });
-                        },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFF08004D), width: 2),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Veuillez entrer votre mot de passe';
                       }
                       return null;
                     },
