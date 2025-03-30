@@ -79,7 +79,7 @@ class StripeService {
         amount = 1999; // 19.99 EUR
       } else if (productId == 'prod_RiIXsD22K4xehY') { // Premium Annuel
         amount = 23999; // 239.99 EUR
-      } else if (productId == 'prod_S27nF635Z0AoFs') { // Platinum Mensuel
+      } else if (productId == 'prod_S27nF635Z0AoFs' || productId == 'prod_S26yXish2BNayF') { // Platinum Mensuel
         amount = 3999; // 39.99 EUR
       } else if (productId == 'prod_S26xbnrxhZn6TT') { // Platinum Annuel
         amount = 47999; // 479.99 EUR
@@ -146,49 +146,34 @@ class StripeService {
       final subscriptionData = await getSubscription(subscriptionId);
       if (subscriptionData == null) return;
       
-      // Vérifier si l'abonnement est actif
-      final String status = subscriptionData['status'];
-      final bool isActive = status == 'active' || status == 'trialing';
-      
-      // Déterminer le type d'abonnement et le nombre de véhicules
-      String planType = 'free';
-      int numberOfCars = 1;
+      // Déterminer le nombre de véhicules en fonction du produit
+      int stripeNumberOfCars = 1;
       
       // Récupérer l'ID du produit pour déterminer le plan
       final String productId = subscriptionData['items']['data'][0]['price']['product'];
       
-      // Mapper l'ID du produit au type de plan
-      if (productId == 'prod_RiIVqYAhJGzB0u') {
-        planType = 'premium-monthly_access';
-        numberOfCars = 10;
-      } else if (productId == 'prod_RiIXsD22K4xehY') {
-        planType = 'premium-yearly_access';
-        numberOfCars = 10;
-      } else if (productId == 'prod_S27nF635Z0AoFs') {
-        planType = 'platinum-monthly_access';
-        numberOfCars = 20;
-      } else if (productId == 'prod_S26xbnrxhZn6TT') {
-        planType = 'platinum-yearly_access';
-        numberOfCars = 20;
+      // Mapper l'ID du produit au nombre de véhicules
+      if (productId == 'prod_RiIVqYAhJGzB0u' || productId == 'prod_RiIXsD22K4xehY') {
+        // Premium (mensuel ou annuel)
+        stripeNumberOfCars = 10;
+      } else if (productId == 'prod_S26yXish2BNayF' || productId == 'prod_S26xbnrxhZn6TT') {
+        // Platinum (mensuel ou annuel)
+        stripeNumberOfCars = 20;
       }
       
-      // Mettre à jour Firestore
+      // Mettre à jour uniquement les champs stripeSubscriptionId et stripeNumberOfCars
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .collection('authentification')
           .doc(userId)
           .set({
-        'subscriptionId': planType,
-        'isSubscriptionActive': isActive,
-        'numberOfCars': numberOfCars,
         'stripeSubscriptionId': subscriptionId,
-        'stripeStatus': status,
-        'subscriptionSource': 'stripe',  // Identifier la source comme Stripe
+        'stripeNumberOfCars': stripeNumberOfCars,
         'lastUpdateDate': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       
-      print('✅ Firebase mis à jour avec succès depuis Stripe');
+      print('✅ Firebase mis à jour avec succès depuis Stripe (ID et nombre de véhicules uniquement)');
     } catch (e) {
       print('❌ Erreur mise à jour Firebase depuis Stripe: $e');
     }

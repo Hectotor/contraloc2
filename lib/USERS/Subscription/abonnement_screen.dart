@@ -57,23 +57,18 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         await _checkCurrentEntitlement();
         _showActivationPopup();
       } else {
-        // Pour les offres payantes, utiliser Stripe pour le paiement par carte bancaire
-        final isMonthly = !plan.toLowerCase().contains("annuel");
-        await RevenueCatService.purchaseProductWithStripe(
-          plan,
-          isMonthly,
-          context
-        );
+        // Pour les offres payantes, continuer à utiliser RevenueCat
+        final customerInfo =
+            await RevenueCatService.purchaseProduct(plan, isMonthly);
 
-        // Note: Le paiement se fait dans un navigateur externe
-        // La mise à jour du statut sera gérée par le webhook Stripe
-        
-        // Afficher un message indiquant que le paiement est en cours
-        if (!mounted) return;
-        _showMessage(
-          'Paiement en cours de traitement. Vous recevrez une confirmation par email.',
-          Colors.blue
-        );
+        if (customerInfo != null) {
+          // Add this line to update Firestore
+          await SubscriptionService.updateSubscriptionStatus();
+
+          if (!mounted) return;
+          await _checkCurrentEntitlement();
+          _showActivationPopup();
+        }
       }
     } catch (e) {
       print('❌ Erreur achat: $e');
