@@ -152,8 +152,10 @@ class PlanDisplayState extends State<PlanDisplay> {
         if (userDoc.exists && mounted) {
           String? cb_subscription = userDoc.data()?['cb_subscription'];
           String? subscription_id = userDoc.data()?['subscriptionId'];
+          String? stripeSubscriptionId = userDoc.data()?['stripeSubscriptionId'];
           print(' Firebase cb_subscription: $cb_subscription');
           print(' Firebase subscriptionId: $subscription_id');
+          print(' Firebase stripeSubscriptionId: $stripeSubscriptionId');
 
           setState(() {
             // Reset all plans to false first
@@ -165,16 +167,11 @@ class PlanDisplayState extends State<PlanDisplay> {
             activePlans["Offre Platinum Annuelle"] = false;
 
             // On prend l'abonnement le plus élevé entre les deux sources
-            bool isPremiumMonthly = cb_subscription == 'premium-monthly_access' || subscription_id == 'premium-monthly_access';
-            bool isPremiumYearly = cb_subscription == 'premium-yearly_access' || subscription_id == 'premium-yearly_access';
-            bool isPlatinumMonthly = cb_subscription == 'platinum-monthly_access' || subscription_id == 'platinum-monthly_access';
-            bool isPlatinumYearly = cb_subscription == 'platinum-yearly_access' || subscription_id == 'platinum-yearly_access';
-            
-            // Vérifier si l'utilisateur a un abonnement premium via cb_subscription
-            hasPremiumSubscription = (cb_subscription == 'premium-monthly_access' || 
-                                     cb_subscription == 'premium-yearly_access' ||
-                                     cb_subscription == 'platinum-monthly_access' ||
-                                     cb_subscription == 'platinum-yearly_access');
+            bool isPremiumMonthly = cb_subscription == 'premium-monthly_access' || stripeSubscriptionId == 'premium-monthly_access' || subscription_id == 'premium-monthly_access'; 
+            bool isPremiumYearly = cb_subscription == 'premium-yearly_access' || stripeSubscriptionId == 'premium-yearly_access' || subscription_id == 'premium-yearly_access';
+            bool isPlatinumMonthly = cb_subscription == 'platinum-monthly_access' || stripeSubscriptionId == 'platinum-monthly_access' || subscription_id == 'platinum-monthly_access';
+            bool isPlatinumYearly = cb_subscription == 'platinum-yearly_access' || stripeSubscriptionId == 'platinum-yearly_access' || subscription_id == 'platinum-yearly_access';
+
 
             // Set only the active plan to true
             if (isPlatinumMonthly) {

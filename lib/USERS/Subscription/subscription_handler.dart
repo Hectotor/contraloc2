@@ -23,8 +23,8 @@ class SubscriptionHandler {
         throw Exception('Utilisateur non connecté');
       }
       
-      // Si c'est une offre gratuite et que l'utilisateur a déjà un abonnement premium
-      if (plan.contains("Gratuite") && hasPremiumSubscription) {
+      // Si c'est une offre gratuite
+      if (plan.contains("Gratuite")) {
         // Vérifier le type d'abonnement et afficher le dialogue approprié
         bool shouldOpenManagementScreen = await _showSubscriptionDialog(context);
         
@@ -200,28 +200,6 @@ class SubscriptionHandler {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                if (hasRevenueCatSubscription) const SizedBox(height: 16),
-                if (hasRevenueCatSubscription)
-                  ElevatedButton(
-                    onPressed: () {
-                      _launchStoreSubscriptionSettings();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF08004D),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-                    ),
-                    child: const Text(
-                      'Gérer mon abonnement',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
                 if (hasRevenueCatSubscription) const SizedBox(height: 24),
                 if (hasRevenueCatSubscription)
                   Row(
@@ -254,6 +232,7 @@ class SubscriptionHandler {
                         child: ElevatedButton(
                           onPressed: () {
                             result = true;
+                            _launchStoreSubscriptionSettings();
                             Navigator.of(context).pop();
                           },
                           style: ElevatedButton.styleFrom(
