@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'revenue_cat_service.dart';
-import '../question_user.dart';
 import 'plan_display.dart';
 import 'stripe_payment_handler.dart';
 
@@ -156,34 +155,6 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
                         },
                       ),
                     ],
-                  ),
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 20.0),
-                  child: TextButton.icon(
-                    onPressed: () {
-                      if (!mounted) return;
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const QuestionUser()),
-                      );
-                    },
-                    icon: const Icon(
-                      Icons.help_outline,
-                      color: Color(0xFF08004D),
-                      size: 24,
-                    ),
-                    label: const Text(
-                      "Des questions ? Contactez-nous",
-                      style: TextStyle(
-                        color: Color(0xFF08004D),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
                   ),
                 ),
               ],

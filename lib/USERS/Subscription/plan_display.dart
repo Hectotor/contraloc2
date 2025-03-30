@@ -1,7 +1,7 @@
 import 'package:ContraLoc/USERS/Subscription/subscription_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-
+import 'package:ContraLoc/USERS/question_user.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -57,6 +57,19 @@ class PlanData {
         {"text": "Ajouter des collaborateurs", "isAvailable": true},
       ],
     ),
+    // Nouvel élément pour contacter le support
+    PlanData(
+      title: "Besoin de plus de véhicules ?",
+      price: "Contactez-nous",
+      features: [
+        {"text": "Offres personnalisées", "isAvailable": true},
+        {"text": "Accompagnement dédié", "isAvailable": true},
+        {"text": "Formation incluse", "isAvailable": true},
+        {"text": "Support prioritaire", "isAvailable": true},
+        {"text": "Fonctionnalités sur mesure", "isAvailable": true},
+        {"text": "Intégration avec vos outils", "isAvailable": true},
+      ],
+    ),
   ];
 
   static List<PlanData> yearlyPlans = [
@@ -97,6 +110,19 @@ class PlanData {
         {"text": "Prise de photos", "isAvailable": true},
         {"text": "Modification des conditions du contrat", "isAvailable": true},
         {"text": "Ajouter des collaborateurs", "isAvailable": true},
+      ],
+    ),
+    // Nouvel élément pour contacter le support
+    PlanData(
+      title: "Besoin de plus de véhicules ?",
+      price: "Contactez-nous",
+      features: [
+        {"text": "Offres personnalisées", "isAvailable": true},
+        {"text": "Accompagnement dédié", "isAvailable": true},
+        {"text": "Formation incluse", "isAvailable": true},
+        {"text": "Support prioritaire", "isAvailable": true},
+        {"text": "Fonctionnalités sur mesure", "isAvailable": true},
+        {"text": "Intégration avec vos outils", "isAvailable": true},
       ],
     ),
   ];
@@ -339,10 +365,18 @@ class PlanDisplayState extends State<PlanDisplay> {
     );
   }
 
-
-
   // Modifier la méthode _handleSubscription pour utiliser SubscriptionHandler
   Future<void> _handleSubscription(String plan) async {
+    // Si l'utilisateur clique sur "Besoin de plus de véhicules ?", rediriger vers la page de questions
+    if (plan == "Besoin de plus de véhicules ?") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const QuestionUser()),
+      );
+      return;
+    }
+    
+    // Sinon, procéder avec le processus d'abonnement normal
     await SubscriptionHandler.handleSubscription(
       context: context,
       plan: plan,
