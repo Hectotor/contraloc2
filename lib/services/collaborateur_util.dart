@@ -383,17 +383,16 @@ class CollaborateurUtil {
     }
     
     final subscriptionId = userData['subscriptionId'] ?? 'free';
-    final cb_subscription = userData['cb_subscription'] ?? 'free';
-    final stripePlanType = userData['stripePlanType'];
+    final cbSubscription = userData['cb_subscription'] ?? 'free';
+    final stripePlanType = userData['stripePlanType'] ?? 'free';
     
-    // L'utilisateur est premium si l'un des deux abonnements est premium
-    return subscriptionId == 'premium-monthly_access' ||
-        subscriptionId == 'premium-yearly_access' ||
-        cb_subscription == 'premium-monthly_access' ||
-        cb_subscription == 'premium-yearly_access' ||
-        stripePlanType == 'premium-monthly_access' ||
-        stripePlanType == 'premium-yearly_access';
-
+    // Vérifier si l'un des abonnements contient "monthly_access" ou "yearly_access"
+    return subscriptionId.toString().contains('monthly_access') || 
+           subscriptionId.toString().contains('yearly_access') ||
+           cbSubscription.toString().contains('monthly_access') ||
+           cbSubscription.toString().contains('yearly_access') ||
+           stripePlanType.toString().contains('monthly_access') ||
+           stripePlanType.toString().contains('yearly_access');
   }
 
   /// Récupère les contrats de l'administrateur avec un statut spécifique
