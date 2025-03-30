@@ -36,8 +36,34 @@ class SubscriptionHandler {
         return;
       }
       
-      // Pour les autres cas (abonnements payants ou offre gratuite sans abonnement actif)
-      await onSubscribe(plan);
+      // Pour les abonnements payants, afficher le dialogue de paiement
+      if (!plan.contains("Gratuite")) {
+        // Afficher le dialogue de paiement
+        final paymentMethod = await showDialog<String>(
+          context: context,
+          builder: (BuildContext context) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: buildPaymentDialog(context, plan),
+            );
+          },
+        );
+        
+        // Si l'utilisateur a choisi une méthode de paiement
+        if (paymentMethod == 'card') {
+          // Traiter le paiement par carte bancaire
+          await onSubscribe(plan);
+        } else {
+          // L'utilisateur a annulé le paiement
+          setProcessingState(false);
+          return;
+        }
+      } else {
+        // Pour l'offre gratuite sans abonnement actif
+        await onSubscribe(plan);
+      }
       
     } catch (e) {
       // Afficher l'erreur
@@ -337,7 +363,41 @@ class SubscriptionHandler {
               fontWeight: FontWeight.w500,
             ),
           ),
-          // Autres éléments du dialogue de paiement
+          const SizedBox(height: 24),
+          // Bouton de paiement par carte bancaire
+          ElevatedButton(
+            onPressed: () {
+              // Fermer le dialogue de paiement
+              Navigator.of(context).pop('card');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF08004D),
+              minimumSize: const Size(double.infinity, 55),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.credit_card, color: Colors.white),
+                SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    "Paiement par carte bancaire",
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
