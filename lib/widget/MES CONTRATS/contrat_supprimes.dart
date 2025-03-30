@@ -293,38 +293,99 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
                                   showDialog(
                                     context: context,
                                     builder: (BuildContext context) {
-                                      return AlertDialog(
-                                        title: Text('Restaurer le contrat'),
-                                        content: Text('Souhaitez-vous restaurer ce contrat ?'),
+                                      return Dialog(
+                                        backgroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(15),
+                                          borderRadius: BorderRadius.circular(20),
                                         ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () {
-                                              Navigator.of(context).pop(); // Fermer le popup
-                                            },
-                                            child: Text('Annuler'),
-                                            style: TextButton.styleFrom(
-                                              foregroundColor: Colors.grey[700],
-                                            ),
-                                          ),
-                                          TextButton(
-                                            onPressed: () {
-                                              // Restaurer le contrat
-                                              _restoreContract(contrat.id);
-                                              Navigator.of(context).pop(); // Fermer le popup
-                                            },
-                                            child: Text('Restaurer'),
-                                            style: TextButton.styleFrom(
-                                              foregroundColor: Color(0xFF08004D),
-                                              backgroundColor: Colors.grey[200],
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(8),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(24),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.all(16),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue[50],
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Icon(
+                                                  Icons.restore_rounded,
+                                                  color: Colors.blue[400],
+                                                  size: 48,
+                                                ),
                                               ),
-                                            ),
+                                              const SizedBox(height: 24),
+                                              const Text(
+                                                'Restaurer le contrat ?',
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF08004D),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 16),
+                                              const Text(
+                                                'Le contrat sera à nouveau disponible dans vos contrats actifs.',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 24),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: TextButton(
+                                                      onPressed: () => Navigator.pop(context),
+                                                      style: TextButton.styleFrom(
+                                                        backgroundColor: Colors.grey[100],
+                                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius: BorderRadius.circular(12),
+                                                        ),
+                                                      ),
+                                                      child: const Text(
+                                                        'Annuler',
+                                                        style: TextStyle(
+                                                          fontSize: 16,
+                                                          color: Color(0xFF08004D),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 16),
+                                                  Expanded(
+                                                    child: ElevatedButton(
+                                                      onPressed: () {
+                                                        // Restaurer le contrat
+                                                        _restoreContract(contrat.id);
+                                                        Navigator.pop(context);
+                                                      },
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor: Color(0xFF08004D),
+                                                        foregroundColor: Colors.white,
+                                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                                        elevation: 0,
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius: BorderRadius.circular(12),
+                                                        ),
+                                                      ),
+                                                      child: const Text(
+                                                        'Restaurer',
+                                                        style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
                                           ),
-                                        ],
+                                        ),
                                       );
                                     },
                                   );

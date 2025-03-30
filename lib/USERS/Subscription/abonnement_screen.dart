@@ -14,7 +14,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
   bool isMonthly = true;
   bool _isLoading = false;
   String _currentEntitlement = '';
-  bool _isTestMode = true; // Variable pour le mode test
+  bool _isTestMode = false; // Variable pour le mode test
 
   @override
   void initState() {
@@ -130,6 +130,8 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
                 ),
 
                 // Bouton pour basculer entre mode test et production
+                // Commenté pour cacher le bouton de mode test
+                /*
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8.0),
                   child: Row(
@@ -157,6 +159,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
                     ],
                   ),
                 ),
+                */
               ],
             ),
             if (_isLoading)
