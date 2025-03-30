@@ -80,6 +80,9 @@ exports.stripeWebhook = async (req, res) => {
         case 'invoice.payment_failed':
           await handleInvoicePaymentFailed(event.data.object, stripeClient);
           break;
+        case 'customer.deleted':
+          await handleCustomerDeleted(event.data.object, stripeClient);
+          break;
         default:
           console.log(`Événement non géré: ${event.type}`);
       }
@@ -195,5 +198,61 @@ async function handleInvoicePaymentFailed(invoice, stripeClient) {
     // C'est un échec de paiement d'abonnement
     const subscription = await stripeClient.subscriptions.retrieve(invoice.subscription);
     await handleSubscriptionChange(subscription, stripeClient);
+  }
+}
+
+// Gérer la suppression d'un client
+async function handleCustomerDeleted(customer, stripeClient) {
+  try {
+    console.log(`🔍 Client supprimé: ${customer.id}`);
+    
+    // Essayer de récupérer l'ID Firebase depuis les métadonnées du client
+    let userId = customer.metadata.firebaseUserId;
+    
+    // Si l'ID n'est pas dans les métadonnées, utiliser l'email ou l'ID client comme fallback
+    if (!userId) {
+      userId = customer.email || customer.id;
+      console.log(`🔍 Aucun ID Firebase trouvé dans les métadonnées, utilisation de fallback: ${userId}`);
+      
+      // Essayer de trouver l'utilisateur par email dans Firebase
+      if (customer.email) {
+        try {
+          console.log(`🔍 Recherche de l'utilisateur par email: ${customer.email}`);
+          const userRecord = await admin.auth().getUserByEmail(customer.email);
+          if (userRecord) {
+            userId = userRecord.uid;
+            console.log(`🔍 Utilisateur trouvé par email: ${userId}`);
+          }
+        } catch (error) {
+          console.log(`🔍 Utilisateur non trouvé par email: ${error.message}`);
+        }
+      }
+    }
+    
+    if (userId) {
+      console.log(`📝 Réinitialisation de l'abonnement Stripe pour l'utilisateur: ${userId}`);
+      
+      // Mettre à jour Firestore pour réinitialiser l'abonnement
+      await admin.firestore()
+        .collection('users')
+        .doc(userId)
+        .collection('authentification')
+        .doc(userId)
+        .set({
+          'stripePlanType': 'free',
+          'isStripeSubscriptionActive': false,
+          'stripeNumberOfCars': 1,
+          'stripeSubscriptionId': null,
+          'stripeStatus': 'canceled',
+          'lastStripeUpdateDate': admin.firestore.FieldValue.serverTimestamp(),
+        }, {merge: true});
+      
+      console.log(`📝 Firebase mis à jour avec succès pour l'utilisateur: ${userId}`);
+    } else {
+      console.error(`🚫 Impossible de trouver l'ID Firebase pour le client supprimé: ${customer.id}`);
+    }
+  } catch (error) {
+    console.error(`Erreur lors de la gestion de la suppression du client: ${error.message}`);
+    throw error;
   }
 }
