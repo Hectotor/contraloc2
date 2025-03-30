@@ -13,8 +13,15 @@ const stripeWebhookHandler = require('./stripe_webhook').stripeWebhook;
 exports.stripeWebhook = functions
   .https
   .onRequest({
-    invoker: 'public'  // Permet les appels non authentifiés
+    invoker: 'public',  // Permet les appels non authentifiés
+    rawBody: true       // Expose le corps brut de la requête pour la vérification de signature Stripe
   }, async (req, res) => {
+    // Ajouter un log pour vérifier si rawBody est disponible
+    console.log(`rawBody disponible: ${req.rawBody ? 'Oui' : 'Non'}`);
+    if (req.rawBody) {
+      console.log(`Longueur de rawBody: ${req.rawBody.length}`);
+    }
+    
     // Appeler le gestionnaire de webhook
     return stripeWebhookHandler(req, res);
   });
