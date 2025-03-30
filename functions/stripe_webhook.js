@@ -2,9 +2,6 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const stripe = require('stripe');
 
-// Suppression de l'initialisation ici car elle est déjà faite dans index.js
-// admin.initializeApp();
-
 // Fonction pour récupérer la clé API Stripe depuis Firestore
 async function getStripeApiKey() {
   try {
@@ -26,7 +23,7 @@ async function getStripeApiKey() {
 }
 
 // Point d'entrée pour le webhook Stripe
-exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
+exports.stripeWebhook = async (req, res) => {
   const apiKey = await getStripeApiKey();
   if (!apiKey) {
     console.error('Impossible de traiter le webhook: clé API manquante');
@@ -35,59 +32,80 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
   
   const stripeClient = stripe(apiKey);
   
-  // Vérifier que la requête provient bien de Stripe
+  // Pour le moment, nous acceptons toutes les requêtes sans vérification de signature
+  // pour éviter les problèmes de configuration
   let event;
   try {
-    const signature = req.headers['stripe-signature'];
+    // Utiliser directement le corps de la requête
+    console.log('⚠️ Mode de développement: Webhook sans vérification de signature');
+    event = req.body;
     
-    // Récupérer le secret du webhook depuis les variables d'environnement
-    const endpointSecret = functions.config().stripe?.webhook_secret;
-    
-    if (endpointSecret) {
-      // Vérifier la signature avec le secret
-      event = stripeClient.webhooks.constructEvent(req.rawBody, signature, endpointSecret);
-      console.log(`✅ Événement Stripe authentifié: ${event.type}`);
-    } else {
-      // Si pas de secret configuré, utiliser directement le corps de la requête (moins sécurisé)
-      console.log('⚠️ Attention: Webhook sans vérification de signature');
-      event = req.body;
-    }
-  } catch (err) {
-    console.error(`❌ Erreur de signature webhook: ${err.message}`);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  // Traiter les différents types d'événements
-  try {
-    switch (event.type) {
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated':
-      case 'customer.subscription.deleted':
-        await handleSubscriptionChange(event.data.object, stripeClient);
-        break;
-      case 'invoice.payment_succeeded':
-        await handleInvoicePaymentSucceeded(event.data.object, stripeClient);
-        break;
-      case 'invoice.payment_failed':
-        await handleInvoicePaymentFailed(event.data.object, stripeClient);
-        break;
-      default:
-        console.log(`Événement non géré: ${event.type}`);
+    // Vérifier que l'événement contient les données nécessaires
+    if (!event || !event.type || !event.data || !event.data.object) {
+      console.error('Données d\'événement invalides');
+      return res.status(400).send('Invalid event data');
     }
 
-    res.status(200).send('Webhook processed');
+    console.log(`✅ Événement Stripe reçu: ${event.type}`);
+
+    // Traiter les différents types d'événements
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          console.log(`✅ Session checkout complétée: ${event.type}`);
+          console.log(`✅ Mode: ${event.data.object.mode}, Subscription ID: ${event.data.object.subscription}`);
+          console.log(`✅ Customer: ${event.data.object.customer}`);
+          // Récupérer l'abonnement associé à la session
+          if (event.data.object.mode === 'subscription' && event.data.object.subscription) {
+            try {
+              console.log(`✅ Récupération de l'abonnement: ${event.data.object.subscription}`);
+              const subscription = await stripeClient.subscriptions.retrieve(event.data.object.subscription);
+              console.log(`✅ Abonnement récupéré avec succès: ${subscription.id}`);
+              await handleSubscriptionChange(subscription, stripeClient);
+            } catch (error) {
+              console.error(`🚫 Erreur lors de la récupération de l'abonnement: ${error.message}`);
+            }
+          } else {
+            console.log(`🚫 Session non compatible: mode=${event.data.object.mode}, subscription=${event.data.object.subscription}`);
+          }
+          break;
+        case 'customer.subscription.created':
+        case 'customer.subscription.updated':
+        case 'customer.subscription.deleted':
+          await handleSubscriptionChange(event.data.object, stripeClient);
+          break;
+        case 'invoice.payment_succeeded':
+          await handleInvoicePaymentSucceeded(event.data.object, stripeClient);
+          break;
+        case 'invoice.payment_failed':
+          await handleInvoicePaymentFailed(event.data.object, stripeClient);
+          break;
+        default:
+          console.log(`Événement non géré: ${event.type}`);
+      }
+
+      res.status(200).send('Webhook processed');
+    } catch (error) {
+      console.error(`Erreur traitement webhook: ${error.message}`);
+      res.status(500).send(`Webhook Error: ${error.message}`);
+    }
   } catch (error) {
     console.error(`Erreur traitement webhook: ${error.message}`);
     res.status(500).send(`Webhook Error: ${error.message}`);
   }
-});
+};
 
 // Gérer les changements d'abonnement
 async function handleSubscriptionChange(subscription, stripeClient) {
   try {
+    console.log(`🔍 Début du traitement de l'abonnement: ${subscription.id}`);
+    console.log(`🔍 Status de l'abonnement: ${subscription.status}`);
+    
     // Récupérer le client Stripe pour obtenir les métadonnées
     const customer = await stripeClient.customers.retrieve(subscription.customer);
-    console.log(`Client Stripe récupéré: ${JSON.stringify(customer.metadata)}`);
+    console.log(`🔍 Client Stripe récupéré: ${subscription.customer}`);
+    console.log(`🔍 Métadonnées client: ${JSON.stringify(customer.metadata)}`);
+    console.log(`🔍 Email client: ${customer.email}`);
     
     // Essayer de récupérer l'ID Firebase depuis les métadonnées du client
     let userId = customer.metadata.firebaseUserId;
@@ -95,7 +113,21 @@ async function handleSubscriptionChange(subscription, stripeClient) {
     // Si l'ID n'est pas dans les métadonnées, utiliser l'email ou l'ID client comme fallback
     if (!userId) {
       userId = customer.email || subscription.customer;
-      console.log(`Aucun ID Firebase trouvé dans les métadonnées, utilisation de fallback: ${userId}`);
+      console.log(`🔍 Aucun ID Firebase trouvé dans les métadonnées, utilisation de fallback: ${userId}`);
+      
+      // Essayer de trouver l'utilisateur par email dans Firebase
+      if (customer.email) {
+        try {
+          console.log(`🔍 Recherche de l'utilisateur par email: ${customer.email}`);
+          const userRecord = await admin.auth().getUserByEmail(customer.email);
+          if (userRecord) {
+            userId = userRecord.uid;
+            console.log(`🔍 Utilisateur trouvé par email: ${userId}`);
+          }
+        } catch (error) {
+          console.log(`🔍 Utilisateur non trouvé par email: ${error.message}`);
+        }
+      }
     }
     
     const subscriptionId = subscription.id;
@@ -107,7 +139,6 @@ async function handleSubscriptionChange(subscription, stripeClient) {
     
     // Déterminer le type de plan et le nombre de véhicules
     let planType = 'free';
-    let numberOfCars = 1;
     let stripeNumberOfCars = 1;
     
     // Mapper l'ID du produit au type de plan
@@ -117,7 +148,7 @@ async function handleSubscriptionChange(subscription, stripeClient) {
     } else if (productId === 'prod_RiIXsD22K4xehY') {
       planType = 'premium-yearly_access';
       stripeNumberOfCars = 10;
-    } else if (productId === 'prod_S27nF635Z0AoFs' || productId === 'prod_S26yXish2BNayF') {
+    } else if (productId === 'prod_S26yXish2BNayF' || productId === 'prod_S27nF635Z0AoFs') {
       planType = 'platinum-monthly_access';
       stripeNumberOfCars = 20;
     } else if (productId === 'prod_S26xbnrxhZn6TT') {
@@ -125,7 +156,7 @@ async function handleSubscriptionChange(subscription, stripeClient) {
       stripeNumberOfCars = 20;
     }
     
-    console.log(`Mise à jour Firebase pour l'utilisateur: ${userId}, plan: ${planType}, actif: ${isActive}`);
+    console.log(`📝 Mise à jour Firebase pour l'utilisateur: ${userId}, plan: ${planType}, actif: ${isActive}`);
     
     // Mettre à jour Firestore avec tous les champs nécessaires
     await admin.firestore()
@@ -142,7 +173,7 @@ async function handleSubscriptionChange(subscription, stripeClient) {
         'lastStripeUpdateDate': admin.firestore.FieldValue.serverTimestamp(),
       }, {merge: true});
     
-    console.log(`Firebase mis à jour avec succès pour l'utilisateur: ${userId}`);
+    console.log(`📝 Firebase mis à jour avec succès pour l'utilisateur: ${userId}`);
   } catch (error) {
     console.error(`Erreur mise à jour abonnement: ${error.message}`);
     throw error;

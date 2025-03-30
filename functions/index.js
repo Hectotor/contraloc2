@@ -7,7 +7,14 @@ if (admin.apps.length === 0) {
 }
 
 // Importer la fonction stripeWebhook depuis stripe_webhook.js
-const stripeWebhook = require('./stripe_webhook');
+const stripeWebhookHandler = require('./stripe_webhook').stripeWebhook;
 
 // Exporter la fonction stripeWebhook avec l'option pour permettre les requêtes non authentifiées
-exports.stripeWebhook = functions.https.onRequest(stripeWebhook);
+exports.stripeWebhook = functions
+  .https
+  .onRequest({
+    invoker: 'public'  // Permet les appels non authentifiés
+  }, async (req, res) => {
+    // Appeler le gestionnaire de webhook
+    return stripeWebhookHandler(req, res);
+  });
