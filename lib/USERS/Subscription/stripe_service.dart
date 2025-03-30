@@ -75,17 +75,28 @@ class StripeService {
     try {
       // Déterminer le montant en fonction du type d'abonnement
       int amount;
+      String interval = 'month'; // Par défaut mensuel
+      
       if (productId == 'prod_RiIVqYAhJGzB0u') { // Premium Mensuel
         amount = 1999; // 19.99 EUR
+        interval = 'month';
       } else if (productId == 'prod_RiIXsD22K4xehY') { // Premium Annuel
         amount = 23999; // 239.99 EUR
+        interval = 'year';
       } else if (productId == 'prod_S27nF635Z0AoFs' || productId == 'prod_S26yXish2BNayF') { // Platinum Mensuel
         amount = 3999; // 39.99 EUR
+        interval = 'month';
       } else if (productId == 'prod_S26xbnrxhZn6TT') { // Platinum Annuel
         amount = 47999; // 479.99 EUR
+        interval = 'year';
       } else {
         amount = 1999; // Montant par défaut
+        interval = 'month';
       }
+      
+      print('🔄 Création session Stripe: customerId=$customerId, productId=$productId');
+      print('🔄 Montant: $amount EUR, Intervalle: $interval');
+      print('🔄 URLs: success=$successUrl, cancel=$cancelUrl');
       
       final headers = await _getHeaders();
       final response = await http.post(
@@ -98,7 +109,7 @@ class StripeService {
           'mode': 'subscription',
           'line_items[0][price_data][product]': productId,
           'line_items[0][price_data][unit_amount]': amount.toString(),
-          'line_items[0][price_data][recurring][interval]': productId.contains('Annuelle') ? 'year' : 'month',
+          'line_items[0][price_data][recurring][interval]': interval,
           'line_items[0][price_data][currency]': 'eur',
           'line_items[0][quantity]': '1',
         },
@@ -106,7 +117,9 @@ class StripeService {
       
       final jsonResponse = jsonDecode(response.body);
       if (response.statusCode == 200) {
-        return jsonResponse['url']; // URL de paiement Stripe
+        final url = jsonResponse['url'] as String?;
+        print('✅ URL de session Stripe créée: $url');
+        return url; // URL de paiement Stripe
       } else {
         print('❌ Erreur création session: ${jsonResponse['error']['message']}');
         return null;

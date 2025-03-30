@@ -22,6 +22,7 @@ class StripePaymentHandler {
   }) async {
     try {
       print('🔄 Démarrage du processus de paiement Stripe...');
+      print('📋 Détails: userId=$userId, productId=$productId, plan=$plan, isMonthly=$isMonthly');
       
       // Afficher un dialogue de chargement
       showDialog(
@@ -48,9 +49,11 @@ class StripePaymentHandler {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         print('❌ Utilisateur non connecté');
-        Navigator.of(context).pop(); // Fermer le dialogue de chargement
+        if (context.mounted) Navigator.of(context).pop(); // Fermer le dialogue de chargement
         throw Exception('Utilisateur non connecté');
       }
+      
+      print('👤 Utilisateur: ${user.email}, ${user.displayName}');
       
       // Créer un client Stripe
       print('🔄 Récupération du client Stripe...');
@@ -61,7 +64,7 @@ class StripePaymentHandler {
       
       if (customerId == null) {
         print('❌ Impossible de créer un client Stripe');
-        Navigator.of(context).pop(); // Fermer le dialogue de chargement
+        if (context.mounted) Navigator.of(context).pop(); // Fermer le dialogue de chargement
         throw Exception('Impossible de créer un client Stripe');
       }
       
@@ -81,14 +84,14 @@ class StripePaymentHandler {
         cancelUrl,
       );
 
-      if (sessionUrl == null) {
-        print('❌ Session de paiement null');
-        Navigator.of(context).pop(); // Fermer le dialogue de chargement
+      if (sessionUrl == null || sessionUrl.isEmpty) {
+        print('❌ Session de paiement null ou vide');
+        if (context.mounted) Navigator.of(context).pop(); // Fermer le dialogue de chargement
         throw Exception('Impossible de créer la session de paiement');
       }
 
       // Fermer le dialogue de chargement
-      Navigator.of(context).pop();
+      if (context.mounted) Navigator.of(context).pop();
 
       print('✔️ URL de paiement obtenue: $sessionUrl');
       // Ouvrir l'URL de paiement dans le navigateur en utilisant notre classe spécialisée
@@ -100,11 +103,29 @@ class StripePaymentHandler {
         },
         onError: (errorMsg) {
           print('❌ Erreur lors de l\'ouverture de l\'URL Stripe: $errorMsg');
+          if (context.mounted) {
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: const Text('Erreur de paiement'),
+                  content: Text('Erreur lors de l\'ouverture de la page de paiement: $errorMsg'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                );
+              },
+            );
+          }
           throw Exception(errorMsg);
         },
       );
       
       if (!result) {
+        print('❌ Échec de l\'ouverture du lien de paiement');
         throw Exception('Échec de l\'ouverture du lien de paiement');
       }
 
@@ -115,7 +136,29 @@ class StripePaymentHandler {
       print('❌ Erreur lors du paiement par carte bancaire: $e');
       // Fermer le dialogue de chargement s'il est ouvert
       if (context.mounted) {
-        Navigator.of(context).pop();
+        // Vérifier si le dialogue est affiché avant de le fermer
+        try {
+          Navigator.of(context).pop();
+        } catch (dialogError) {
+          print('Note: Le dialogue était déjà fermé');
+        }
+        
+        // Afficher un dialogue d'erreur
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Erreur de paiement'),
+              content: Text('Une erreur est survenue lors du processus de paiement: $e'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
       }
       rethrow;
     }

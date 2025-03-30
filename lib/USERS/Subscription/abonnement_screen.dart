@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'revenue_cat_service.dart';
 import '../question_user.dart';
 import 'plan_display.dart';
+import 'stripe_payment_handler.dart';
 
 class AbonnementScreen extends StatefulWidget {
   const AbonnementScreen({Key? key}) : super(key: key);
@@ -12,7 +14,8 @@ class AbonnementScreen extends StatefulWidget {
 class _AbonnementScreenState extends State<AbonnementScreen> {
   bool isMonthly = true;
   bool _isLoading = false;
-  String _currentEntitlement = 'free';
+  String _currentEntitlement = '';
+  bool _isTestMode = true; // Variable pour le mode test
 
   @override
   void initState() {
@@ -67,10 +70,92 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
                   child: PlanDisplay(
                     isMonthly: isMonthly,
                     currentEntitlement: _currentEntitlement,
-                    onSubscribe: (plan) {}, 
+                    onSubscribe: (plan) async {
+                      // Déterminer l'ID du produit Stripe en fonction du plan et de la période
+                      String productId;
+                      if (plan.contains('Premium')) {
+                        if (isMonthly) {
+                          productId = 'prod_RiIVqYAhJGzB0u'; // Premium Mensuel
+                        } else {
+                          productId = 'prod_RiIXsD22K4xehY'; // Premium Annuel
+                        }
+                      } else if (plan.contains('Platinum')) {
+                        if (isMonthly) {
+                          // Utiliser l'ID de test ou de production selon l'environnement
+                          // TODO: Ajouter une variable d'environnement pour déterminer si on est en test ou en production
+                          bool isTestEnvironment = _isTestMode; // Mettre à false en production
+                          
+                          if (isTestEnvironment) {
+                            productId = 'prod_S27nF635Z0AoFs'; // Platinum Mensuel (test)
+                          } else {
+                            productId = 'prod_S26yXish2BNayF'; // Platinum Mensuel (production)
+                          }
+                        } else {
+                          productId = 'prod_S26xbnrxhZn6TT'; // Platinum Annuel
+                        }
+                      } else {
+                        // Plan gratuit ou autre
+                        return;
+                      }
+                      
+                      print('🔄 Lancement du processus de paiement Stripe pour le plan: $plan');
+                      print('🔄 ID du produit: $productId, Mensuel: $isMonthly');
+                      
+                      try {
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (user == null) {
+                          throw Exception('Utilisateur non connecté');
+                        }
+                        
+                        // Appeler la méthode de paiement Stripe
+                        await StripePaymentHandler.purchaseProductWithStripe(
+                          context: context,
+                          userId: user.uid,
+                          productId: productId,
+                          plan: plan,
+                          isMonthly: isMonthly,
+                        );
+                      } catch (e) {
+                        print('❌ Erreur lors du processus de paiement: $e');
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Erreur: $e')),
+                          );
+                        }
+                      }
+                    }, 
                     onPageChanged: (index) {
                       // Gérer le changement de page si nécessaire
                     },
+                  ),
+                ),
+
+                // Bouton pour basculer entre mode test et production
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Mode: ${_isTestMode ? "Test" : "Production"}', 
+                           style: TextStyle(color: _isTestMode ? Colors.orange : Colors.green)),
+                      Switch(
+                        value: _isTestMode,
+                        activeColor: Colors.orange,
+                        inactiveThumbColor: Colors.green,
+                        onChanged: (value) {
+                          setState(() {
+                            _isTestMode = value;
+                          });
+                          // Afficher un message pour confirmer le changement de mode
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Mode ${_isTestMode ? "Test" : "Production"} activé'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
 
