@@ -395,6 +395,49 @@ class CollaborateurUtil {
            stripePlanType.toString().contains('yearly_access');
   }
 
+  /// Vérifie si l'utilisateur (ou son administrateur) a un abonnement platinum
+  static Future<bool> isPlatinumUser() async {
+    final userData = await getAuthData();
+    
+    if (userData.isEmpty) {
+      // Vérifier si c'est un collaborateur sans accès aux données d'authentification
+      final status = await checkCollaborateurStatus();
+      if (status['isCollaborateur'] == true) {
+        // Pour les collaborateurs, on vérifie si l'administrateur a un compte platinum
+        final adminId = status['adminId'];
+        if (adminId != null) {
+          final adminData = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .doc(adminId)
+              .get();
+          
+          if (adminData.exists && adminData.data() != null) {
+            final adminSubscriptionId = adminData.data()!['subscriptionId'] ?? 'free';
+            final adminCbSubscription = adminData.data()!['cb_subscription'] ?? 'free';
+            final adminStripePlanType = adminData.data()!['stripePlanType'] ?? 'free';
+            
+            return adminSubscriptionId.toString().contains('platinum') || 
+                   adminCbSubscription.toString().contains('platinum') || 
+                   adminStripePlanType.toString().contains('platinum');
+          }
+        }
+        return false;
+      }
+      return false;
+    }
+    
+    final subscriptionId = userData['subscriptionId'] ?? 'free';
+    final cbSubscription = userData['cb_subscription'] ?? 'free';
+    final stripePlanType = userData['stripePlanType'] ?? 'free';
+    
+    // Vérifier si l'un des abonnements contient "platinum"
+    return subscriptionId.toString().contains('platinum') || 
+           cbSubscription.toString().contains('platinum') || 
+           stripePlanType.toString().contains('platinum');
+  }
+
   /// Récupère les contrats de l'administrateur avec un statut spécifique
   /// Cette méthode est utilisée par les collaborateurs pour accéder aux contrats de leur admin
   static Stream<QuerySnapshot> getAdminContrats(String adminId, String status) {

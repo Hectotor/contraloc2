@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'add_collab_screen.dart';
+import '../../services/collaborateur_util.dart';
+import '../Subscription/abonnement_screen.dart';
 
 class CollaboratorPage extends StatelessWidget {
   final String adminId;
@@ -226,13 +228,60 @@ class CollaboratorPage extends StatelessWidget {
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 16.0),
         child: FloatingActionButton.extended(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => AddCollaborateurScreen(),
-              ),
-            );
+          onPressed: () async {
+            // Vérifier si l'utilisateur a un compte Platinum
+            bool isPlatinum = await CollaborateurUtil.isPlatinumUser();
+            
+            if (isPlatinum) {
+              // Si l'utilisateur a un compte Platinum, lui permettre d'ajouter un collaborateur
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddCollaborateurScreen(),
+                ),
+              );
+            } else {
+              // Si l'utilisateur n'a pas un compte Platinum, afficher un message et proposer de passer à Platinum
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: const Text('Abonnement requis',
+                        style: TextStyle(color: Color(0xFF08004D), fontWeight: FontWeight.bold)),
+                    content: const Text(
+                      'La gestion des collaborateurs est une fonctionnalité réservée aux utilisateurs avec un abonnement Platinum. Souhaitez-vous passer à l\'offre Platinum ?',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Plus tard',
+                            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          // Rediriger vers la page d'abonnement
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AbonnementScreen(),
+                            ),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F056B).withOpacity(0.1),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('Voir les offres',
+                            style: TextStyle(color: Color(0xFF0F056B), fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  );
+                },
+              );
+            }
           },
           icon: const Icon(Icons.person_add, color: Colors.white),
           label: const Text(
