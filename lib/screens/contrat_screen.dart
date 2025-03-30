@@ -36,6 +36,87 @@ class _ContratScreenState extends State<ContratScreen>
   int _calendarEventsCount = 0;
   int _deletedContractsCount = 0;
   
+  // Système de cache pour les contrats
+  final Map<String, List<DocumentSnapshot>> _contractsCache = {};
+  final Map<String, DateTime> _cacheTimestamps = {};
+  final Duration _cacheDuration = Duration(minutes: 5); // Durée de validité du cache
+  
+  // Clés de cache pour les différents types de contrats
+  static const String _activeContractsKey = 'active_contracts';
+  static const String _returnedContractsKey = 'returned_contracts';
+  static const String _calendarContractsKey = 'calendar_contracts';
+  static const String _deletedContractsKey = 'deleted_contracts';
+  
+  // Méthode pour invalider le cache
+  void _invalidateCache() {
+    _contractsCache.clear();
+    _cacheTimestamps.clear();
+  }
+  
+  // Méthode pour récupérer les contrats par catégorie
+  Future<List<DocumentSnapshot>> _getContractsByCategory(String categoryKey) async {
+    if (_cacheTimestamps[categoryKey] != null &&
+        DateTime.now().difference(_cacheTimestamps[categoryKey]!) < _cacheDuration) {
+      // Récupérer les données du cache
+      final cachedContracts = _contractsCache[categoryKey];
+      if (cachedContracts != null) {
+        return cachedContracts;
+      }
+    }
+    
+    final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
+    if (effectiveUserId == null) return [];
+    
+    try {
+      QuerySnapshot querySnapshot;
+      switch (categoryKey) {
+        case _activeContractsKey:
+          querySnapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(effectiveUserId)
+              .collection('locations')
+              .where('status', isEqualTo: 'en_cours')
+              .get();
+          break;
+        case _returnedContractsKey:
+          querySnapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(effectiveUserId)
+              .collection('locations')
+              .where('status', isEqualTo: 'restitue')
+              .get();
+          break;
+        case _calendarContractsKey:
+          querySnapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(effectiveUserId)
+              .collection('locations')
+              .where('status', isEqualTo: 'réservé')
+              .get();
+          break;
+        case _deletedContractsKey:
+          querySnapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(effectiveUserId)
+              .collection('locations')
+              .where('statussupprime', isEqualTo: 'supprimé')
+              .get();
+          break;
+        default:
+          return [];
+      }
+      
+      // Stocker les données en cache
+      _contractsCache[categoryKey] = querySnapshot.docs;
+      _cacheTimestamps[categoryKey] = DateTime.now();
+      
+      return querySnapshot.docs;
+    } catch (e) {
+      print('Erreur lors de la récupération des contrats: $e');
+      return [];
+    }
+  }
+  
   @override
   void initState() {
     super.initState();
@@ -73,20 +154,44 @@ class _ContratScreenState extends State<ContratScreen>
     
     try {
       final now = DateTime.now();
-      final contractsToDelete = await FirebaseFirestore.instance
+      final dateLimit = now.subtract(const Duration(days: 90));
+      
+      // Récupérer d'abord tous les contrats restitués
+      final contractsQuery = await FirebaseFirestore.instance
           .collection('users')
           .doc(effectiveUserId)
           .collection('locations')
-          .where('statussupprime', isEqualTo: 'supprimé')
-          .where('dateSuppressionDefinitive', isLessThan: now)
+          .where('status', isEqualTo: 'restitue')
           .get();
       
-      for (var doc in contractsToDelete.docs) {
-        await doc.reference.delete();
-        print('Contrat ${doc.id} supprimé définitivement (90 jours écoulés)');
+      // Filtrer localement ceux qui sont expirés (plus de 90 jours)
+      final expiredContracts = contractsQuery.docs.where((doc) {
+        final data = doc.data();
+        if (data.containsKey('dateRestitution')) {
+          final dateRestitution = data['dateRestitution'] as Timestamp?;
+          if (dateRestitution != null) {
+            return dateRestitution.toDate().isBefore(dateLimit);
+          }
+        }
+        return false;
+      }).toList();
+      
+      if (expiredContracts.isNotEmpty) {
+        // Batch pour supprimer les contrats expirés
+        final batch = FirebaseFirestore.instance.batch();
+        
+        for (var doc in expiredContracts) {
+          batch.update(doc.reference, {'statussupprime': 'supprimé'});
+        }
+        
+        await batch.commit();
+        print('${expiredContracts.length} contrats expirés ont été marqués comme supprimés');
+        
+        // Invalider le cache après la suppression des contrats
+        _invalidateCache();
       }
     } catch (e) {
-      print('Erreur lors de la vérification des contrats expirés: $e');
+      print('Erreur lors de la suppression des contrats expirés: $e');
     }
   }
   
@@ -98,42 +203,17 @@ class _ContratScreenState extends State<ContratScreen>
     if (effectiveUserId == null) return;
     
     try {
-      // Faire une seule requête pour récupérer tous les contrats
-      final allContractsSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(effectiveUserId)
-          .collection('locations')
-          .get();
+      // Récupérer les contrats par catégorie
+      final activeContracts = await _getContractsByCategory(_activeContractsKey);
+      final returnedContracts = await _getContractsByCategory(_returnedContractsKey);
+      final calendarContracts = await _getContractsByCategory(_calendarContractsKey);
+      final deletedContracts = await _getContractsByCategory(_deletedContractsKey);
       
       // Compter localement les contrats par catégorie
-      int activeCount = 0;
-      int returnedCount = 0;
-      int calendarCount = 0;
-      int deletedCount = 0;
-      
-      for (var doc in allContractsSnapshot.docs) {
-        final data = doc.data();
-        
-        // Vérifier si le contrat est marqué comme supprimé
-        if (data['statussupprime'] == 'supprimé') {
-          deletedCount++;
-          continue; // Passer au contrat suivant car il est supprimé
-        }
-        
-        // Compter selon le statut
-        switch (data['status']) {
-          case 'en_cours':
-            activeCount++;
-            break;
-          case 'restitue':
-            returnedCount++;
-            break;
-          case 'réservé':
-            calendarCount++;
-            break;
-            
-        }
-      }
+      int activeCount = activeContracts.length;
+      int returnedCount = returnedContracts.length;
+      int calendarCount = calendarContracts.length;
+      int deletedCount = deletedContracts.length;
       
       if (mounted) {
         setState(() {
