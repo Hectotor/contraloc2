@@ -1,10 +1,7 @@
-import 'package:ContraLoc/USERS/Subscription/subscription_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show PlatformException;
 import 'revenue_cat_service.dart';
 import '../question_user.dart';
 import 'plan_display.dart';
-import '../felicitation.dart';
 
 class AbonnementScreen extends StatefulWidget {
   const AbonnementScreen({Key? key}) : super(key: key);
@@ -43,77 +40,15 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
     }
   }
 
-  Future<void> _processSubscription(String plan) async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-
-    try {
-      // Traiter l'offre gratuite directement sans passer par RevenueCat
-      if (plan == "Offre Gratuite") {
-        print('📊 Activation de l\'offre gratuite');
-        await SubscriptionService.activateFreeSubscription();
-        
-        if (!mounted) return;
-        await _checkCurrentEntitlement();
-        _showActivationPopup();
-      } else {
-        // Pour les offres payantes, continuer à utiliser RevenueCat
-        final customerInfo =
-            await RevenueCatService.purchaseProduct(plan, isMonthly);
-
-        if (customerInfo != null) {
-          // Add this line to update Firestore
-          await SubscriptionService.updateSubscriptionStatus();
-
-          if (!mounted) return;
-          await _checkCurrentEntitlement();
-          _showActivationPopup();
-        }
-      }
-    } catch (e) {
-      print('❌ Erreur achat: $e');
-      if (!mounted) return;
-      if (e is PlatformException &&
-          e.code == '1' &&
-          e.details?['userCancelled'] == true) {
-        _showMessage(
-          'Annulation', 
-          Colors.orange, // Couleur orange pour une annulation
-        );
-        return; // Sort de la fonction sans autre traitement
-      }
-      _showMessage('Erreur lors de l\'achat. Veuillez réessayer.', Colors.red);
-    } finally {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-    }
-  }
-
-  void _showActivationPopup() {
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const FelicitationDialog(),
-    );
-  }
-
-  void _showMessage(String message, Color color) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Ajout du fond blanc
+      backgroundColor: Colors.white, 
       appBar: AppBar(
         backgroundColor: const Color(0xFF08004D),
         iconTheme: const IconThemeData(
-            color: Colors.white), // Ajout pour le bouton retour
-        centerTitle: true, // Optionnel : pour centrer le titre
+            color: Colors.white), 
+        centerTitle: true, 
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -123,24 +58,22 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
         ),
       ),
       body: Container(
-        color: Colors.white, // Ajout du fond blanc au container principal
+        color: Colors.white, 
         child: Stack(
           children: [
             Column(
               children: [
-                // Affichage des plans
                 Expanded(
                   child: PlanDisplay(
                     isMonthly: isMonthly,
                     currentEntitlement: _currentEntitlement,
-                    onSubscribe: _processSubscription,
+                    onSubscribe: (plan) {}, 
                     onPageChanged: (index) {
                       // Gérer le changement de page si nécessaire
                     },
                   ),
                 ),
 
-                // Bouton de contact
                 Padding(
                   padding: const EdgeInsets.only(bottom: 20.0),
                   child: TextButton.icon(

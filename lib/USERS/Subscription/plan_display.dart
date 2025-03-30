@@ -1,12 +1,9 @@
-import 'dart:io';
 import 'package:ContraLoc/USERS/Subscription/revenue_cat_service.dart';
 import 'package:ContraLoc/USERS/Subscription/subscription_service.dart';
 import 'package:ContraLoc/USERS/Subscription/subscription_handler.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:ContraLoc/widget/chargement.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
