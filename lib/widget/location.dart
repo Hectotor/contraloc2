@@ -330,6 +330,20 @@ class _LocationPageState extends State<LocationPage> {
       final siretEntreprise = userData['siret'] ?? '';
       final logoUrl = userData['logoUrl'] ?? '';
 
+      // Récupérer les informations du collaborateur qui crée le contrat
+      String nomCollaborateur = '';
+      String prenomCollaborateur = '';
+      
+      if (collaborateurStatus['isCollaborateur'] ?? false) {
+        // Si c'est un collaborateur, récupérer son nom et prénom
+        final collaborateurDoc = await _firestore.collection('users').doc(userId).get();
+        final collaborateurData = collaborateurDoc.data();
+        if (collaborateurData != null) {
+          nomCollaborateur = collaborateurData['nom'] ?? '';
+          prenomCollaborateur = collaborateurData['prenom'] ?? '';
+        }
+      }
+
       await _firestore
           .collection('users')
           .doc(targetId) 
@@ -452,6 +466,8 @@ class _LocationPageState extends State<LocationPage> {
         'telephoneEntreprise': telephoneEntreprise,
         'siretEntreprise': siretEntreprise,
         'conditions': conditions, 
+        'nomCollaborateur': nomCollaborateur,
+        'prenomCollaborateur': prenomCollaborateur,
       });
 
       if (widget.email != null && widget.email!.isNotEmpty) {
@@ -487,7 +503,9 @@ class _LocationPageState extends State<LocationPage> {
           'prixLocation': _prixLocationController.text,
           'kilometrageDepart': _kilometrageDepartController.text,  
           'pourcentageEssence': _pourcentageEssence.toString(),  
-          'condition': conditions,  
+          'condition': conditions, 
+          'nomCollaborateur': nomCollaborateur, 
+          'prenomCollaborateur': prenomCollaborateur, 
         };  
 
         final pdfPath = await generatePdf(  
@@ -519,6 +537,9 @@ class _LocationPageState extends State<LocationPage> {
           _typeLocationController.text,  
           _prixLocationController.text,  
           condition: conditions,  
+          nomCollaborateur: nomCollaborateur.isNotEmpty && prenomCollaborateur.isNotEmpty 
+              ? '$prenomCollaborateur $nomCollaborateur' 
+              : null,
         );
 
         await EmailService.sendEmailWithPdf(

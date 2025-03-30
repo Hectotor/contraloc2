@@ -74,6 +74,8 @@ Future<String> generatePdf(
   String? signatureBase64, // Signature aller
   String? signatureRetourBase64, // Signature retour
   String? signatureAllerBase64, // Nouvelle signature aller
+  String? nomCollaborateur,
+  String? prenomCollaborateur, // Nom du collaborateur qui a créé le contrat
 }) async {
   final pdf = pw.Document();
 
@@ -373,6 +375,7 @@ Future<String> generatePdf(
               boldFont: boldFont,
               ttf: ttf,
               logoImage: logoImage, // Ajout du logoImage ici
+              nomCollaborateur: nomCollaborateur, // Ajout du nom du collaborateur
             ),
             pw.SizedBox(height: 20),
             PdfVoitureWidget.build(

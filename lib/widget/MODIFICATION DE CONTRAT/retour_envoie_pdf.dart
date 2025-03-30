@@ -176,6 +176,9 @@ class RetourEnvoiePdf {
         signatureBase64: signatureBase64 ?? '',
         signatureRetourBase64: signatureRetourBase64 ?? '',
         signatureAllerBase64: signatureAllerBase64 ?? '',
+        nomCollaborateur: contratData['nomCollaborateur'] != null && contratData['prenomCollaborateur'] != null
+            ? '${contratData['prenomCollaborateur']} ${contratData['nomCollaborateur']}'
+            : null,
       );
 
       // Fermer le dialogue de chargement

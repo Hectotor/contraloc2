@@ -11,6 +11,7 @@ class PdfInfoContactWidget {
     required pw.Font boldFont,
     required pw.Font ttf,
     pw.ImageProvider? logoImage, // Ajout du paramètre logoImage
+    String? nomCollaborateur, // Ajout du paramètre pour le nom du collaborateur
   }) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -23,6 +24,7 @@ class PdfInfoContactWidget {
           boldFont: boldFont,
           ttf: ttf,
           logoImage: logoImage, // Passage du logoImage
+          nomCollaborateur: nomCollaborateur, // Passage du nom du collaborateur
         ),
         _buildClientInfo(
           clientData: clientData,
@@ -40,8 +42,8 @@ class PdfInfoContactWidget {
     required String siret,
     required pw.Font boldFont,
     required pw.Font ttf,
-    pw.ImageProvider?
-        logoImage, // On peut garder le paramètre mais ne pas l'utiliser
+    pw.ImageProvider? logoImage, // On peut garder le paramètre mais ne pas l'utiliser
+    String? nomCollaborateur, // Ajout du paramètre pour le nom du collaborateur
   }) {
     return pw.Container(
       width: 250,
@@ -66,6 +68,11 @@ class PdfInfoContactWidget {
           pw.Text(nomEntreprise,
               style: pw.TextStyle(fontSize: 12, font: boldFont)),
           pw.SizedBox(height: 2),
+          // Ajout du nom du collaborateur s'il est disponible
+          if (nomCollaborateur != null && nomCollaborateur.isNotEmpty)
+            pw.Text('Contrat créé par: $nomCollaborateur', style: pw.TextStyle(font: ttf, fontSize: 9)),
+          if (nomCollaborateur != null && nomCollaborateur.isNotEmpty)
+            pw.SizedBox(height: 2),
           if (adresse.isNotEmpty)
             pw.Text('Adresse: $adresse', style: pw.TextStyle(font: ttf, fontSize: 9)),
           pw.SizedBox(height: 2),

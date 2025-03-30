@@ -496,7 +496,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         widget.data['dateFinEffectif'] ?? '',
         widget.data['kilometrageRetour'] ?? '',
         widget.data['commentaireRetour'] ?? '',
-        [],
+        [],  // photosRetour
         widget.data['nomEntreprise'] ?? userData['nomEntreprise'] ?? '',
         widget.data['logoUrl'] ?? userData['logoUrl'] ?? '',
         widget.data['adresseEntreprise'] ?? userData['adresse'] ?? '',
@@ -522,8 +522,11 @@ class _ModifierScreenState extends State<ModifierScreen> {
         condition: conditions,
         signatureBase64: '',
         signatureRetourBase64: signatureRetourBase64,
+        nomCollaborateur: widget.data['nomCollaborateur'] != null && widget.data['prenomCollaborateur'] != null
+            ? '${widget.data['prenomCollaborateur']} ${widget.data['nomCollaborateur']}'
+            : null,
       );
-
+      
       try {
         await File(pdfPath).copy(localPdfPath);
         print('📄 PDF sauvegardé en cache local: $localPdfPath');
