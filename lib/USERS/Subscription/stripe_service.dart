@@ -9,14 +9,7 @@ class StripeService {
   // Récupérer les clés API Stripe depuis Firestore
   static Future<Map<String, String>> _getApiKeys() async {
     try {
-      // Clés API temporaires pour le développement
-      // À remplacer par la récupération depuis Firestore en production
-      return {
-        'apiKey': 'sk_test_51OQDGELRjO5YpWZvFBfcgWMDMQfwNZWFhNQQIvLkrKBNQZLQXMQbZXCPKLJJJRfJGXhgGDVWdqNxcOBqtlXXXXXX',
-        'publicKey': 'pk_test_51OQDGELRjO5YpWZvwXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-      };
-      
-      /*
+
       // Code pour récupérer les clés depuis Firestore
       final doc = await FirebaseFirestore.instance
           .collection('api_key_stripe')
@@ -33,7 +26,7 @@ class StripeService {
       
       print('❌ Clés API Stripe non trouvées dans Firestore');
       return {'apiKey': '', 'publicKey': ''};
-      */
+
     } catch (e) {
       print('❌ Erreur lors de la récupération des clés API Stripe: $e');
       return {'apiKey': '', 'publicKey': ''};
