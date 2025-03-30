@@ -109,15 +109,15 @@ class SubscriptionHandler {
         if (userDoc.exists) {
           final data = userDoc.data();
           if (data != null) {
-            final stripeSubscriptionId = data['stripeSubscriptionId'];
+            final stripePlanType = data['stripePlanType'];
             final cbSubscription = data['cb_subscription'];
             final subscriptionId = data['subscriptionId'];
             
             // Vérifier si c'est un abonnement Stripe
-            hasStripeSubscription = stripeSubscriptionId != null &&
-                stripeSubscriptionId.toString().isNotEmpty &&
-                (stripeSubscriptionId.toString().contains('monthly') ||
-                 stripeSubscriptionId.toString().contains('yearly'));
+            hasStripeSubscription = stripePlanType != null &&
+                stripePlanType.toString().isNotEmpty &&
+                (stripePlanType.toString().contains('monthly') ||
+                 stripePlanType.toString().contains('yearly'));
                 
             // Vérifier si c'est un abonnement CB
             hasCBSubscription = cbSubscription != null &&

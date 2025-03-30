@@ -173,19 +173,34 @@ class VehicleLimitChecker {
       print('📊 Vérification des limites pour ${isCollaborateur ? "l'administrateur" : "l'utilisateur"}: $targetId');
       
       // Récupérer la limite directement depuis les champs stockés
-      int vehicleLimit = userDoc.data()?['numberOfCars'] ?? 1; // Valeur par défaut: 1
-      final cb_nb_car = userDoc.data()?['cb_nb_car']; // Peut être null
+      int vehicleLimit = 1; // Valeur par défaut: 1
+      final data = userDoc.data();
       
-      print('📊 Limite de véhicules initiale: $vehicleLimit');
-      print('📊 Limite de véhicules cb_nb_car: $cb_nb_car');
+      // Récupérer les limites de véhicules depuis différentes sources
+      final revenueCatLimit = data?['numberOfCars']; // RevenueCat
+      final stripeLimit = data?['stripeNumberOfCars']; // Stripe
+      final cbLimit = data?['cb_nb_car']; // Paiement CB
+      
+      print('📊 Limite RevenueCat: $revenueCatLimit');
+      print('📊 Limite Stripe: $stripeLimit');
+      print('📊 Limite CB: $cbLimit');
       print('📊 Nombre de véhicules actuels: $currentVehicleCount');
       
-      // Si cb_nb_car existe et est supérieur à numberOfCars, utiliser cette valeur
-      if (cb_nb_car != null && cb_nb_car > vehicleLimit) {
-        vehicleLimit = cb_nb_car;
-        print('📊 Utilisation de la limite cb_nb_car: $vehicleLimit');
+      // Utiliser la limite la plus élevée parmi les différentes sources
+      if (revenueCatLimit != null && revenueCatLimit > vehicleLimit) {
+        vehicleLimit = revenueCatLimit;
       }
-
+      
+      if (stripeLimit != null && stripeLimit > vehicleLimit) {
+        vehicleLimit = stripeLimit;
+      }
+      
+      if (cbLimit != null && cbLimit > vehicleLimit) {
+        vehicleLimit = cbLimit;
+      }
+      
+      print('📊 Limite finale utilisée: $vehicleLimit');
+      
       if (currentVehicleCount >= vehicleLimit) {
         print('❌ Vérification de limite de véhicules échouée: $currentVehicleCount/$vehicleLimit');
         _showVehicleLimitDialog();

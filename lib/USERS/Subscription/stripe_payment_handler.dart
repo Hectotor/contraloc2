@@ -59,7 +59,8 @@ class StripePaymentHandler {
       print('🔄 Récupération du client Stripe...');
       final customerId = await StripeService.createCustomer(
         user.email ?? '', 
-        user.displayName ?? 'Utilisateur'
+        user.displayName ?? 'Utilisateur ContraLoc',
+        userId: userId, // Ajouter l'ID Firebase aux métadonnées
       );
       
       if (customerId == null) {
@@ -171,7 +172,7 @@ class StripePaymentHandler {
     required String subscriptionId,
     required String status,
     required String planType,
-    required int numberOfCars,
+    required int stripeNumberOfCars,
   }) async {
     try {
       print('🔄 Redirection vers la méthode unifiée de mise à jour...');
@@ -208,7 +209,7 @@ class StripePaymentHandler {
       }
       
       // Vérifier si l'utilisateur a un abonnement Stripe actif
-      final isActive = userData['isSubscriptionActive'] == true;
+      final isActive = userData['isStripeSubscriptionActive'] == true;
       final stripeStatus = userData['stripeStatus'];
       
       return isActive && (stripeStatus == 'active' || stripeStatus == 'trialing');

@@ -3,18 +3,27 @@ import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class StripeService {
-  // URL de base pour l'API Stripe
+  // Base URL pour l'API Stripe
   static const String _apiBase = 'https://api.stripe.com/v1';
   
-  // Récupérer les clés API depuis Firestore
+  // Récupérer les clés API Stripe depuis Firestore
   static Future<Map<String, String>> _getApiKeys() async {
     try {
+      // Clés API temporaires pour le développement
+      // À remplacer par la récupération depuis Firestore en production
+      return {
+        'apiKey': 'sk_test_51OQDGELRjO5YpWZvFBfcgWMDMQfwNZWFhNQQIvLkrKBNQZLQXMQbZXCPKLJJJRfJGXhgGDVWdqNxcOBqtlXXXXXX',
+        'publicKey': 'pk_test_51OQDGELRjO5YpWZvwXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+      };
+      
+      /*
+      // Code pour récupérer les clés depuis Firestore
       final doc = await FirebaseFirestore.instance
           .collection('api_key_stripe')
           .doc('api')
           .get();
-          
-      if (doc.exists) {
+      
+      if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         return {
           'apiKey': data['_apiKey'] ?? '',
@@ -24,6 +33,7 @@ class StripeService {
       
       print('❌ Clés API Stripe non trouvées dans Firestore');
       return {'apiKey': '', 'publicKey': ''};
+      */
     } catch (e) {
       print('❌ Erreur lors de la récupération des clés API Stripe: $e');
       return {'apiKey': '', 'publicKey': ''};
@@ -40,16 +50,26 @@ class StripeService {
   }
   
   // Créer un client Stripe pour l'utilisateur actuel
-  static Future<String?> createCustomer(String email, String name) async {
+  static Future<String?> createCustomer(String email, String name, {String? userId}) async {
     try {
+      print('🔄 Création d\'un client Stripe pour: $email, $name, userId: $userId');
       final headers = await _getHeaders();
+      
+      // Préparer les données du client
+      final Map<String, dynamic> customerData = {
+        'email': email,
+        'name': name,
+      };
+      
+      // Ajouter l'ID Firebase aux métadonnées si disponible
+      if (userId != null && userId.isNotEmpty) {
+        customerData['metadata[firebaseUserId]'] = userId;
+      }
+      
       final response = await http.post(
         Uri.parse('$_apiBase/customers'),
         headers: headers,
-        body: {
-          'email': email,
-          'name': name,
-        },
+        body: customerData,
       );
       
       final jsonResponse = jsonDecode(response.body);
@@ -60,12 +80,12 @@ class StripeService {
         return null;
       }
     } catch (e) {
-      print('❌ Exception création client Stripe: $e');
+      print('❌ Erreur création client Stripe: $e');
       return null;
     }
   }
   
-  // Créer un lien de paiement pour un abonnement
+  // Créer une session de paiement pour un abonnement
   static Future<String?> createSubscriptionCheckoutSession(
     String customerId,
     String productId,
@@ -73,59 +93,62 @@ class StripeService {
     String cancelUrl,
   ) async {
     try {
-      // Déterminer le montant en fonction du type d'abonnement
+      print('🔄 Création session de paiement Stripe...');
+      print('📋 Détails: customerId=$customerId, productId=$productId');
+      print('📋 URLs: successUrl=$successUrl, cancelUrl=$cancelUrl');
+      
+      // Déterminer le montant et l'intervalle en fonction du produit
       int amount;
-      String interval = 'month'; // Par défaut mensuel
+      String interval;
       
       if (productId == 'prod_RiIVqYAhJGzB0u') { // Premium Mensuel
-        amount = 1999; // 19.99 EUR
+        amount = 1999;
         interval = 'month';
       } else if (productId == 'prod_RiIXsD22K4xehY') { // Premium Annuel
-        amount = 23999; // 239.99 EUR
+        amount = 23999;
         interval = 'year';
-      } else if (productId == 'prod_S27nF635Z0AoFs' || productId == 'prod_S26yXish2BNayF') { // Platinum Mensuel
-        amount = 3999; // 39.99 EUR
+      } else if (productId == 'prod_S26yXish2BNayF' || productId == 'prod_S27nF635Z0AoFs') { // Platinum Mensuel
+        amount = 3999;
         interval = 'month';
       } else if (productId == 'prod_S26xbnrxhZn6TT') { // Platinum Annuel
-        amount = 47999; // 479.99 EUR
+        amount = 47999;
         interval = 'year';
       } else {
-        amount = 1999; // Montant par défaut
-        interval = 'month';
+        print('❌ Produit non reconnu: $productId');
+        return null;
       }
       
-      print('🔄 Création session Stripe: customerId=$customerId, productId=$productId');
-      print('🔄 Montant: $amount EUR, Intervalle: $interval');
-      print('🔄 URLs: success=$successUrl, cancel=$cancelUrl');
+      print('💰 Montant: $amount, Intervalle: $interval');
       
       final headers = await _getHeaders();
       final response = await http.post(
         Uri.parse('$_apiBase/checkout/sessions'),
         headers: headers,
         body: {
-          'customer': customerId,
           'success_url': successUrl,
           'cancel_url': cancelUrl,
-          'mode': 'subscription',
+          'customer': customerId,
+          'line_items[0][price_data][currency]': 'eur',
           'line_items[0][price_data][product]': productId,
           'line_items[0][price_data][unit_amount]': amount.toString(),
           'line_items[0][price_data][recurring][interval]': interval,
-          'line_items[0][price_data][currency]': 'eur',
           'line_items[0][quantity]': '1',
+          'mode': 'subscription',
+          'payment_method_types[0]': 'card',
         },
       );
       
       final jsonResponse = jsonDecode(response.body);
       if (response.statusCode == 200) {
-        final url = jsonResponse['url'] as String?;
-        print('✅ URL de session Stripe créée: $url');
-        return url; // URL de paiement Stripe
+        final sessionUrl = jsonResponse['url'];
+        print('✅ Session Stripe créée avec succès: $sessionUrl');
+        return sessionUrl;
       } else {
-        print('❌ Erreur création session: ${jsonResponse['error']['message']}');
+        print('❌ Erreur création session Stripe: ${jsonResponse['error']['message']}');
         return null;
       }
     } catch (e) {
-      print('❌ Exception création session: $e');
+      print('❌ Erreur création session Stripe: $e');
       return null;
     }
   }
@@ -133,10 +156,9 @@ class StripeService {
   // Récupérer les informations d'un abonnement
   static Future<Map<String, dynamic>?> getSubscription(String subscriptionId) async {
     try {
-      final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$_apiBase/subscriptions/$subscriptionId'),
-        headers: headers,
+        headers: await _getHeaders(),
       );
       
       final jsonResponse = jsonDecode(response.body);
@@ -147,7 +169,7 @@ class StripeService {
         return null;
       }
     } catch (e) {
-      print('❌ Exception récupération abonnement: $e');
+      print('❌ Erreur récupération abonnement: $e');
       return null;
     }
   }
@@ -155,22 +177,36 @@ class StripeService {
   // Mettre à jour Firebase avec les informations d'abonnement Stripe
   static Future<void> updateFirebaseFromStripe(String userId, String subscriptionId) async {
     try {
-      // Récupérer les détails de l'abonnement depuis Stripe
-      final subscriptionData = await getSubscription(subscriptionId);
-      if (subscriptionData == null) return;
+      // Obtenir les détails de l'abonnement
+      final response = await http.get(
+        Uri.parse('$_apiBase/subscriptions/$subscriptionId'),
+        headers: await _getHeaders(),
+      );
       
-      // Déterminer le nombre de véhicules en fonction du produit
+      final jsonResponse = jsonDecode(response.body);
+      if (response.statusCode != 200) {
+        throw Exception('Erreur récupération abonnement: ${jsonResponse['error']['message']}');
+      }
+      
+      final status = jsonResponse['status'];
+      final isActive = status == 'active' || status == 'trialing';
+      final productId = jsonResponse['items']['data'][0]['price']['product'];
+      
+      // Déterminer le type de plan et le nombre de véhicules
+      String planType = 'free';
       int stripeNumberOfCars = 1;
       
-      // Récupérer l'ID du produit pour déterminer le plan
-      final String productId = subscriptionData['items']['data'][0]['price']['product'];
-      
-      // Mapper l'ID du produit au nombre de véhicules
-      if (productId == 'prod_RiIVqYAhJGzB0u' || productId == 'prod_RiIXsD22K4xehY') {
-        // Premium (mensuel ou annuel)
+      if (productId == 'prod_RiIVqYAhJGzB0u') {
+        planType = 'premium-monthly_access';
         stripeNumberOfCars = 10;
-      } else if (productId == 'prod_S26yXish2BNayF' || productId == 'prod_S26xbnrxhZn6TT' || productId == 'prod_S27nF635Z0AoFs') {
-        // Platinum (mensuel ou annuel)
+      } else if (productId == 'prod_RiIXsD22K4xehY') {
+        planType = 'premium-yearly_access';
+        stripeNumberOfCars = 10;
+      } else if (productId == 'prod_S26yXish2BNayF' || productId == 'prod_S27nF635Z0AoFs') {
+        planType = 'platinum-monthly_access';
+        stripeNumberOfCars = 20;
+      } else if (productId == 'prod_S26xbnrxhZn6TT') {
+        planType = 'platinum-yearly_access';
         stripeNumberOfCars = 20;
       }
       
@@ -181,9 +217,12 @@ class StripeService {
           .collection('authentification')
           .doc(userId)
           .set({
-        'stripeSubscriptionId': subscriptionId,
+        'stripePlanType': planType,
+        'isStripeSubscriptionActive': isActive,
         'stripeNumberOfCars': stripeNumberOfCars,
-        'lastUpdateDate': FieldValue.serverTimestamp(),
+        'stripeSubscriptionId': subscriptionId,
+        'stripeStatus': status,
+        'lastStripeUpdateDate': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       
       print('✅ Firebase mis à jour avec succès depuis Stripe');
@@ -193,9 +232,9 @@ class StripeService {
     }
   }
   
-  // Obtenir la clé publique pour l'utiliser côté client
-  static Future<String> getPublicKey() async {
+  // Récupérer la clé publique Stripe
+  static Future<String?> getPublicKey() async {
     final keys = await _getApiKeys();
-    return keys['publicKey'] ?? '';
+    return keys['publicKey'];
   }
 }

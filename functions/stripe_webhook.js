@@ -85,7 +85,19 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
 // Gérer les changements d'abonnement
 async function handleSubscriptionChange(subscription, stripeClient) {
   try {
-    const userId = subscription.customer_email || subscription.customer;
+    // Récupérer le client Stripe pour obtenir les métadonnées
+    const customer = await stripeClient.customers.retrieve(subscription.customer);
+    console.log(`Client Stripe récupéré: ${JSON.stringify(customer.metadata)}`);
+    
+    // Essayer de récupérer l'ID Firebase depuis les métadonnées du client
+    let userId = customer.metadata.firebaseUserId;
+    
+    // Si l'ID n'est pas dans les métadonnées, utiliser l'email ou l'ID client comme fallback
+    if (!userId) {
+      userId = customer.email || subscription.customer;
+      console.log(`Aucun ID Firebase trouvé dans les métadonnées, utilisation de fallback: ${userId}`);
+    }
+    
     const subscriptionId = subscription.id;
     const status = subscription.status;
     const isActive = status === 'active' || status === 'trialing';
@@ -96,35 +108,41 @@ async function handleSubscriptionChange(subscription, stripeClient) {
     // Déterminer le type de plan et le nombre de véhicules
     let planType = 'free';
     let numberOfCars = 1;
+    let stripeNumberOfCars = 1;
     
     // Mapper l'ID du produit au type de plan
     if (productId === 'prod_RiIVqYAhJGzB0u') {
       planType = 'premium-monthly_access';
-      numberOfCars = 10;
+      stripeNumberOfCars = 10;
     } else if (productId === 'prod_RiIXsD22K4xehY') {
       planType = 'premium-yearly_access';
-      numberOfCars = 10;
+      stripeNumberOfCars = 10;
     } else if (productId === 'prod_S27nF635Z0AoFs' || productId === 'prod_S26yXish2BNayF') {
       planType = 'platinum-monthly_access';
-      numberOfCars = 20;
+      stripeNumberOfCars = 20;
     } else if (productId === 'prod_S26xbnrxhZn6TT') {
       planType = 'platinum-yearly_access';
-      numberOfCars = 20;
+      stripeNumberOfCars = 20;
     }
     
-    // Mettre à jour Firestore
+    console.log(`Mise à jour Firebase pour l'utilisateur: ${userId}, plan: ${planType}, actif: ${isActive}`);
+    
+    // Mettre à jour Firestore avec tous les champs nécessaires
     await admin.firestore()
       .collection('users')
       .doc(userId)
       .collection('authentification')
       .doc(userId)
       .set({
+        'stripePlanType': planType,
+        'isStripeSubscriptionActive': isActive,
+        'stripeNumberOfCars': stripeNumberOfCars,
         'stripeSubscriptionId': subscriptionId,
-        'stripeNumberOfCars': numberOfCars,
-        'lastUpdateDate': admin.firestore.FieldValue.serverTimestamp(),
+        'stripeStatus': status,
+        'lastStripeUpdateDate': admin.firestore.FieldValue.serverTimestamp(),
       }, {merge: true});
     
-    console.log(`Firebase mis à jour pour l'utilisateur: ${userId}, plan: ${planType}`);
+    console.log(`Firebase mis à jour avec succès pour l'utilisateur: ${userId}`);
   } catch (error) {
     console.error(`Erreur mise à jour abonnement: ${error.message}`);
     throw error;
