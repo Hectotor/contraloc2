@@ -161,7 +161,7 @@ class StripeService {
         stripeNumberOfCars = 20;
       }
       
-      // Mettre à jour uniquement les champs stripeSubscriptionId et stripeNumberOfCars
+      // Mettre à jour les données d'abonnement dans Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
@@ -173,9 +173,10 @@ class StripeService {
         'lastUpdateDate': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       
-      print('✅ Firebase mis à jour avec succès depuis Stripe (ID et nombre de véhicules uniquement)');
+      print('✅ Firebase mis à jour avec succès depuis Stripe');
     } catch (e) {
       print('❌ Erreur mise à jour Firebase depuis Stripe: $e');
+      rethrow;
     }
   }
   

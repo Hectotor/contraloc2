@@ -104,7 +104,7 @@ async function handleSubscriptionChange(subscription, stripeClient) {
     } else if (productId === 'prod_RiIXsD22K4xehY') {
       planType = 'premium-yearly_access';
       numberOfCars = 10;
-    } else if (productId === 'prod_S27nF635Z0AoFs') {
+    } else if (productId === 'prod_S27nF635Z0AoFs' || productId === 'prod_S26yXish2BNayF') {
       planType = 'platinum-monthly_access';
       numberOfCars = 20;
     } else if (productId === 'prod_S26xbnrxhZn6TT') {
@@ -119,12 +119,8 @@ async function handleSubscriptionChange(subscription, stripeClient) {
       .collection('authentification')
       .doc(userId)
       .set({
-        'subscriptionId': planType,
-        'isSubscriptionActive': isActive,
-        'numberOfCars': numberOfCars,
         'stripeSubscriptionId': subscriptionId,
-        'stripeStatus': status,
-        'subscriptionSource': 'stripe',  // Identifier la source comme Stripe
+        'stripeNumberOfCars': numberOfCars,
         'lastUpdateDate': admin.firestore.FieldValue.serverTimestamp(),
       }, {merge: true});
     

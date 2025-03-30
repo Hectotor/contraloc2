@@ -122,6 +122,7 @@ class StripePaymentHandler {
   }
   
   /// Met à jour Firestore avec les informations d'abonnement Stripe
+  /// Cette méthode est maintenant dépréciée, utilisez StripeService.updateFirebaseFromStripe à la place
   static Future<void> updateFirestoreWithStripeSubscription({
     required String userId,
     required String subscriptionId,
@@ -130,26 +131,11 @@ class StripePaymentHandler {
     required int numberOfCars,
   }) async {
     try {
-      print('🔄 Mise à jour de Firestore avec les données d\'abonnement Stripe...');
+      print('🔄 Redirection vers la méthode unifiée de mise à jour...');
       
-      // Référence au document utilisateur dans Firestore
-      final userDocRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('authentification')
-          .doc(userId);
+      // Utiliser la méthode unifiée dans StripeService
+      await StripeService.updateFirebaseFromStripe(userId, subscriptionId);
       
-      // Mettre à jour les données d'abonnement
-      await userDocRef.update({
-        'subscriptionId': planType,
-        'isSubscriptionActive': status == 'active' || status == 'trialing',
-        'numberOfCars': numberOfCars,
-        'stripeSubscriptionId': subscriptionId,
-        'stripeStatus': status,
-        'subscriptionUpdateTime': FieldValue.serverTimestamp(),
-      });
-      
-      print('✔️ Données d\'abonnement Stripe mises à jour avec succès dans Firestore');
     } catch (e) {
       print('❌ Erreur lors de la mise à jour des données d\'abonnement Stripe: $e');
       rethrow;
