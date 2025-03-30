@@ -2,14 +2,15 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const stripe = require('stripe');
 
-admin.initializeApp();
+// Suppression de l'initialisation ici car elle est déjà faite dans index.js
+// admin.initializeApp();
 
 // Fonction pour récupérer la clé API Stripe depuis Firestore
 async function getStripeApiKey() {
   try {
     const doc = await admin.firestore()
-      .collection('api')
-      .doc('api_key_stripe')
+      .collection('api_key_stripe')
+      .doc('api')
       .get();
     
     if (doc.exists) {

@@ -1,12 +1,12 @@
-import 'package:flutter/services.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:ContraLoc/widget/chargement.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:ContraLoc/USERS/Subscription/stripe_service.dart';
 
 class RevenueCatService {
   // Identifiants iOS
@@ -369,7 +369,7 @@ class RevenueCatService {
       .any((id) => id.contains('yearly'));
   }
 
-  static Future<CustomerInfo?> purchaseProduct(
+  static Future<CustomerInfo?> purchaseProductByType(
     String plan, 
     bool isMonthly
   ) async {
@@ -455,7 +455,7 @@ class RevenueCatService {
       );
 
       // Effectuer l'achat de l'abonnement
-      final customerInfo = await purchaseProduct(plan, isMonthly);
+      final customerInfo = await purchaseProductByType(plan, isMonthly);
 
       // Fermer le dialogue de chargement
       Navigator.of(context).pop();
@@ -566,8 +566,8 @@ class RevenueCatService {
       
       if (managementURL != null && managementURL.isNotEmpty) {
         // Ouvrir l'URL de gestion dans le navigateur
-        if (await canLaunch(managementURL)) {
-          await launch(managementURL);
+        if (await canLaunchUrl(Uri.parse(managementURL))) {
+          await launchUrl(Uri.parse(managementURL));
           print('📊 URL de gestion des abonnements ouverte: $managementURL');
         } else {
           print('❌ Impossible d\'ouvrir l\'URL de gestion: $managementURL');
@@ -580,78 +580,205 @@ class RevenueCatService {
     }
   }
 
-  // Méthode pour effectuer un paiement par carte bancaire via Stripe
-  static Future<CustomerInfo?> purchaseProductWithStripe(
-    String plan, 
-    bool isMonthly,
-    BuildContext context
-  ) async {
+  // Méthode pour acheter un produit avec RevenueCat
+  static Future<CustomerInfo?> purchaseProductWithRevenueCat(BuildContext context, String productId) async {
     try {
-      // Afficher le dialogue de chargement
+      print('🔄 Achat du produit: $productId');
+
+      // Afficher un dialogue de chargement
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) => const Chargement(),
+        builder: (BuildContext context) {
+          return const Dialog(
+            child: Padding(
+              padding: EdgeInsets.all(20.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 20),
+                  Text('Préparation de l\'achat...'),
+                ],
+              ),
+            ),
+          );
+        },
       );
 
-      // Obtenir l'utilisateur actuel
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('Utilisateur non connecté');
-      }
-
-      // Déterminer l'ID du produit Stripe en fonction du plan
-      String productId;
-      if (plan.contains("Premium")) {
-        productId = isMonthly ? 'prod_RiIVqYAhJGzB0u' : 'prod_RiIXsD22K4xehY';
-      } else { // Platinum
-        productId = isMonthly ? 'prod_S26yXish2BNayF' : 'prod_S26xbnrxhZn6TT';
-      }
-
-      print('🔄 Création du client Stripe...');
-      // Créer ou récupérer le client Stripe
-      final customerId = await StripeService.createCustomer(user.email ?? '', user.displayName ?? 'Utilisateur');
-      if (customerId == null) {
-        throw Exception('Impossible de créer le client Stripe');
-      }
-
-      print('🔄 Création de la session de paiement...');
-      // URLs de redirection
-      final successUrl = 'https://contraloc.com/success';
-      final cancelUrl = 'https://contraloc.com/cancel';
-
-      // Créer la session de paiement
-      final sessionUrl = await StripeService.createSubscriptionCheckoutSession(
-        customerId,
-        productId,
-        successUrl,
-        cancelUrl,
-      );
-
-      if (sessionUrl == null) {
-        throw Exception('Impossible de créer la session de paiement');
-      }
+      // Effectuer l'achat
+      final customerInfo = await Purchases.purchaseProduct(productId);
+      print('✅ Achat réussi: ${customerInfo.entitlements.all}');
 
       // Fermer le dialogue de chargement
       Navigator.of(context).pop();
 
-      print('🔄 Ouverture de l\'URL de paiement: $sessionUrl');
-      // Ouvrir l'URL de paiement dans le navigateur
-      final Uri url = Uri.parse(sessionUrl);
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
-        throw Exception('Impossible d\'ouvrir l\'URL de paiement');
+      // Mettre à jour Firestore avec les informations de l'abonnement
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await updateFirebaseFromRevenueCat(user.uid, customerInfo);
       }
 
-      // Comme le paiement se fait dans un navigateur externe, nous ne pouvons pas
-      // savoir immédiatement si le paiement a réussi. Nous retournons null pour l'instant.
-      // La mise à jour du statut de l'abonnement sera gérée par le webhook Stripe.
-      return null;
+      // Afficher un message de succès
+      if (context.mounted) {
+        final isMonthly = productId.contains('monthly');
+        final plan = productId.contains('platinum') ? 'Platinum' : 'Premium';
+
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: 60,
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Félicitations !',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Votre abonnement ${plan.toLowerCase()} ${isMonthly ? 'mensuel' : 'annuel'} a été activé avec succès.',
+                      style: TextStyle(
+                        fontSize: 16, 
+                        color: Colors.black54
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                      ),
+                      child: const Text(
+                        'Continuer', 
+                        style: TextStyle(
+                          fontSize: 16, 
+                          color: Colors.white
+                        )
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      }
+
+      return customerInfo;
     } catch (e) {
-      print('❌ Erreur lors du paiement par carte bancaire: $e');
-      // Fermer le dialogue de chargement s'il est ouvert
+      // Fermer le dialogue de chargement en cas d'erreur
       Navigator.of(context).pop();
+
+      // Afficher un message d'erreur
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Erreur'),
+            content: Text('Une erreur est survenue lors de l\'abonnement : $e'),
+            actions: [
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+
+      rethrow;
+    }
+  }
+
+  // Méthode pour restaurer les achats
+  static Future<CustomerInfo?> restorePurchases(BuildContext context) async {
+    try {
+      print('🔄 Restauration des achats...');
+      
+      // Afficher un dialogue de chargement
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Dialog(
+            child: Padding(
+              padding: EdgeInsets.all(20.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 20),
+                  Text('Restauration des achats...'),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+
+      // Restaurer les achats
+      final customerInfo = await Purchases.restorePurchases();
+      
+      // Fermer le dialogue de chargement
+      Navigator.of(context).pop();
+      
+      print('✅ Achats restaurés avec succès');
+      
+      // Mettre à jour Firestore avec les informations de l'abonnement
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await updateFirebaseFromRevenueCat(user.uid, customerInfo);
+      }
+      
+      return customerInfo;
+    } catch (e) {
+      // Fermer le dialogue de chargement en cas d'erreur
+      Navigator.of(context).pop();
+
+      // Afficher un message d'erreur
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Erreur'),
+            content: Text('Une erreur est survenue lors de la restauration des achats : $e'),
+            actions: [
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+
       rethrow;
     }
   }

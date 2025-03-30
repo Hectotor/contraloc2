@@ -123,6 +123,13 @@
     <true/>
     <key>UIFileSharingEnabled</key>
     <true/>
+    
+    <!-- Configuration pour permettre l'ouverture d'URLs externes -->
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>https</string>
+        <string>http</string>
+    </array>
 
 </dict>
 </plist>
