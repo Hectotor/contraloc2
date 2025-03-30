@@ -257,37 +257,32 @@ class CollaborateurUtil {
         docRef = docRef.collection(subCollection).doc(subDocId ?? docId);
       }
       
-      // Utiliser _executeWithRetry pour gérer les erreurs de connectivité
+      // Essayer d'abord depuis le cache sans retry
+      try {
+        final docCache = await docRef.get(GetOptions(source: Source.cache));
+        
+        if (docCache.exists) {
+          print('📋 Document récupéré depuis le cache: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
+          return docCache;
+        }
+      } catch (cacheError) {
+        // Ignorer les erreurs de cache et passer directement au serveur
+        print('⚠️ Cache non disponible, passage au serveur');
+      }
+      
+      // Si on arrive ici, le document n'est pas dans le cache ou il y a eu une erreur
+      // Utiliser _executeWithRetry pour la récupération depuis le serveur
       return await _executeWithRetry(
         operation: () async {
-          try {
-            // Essayer d'abord depuis le cache
-            final docCache = await docRef.get(GetOptions(source: Source.cache));
-            
-            if (docCache.exists) {
-              print('📋 Document récupéré depuis le cache: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
-              return docCache;
-            }
-            
-            // Si pas dans le cache, essayer depuis le serveur
-            final docServer = await docRef.get();
-            
-            if (docServer.exists) {
-              print('🔄 Document récupéré depuis le serveur: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
-              return docServer;
-            }
-            
+          final docServer = await docRef.get();
+          
+          if (docServer.exists) {
+            print('🔄 Document récupéré depuis le serveur: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
+          } else {
             print('⚠️ Document non trouvé: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
-            return docServer; // Retourner le document vide
-          } catch (e) {
-            // Si c'est une erreur de cache, essayer directement depuis le serveur
-            if (e.toString().contains('Failed to get document from cache')) {
-              print('⚠️ Cache non disponible, tentative depuis le serveur');
-              final docServer = await docRef.get();
-              return docServer;
-            }
-            rethrow;
           }
+          
+          return docServer;
         },
       );
     } catch (e) {
@@ -630,7 +625,7 @@ class CollaborateurUtil {
   /// en cas d'erreur temporaire de connectivité
   static Future<T> _executeWithRetry<T>({
     required Future<T> Function() operation,
-    int maxRetries = 3,
+    int maxRetries = 5,
     Duration initialDelay = const Duration(milliseconds: 500),
   }) async {
     int attempts = 0;
@@ -650,9 +645,14 @@ class CollaborateurUtil {
           rethrow; // Relancer l'erreur si ce n'est pas une erreur de connectivité ou si max retries atteint
         }
         
-        print("⚠️ Tentative $attempts échouée, nouvelle tentative dans ${delay.inMilliseconds}ms: $e");
+        // Calcul du délai avec backoff exponentiel au lieu de multiplication par 1.5
+        int delayMs = initialDelay.inMilliseconds * (1 << (attempts - 1));
+        // Ajouter un jitter aléatoire entre 0 et 100ms pour éviter les collisions
+        delayMs += (DateTime.now().millisecondsSinceEpoch % 100);
+        delay = Duration(milliseconds: delayMs);
+        
+        print("⚠️ Tentative $attempts/$maxRetries échouée, nouvelle tentative dans ${delay.inMilliseconds}ms: $e");
         await Future.delayed(delay);
-        delay *= 1.5;
       }
     }
   }
@@ -687,20 +687,36 @@ class CollaborateurUtil {
       
       // 3. Tenter de nettoyer le cache Firestore de manière sécurisée
       try {
-        // Désactiver la persistance pour les futures sessions
-        // Note: clearPersistence() peut échouer si des listeners sont actifs
-        // mais ce n'est pas bloquant pour la déconnexion
-        await _firestore.terminate();
-        await _firestore.clearPersistence().timeout(
-          const Duration(seconds: 2),
-          onTimeout: () {
-            print("⚠️ Timeout lors du nettoyage du cache Firestore, mais ce n'est pas bloquant");
-            return;
-          },
-        );
-      } catch (firestoreError) {
-        print("⚠️ Impossible de nettoyer complètement le cache Firestore: $firestoreError");
-        // Ne pas bloquer la déconnexion si le nettoyage du cache échoue
+        // Vérifier d'abord que l'utilisateur est toujours authentifié
+        // pour éviter les erreurs de permission
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null) {
+          // L'utilisateur est encore authentifié, on peut essayer de nettoyer Firestore
+          try {
+            // Désactiver la persistance pour les futures sessions
+            await _firestore.terminate();
+            await _firestore.clearPersistence().timeout(
+              const Duration(seconds: 2),
+              onTimeout: () {
+                print("⚠️ Timeout lors du nettoyage du cache Firestore, mais ce n'est pas bloquant");
+                return;
+              },
+            );
+          } catch (firestoreError) {
+            if (firestoreError.toString().contains('permission-denied')) {
+              print("⚠️ Erreur de permission lors du nettoyage du cache Firestore - l'utilisateur est peut-être déjà déconnecté");
+            } else {
+              print("⚠️ Impossible de nettoyer complètement le cache Firestore: $firestoreError");
+            }
+            // Ne pas bloquer la déconnexion si le nettoyage du cache échoue
+          }
+        } else {
+          // L'utilisateur est déjà déconnecté, on saute le nettoyage de Firestore
+          print("👋 Utilisateur déjà déconnecté, nettoyage Firestore ignoré");
+        }
+      } catch (authError) {
+        print("⚠️ Erreur lors de la vérification de l'état d'authentification: $authError");
+        // Ne pas bloquer la déconnexion si la vérification échoue
       }
       
       print("✅ Cache et préférences effacés avec succès");

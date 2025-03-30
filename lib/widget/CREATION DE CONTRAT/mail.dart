@@ -126,27 +126,37 @@ class EmailService {
       }
 
       // Récupérer les paramètres SMTP depuis admin/smtpSettings
-      DocumentSnapshot adminDoc;
-      try {
-        // Essayer d'abord depuis le cache
-        adminDoc = await FirebaseFirestore.instance
-            .collection('admin')
-            .doc('smtpSettings')
-            .get(GetOptions(source: Source.cache));
-            
-        if (!adminDoc.exists) {
-          // Si pas dans le cache, essayer depuis le serveur
+      DocumentSnapshot? adminDoc;
+      int maxRetries = 5;
+      int currentRetry = 0;
+      int baseDelayMs = 500;
+
+      while (currentRetry < maxRetries) {
+        try {
+          // Tenter de récupérer les paramètres SMTP
           adminDoc = await FirebaseFirestore.instance
               .collection('admin')
               .doc('smtpSettings')
               .get();
+          
+          // Si on arrive ici, la récupération a réussi
+          break;
+        } catch (e) {
+          currentRetry++;
+          if (currentRetry >= maxRetries) {
+            print('❌ Erreur récupération paramètres SMTP après $maxRetries tentatives: $e');
+            throw Exception('Configuration SMTP non accessible: $e');
+          }
+          
+          // Calcul du délai avec backoff exponentiel
+          int delayMs = baseDelayMs * (1 << (currentRetry - 1));
+          
+          print('🔄 Tentative $currentRetry/$maxRetries échouée. Nouvel essai dans ${delayMs}ms...');
+          await Future.delayed(Duration(milliseconds: delayMs));
         }
-      } catch (e) {
-        print('❌ Erreur récupération paramètres SMTP: $e');
-        throw Exception('Configuration SMTP non accessible: $e');
       }
 
-      if (!adminDoc.exists) {
+      if (adminDoc == null || !adminDoc.exists) {
         throw Exception('Configuration SMTP non trouvée');
       }
 
