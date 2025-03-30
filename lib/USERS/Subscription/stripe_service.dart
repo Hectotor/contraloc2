@@ -156,7 +156,7 @@ class StripeService {
       if (productId == 'prod_RiIVqYAhJGzB0u' || productId == 'prod_RiIXsD22K4xehY') {
         // Premium (mensuel ou annuel)
         stripeNumberOfCars = 10;
-      } else if (productId == 'prod_S26yXish2BNayF' || productId == 'prod_S26xbnrxhZn6TT') {
+      } else if (productId == 'prod_S26yXish2BNayF' || productId == 'prod_S26xbnrxhZn6TT' || productId == 'prod_S27nF635Z0AoFs') {
         // Platinum (mensuel ou annuel)
         stripeNumberOfCars = 20;
       }

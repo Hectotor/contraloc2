@@ -1,9 +1,7 @@
-import 'package:ContraLoc/USERS/Subscription/revenue_cat_service.dart';
-import 'package:ContraLoc/USERS/Subscription/subscription_service.dart';
 import 'package:ContraLoc/USERS/Subscription/subscription_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:ContraLoc/widget/chargement.dart';
+
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -341,124 +339,7 @@ class PlanDisplayState extends State<PlanDisplay> {
     );
   }
 
-  Future<void> _processPayment(String plan) async {
-    try {
-      // Afficher le dialogue de chargement personnalisé
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) => const Chargement(),
-      );
 
-      final customerInfo = await RevenueCatService.purchaseProduct(
-        plan, 
-        !plan.toLowerCase().contains("annuel")
-      );
-
-      // Fermer le dialogue de chargement
-      Navigator.of(context).pop();
-
-      if (customerInfo != null) {
-        // D'abord mettre à jour les données dans Firestore
-        print('👤 Mise à jour du statut dans Firestore...');
-        await SubscriptionService.updateSubscriptionStatus();
-        print('✅ Firestore mis à jour');
-
-        // Ensuite vérifier les plans pour l'affichage
-        print('🔄 Actualisation de l\'affichage...');
-        await _checkActivePlans();
-        print('✅ Affichage actualisé');
-
-        // Afficher le dialogue de succès
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return Dialog(
-              backgroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.check_circle_outline,
-                      color: Colors.green,
-                      size: 80,
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Félicitations !',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Votre abonnement a été activé avec succès.',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.black54,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 30,
-                          vertical: 12,
-                        ),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text(
-                        'Continuer',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      }
-    } catch (e) {
-      // Fermer l'indicateur de chargement s'il est affiché
-      if (Navigator.canPop(context)) {
-        Navigator.of(context).pop();
-      }
-
-      // Afficher l'erreur
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Erreur'),
-            content: Text('Une erreur est survenue lors du paiement : $e'),
-            actions: [
-              TextButton(
-                child: const Text('OK'),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          );
-        },
-      );
-    }
-  }
 
   // Modifier la méthode _handleSubscription pour utiliser SubscriptionHandler
   Future<void> _handleSubscription(String plan) async {
