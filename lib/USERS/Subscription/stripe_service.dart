@@ -43,16 +43,19 @@ class StripeService {
   }
   
   // Créer un client Stripe pour l'utilisateur actuel
-  static Future<String?> createCustomer(String email, String name, {String? userId}) async {
+  static Future<String?> createCustomer(String email, String nomEntreprise, {String? userId}) async {
     try {
-      print('🔄 Création d\'un client Stripe pour: $email, $name, userId: $userId');
+      print('🔄 Création d\'un client Stripe pour: $email, nomEntreprise: $nomEntreprise, userId: $userId');
       final headers = await _getHeaders();
       
       // Préparer les données du client
       final Map<String, dynamic> customerData = {
         'email': email,
-        'name': name,
+        'name': nomEntreprise,
+         // Le champ 'name' dans l'API Stripe correspond à 'nomEntreprise' dans Firestore
       };
+      
+      print('📋 Données du client Stripe: $customerData');
       
       // Ajouter l'ID Firebase aux métadonnées si disponible
       if (userId != null && userId.isNotEmpty) {
@@ -66,6 +69,8 @@ class StripeService {
       );
       
       final jsonResponse = jsonDecode(response.body);
+      print('📋 Réponse Stripe: ${response.statusCode} - ${response.body}');
+      
       if (response.statusCode == 200) {
         return jsonResponse['id']; // Retourne l'ID du client Stripe
       } else {

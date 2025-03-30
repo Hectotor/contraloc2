@@ -21,9 +21,6 @@ class StripePaymentHandler {
     required bool isMonthly,
   }) async {
     try {
-      print('🔄 Démarrage du processus de paiement Stripe...');
-      print('📋 Détails: userId=$userId, productId=$productId, plan=$plan, isMonthly=$isMonthly');
-      
       // Afficher un dialogue de chargement
       showDialog(
         context: context,
@@ -48,36 +45,45 @@ class StripePaymentHandler {
       // Récupérer les informations de l'utilisateur
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        print('❌ Utilisateur non connecté');
         if (context.mounted) Navigator.of(context).pop(); // Fermer le dialogue de chargement
         throw Exception('Utilisateur non connecté');
       }
       
-      print('👤 Utilisateur: ${user.email}, ${user.displayName}');
+      // Récupérer le nom de l'entreprise depuis la sous-collection authentification
+      final authUserDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('authentification')
+        .doc(userId)
+        .get();
+      
+      // Valeur par défaut
+      String nomEntreprise = 'Utilisateur ContraLoc';
+      
+      if (authUserDoc.exists && authUserDoc.data() != null) {
+        final userData = authUserDoc.data()!;
+        if (userData['nomEntreprise'] != null && userData['nomEntreprise'].toString().isNotEmpty) {
+          nomEntreprise = userData['nomEntreprise'];
+        }
+      }
       
       // Créer un client Stripe
-      print('🔄 Récupération du client Stripe...');
       final customerId = await StripeService.createCustomer(
         user.email ?? '', 
-        user.displayName ?? 'Utilisateur ContraLoc',
+        nomEntreprise, // Passer le nom d'entreprise récupéré depuis Firestore
         userId: userId, // Ajouter l'ID Firebase aux métadonnées
       );
       
       if (customerId == null) {
-        print('❌ Impossible de créer un client Stripe');
         if (context.mounted) Navigator.of(context).pop(); // Fermer le dialogue de chargement
         throw Exception('Impossible de créer un client Stripe');
       }
-      
-      print('✔️ Client Stripe récupéré: $customerId');
 
-      print('🔄 Création de la session de paiement...');
       // URLs de redirection
       final successUrl = 'https://www.contraloc.fr/payment-success/';
       final cancelUrl = 'https://contraloc.fr/';
 
       // Créer la session de paiement
-      print('🔄 Création de la session de paiement Stripe...');
       final sessionUrl = await StripeService.createSubscriptionCheckoutSession(
         customerId,
         productId,
@@ -86,7 +92,6 @@ class StripePaymentHandler {
       );
 
       if (sessionUrl == null || sessionUrl.isEmpty) {
-        print('❌ Session de paiement null ou vide');
         if (context.mounted) Navigator.of(context).pop(); // Fermer le dialogue de chargement
         throw Exception('Impossible de créer la session de paiement');
       }
@@ -94,16 +99,12 @@ class StripePaymentHandler {
       // Fermer le dialogue de chargement
       if (context.mounted) Navigator.of(context).pop();
 
-      print('✔️ URL de paiement obtenue: $sessionUrl');
       // Ouvrir l'URL de paiement dans le navigateur en utilisant notre classe spécialisée
       final result = await StripeUrlLauncher.launchStripeCheckout(
         context: context,
         stripeUrl: sessionUrl,
-        onSuccess: () {
-          print('✔️ URL Stripe ouverte avec succès');
-        },
+        onSuccess: () {},
         onError: (errorMsg) {
-          print('❌ Erreur lors de l\'ouverture de l\'URL Stripe: $errorMsg');
           if (context.mounted) {
             showDialog(
               context: context,
@@ -126,7 +127,6 @@ class StripePaymentHandler {
       );
       
       if (!result) {
-        print('❌ Échec de l\'ouverture du lien de paiement');
         throw Exception('Échec de l\'ouverture du lien de paiement');
       }
 
@@ -134,15 +134,12 @@ class StripePaymentHandler {
       // savoir immédiatement si le paiement a réussi. La mise à jour du statut 
       // de l'abonnement sera gérée par le webhook Stripe.
     } catch (e) {
-      print('❌ Erreur lors du paiement par carte bancaire: $e');
       // Fermer le dialogue de chargement s'il est ouvert
       if (context.mounted) {
         // Vérifier si le dialogue est affiché avant de le fermer
         try {
           Navigator.of(context).pop();
-        } catch (dialogError) {
-          print('Note: Le dialogue était déjà fermé');
-        }
+        } catch (dialogError) {}
         
         // Afficher un dialogue d'erreur
         showDialog(
@@ -175,13 +172,10 @@ class StripePaymentHandler {
     required int stripeNumberOfCars,
   }) async {
     try {
-      print('🔄 Redirection vers la méthode unifiée de mise à jour...');
-      
       // Utiliser la méthode unifiée dans StripeService
       await StripeService.updateFirebaseFromStripe(userId, subscriptionId);
       
     } catch (e) {
-      print('❌ Erreur lors de la mise à jour des données d\'abonnement Stripe: $e');
       rethrow;
     }
   }
@@ -214,7 +208,6 @@ class StripePaymentHandler {
       
       return isActive && (stripeStatus == 'active' || stripeStatus == 'trialing');
     } catch (e) {
-      print('❌ Erreur lors de la vérification de l\'abonnement Stripe: $e');
       return false;
     }
   }

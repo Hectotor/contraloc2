@@ -137,46 +137,68 @@ async function handleSubscriptionChange(subscription, stripeClient) {
     const status = subscription.status;
     const isActive = status === 'active' || status === 'trialing';
     
-    // Obtenir le produit pour déterminer le type de plan
-    const productId = subscription.items.data[0].price.product;
-    
-    // Déterminer le type de plan et le nombre de véhicules
-    let planType = 'free';
-    let stripeNumberOfCars = 1;
-    
-    // Mapper l'ID du produit au type de plan
-    if (productId === 'prod_RiIVqYAhJGzB0u') {
-      planType = 'premium-monthly_access';
-      stripeNumberOfCars = 10;
-    } else if (productId === 'prod_RiIXsD22K4xehY') {
-      planType = 'premium-yearly_access';
-      stripeNumberOfCars = 10;
-    } else if (productId === 'prod_S26yXish2BNayF' || productId === 'prod_S27nF635Z0AoFs') {
-      planType = 'platinum-monthly_access';
-      stripeNumberOfCars = 20;
-    } else if (productId === 'prod_S26xbnrxhZn6TT') {
-      planType = 'platinum-yearly_access';
-      stripeNumberOfCars = 20;
+    // Vérifier si l'abonnement est annulé ou inactif
+    if (status === 'canceled' || status === 'incomplete_expired' || status === 'unpaid') {
+      console.log(`📝 Réinitialisation de l'abonnement Stripe pour l'utilisateur: ${userId} (statut: ${status})`);
+      
+      // Réinitialiser les valeurs pour un abonnement annulé ou inactif
+      await admin.firestore()
+        .collection('users')
+        .doc(userId)
+        .collection('authentification')
+        .doc(userId)
+        .set({
+          'stripePlanType': 'free',
+          'isStripeSubscriptionActive': false,
+          'stripeNumberOfCars': 1,
+          'stripeSubscriptionId': subscriptionId,  // Garder l'ID pour référence
+          'stripeStatus': status,
+          'lastStripeUpdateDate': admin.firestore.FieldValue.serverTimestamp(),
+        }, {merge: true});
+      
+      console.log(`📝 Firebase mis à jour avec succès pour l'utilisateur: ${userId} (abonnement réinitialisé)`);
+    } else {
+      // Obtenir le produit pour déterminer le type de plan
+      const productId = subscription.items.data[0].price.product;
+      
+      // Déterminer le type de plan et le nombre de véhicules
+      let planType = 'free';
+      let stripeNumberOfCars = 1;
+      
+      // Mapper l'ID du produit au type de plan
+      if (productId === 'prod_RiIVqYAhJGzB0u') {
+        planType = 'premium-monthly_access';
+        stripeNumberOfCars = 10;
+      } else if (productId === 'prod_RiIXsD22K4xehY') {
+        planType = 'premium-yearly_access';
+        stripeNumberOfCars = 10;
+      } else if (productId === 'prod_S26yXish2BNayF' || productId === 'prod_S27nF635Z0AoFs') {
+        planType = 'platinum-monthly_access';
+        stripeNumberOfCars = 20;
+      } else if (productId === 'prod_S26xbnrxhZn6TT') {
+        planType = 'platinum-yearly_access';
+        stripeNumberOfCars = 20;
+      }
+      
+      console.log(`📝 Mise à jour Firebase pour l'utilisateur: ${userId}, plan: ${planType}, actif: ${isActive}`);
+      
+      // Mettre à jour Firestore avec tous les champs nécessaires
+      await admin.firestore()
+        .collection('users')
+        .doc(userId)
+        .collection('authentification')
+        .doc(userId)
+        .set({
+          'stripePlanType': planType,
+          'isStripeSubscriptionActive': isActive,
+          'stripeNumberOfCars': stripeNumberOfCars,
+          'stripeSubscriptionId': subscriptionId,
+          'stripeStatus': status,
+          'lastStripeUpdateDate': admin.firestore.FieldValue.serverTimestamp(),
+        }, {merge: true});
+      
+      console.log(`📝 Firebase mis à jour avec succès pour l'utilisateur: ${userId}`);
     }
-    
-    console.log(`📝 Mise à jour Firebase pour l'utilisateur: ${userId}, plan: ${planType}, actif: ${isActive}`);
-    
-    // Mettre à jour Firestore avec tous les champs nécessaires
-    await admin.firestore()
-      .collection('users')
-      .doc(userId)
-      .collection('authentification')
-      .doc(userId)
-      .set({
-        'stripePlanType': planType,
-        'isStripeSubscriptionActive': isActive,
-        'stripeNumberOfCars': stripeNumberOfCars,
-        'stripeSubscriptionId': subscriptionId,
-        'stripeStatus': status,
-        'lastStripeUpdateDate': admin.firestore.FieldValue.serverTimestamp(),
-      }, {merge: true});
-    
-    console.log(`📝 Firebase mis à jour avec succès pour l'utilisateur: ${userId}`);
   } catch (error) {
     console.error(`Erreur mise à jour abonnement: ${error.message}`);
     throw error;
