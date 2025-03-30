@@ -54,36 +54,46 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
   @override
   void initState() {
     super.initState();
-    // Initialiser les contrôleurs d'affichage
-    _kmSuppDisplayController = TextEditingController(text: _calculerFraisKilometriques().toStringAsFixed(2));
-    _coutTotalController = TextEditingController(text: _calculerCoutTotal().toStringAsFixed(2));
+    // Initialiser les contrôleurs d'affichage avec "00,00" par défaut
+    _kmSuppDisplayController = TextEditingController(text: _calculerFraisKilometriques() > 0 ? _calculerFraisKilometriques().toStringAsFixed(2) : "00,00");
+    _coutTotalController = TextEditingController(text: _calculerCoutTotal() > 0 ? _calculerCoutTotal().toStringAsFixed(2) : "00,00");
     
-    // Initialiser les contrôleurs avec les données existantes si disponibles
-    _cautionController.text = widget.data['caution']?.toString() ?? '0';
+    // Initialiser les contrôleurs avec les données existantes si disponibles, sinon "00,00"
+    _cautionController.text = (widget.data['caution'] != null && widget.data['caution'].toString().isNotEmpty) 
+        ? widget.data['caution'].toString() 
+        : "00,00";
     
     // Initialiser les frais avec les valeurs du PDF si disponibles
     if (widget.data['nettoyageInt'] != null && widget.data['nettoyageInt'].toString().isNotEmpty) {
       _fraisNettoyageIntController.text = widget.data['nettoyageInt'].toString();
+    } else if (widget.data['fraisNettoyageInterieur'] != null && widget.data['fraisNettoyageInterieur'].toString().isNotEmpty) {
+      _fraisNettoyageIntController.text = widget.data['fraisNettoyageInterieur'].toString();
     } else {
-      _fraisNettoyageIntController.text = widget.data['fraisNettoyageInterieur']?.toString() ?? '0';
+      _fraisNettoyageIntController.text = "00,00";
     }
     
     if (widget.data['nettoyageExt'] != null && widget.data['nettoyageExt'].toString().isNotEmpty) {
       _fraisNettoyageExtController.text = widget.data['nettoyageExt'].toString();
+    } else if (widget.data['fraisNettoyageExterieur'] != null && widget.data['fraisNettoyageExterieur'].toString().isNotEmpty) {
+      _fraisNettoyageExtController.text = widget.data['fraisNettoyageExterieur'].toString();
     } else {
-      _fraisNettoyageExtController.text = widget.data['fraisNettoyageExterieur']?.toString() ?? '0';
+      _fraisNettoyageExtController.text = "00,00";
     }
     
     if (widget.data['carburantManquant'] != null && widget.data['carburantManquant'].toString().isNotEmpty) {
       _fraisCarburantController.text = widget.data['carburantManquant'].toString();
+    } else if (widget.data['fraisCarburantManquant'] != null && widget.data['fraisCarburantManquant'].toString().isNotEmpty) {
+      _fraisCarburantController.text = widget.data['fraisCarburantManquant'].toString();
     } else {
-      _fraisCarburantController.text = widget.data['fraisCarburantManquant']?.toString() ?? '0';
+      _fraisCarburantController.text = "00,00";
     }
     
     if (widget.data['prixRayures'] != null && widget.data['prixRayures'].toString().isNotEmpty) {
       _fraisRayuresController.text = widget.data['prixRayures'].toString();
+    } else if (widget.data['fraisRayuresDommages'] != null && widget.data['fraisRayuresDommages'].toString().isNotEmpty) {
+      _fraisRayuresController.text = widget.data['fraisRayuresDommages'].toString();
     } else {
-      _fraisRayuresController.text = widget.data['fraisRayuresDommages']?.toString() ?? '0';
+      _fraisRayuresController.text = "00,00";
     }
 
     // Initialiser les cases à cocher avec les valeurs sauvegardées
@@ -114,8 +124,12 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
         oldWidget.tarifKilometrique != widget.tarifKilometrique ||
         oldWidget.dateFinEffective != widget.dateFinEffective) {
       // Mettre à jour les contrôleurs d'affichage
-      _kmSuppDisplayController.text = _calculerFraisKilometriques().toStringAsFixed(2);
-      _coutTotalController.text = _calculerCoutTotal().toStringAsFixed(2);
+      double fraisKm = _calculerFraisKilometriques();
+      double coutTotal = _calculerCoutTotal();
+      
+      // Utiliser "00,00" si les valeurs sont nulles ou égales à 0
+      _kmSuppDisplayController.text = fraisKm > 0 ? fraisKm.toStringAsFixed(2) : "00,00";
+      _coutTotalController.text = coutTotal > 0 ? coutTotal.toStringAsFixed(2) : "00,00";
       
       // Recalculer le total
       _calculerTotal();
@@ -192,7 +206,8 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
     // Mettre à jour le contrôleur d'affichage si nous ne sommes pas dans initState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _kmSuppDisplayController.text = frais.toStringAsFixed(2);
+        // Utiliser "00,00" si les frais sont nuls
+        _kmSuppDisplayController.text = frais > 0 ? frais.toStringAsFixed(2) : "00,00";
       }
     });
     
@@ -270,7 +285,8 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
       // Mettre à jour le contrôleur d'affichage si nous ne sommes pas dans initState
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _coutTotalController.text = coutTotal.toStringAsFixed(2);
+          // Utiliser "00,00" si le coût est nul
+          _coutTotalController.text = coutTotal > 0 ? coutTotal.toStringAsFixed(2) : "00,00";
         }
       });
       
@@ -284,15 +300,21 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
   
   // Méthode pour notifier le parent des changements
   void _notifierParent() {
+    // Fonction pour convertir les valeurs "00,00" en 0.0 et les autres en double
+    double parseValue(String text) {
+      if (text == "00,00") return 0.0;
+      return double.tryParse(text.replaceAll(',', '.')) ?? 0.0;
+    }
+    
     // Préparer les données à envoyer au parent
     _tempFrais = {
       'prixLocation': _calculerCoutTotal(),
-      'caution': double.tryParse(_cautionController.text) ?? 0.0,
+      'caution': parseValue(_cautionController.text),
       'coutKmSupplementaires': _calculerFraisKilometriques(),
-      'fraisNettoyageInterieur': double.tryParse(_fraisNettoyageIntController.text) ?? 0.0,
-      'fraisNettoyageExterieur': double.tryParse(_fraisNettoyageExtController.text) ?? 0.0,
-      'fraisCarburantManquant': double.tryParse(_fraisCarburantController.text) ?? 0.0,
-      'fraisRayuresDommages': double.tryParse(_fraisRayuresController.text) ?? 0.0,
+      'fraisNettoyageInterieur': parseValue(_fraisNettoyageIntController.text),
+      'fraisNettoyageExterieur': parseValue(_fraisNettoyageExtController.text),
+      'fraisCarburantManquant': parseValue(_fraisCarburantController.text),
+      'fraisRayuresDommages': parseValue(_fraisRayuresController.text),
       
       // Utiliser des noms de propriétés cohérents pour les cases à cocher
       'includeNettoyageInterieur': _includeNettoyageInt,

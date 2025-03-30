@@ -9,11 +9,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 class PlanData {
   final String title;
   final String price;
+  final String? subtext;
   final List<Map<String, dynamic>> features;
 
   PlanData({
     required this.title,
     required this.price,
+    this.subtext,
     required this.features,
   });
 
@@ -34,6 +36,7 @@ class PlanData {
     PlanData(
       title: "Offre Premium Mensuelle",
       price: "19.99€/mois",
+      subtext: "(soit 1,99€ la voiture)",
       features: [
         {"text": "10 voitures", "isAvailable": true},
         {"text": "Contrats illimités", "isAvailable": true},
@@ -47,6 +50,7 @@ class PlanData {
     PlanData(
       title: "Offre Platinum Mensuelle",
       price: "39.99€/mois",
+      subtext: "(soit 1,99€ la voiture)",
       features: [
         {"text": "20 voitures", "isAvailable": true},
         {"text": "Contrats illimités", "isAvailable": true},
@@ -67,7 +71,6 @@ class PlanData {
         {"text": "Formation incluse", "isAvailable": true},
         {"text": "Support prioritaire", "isAvailable": true},
         {"text": "Fonctionnalités sur mesure", "isAvailable": true},
-        {"text": "Intégration avec vos outils", "isAvailable": true},
       ],
     ),
   ];
@@ -89,6 +92,7 @@ class PlanData {
     PlanData(
       title: "Offre Premium Annuelle",
       price: "239.99€/an",
+      subtext: "(soit 1,99€ la voiture)",
       features: [
         {"text": "10 voitures", "isAvailable": true},
         {"text": "Contrats illimités", "isAvailable": true},
@@ -102,6 +106,7 @@ class PlanData {
     PlanData(
       title: "Offre Platinum Annuelle",
       price: "479.99€/an",
+      subtext: "(soit 1,99€ la voiture)",
       features: [
         {"text": "20 voitures", "isAvailable": true},
         {"text": "Contrats illimités", "isAvailable": true},
@@ -122,7 +127,6 @@ class PlanData {
         {"text": "Formation incluse", "isAvailable": true},
         {"text": "Support prioritaire", "isAvailable": true},
         {"text": "Fonctionnalités sur mesure", "isAvailable": true},
-        {"text": "Intégration avec vos outils", "isAvailable": true},
       ],
     ),
   ];
@@ -292,6 +296,15 @@ class PlanDisplayState extends State<PlanDisplay> {
                     color: Color(0xFFFFC300),
                   ),
                 ),
+                if (plan.subtext != null)
+                  Text(
+                    plan.subtext!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey,
+                    ),
+                  ),
               ],
             ),
           ),

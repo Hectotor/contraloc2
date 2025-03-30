@@ -410,155 +410,206 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, 
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text(
-          widget.vehicleId != null ? "Modifier" : "Ajouter un véhicule",
+          widget.vehicleId != null ? "Modifier le véhicule" : "Ajouter un véhicule",
           style: const TextStyle(
-              color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
+              color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF08004D),
         centerTitle: true,
+        elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionTitle("Informations générales"),
-                  _buildTextField("Marque", _marqueController,
-                      isRequired: true),
-                  _buildTextField("Modèle", _modeleController,
-                      isRequired: true),
-                  _buildTextField("Immatriculation", _immatriculationController,
-                      isRequired: true),
-                  _buildDropdown(
-                      "Type de carburant",
-                      ["Essence", "Diesel", "Hybride", "Électrique"],
-                      _typeCarburant,
-                      (value) => setState(() => _typeCarburant = value!)),
-                  _buildSectionTitle("Informations techniques"),
-                  _buildTextField("Numéro de série (VIN)", _vinController),
-                  _buildDropdown(
-                      "Type de boîte de vitesses",
-                      ["Manuelle", "Automatique", "Semi-automatique"],
-                      _boiteVitesses,
-                      (value) => setState(() => _boiteVitesses = value!)),
-                  _buildSectionTitle("Informations de location"),
-                  _buildTextField(
-                    "Prix de location par jour (€)",
-                    _prixLocationController,
-                    keyboardType:
-                        TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
-                    ],
-                  ),
-                  _buildTextField(
-                    "Caution (€)",
-                    _cautionController,
-                    keyboardType:
-                        TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
-                    ],
-                  ),
-                  _buildTextField(
-                    "Franchise (€)",
-                    _franchiseController,
-                    keyboardType:
-                        TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
-                    ],
-                  ),
-                  _buildTextField(
-                    "Kilométrage supplémentaire (€)",
-                    _kilometrageSuppController,
-                    isRequired: true,
-                    keyboardType:
-                        TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
-                    ],
-                  ),
-                  _buildTextField(
-                    "Carburant manquant (€)",
-                    _carburantManquantController,
-                    isRequired: true,
-                    keyboardType:
-                        TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
-                    ],
-                  ),
-                  _buildTextField(
-                    "Frais de nettoyage intérieur (€)",
-                    _nettoyageIntController,
-                    isRequired: true,
-                    keyboardType:
-                        TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
-                    ],
-                  ),
-                  _buildTextField(
-                    "Frais de nettoyage extérieur (€)",
-                    _nettoyageExtController,
-                    isRequired: true,
-                    keyboardType:
-                        TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
-                    ],
-                  ),
-                  _buildTextField(
-                    "Rayures par élément (€)",
-                    _rayuresController,
-                    keyboardType:
-                        TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
-                    ],
-                  ),
-                  _buildSectionTitle("Assurance et maintenance"),
-                  _buildTextField(
-                      "Nom de l'assurance", _assuranceNomController),
-                  _buildTextField("N° téléphone l'assurance",
-                      _assuranceNumeroController), 
-                  _buildTextField(
-                      "Date du prochain entretien", _entretienDateController),
-                  _buildTextField(
-                      "Kilométrage du prochain entretien", _entretienKilometrageController),
-                  _buildNotesField(
-                      "Notes d'entretien", _entretienNotesController),
-                  _buildSectionTitle("Ajouter des images"),
-                  _buildImagePicker("Photo de la voiture", _carPhoto,
-                      () => _pickImage('car')),
-                  _buildImagePicker("Carte grise", _carteGrisePhoto,
-                      () => _pickImage('carteGrise')),
-                  _buildImagePicker("Attestation d'assurance", _assurancePhoto,
-                      () => _pickImage('assurance')),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _saveVehicule,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF08004D),
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // En-tête avec description
+                    _buildHeader(),
+                    const SizedBox(height: 24),
+                    
+                    // Section informations générales
+                    _buildSection(
+                      title: "Informations générales",
+                      icon: Icons.info_outline,
+                      color: const Color(0xFF1A237E),
+                      children: [
+                        _buildTextField("Marque", _marqueController, isRequired: true),
+                        _buildTextField("Modèle", _modeleController, isRequired: true),
+                        _buildTextField("Immatriculation", _immatriculationController, isRequired: true),
+                        _buildDropdown(
+                          "Type de carburant",
+                          ["Essence", "Diesel", "Hybride", "Électrique"],
+                          _typeCarburant,
+                          (value) => setState(() => _typeCarburant = value!)),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Section informations techniques
+                    _buildSection(
+                      title: "Informations techniques",
+                      icon: Icons.build_outlined,
+                      color: Colors.orange[700]!,
+                      children: [
+                        _buildTextField("Numéro de série (VIN)", _vinController),
+                        _buildDropdown(
+                          "Type de boîte de vitesses",
+                          ["Manuelle", "Automatique", "Semi-automatique"],
+                          _boiteVitesses,
+                          (value) => setState(() => _boiteVitesses = value!)),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Section informations de location
+                    _buildSection(
+                      title: "Informations de location",
+                      icon: Icons.euro_outlined,
+                      color: Colors.green[700]!,
+                      children: [
+                        _buildTextField(
+                          "Prix de location par jour (€)",
+                          _prixLocationController,
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                          ],
+                        ),
+                        _buildTextField(
+                          "Caution (€)",
+                          _cautionController,
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                          ],
+                        ),
+                        _buildTextField(
+                          "Franchise (€)",
+                          _franchiseController,
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                          ],
+                        ),
+                        _buildTextField(
+                          "Kilométrage supplémentaire (€)",
+                          _kilometrageSuppController,
+                          isRequired: true,
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Section frais supplémentaires
+                    _buildSection(
+                      title: "Frais supplémentaires",
+                      icon: Icons.attach_money_outlined,
+                      color: Colors.red[700]!,
+                      children: [
+                        _buildTextField(
+                          "Carburant manquant (€)",
+                          _carburantManquantController,
+                          isRequired: true,
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                          ],
+                        ),
+                        _buildTextField(
+                          "Frais de nettoyage intérieur (€)",
+                          _nettoyageIntController,
+                          isRequired: true,
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                          ],
+                        ),
+                        _buildTextField(
+                          "Frais de nettoyage extérieur (€)",
+                          _nettoyageExtController,
+                          isRequired: true,
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                          ],
+                        ),
+                        _buildTextField(
+                          "Rayures par élément (€)",
+                          _rayuresController,
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Section assurance et maintenance
+                    _buildSection(
+                      title: "Assurance et maintenance",
+                      icon: Icons.security_outlined,
+                      color: Colors.blue[700]!,
+                      children: [
+                        _buildTextField("Nom de l'assurance", _assuranceNomController),
+                        _buildTextField("N° téléphone l'assurance", _assuranceNumeroController),
+                        _buildTextField("Date du prochain entretien", _entretienDateController),
+                        _buildTextField("Kilométrage du prochain entretien", _entretienKilometrageController),
+                        _buildNotesField("Notes d'entretien", _entretienNotesController),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Section images
+                    _buildSection(
+                      title: "Documents et photos",
+                      icon: Icons.photo_camera_outlined,
+                      color: Colors.purple[700]!,
+                      children: [
+                        _buildImagePicker("Photo de la voiture", _carPhoto, () => _pickImage('car')),
+                        _buildImagePicker("Carte grise", _carteGrisePhoto, () => _pickImage('carteGrise')),
+                        _buildImagePicker("Attestation d'assurance", _assurancePhoto, () => _pickImage('assurance')),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    
+                    // Bouton d'enregistrement
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 40),
+                      child: ElevatedButton(
+                        onPressed: _saveVehicule,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF08004D),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: Text(
+                          widget.vehicleId != null ? "Mettre à jour" : "Enregistrer le véhicule",
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
-                    child: const Text("Enregistrer",
-                        style: TextStyle(color: Colors.white, fontSize: 20)),
-                  ),
-                  const SizedBox(height: 40), 
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -571,6 +622,106 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  // Widget d'en-tête avec description
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.vehicleId != null ? "Modification du véhicule" : "Nouveau véhicule",
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF08004D),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.vehicleId != null 
+                ? "Mettez à jour les informations de votre véhicule"
+                : "Remplissez les informations pour ajouter un nouveau véhicule",
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Méthode pour construire une section avec titre et contenu
+  Widget _buildSection({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<Widget> children,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // En-tête de section
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: color, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Contenu de la section
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(children: children),
+          ),
         ],
       ),
     );
@@ -773,19 +924,6 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
-      child: Text(
-        title,
-        style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF08004D)),
       ),
     );
   }
