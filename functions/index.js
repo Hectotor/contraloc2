@@ -1,10 +1,13 @@
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
-const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
 
-initializeApp();
-const db = getFirestore();
+// Initialiser Firebase Admin
+if (admin.apps.length === 0) {
+  admin.initializeApp();
+}
 
-// La Cloud Function addCollaboratorToUser a été supprimée car elle n'est plus nécessaire
-// Les données des collaborateurs sont maintenant uniquement stockées dans la sous-collection
-// de l'administrateur (users/{adminId}/collaborateurs/{collaboratorId})
+// Importer la fonction stripeWebhook depuis stripe_webhook.js
+const stripeWebhook = require('./stripe_webhook');
+
+// Exporter la fonction stripeWebhook avec l'option pour permettre les requêtes non authentifiées
+exports.stripeWebhook = functions.https.onRequest(stripeWebhook);
