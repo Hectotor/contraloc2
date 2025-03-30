@@ -110,14 +110,18 @@ class SubscriptionHandler {
           final data = userDoc.data();
           if (data != null) {
             final stripePlanType = data['stripePlanType'];
+            final isStripeActive = data['isStripeSubscriptionActive'] == true;
+            final stripeStatus = data['stripeStatus'];
             final cbSubscription = data['cb_subscription'];
             final subscriptionId = data['subscriptionId'];
             
-            // Vérifier si c'est un abonnement Stripe
-            hasStripeSubscription = stripePlanType != null &&
+            // Vérifier si c'est un abonnement Stripe actif
+            hasStripeSubscription = isStripeActive && 
+                stripePlanType != null &&
                 stripePlanType.toString().isNotEmpty &&
                 (stripePlanType.toString().contains('monthly') ||
-                 stripePlanType.toString().contains('yearly'));
+                 stripePlanType.toString().contains('yearly')) &&
+                (stripeStatus == 'active' || stripeStatus == 'trialing');
                 
             // Vérifier si c'est un abonnement CB
             hasCBSubscription = cbSubscription != null &&

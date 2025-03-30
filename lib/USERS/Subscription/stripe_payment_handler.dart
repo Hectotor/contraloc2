@@ -183,7 +183,6 @@ class StripePaymentHandler {
   /// Vérifie si un utilisateur a un abonnement Stripe actif
   static Future<bool> hasActiveStripeSubscription(String userId) async {
     try {
-      // Référence au document utilisateur dans Firestore
       final userDocRef = FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
@@ -206,8 +205,10 @@ class StripePaymentHandler {
       final isActive = userData['isStripeSubscriptionActive'] == true;
       final stripeStatus = userData['stripeStatus'];
       
+      // Vérifier à la fois le champ isStripeSubscriptionActive et le statut
       return isActive && (stripeStatus == 'active' || stripeStatus == 'trialing');
     } catch (e) {
+      print(' Erreur lors de la vérification de l\'abonnement Stripe: $e');
       return false;
     }
   }

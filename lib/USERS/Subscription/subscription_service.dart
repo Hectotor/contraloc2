@@ -38,13 +38,20 @@ class SubscriptionService {
 
       // Vérifier si l'utilisateur a un abonnement Stripe
       final stripeSubscriptionId = userData['stripeSubscriptionId'];
+      final stripeStatus = userData['stripeStatus'];
+      
       if (stripeSubscriptionId != null && stripeSubscriptionId.toString().isNotEmpty) {
-        // Mettre à jour les données d'abonnement depuis Stripe
-        await StripeService.updateFirebaseFromStripe(
-          currentUser.uid, 
-          stripeSubscriptionId.toString()
-        );
-        print('✅ Statut d\'abonnement Stripe mis à jour');
+        // Ne mettre à jour que si le statut n'est pas déjà "canceled"
+        if (stripeStatus != 'canceled') {
+          // Mettre à jour les données d'abonnement depuis Stripe
+          await StripeService.updateFirebaseFromStripe(
+            currentUser.uid, 
+            stripeSubscriptionId.toString()
+          );
+          print('✅ Statut d\'abonnement Stripe mis à jour');
+        } else {
+          print('ℹ️ Abonnement Stripe déjà annulé, pas de mise à jour nécessaire');
+        }
       } else {
         print('ℹ️ Aucun abonnement Stripe trouvé');
         

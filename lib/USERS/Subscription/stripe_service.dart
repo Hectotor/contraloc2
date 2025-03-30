@@ -188,6 +188,26 @@ class StripeService {
       
       final status = jsonResponse['status'];
       final isActive = status == 'active' || status == 'trialing';
+      
+      // Si l'abonnement est annulé, réinitialiser les valeurs
+      if (status == 'canceled') {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('authentification')
+            .doc(userId)
+            .set({
+          'stripePlanType': 'free',
+          'isStripeSubscriptionActive': false,
+          'stripeNumberOfCars': 1,
+          'stripeStatus': status,
+          'lastStripeUpdateDate': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        
+        print('✅ Firebase mis à jour avec succès - Abonnement annulé');
+        return;
+      }
+      
       final productId = jsonResponse['items']['data'][0]['price']['product'];
       
       // Déterminer le type de plan et le nombre de véhicules
