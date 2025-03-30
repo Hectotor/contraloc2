@@ -552,6 +552,8 @@ class _LocationPageState extends State<LocationPage> {
           prenom: widget.prenom,
           nom: widget.nom,
           nomEntreprise: nomEntreprise,
+          nomCollaborateur: nomCollaborateur,
+          prenomCollaborateur: prenomCollaborateur,
         );
       }
 

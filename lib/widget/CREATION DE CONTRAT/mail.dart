@@ -20,6 +20,8 @@ class EmailService {
     String? telephone,
     String? logoUrl,
     bool sendCopyToAdmin = true,
+    String? nomCollaborateur,
+    String? prenomCollaborateur,
   }) async {
     try {
       // Récupérer les données de l'utilisateur
@@ -49,11 +51,49 @@ class EmailService {
             // Récupérer l'email de l'administrateur
             if (sendCopyToAdmin) {
               try {
+                // D'abord essayer de récupérer depuis le document principal de l'admin
                 final adminUserDoc = await FirebaseFirestore.instance
                     .collection('users')
                     .doc(adminId)
                     .get();
+                
+                // Vérifier si l'email est dans le document principal
                 adminEmail = adminUserDoc.data()?['email'];
+                
+                // Si l'email n'est pas trouvé, essayer dans la sous-collection authentification
+                if (adminEmail == null) {
+                  final adminAuthDoc = await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(adminId)
+                      .collection('authentification')
+                      .doc(adminId)
+                      .get();
+                  
+                  adminEmail = adminAuthDoc.data()?['email'];
+                  print('📧 Email administrateur récupéré depuis authentification: $adminEmail');
+                }
+                
+                // Si toujours null, essayer de récupérer l'utilisateur Firebase
+                if (adminEmail == null) {
+                  try {
+                    // Récupérer tous les collaborateurs de l'admin pour trouver son email
+                    final adminCollaborateursSnapshot = await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(adminId)
+                        .collection('collaborateurs')
+                        .where('role', isEqualTo: 'admin')
+                        .limit(1)
+                        .get();
+                    
+                    if (adminCollaborateursSnapshot.docs.isNotEmpty) {
+                      adminEmail = adminCollaborateursSnapshot.docs.first.data()['email'];
+                      print('📧 Email administrateur récupéré depuis collaborateurs: $adminEmail');
+                    }
+                  } catch (e) {
+                    print('❌ Erreur lors de la recherche dans collaborateurs: $e');
+                  }
+                }
+                
                 print('📧 Email administrateur récupéré: $adminEmail');
               } catch (e) {
                 print('❌ Erreur lors de la récupération de l\'email administrateur: $e');
@@ -241,6 +281,12 @@ class EmailService {
       if (sendCopyToAdmin && adminEmail != null && adminEmail != email) {
         print('📨 Tentative d\'envoi d\'une copie à l\'administrateur: $adminEmail');
         try {
+          // Déterminer si le contrat a été créé par un collaborateur
+          String collaborateurInfo = '';
+          if (isCollaborateur && prenomCollaborateur != null && nomCollaborateur != null) {
+            collaborateurInfo = '<p><strong>Ce contrat a été créé par votre collaborateur: $prenomCollaborateur $nomCollaborateur</strong></p>';
+          }
+          
           final adminMessage = Message()
             ..from = Address(smtpEmail, nomEntreprise ?? 'Contraloc')
             ..recipients.add(adminEmail)
@@ -263,6 +309,8 @@ class EmailService {
                   <p>Bonjour,</p>
                   
                   <p>Voici une copie du contrat de location qui a été envoyé à <strong>$prenom $nom</strong> pour le véhicule <strong>$marque $modele $immatriculation</strong>. 📝</p>
+                  
+                  $collaborateurInfo
                   
                   <p>Ce message est une copie automatique envoyée à l'administrateur pour archivage.</p>
 

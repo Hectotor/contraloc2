@@ -201,6 +201,8 @@ class RetourEnvoiePdf {
           adresse: adresse,
           telephone: telephone,
           logoUrl: logoUrl,
+          nomCollaborateur: contratData['nomCollaborateur'],
+          prenomCollaborateur: contratData['prenomCollaborateur'],
         );
       } else {
         print("Aucun email client n'a été trouvé. Pas d'envoi de PDF.");
