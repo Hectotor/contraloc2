@@ -24,13 +24,14 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
   
   // Filtres pour le calcul du chiffre d'affaire
   Map<String, bool> _filtresCalcul = {
-    'prixLocation': true,
-    'coutKmSupplementaires': true,
-    'fraisNettoyageInterieur': true,
-    'fraisNettoyageExterieur': true,
-    'fraisCarburantManquant': true,
-    'fraisRayuresDommages': true,
-    'caution': true,
+    'facturePrixLocation': true,
+    'factureCoutKmSupplementaires': true,
+    'factureFraisNettoyageInterieur': true,
+    'factureFraisNettoyageExterieur': true,
+    'factureFraisCarburantManquant': true,
+    'factureFraisRayuresDommages': true,
+    'factureFraisAutre': true,
+    'factureCaution': true,
   };
   
   List<Map<String, dynamic>> _contrats = [];
@@ -146,13 +147,14 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         };
         
         // Récupérer les données financières
-        double prixLocation = (data['prixLocation'] ?? 0.0).toDouble();
-        double coutKmSupplementaires = (data['coutKmSupplementaires'] ?? 0.0).toDouble();
-        double fraisNettoyageInterieur = (data['fraisNettoyageInterieur'] ?? 0.0).toDouble();
-        double fraisNettoyageExterieur = (data['fraisNettoyageExterieur'] ?? 0.0).toDouble();
-        double fraisCarburantManquant = (data['fraisCarburantManquant'] ?? 0.0).toDouble();
-        double fraisRayuresDommages = (data['fraisRayuresDommages'] ?? 0.0).toDouble();
-        double caution = (data['caution'] ?? 0.0).toDouble();
+        double prixLocation = (data['facturePrixLocation'] ?? 0.0).toDouble();
+        double coutKmSupplementaires = (data['factureCoutKmSupplementaires'] ?? 0.0).toDouble();
+        double fraisNettoyageInterieur = (data['factureFraisNettoyageInterieur'] ?? 0.0).toDouble();
+        double fraisNettoyageExterieur = (data['factureFraisNettoyageExterieur'] ?? 0.0).toDouble();
+        double fraisCarburantManquant = (data['factureFraisCarburantManquant'] ?? 0.0).toDouble();
+        double fraisRayuresDommages = (data['factureFraisRayuresDommages'] ?? 0.0).toDouble();
+        double fraisAutre = (data['factureFraisAutre'] ?? 0.0).toDouble();
+        double caution = (data['factureCaution'] ?? 0.0).toDouble();
         double montantTotal = (data['montantTotal'] ?? 0.0).toDouble();
         
         // Récupérer la date de clôture
@@ -170,13 +172,14 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         contrats.add({
           'vehiculeInfoStr': vehiculeInfoStr,
           'vehiculeDetails': vehiculeDetails,
-          'prixLocation': prixLocation,
-          'coutKmSupplementaires': coutKmSupplementaires,
-          'fraisNettoyageInterieur': fraisNettoyageInterieur,
-          'fraisNettoyageExterieur': fraisNettoyageExterieur,
-          'fraisCarburantManquant': fraisCarburantManquant,
-          'fraisRayuresDommages': fraisRayuresDommages,
-          'caution': caution,
+          'facturePrixLocation': prixLocation,
+          'factureCoutKmSupplementaires': coutKmSupplementaires,
+          'factureFraisNettoyageInterieur': fraisNettoyageInterieur,
+          'factureFraisNettoyageExterieur': fraisNettoyageExterieur,
+          'factureFraisCarburantManquant': fraisCarburantManquant,
+          'factureFraisRayuresDommages': fraisRayuresDommages,
+          'factureFraisAutre': fraisAutre,
+          'factureCaution': caution,
           'montantTotal': montantTotal,
           'dateCloture': dateCloture,
         });
@@ -221,13 +224,14 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     for (var contrat in _contrats) {
       DateTime dateCloture = contrat['dateCloture'];
       double montant = 0;
-      if (_filtresCalcul['prixLocation']!) montant += contrat['prixLocation'];
-      if (_filtresCalcul['coutKmSupplementaires']!) montant += contrat['coutKmSupplementaires'];
-      if (_filtresCalcul['fraisNettoyageInterieur']!) montant += contrat['fraisNettoyageInterieur'];
-      if (_filtresCalcul['fraisNettoyageExterieur']!) montant += contrat['fraisNettoyageExterieur'];
-      if (_filtresCalcul['fraisCarburantManquant']!) montant += contrat['fraisCarburantManquant'];
-      if (_filtresCalcul['fraisRayuresDommages']!) montant += contrat['fraisRayuresDommages'];
-      if (_filtresCalcul['caution']!) montant += contrat['caution'];
+      if (_filtresCalcul['facturePrixLocation']!) montant += contrat['facturePrixLocation'];
+      if (_filtresCalcul['factureCoutKmSupplementaires']!) montant += contrat['factureCoutKmSupplementaires'];
+      if (_filtresCalcul['factureFraisNettoyageInterieur']!) montant += contrat['factureFraisNettoyageInterieur'];
+      if (_filtresCalcul['factureFraisNettoyageExterieur']!) montant += contrat['factureFraisNettoyageExterieur'];
+      if (_filtresCalcul['factureFraisCarburantManquant']!) montant += contrat['factureFraisCarburantManquant'];
+      if (_filtresCalcul['factureFraisRayuresDommages']!) montant += contrat['factureFraisRayuresDommages'];
+      if (_filtresCalcul['factureFraisAutre']!) montant += contrat['factureFraisAutre'];
+      if (_filtresCalcul['factureCaution']!) montant += contrat['factureCaution'];
       
       // Filtrer par année si nécessaire
       if (dateCloture.year.toString() != _selectedYear) {
@@ -302,26 +306,29 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       
       // Calculer le montant en fonction des filtres sélectionnés
       double montant = 0;
-      if (_filtresCalcul['prixLocation'] == true) {
-        montant += contrat['prixLocation'] ?? 0;
+      if (_filtresCalcul['facturePrixLocation'] == true) {
+        montant += contrat['facturePrixLocation'] ?? 0;
       }
-      if (_filtresCalcul['coutKmSupplementaires'] == true) {
-        montant += contrat['coutKmSupplementaires'] ?? 0;
+      if (_filtresCalcul['factureCoutKmSupplementaires'] == true) {
+        montant += contrat['factureCoutKmSupplementaires'] ?? 0;
       }
-      if (_filtresCalcul['fraisNettoyageInterieur'] == true) {
-        montant += contrat['fraisNettoyageInterieur'] ?? 0;
+      if (_filtresCalcul['factureFraisNettoyageInterieur'] == true) {
+        montant += contrat['factureFraisNettoyageInterieur'] ?? 0;
       }
-      if (_filtresCalcul['fraisNettoyageExterieur'] == true) {
-        montant += contrat['fraisNettoyageExterieur'] ?? 0;
+      if (_filtresCalcul['factureFraisNettoyageExterieur'] == true) {
+        montant += contrat['factureFraisNettoyageExterieur'] ?? 0;
       }
-      if (_filtresCalcul['fraisCarburantManquant'] == true) {
-        montant += contrat['fraisCarburantManquant'] ?? 0;
+      if (_filtresCalcul['factureFraisCarburantManquant'] == true) {
+        montant += contrat['factureFraisCarburantManquant'] ?? 0;
       }
-      if (_filtresCalcul['fraisRayuresDommages'] == true) {
-        montant += contrat['fraisRayuresDommages'] ?? 0;
+      if (_filtresCalcul['factureFraisRayuresDommages'] == true) {
+        montant += contrat['factureFraisRayuresDommages'] ?? 0;
       }
-      if (_filtresCalcul['caution'] == true) {
-        montant += contrat['caution'] ?? 0;
+      if (_filtresCalcul['factureFraisAutre'] == true) {
+        montant += contrat['factureFraisAutre'] ?? 0;
+      }
+      if (_filtresCalcul['factureCaution'] == true) {
+        montant += contrat['factureCaution'] ?? 0;
       }
       
       if (chiffreParVehicule.containsKey(vehiculeInfoStr)) {
