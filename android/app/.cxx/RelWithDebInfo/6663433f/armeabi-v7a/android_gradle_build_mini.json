@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "/Users/chablis/flutter/packages/flutter_tools/gradle/src/main/groovy/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/chablis/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/chablis/Downloads/contraloc2-426dea1ce9a361b0a70c2acbc5bca7a9085d550b/android/app/.cxx/RelWithDebInfo/6663433f/armeabi-v7a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/chablis/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/chablis/Downloads/contraloc2-426dea1ce9a361b0a70c2acbc5bca7a9085d550b/android/app/.cxx/RelWithDebInfo/6663433f/armeabi-v7a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}

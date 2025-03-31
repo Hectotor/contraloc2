@@ -1,0 +1,1 @@
+/Users/chablis/Downloads/contraloc2-426dea1ce9a361b0a70c2acbc5bca7a9085d550b/build/app/intermediates/cxx/RelWithDebInfo/6663433f/obj/armeabi-v7a

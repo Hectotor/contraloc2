@@ -1,0 +1,2 @@
+/Users/chablis/Downloads/contraloc2-426dea1ce9a361b0a70c2acbc5bca7a9085d550b/android/app/.cxx/RelWithDebInfo/6663433f/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/chablis/Downloads/contraloc2-426dea1ce9a361b0a70c2acbc5bca7a9085d550b/android/app/.cxx/RelWithDebInfo/6663433f/armeabi-v7a/CMakeFiles/rebuild_cache.dir
