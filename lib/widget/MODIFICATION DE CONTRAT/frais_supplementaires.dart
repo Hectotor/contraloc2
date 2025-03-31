@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart'; // Importer la bibliothèque intl pour utiliser DateFormat
 
 class FraisSupplementaires extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -31,108 +30,87 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
   final TextEditingController _fraisNettoyageExtController = TextEditingController();
   final TextEditingController _fraisCarburantController = TextEditingController();
   final TextEditingController _fraisRayuresController = TextEditingController();
+  final TextEditingController _fraisAutreController = TextEditingController();
 
   // Contrôleurs spécifiques pour les champs calculés automatiquement
   late TextEditingController _kmSuppDisplayController;
   late TextEditingController _coutTotalController;
 
-  // Variables pour les cases à cocher
-  bool _includeNettoyageInt = false;
-  bool _includeNettoyageExt = false;
-  bool _includeCarburant = false;
-  bool _includeRayures = false;
-  bool _includeCoutTotal = false;
-  bool _includeCaution = false;
-  bool _includeCoutKmSupp = false;
+  // Type de paiement
+  String _typePaiement = 'Carte bancaire';
+  final List<String> _typesPaiement = ['Carte bancaire', 'Espèces', 'Virement'];
 
   // Total calculé
   double _total = 0.0;
   
-  // Stockage temporaire des frais
-  Map<String, dynamic> _tempFrais = {};
+  // Méthode pour notifier le parent des changements
+  void _notifierParent() {
+    // Préparer les données à envoyer au parent
+    Map<String, dynamic> frais = {
+      'facturePrixLocation': _coutTotalController.text,
+      'factureCaution': _cautionController.text,
+      'factureCoutKmSupplementaires': _kmSuppDisplayController.text,
+      'factureFraisNettoyageInterieur': _fraisNettoyageIntController.text,
+      'factureFraisNettoyageExterieur': _fraisNettoyageExtController.text,
+      'factureFraisCarburantManquant': _fraisCarburantController.text,
+      'factureFraisRayuresDommages': _fraisRayuresController.text,
+      'factureFraisAutre': _fraisAutreController.text,
+      'factureTotalFrais': _total.toStringAsFixed(2).replaceAll('.', ','),
+      
+      // Indiquer que tous les frais sont inclus
+      'includeNettoyageInterieur': _fraisNettoyageIntController.text.isNotEmpty,
+      'includeNettoyageExterieur': _fraisNettoyageExtController.text.isNotEmpty,
+      'includeCarburantManquant': _fraisCarburantController.text.isNotEmpty,
+      'includeRayuresDommages': _fraisRayuresController.text.isNotEmpty,
+      'includeCoutTotal': _coutTotalController.text.isNotEmpty,
+      'includeCaution': _cautionController.text.isNotEmpty,
+      'includeCoutKmSupp': _kmSuppDisplayController.text.isNotEmpty,
+      'includeAutre': _fraisAutreController.text.isNotEmpty,
+    };
+    
+    // Ajouter le type de paiement uniquement si le total est supérieur à 0
+    if (_total > 0) {
+      frais['factureTypePaiement'] = _typePaiement;
+    }
+    
+    // Notifier le parent des changements
+    widget.onFraisUpdated(frais);
+  }
 
   @override
   void initState() {
     super.initState();
-    // Initialiser les contrôleurs d'affichage avec "00,00" par défaut
-    _kmSuppDisplayController = TextEditingController(text: _calculerFraisKilometriques() > 0 ? _calculerFraisKilometriques().toStringAsFixed(2) : "00,00");
-    _coutTotalController = TextEditingController(text: _calculerCoutTotal() > 0 ? _calculerCoutTotal().toStringAsFixed(2) : "00,00");
+    // Initialiser les contrôleurs avec des valeurs vides
+    _kmSuppDisplayController = TextEditingController(text: "");
+    _coutTotalController = TextEditingController(text: "");
     
-    // Initialiser les contrôleurs avec les données existantes si disponibles, sinon "00,00"
-    _cautionController.text = (widget.data['caution'] != null && widget.data['caution'].toString().isNotEmpty) 
-        ? widget.data['caution'].toString() 
-        : "00,00";
-    
-    // Initialiser les frais avec les valeurs du PDF si disponibles
-    if (widget.data['nettoyageInt'] != null && widget.data['nettoyageInt'].toString().isNotEmpty) {
-      _fraisNettoyageIntController.text = widget.data['nettoyageInt'].toString();
-    } else if (widget.data['fraisNettoyageInterieur'] != null && widget.data['fraisNettoyageInterieur'].toString().isNotEmpty) {
-      _fraisNettoyageIntController.text = widget.data['fraisNettoyageInterieur'].toString();
-    } else {
-      _fraisNettoyageIntController.text = "00,00";
-    }
-    
-    if (widget.data['nettoyageExt'] != null && widget.data['nettoyageExt'].toString().isNotEmpty) {
-      _fraisNettoyageExtController.text = widget.data['nettoyageExt'].toString();
-    } else if (widget.data['fraisNettoyageExterieur'] != null && widget.data['fraisNettoyageExterieur'].toString().isNotEmpty) {
-      _fraisNettoyageExtController.text = widget.data['fraisNettoyageExterieur'].toString();
-    } else {
-      _fraisNettoyageExtController.text = "00,00";
-    }
-    
-    if (widget.data['carburantManquant'] != null && widget.data['carburantManquant'].toString().isNotEmpty) {
-      _fraisCarburantController.text = widget.data['carburantManquant'].toString();
-    } else if (widget.data['fraisCarburantManquant'] != null && widget.data['fraisCarburantManquant'].toString().isNotEmpty) {
-      _fraisCarburantController.text = widget.data['fraisCarburantManquant'].toString();
-    } else {
-      _fraisCarburantController.text = "00,00";
-    }
-    
-    if (widget.data['prixRayures'] != null && widget.data['prixRayures'].toString().isNotEmpty) {
-      _fraisRayuresController.text = widget.data['prixRayures'].toString();
-    } else if (widget.data['fraisRayuresDommages'] != null && widget.data['fraisRayuresDommages'].toString().isNotEmpty) {
-      _fraisRayuresController.text = widget.data['fraisRayuresDommages'].toString();
-    } else {
-      _fraisRayuresController.text = "00,00";
-    }
-
-    // Initialiser les cases à cocher avec les valeurs sauvegardées
-    _includeNettoyageInt = widget.data['includeNettoyageInterieur'] ?? false;
-    _includeNettoyageExt = widget.data['includeNettoyageExterieur'] ?? false;
-    _includeCarburant = widget.data['includeCarburantManquant'] ?? false;
-    _includeRayures = widget.data['includeRayuresDommages'] ?? false;
-    _includeCoutTotal = widget.data['includeCoutTotal'] ?? false;
-    _includeCaution = widget.data['includeCaution'] ?? false;
-    _includeCoutKmSupp = widget.data['includeCoutKmSupp'] ?? false;
-
-    // Calculer le total initial sans notifier le parent
-    _calculerTotalSansNotification();
-    
-    // Utiliser Future.microtask pour notifier le parent après la construction initiale
-    Future.microtask(() {
-      _notifierParent();
-    });
-  }
-
-  @override
-  void didUpdateWidget(FraisSupplementaires oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    
-    // Vérifier si les propriétés ont changé
-    if (oldWidget.kilometrageActuel != widget.kilometrageActuel || 
-        oldWidget.kilometrageInitial != widget.kilometrageInitial || 
-        oldWidget.tarifKilometrique != widget.tarifKilometrique ||
-        oldWidget.dateFinEffective != widget.dateFinEffective) {
-      // Mettre à jour les contrôleurs d'affichage
-      double fraisKm = _calculerFraisKilometriques();
-      double coutTotal = _calculerCoutTotal();
+    // Charger les valeurs existantes depuis widget.data
+    if (widget.data.isNotEmpty) {
+      // Charger les valeurs de base
+      _cautionController.text = widget.data['factureCaution']?.toString() ?? "";
+      _fraisNettoyageIntController.text = widget.data['factureFraisNettoyageInterieur']?.toString() ?? "";
+      _fraisNettoyageExtController.text = widget.data['factureFraisNettoyageExterieur']?.toString() ?? "";
+      _fraisCarburantController.text = widget.data['factureFraisCarburantManquant']?.toString() ?? "";
+      _fraisRayuresController.text = widget.data['factureFraisRayuresDommages']?.toString() ?? "";
+      _fraisAutreController.text = widget.data['factureFraisAutre']?.toString() ?? "";
+      _coutTotalController.text = widget.data['facturePrixLocation']?.toString() ?? "";
       
-      // Utiliser "00,00" si les valeurs sont nulles ou égales à 0
-      _kmSuppDisplayController.text = fraisKm > 0 ? fraisKm.toStringAsFixed(2) : "00,00";
-      _coutTotalController.text = coutTotal > 0 ? coutTotal.toStringAsFixed(2) : "00,00";
+      // Charger le type de paiement s'il existe
+      if (widget.data['factureTypePaiement'] != null && _typesPaiement.contains(widget.data['factureTypePaiement'])) {
+        _typePaiement = widget.data['factureTypePaiement'];
+      }
       
-      // Recalculer le total
-      _calculerTotal();
+      // Calculer le total
+      _calculerTotalSansNotification();
+      setState(() {});
+    } else {
+      // Initialiser avec des valeurs vides si widget.data est vide
+      _cautionController.text = "";
+      _fraisNettoyageIntController.text = "";
+      _fraisNettoyageExtController.text = "";
+      _fraisCarburantController.text = "";
+      _fraisRayuresController.text = "";
+      _fraisAutreController.text = "";
     }
   }
 
@@ -147,202 +125,22 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
   void _calculerTotalSansNotification() {
     double total = 0.0;
     
-    // Ajouter coût total si la case est cochée
-    if (_includeCoutTotal) {
-      total += _calculerCoutTotal();
-    }
+    // Ajouter tous les frais automatiquement sans vérifier les cases à cocher
+    try { total += double.tryParse(_coutTotalController.text.replaceAll(',', '.')) ?? 0.0; } catch(_) {}
+    try { total += double.tryParse(_cautionController.text.replaceAll(',', '.')) ?? 0.0; } catch(_) {}
+    try { total += double.tryParse(_kmSuppDisplayController.text.replaceAll(',', '.')) ?? 0.0; } catch(_) {}
+    try { total += double.tryParse(_fraisNettoyageIntController.text.replaceAll(',', '.')) ?? 0.0; } catch(_) {}
+    try { total += double.tryParse(_fraisNettoyageExtController.text.replaceAll(',', '.')) ?? 0.0; } catch(_) {}
+    try { total += double.tryParse(_fraisCarburantController.text.replaceAll(',', '.')) ?? 0.0; } catch(_) {}
+    try { total += double.tryParse(_fraisRayuresController.text.replaceAll(',', '.')) ?? 0.0; } catch(_) {}
+    try { total += double.tryParse(_fraisAutreController.text.replaceAll(',', '.')) ?? 0.0; } catch(_) {}
     
-    // Ajouter caution si la case est cochée
-    if (_includeCaution) {
-      total += double.tryParse(_cautionController.text) ?? 0.0;
-    }
-    
-    // Ajouter coût km supplémentaires si la case est cochée
-    if (_includeCoutKmSupp) {
-      total += _calculerFraisKilometriques();
-    }
-    
-    // Ajouter frais optionnels selon les cases cochées
-    if (_includeNettoyageInt) {
-      total += double.tryParse(_fraisNettoyageIntController.text) ?? 0.0;
-    }
-    
-    if (_includeNettoyageExt) {
-      total += double.tryParse(_fraisNettoyageExtController.text) ?? 0.0;
-    }
-    
-    if (_includeCarburant) {
-      total += double.tryParse(_fraisCarburantController.text) ?? 0.0;
-    }
-    
-    if (_includeRayures) {
-      total += double.tryParse(_fraisRayuresController.text) ?? 0.0;
-    }
-    
+    // Mettre à jour le total
     setState(() {
       _total = total;
     });
   }
-
-  double _calculerFraisKilometriques() {
-    double kilometrageAutorise = double.tryParse(widget.data['kilometrageAutorise'] ?? '0') ?? 0;
-    double kilometrage = widget.kilometrageActuel - widget.kilometrageInitial;
-    double kmSupplementaires = 0;
-    
-    // Si le kilométrage est inférieur au kilométrage initial, pas de frais
-    if (kilometrage < 0) {
-      kilometrage = 0;
-      return 0;
-    }
-    
-    // Calculer les kilomètres supplémentaires (au-delà du kilométrage autorisé)
-    if (kilometrage > kilometrageAutorise && kilometrageAutorise > 0) {
-      kmSupplementaires = kilometrage - kilometrageAutorise;
-    }
-    
-    // Calculer les frais en fonction du tarif kilométrique
-    double frais = kmSupplementaires * widget.tarifKilometrique;
-    
-    // Mettre à jour le contrôleur d'affichage si nous ne sommes pas dans initState
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        // Utiliser "00,00" si les frais sont nuls
-        _kmSuppDisplayController.text = frais > 0 ? frais.toStringAsFixed(2) : "00,00";
-      }
-    });
-    
-    return frais;
-  }
   
-  // Méthode pour calculer le coût total en fonction des données du contrat
-  double _calculerCoutTotal() {
-    try {
-      // Récupérer le prix de location depuis les données
-      double prixLocation = 0.0;
-      
-      // Vérifier si prixLocation est une chaîne ou un nombre
-      var prixLocationData = widget.data['prixLocation'];
-      if (prixLocationData is String) {
-        prixLocation = double.tryParse(prixLocationData) ?? 0.0;
-      } else if (prixLocationData is num) {
-        prixLocation = prixLocationData.toDouble();
-      }
-      
-      // Récupérer et parser les dates
-      DateTime dateDebut;
-      DateTime dateFin;
-      
-      try {
-        // Essayer de parser la date de début
-        String dateDebutStr = widget.data['dateDebut'] ?? '';
-        if (dateDebutStr.contains('à')) {
-          // Format: "EEEE d MMMM yyyy à HH:mm"
-          dateDebut = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(dateDebutStr);
-        } else {
-          // Essayer d'autres formats courants
-          dateDebut = DateTime.tryParse(dateDebutStr) ?? DateTime.now();
-        }
-        
-        // Essayer de parser la date de fin effective
-        if (widget.dateFinEffective.isNotEmpty) {
-          if (widget.dateFinEffective.contains('à')) {
-            // Format: "EEEE d MMMM yyyy à HH:mm"
-            dateFin = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(widget.dateFinEffective);
-          } else {
-            // Essayer d'autres formats courants
-            dateFin = DateTime.tryParse(widget.dateFinEffective) ?? DateTime.now();
-          }
-        } else {
-          // Utiliser la date de fin théorique si la date effective n'est pas disponible
-          String dateFinStr = widget.data['dateFinTheorique'] ?? '';
-          if (dateFinStr.contains('à')) {
-            dateFin = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(dateFinStr);
-          } else {
-            dateFin = DateTime.tryParse(dateFinStr) ?? DateTime.now();
-          }
-        }
-      } catch (e) {
-        print('Erreur lors du parsing des dates: $e');
-        // En cas d'erreur, utiliser des valeurs par défaut
-        dateDebut = DateTime.now();
-        dateFin = DateTime.now().add(const Duration(days: 1));
-      }
-      
-      // Calculer la différence en heures pour plus de précision
-      int differenceEnHeures = dateFin.difference(dateDebut).inHours;
-      
-      // Calculer le nombre de jours facturés
-      int joursFactures = 1; // Le premier jour est toujours facturé
-      
-      // Ajouter un jour pour chaque tranche de 24h complète
-      if (differenceEnHeures >= 24) {
-        joursFactures = 1 + (differenceEnHeures / 24).floor();
-      }
-      
-      // Calculer le coût total
-      double coutTotal = prixLocation * joursFactures;
-      
-      // Mettre à jour le contrôleur d'affichage si nous ne sommes pas dans initState
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          // Utiliser "00,00" si le coût est nul
-          _coutTotalController.text = coutTotal > 0 ? coutTotal.toStringAsFixed(2) : "00,00";
-        }
-      });
-      
-      return coutTotal;
-      
-    } catch (e) {
-      print('Erreur lors du calcul du coût total: $e');
-      return 0.0;
-    }
-  }
-  
-  // Méthode pour notifier le parent des changements
-  void _notifierParent() {
-    // Fonction pour convertir les valeurs "00,00" en 0.0 et les autres en double
-    double parseValue(String text) {
-      if (text == "00,00") return 0.0;
-      return double.tryParse(text.replaceAll(',', '.')) ?? 0.0;
-    }
-    
-    // Préparer les données à envoyer au parent
-    _tempFrais = {
-      'prixLocation': _calculerCoutTotal(),
-      'caution': parseValue(_cautionController.text),
-      'coutKmSupplementaires': _calculerFraisKilometriques(),
-      'fraisNettoyageInterieur': parseValue(_fraisNettoyageIntController.text),
-      'fraisNettoyageExterieur': parseValue(_fraisNettoyageExtController.text),
-      'fraisCarburantManquant': parseValue(_fraisCarburantController.text),
-      'fraisRayuresDommages': parseValue(_fraisRayuresController.text),
-      
-      // Utiliser des noms de propriétés cohérents pour les cases à cocher
-      'includeNettoyageInterieur': _includeNettoyageInt,
-      'includeNettoyageExterieur': _includeNettoyageExt,
-      'includeCarburantManquant': _includeCarburant,
-      'includeRayuresDommages': _includeRayures,
-      'includeCoutTotal': _includeCoutTotal,
-      'includeCaution': _includeCaution,
-      'includeCoutKmSupp': _includeCoutKmSupp,
-      'totalFrais': _total,
-      
-      // Ajouter les champs pour le PDF avec le même format pour tous les frais
-      'nettoyageInt': _includeNettoyageInt ? _fraisNettoyageIntController.text : '',
-      'nettoyageExt': _includeNettoyageExt ? _fraisNettoyageExtController.text : '',
-      'carburantManquant': _includeCarburant ? _fraisCarburantController.text : '',
-      'prixRayures': _includeRayures ? _fraisRayuresController.text : '',
-      'temporaire': true, // Marquer les frais comme temporaires
-    };
-    
-    widget.onFraisUpdated(_tempFrais);
-  }
-
-  // Méthode pour calculer le total et notifier le parent
-  void _calculerTotal() {
-    _calculerTotalSansNotification();
-    _notifierParent();
-  }
-
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -363,107 +161,99 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
             ),
             const SizedBox(height: 20),
             
+            // Type de paiement
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Type de paiement", style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 5),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _typePaiement,
+                      items: _typesPaiement.map((String type) {
+                        return DropdownMenuItem<String>(
+                          value: type,
+                          child: Text(type),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            _typePaiement = newValue;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
             // Coût total
-            _buildCheckboxField(
+            _buildTextField(
               controller: _coutTotalController,
               label: "Prix de la location",
-              value: _includeCoutTotal,
-              onChanged: (value) {
-                setState(() {
-                  _includeCoutTotal = value ?? false;
-                  _calculerTotal();
-                });
-              },
-              onTextChanged: (_) => _calculerTotal(),
-              readOnly: true, // Rendre le champ en lecture seule car calculé automatiquement
+              onTextChanged: (_) => _calculerTotalSansNotification(),
+              readOnly: false, // Permettre la modification manuelle
             ),
             const SizedBox(height: 10),
             
             // Caution
-            _buildCheckboxField(
+            _buildTextField(
               controller: _cautionController,
               label: "Caution",
-              value: _includeCaution,
-              onChanged: (value) {
-                setState(() {
-                  _includeCaution = value ?? false;
-                  _calculerTotal();
-                });
-              },
-              onTextChanged: (_) => _calculerTotal(),
+              onTextChanged: (_) => _calculerTotalSansNotification(),
             ),
             const SizedBox(height: 10),
             
-            // Coût km supplémentaires
-            _buildCheckboxField(
+            // Coût kilomètres supplémentaires
+            _buildTextField(
               controller: _kmSuppDisplayController,
-              label: "Frais total km supplémentaires",
-              value: _includeCoutKmSupp,
-              onChanged: (value) {
-                setState(() {
-                  _includeCoutKmSupp = value ?? false;
-                  _calculerTotal();
-                });
-              },
-              onTextChanged: (_) => _calculerTotal(),
-              readOnly: true, // Rendre le champ en lecture seule car calculé automatiquement
+              label: "Frais des kilomètres supplémentaires",
+              onTextChanged: (_) => _calculerTotalSansNotification(),
             ),
             const SizedBox(height: 10),
             
-            // Frais avec cases à cocher
-            _buildCheckboxField(
+            _buildTextField(
               controller: _fraisNettoyageIntController,
               label: "Frais de nettoyage intérieur",
-              value: _includeNettoyageInt,
-              onChanged: (value) {
-                setState(() {
-                  _includeNettoyageInt = value ?? false;
-                  _calculerTotal();
-                });
-              },
-              onTextChanged: (_) => _calculerTotal(),
+              onTextChanged: (_) => _calculerTotalSansNotification(),
             ),
             const SizedBox(height: 10),
             
-            _buildCheckboxField(
+            _buildTextField(
               controller: _fraisNettoyageExtController,
               label: "Frais de nettoyage extérieur",
-              value: _includeNettoyageExt,
-              onChanged: (value) {
-                setState(() {
-                  _includeNettoyageExt = value ?? false;
-                  _calculerTotal();
-                });
-              },
-              onTextChanged: (_) => _calculerTotal(),
+              onTextChanged: (_) => _calculerTotalSansNotification(),
             ),
             const SizedBox(height: 10),
             
-            _buildCheckboxField(
+            _buildTextField(
               controller: _fraisCarburantController,
               label: "Frais de carburant manquant",
-              value: _includeCarburant,
-              onChanged: (value) {
-                setState(() {
-                  _includeCarburant = value ?? false;
-                  _calculerTotal();
-                });
-              },
-              onTextChanged: (_) => _calculerTotal(),
+              onTextChanged: (_) => _calculerTotalSansNotification(),
             ),
             const SizedBox(height: 10),
             
-            _buildCheckboxField(
+            _buildTextField(
               controller: _fraisRayuresController,
               label: "Frais de rayures/dommages",
-              value: _includeRayures,
-              onChanged: (value) {
-                setState(() {
-                  _includeRayures = value ?? false;
-                  _calculerTotal();
-                });
-              },
-              onTextChanged: (_) => _calculerTotal(),
+              onTextChanged: (_) => _calculerTotalSansNotification(),
+            ),
+            const SizedBox(height: 10),
+            
+            _buildTextField(
+              controller: _fraisAutreController,
+              label: "Autre",
+              onTextChanged: (_) => _calculerTotalSansNotification(),
             ),
             const SizedBox(height: 20),
             
@@ -485,7 +275,7 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
                     ),
                   ),
                   Text(
-                    "${_total.toStringAsFixed(2)} €",
+                    "${_total.toStringAsFixed(2).replaceAll('.', ',')} €",
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -509,7 +299,8 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    _calculerTotal(); // Recalculer une dernière fois
+                    _calculerTotalSansNotification(); // Recalculer une dernière fois
+                    _notifierParent(); // Notifier le parent uniquement lors de la validation
                     Navigator.of(context).pop(true);
                   },
                   style: ElevatedButton.styleFrom(
@@ -528,40 +319,33 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
     );
   }
 
-  // Widget pour construire un champ avec case à cocher
-  Widget _buildCheckboxField({
+  // Widget pour créer un champ de texte avec étiquette (sans case à cocher)
+  Widget _buildTextField({
     required TextEditingController controller,
     required String label,
-    required bool value,
-    required Function(bool?) onChanged,
     required Function(String) onTextChanged,
     bool readOnly = false,
   }) {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Checkbox(
-          value: value,
-          onChanged: onChanged,
-          activeColor: const Color(0xFF08004D),
-        ),
-        Expanded(
-          child: TextFormField(
-            controller: controller,
-            readOnly: readOnly,
-            decoration: InputDecoration(
-              labelText: label,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              suffixText: "€",
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 5),
+        TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
             ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-            ],
-            onChanged: onTextChanged,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            suffixText: "€",
           ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9,]')),
+          ],
+          onChanged: onTextChanged,
+          readOnly: readOnly,
         ),
       ],
     );

@@ -90,11 +90,13 @@ class _ModifierScreenState extends State<ModifierScreen> {
     _dateFinEffectifController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR')
         .format(DateTime.now()); 
     _commentaireRetourController.text = widget.data['commentaireRetour'] ?? '';
-    _kilometrageRetourController.text = widget.data['kilometrageRetour'] ?? '';
-    _nettoyageIntController.text = widget.data['nettoyageInt'] ?? '';
-    _nettoyageExtController.text = widget.data['nettoyageExt'] ?? '';
-    _carburantManquantController.text = widget.data['carburantManquant'] ?? '';
-    _cautionController.text = widget.data['caution'] ?? '';
+    _kilometrageRetourController.text = widget.data['kilometrageRetour']?.toString() ?? '';
+    
+    // Conversion des valeurs en String pour éviter les erreurs de type
+    _nettoyageIntController.text = widget.data['nettoyageInt']?.toString() ?? '';
+    _nettoyageExtController.text = widget.data['nettoyageExt']?.toString() ?? '';
+    _carburantManquantController.text = widget.data['carburantManquant']?.toString() ?? '';
+    _cautionController.text = widget.data['caution']?.toString() ?? '';
 
     if (widget.data['photosRetourUrls'] != null) {
       _photosRetourUrls = List<String>.from(widget.data['photosRetourUrls']);
@@ -114,19 +116,19 @@ class _ModifierScreenState extends State<ModifierScreen> {
       final userId = status['userId'];
 
       if (userId == null) {
-        print("🔴 Erreur: Utilisateur non connecté");
+        print(" Erreur: Utilisateur non connecté");
         throw Exception("Utilisateur non connecté");
       }
 
       final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
 
       if (targetId == null) {
-        print("🔴 Erreur: ID cible non disponible");
+        print(" Erreur: ID cible non disponible");
         throw Exception("ID cible non disponible");
       }
 
-      print("📝 Téléchargement de photos retour par ${status['isCollaborateur'] ? 'collaborateur' : 'admin'}");
-      print("📝 userId: $userId, targetId (adminId): $targetId");
+      print(" Téléchargement de photos retour par ${status['isCollaborateur'] ? 'collaborateur' : 'admin'}");
+      print(" userId: $userId, targetId (adminId): $targetId");
 
       for (var photo in photos) {
         final compressedImage = await FlutterImageCompress.compressWithFile(
@@ -137,7 +139,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         );
 
         if (compressedImage == null) {
-          print("🔴 Erreur: Échec de la compression de l'image");
+          print(" Erreur: Échec de la compression de l'image");
           continue;
         }
 
@@ -160,9 +162,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
       }
       return urls;
     } catch (e) {
-      print('🔴 Erreur lors du téléchargement des photos : $e');
+      print(' Erreur lors du téléchargement des photos : $e');
       if (e.toString().contains('unauthorized')) {
-        print('🔐 Problème d\'autorisation: Vérifiez les règles de sécurité Firebase Storage');
+        print(' Problème d\'autorisation: Vérifiez les règles de sécurité Firebase Storage');
       }
       rethrow;
     }
@@ -213,7 +215,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
       final isCollaborateur = status['isCollaborateur'] == true;
       final adminId = status['adminId'];
 
-      print('🔄 Mise à jour du contrat - userId: $userId, isCollaborateur: $isCollaborateur, adminId: $adminId');
+      print(' Mise à jour du contrat - userId: $userId, isCollaborateur: $isCollaborateur, adminId: $adminId');
 
       List<String> allPhotosUrls = List<String>.from(_photosRetourUrls);
 
@@ -224,13 +226,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
       String? signatureRetourBase64 = _signatureRetourBase64.isNotEmpty ? _signatureRetourBase64 : null;
 
-      Map<String, dynamic> fraisFinaux = {..._fraisSupplementaires};
+      Map<String, dynamic> fraisFinaux = _fraisSupplementaires;
       
-      if (fraisFinaux.containsKey('temporaire')) {
-        fraisFinaux.remove('temporaire');
-      }
-      
-      print('💰 Sauvegarde des frais définitifs: $fraisFinaux');
+      print(' Sauvegarde des frais définitifs: $fraisFinaux');
 
       final updateData = {
         'status': 'restitue',
@@ -246,14 +244,37 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'signature_retour': signatureRetourBase64,
         'contratCloture': true,
         'dateClotureContrat': DateTime.now().toIso8601String(),
+        
+        // Ajouter les frais supplémentaires au contrat
+        'factureFraisSupplementaires': fraisFinaux,
+        'facturePrixLocation': fraisFinaux['prixLocation'],
+        'factureCaution': fraisFinaux['caution'],
+        'factureCoutKmSupplementaires': fraisFinaux['coutKmSupplementaires'],
+        'factureFraisNettoyageInterieur': fraisFinaux['fraisNettoyageInterieur'],
+        'factureFraisNettoyageExterieur': fraisFinaux['fraisNettoyageExterieur'],
+        'factureFraisCarburantManquant': fraisFinaux['fraisCarburantManquant'],
+        'factureFraisRayuresDommages': fraisFinaux['fraisRayuresDommages'],
+        'factureFraisAutre': fraisFinaux['fraisAutre'],
+        'factureTypePaiement': fraisFinaux['typePaiement'],
+        'factureTotalFrais': fraisFinaux['totalFrais'],
+        
+        // Ajouter les indicateurs d'inclusion
+        'includeNettoyageInterieur': fraisFinaux['includeNettoyageInterieur'],
+        'includeNettoyageExterieur': fraisFinaux['includeNettoyageExterieur'],
+        'includeCarburantManquant': fraisFinaux['includeCarburantManquant'],
+        'includeRayuresDommages': fraisFinaux['includeRayuresDommages'],
+        'includeCoutTotal': fraisFinaux['includeCoutTotal'],
+        'includeCaution': fraisFinaux['includeCaution'],
+        'includeCoutKmSupp': fraisFinaux['includeCoutKmSupp'],
+        'includeAutre': fraisFinaux['includeAutre'],
       };
 
       if (isCollaborateur && adminId != null) {
         try {
-          print('🔄 Début de la mise à jour du contrat par le collaborateur');
-          print('👤 ID Collaborateur: ${FirebaseAuth.instance.currentUser?.uid}');
-          print('👥 ID Admin: $adminId');
-          print('📄 ID Contrat: ${widget.contratId}');
+          print(' Début de la mise à jour du contrat par le collaborateur');
+          print(' ID Collaborateur: ${FirebaseAuth.instance.currentUser?.uid}');
+          print(' ID Admin: $adminId');
+          print(' ID Contrat: ${widget.contratId}');
           
           await CollaborateurUtil.updateDocument(
             collection: 'locations',
@@ -261,7 +282,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
             data: updateData,
             useAdminId: true,
           );
-          print('✅ Contrat mis à jour dans la collection de l\'admin: $adminId');
+          print(' Contrat mis à jour dans la collection de l\'admin: $adminId');
 
           Map<String, dynamic> vehiculeInfoDetails = await CollaborateurCA.getVehiculeInfo(
             immatriculation: widget.data['immatriculation'] ?? '',
@@ -292,19 +313,19 @@ class _ModifierScreenState extends State<ModifierScreen> {
           );
           
           if (success) {
-            print('✅ Données financières enregistrées avec succès dans chiffre_affaire');
+            print(' Données financières enregistrées avec succès dans chiffre_affaire');
           } else {
-            print('⚠️ Échec de l\'enregistrement dans chiffre_affaire');
+            print(' Échec de l\'enregistrement dans chiffre_affaire');
             throw Exception('Échec de l\'enregistrement des données financières');
           }
         } catch (e) {
-          print('❌ Erreur lors de la mise à jour du contrat: $e');
+          print(' Erreur lors de la mise à jour du contrat: $e');
         }
       } else {
         try {
-          print('🔄 Début de la mise à jour du contrat par l\'administrateur');
-          print('👤 ID Administrateur: ${FirebaseAuth.instance.currentUser?.uid}');
-          print('📄 ID Contrat: ${widget.contratId}');
+          print(' Début de la mise à jour du contrat par l\'administrateur');
+          print(' ID Administrateur: ${FirebaseAuth.instance.currentUser?.uid}');
+          print(' ID Contrat: ${widget.contratId}');
           
           await CollaborateurUtil.updateDocument(
             collection: 'locations',
@@ -312,7 +333,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
             data: updateData,
             useAdminId: false,
           );
-          print('✅ Contrat mis à jour dans la collection de l\'administrateur');
+          print(' Contrat mis à jour dans la collection de l\'administrateur');
 
           Map<String, dynamic> vehiculeInfoDetails = await CollaborateurCA.getVehiculeInfo(
             immatriculation: widget.data['immatriculation'] ?? '',
@@ -343,13 +364,13 @@ class _ModifierScreenState extends State<ModifierScreen> {
           );
           
           if (success) {
-            print('✅ Données financières enregistrées avec succès dans chiffre_affaire');
+            print(' Données financières enregistrées avec succès dans chiffre_affaire');
           } else {
-            print('⚠️ Échec de l\'enregistrement dans chiffre_affaire');
+            print(' Échec de l\'enregistrement dans chiffre_affaire');
             throw Exception('Échec de l\'enregistrement des données financières');
           }
         } catch (e) {
-          print('❌ Erreur lors de la mise à jour du contrat: $e');
+          print(' Erreur lors de la mise à jour du contrat: $e');
         }
       }
 
@@ -455,7 +476,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
       final localPdfFile = File(localPdfPath);
       
       if (await localPdfFile.exists()) {
-        print('📄 PDF trouvé en cache local, ouverture directe');
+        print(' PDF trouvé en cache local, ouverture directe');
         
         if (dialogShown && context.mounted) {
           Navigator.pop(context);
@@ -466,20 +487,20 @@ class _ModifierScreenState extends State<ModifierScreen> {
         return;
       }
       
-      print('📄 PDF non trouvé en cache local, génération sans appels Firestore...');
+      print(' PDF non trouvé en cache local, génération sans appels Firestore...');
 
       final status = await CollaborateurUtil.checkCollaborateurStatus();
       final userId = status['userId'];
       final isCollaborateur = status['isCollaborateur'] == true;
       
-      print('🔍 Génération PDF - userId: $userId, isCollaborateur: $isCollaborateur');
+      print(' Génération PDF - userId: $userId, isCollaborateur: $isCollaborateur');
 
       String conditions = widget.data['conditions'] ?? ContratModifier.defaultContract;
       
       String? signatureRetourBase64 = widget.data['signature_retour'] ?? widget.data['signatureRetour'];
       
-      print('📝 Signature de retour récupérée : ${signatureRetourBase64 != null ? 'Présente' : 'Absente'}');
-      print('📄 Conditions personnalisées récupérées : ${conditions != ContratModifier.defaultContract ? 'Personnalisées' : 'Par défaut'}');
+      print(' Signature de retour récupérée : ${signatureRetourBase64 != null ? 'Présente' : 'Absente'}');
+      print(' Conditions personnalisées récupérées : ${conditions != ContratModifier.defaultContract ? 'Personnalisées' : 'Par défaut'}');
 
       final userData = await CollaborateurUtil.getAuthData();
 
@@ -529,9 +550,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
       
       try {
         await File(pdfPath).copy(localPdfPath);
-        print('📄 PDF sauvegardé en cache local: $localPdfPath');
+        print(' PDF sauvegardé en cache local: $localPdfPath');
       } catch (e) {
-        print('⚠️ Erreur lors de la sauvegarde du PDF en cache local: $e');
+        print(' Erreur lors de la sauvegarde du PDF en cache local: $e');
       }
 
       if (dialogShown && context.mounted) {
@@ -542,7 +563,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
       await OpenFilex.open(pdfPath);
 
     } catch (e) {
-      print('❌ Erreur lors de la génération du PDF : $e');
+      print(' Erreur lors de la génération du PDF : $e');
       
       if (dialogShown && context.mounted) {
         Navigator.pop(context);
