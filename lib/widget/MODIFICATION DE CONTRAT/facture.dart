@@ -33,6 +33,7 @@ class _FactureScreenState extends State<FactureScreen> {
   late TextEditingController _fraisCarburantController;
   late TextEditingController _fraisRayuresController;
   late TextEditingController _fraisAutreController;
+  late TextEditingController _remiseController; // Nouveau contrôleur pour la remise
 
   // Contrôleurs spécifiques pour les champs calculés automatiquement
   late TextEditingController _kmSuppDisplayController;
@@ -65,6 +66,7 @@ class _FactureScreenState extends State<FactureScreen> {
     _fraisCarburantController = TextEditingController(text: "0");
     _fraisRayuresController = TextEditingController(text: "0");
     _fraisAutreController = TextEditingController(text: "0");
+    _remiseController = TextEditingController(text: "0"); // Initialisation du contrôleur de remise
 
     // Initialiser les contrôleurs de kilométrage
     _kmDepartController = TextEditingController(
@@ -127,6 +129,7 @@ class _FactureScreenState extends State<FactureScreen> {
     _kmAutoriseController.dispose();
     _kmSuppController.dispose();
     _kmRetourController.dispose();
+    _remiseController.dispose(); // Dispose du contrôleur de remise
     super.dispose();
   }
 
@@ -140,9 +143,9 @@ class _FactureScreenState extends State<FactureScreen> {
       // Calcul du prix de location basé sur la durée
       try {
         // Récupérer les dates
-        String dateDebutStr = widget.data['dateDebut'] as String? ?? '';
-        String dateFinStr = widget.dateFinEffective ?? '';
-        String prixLocationStr = widget.data['prixLocation'] as String? ?? '0';
+        String dateDebutStr = (widget.data['dateDebut'] as String?) ?? '';
+        String dateFinStr = widget.dateFinEffective;
+        String prixLocationStr = (widget.data['prixLocation'] as String?) ?? '0';
         
         // Convertir le prix de location en double
         double prixLocationJournalier = double.tryParse(prixLocationStr.replaceAll(',', '.')) ?? 0.0;
@@ -252,7 +255,14 @@ class _FactureScreenState extends State<FactureScreen> {
       total += double.tryParse(_fraisRayuresController.text.replaceAll(',', '.')) ?? 0.0;
       total += double.tryParse(_fraisAutreController.text.replaceAll(',', '.')) ?? 0.0;
       total += double.tryParse(_cautionController.text.replaceAll(',', '.')) ?? 0.0;
-
+      
+      // Appliquer la remise (soustraire du total)
+      double remise = double.tryParse(_remiseController.text.replaceAll(',', '.')) ?? 0.0;
+      total -= remise;
+      
+      // S'assurer que le total n'est pas négatif
+      total = total < 0 ? 0 : total;
+      
       _total = total;
     });
   }
@@ -268,6 +278,7 @@ class _FactureScreenState extends State<FactureScreen> {
         'factureFraisCarburantManquant': double.tryParse(_fraisCarburantController.text.replaceAll(',', '.')) ?? 0,
         'factureFraisRayuresDommages': double.tryParse(_fraisRayuresController.text.replaceAll(',', '.')) ?? 0,
         'factureFraisAutre': double.tryParse(_fraisAutreController.text.replaceAll(',', '.')) ?? 0,
+        'factureRemise': double.tryParse(_remiseController.text.replaceAll(',', '.')) ?? 0, // Ajouter la remise
         'factureTotalFrais': _total,
         'factureTypePaiement': _typePaiement,
         'kilometrageRetour': double.tryParse(_kmRetourController.text) ?? 0,
@@ -340,7 +351,7 @@ class _FactureScreenState extends State<FactureScreen> {
 
                   // Section des frais principaux
                   _buildSection(
-                    title: "Frais principaux",
+                    title: "Prix de location (Prix / 24h)",
                     icon: Icons.attach_money,
                     color: Colors.green[700]!,
                     children: [
@@ -538,6 +549,40 @@ class _FactureScreenState extends State<FactureScreen> {
                     color: Colors.blue[700]!,
                     children: [
                       _buildTextField("Frais caution", _cautionController),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Section de la remise
+                  _buildSection(
+                    title: "Remise",
+                    icon: Icons.discount,
+                    color: Colors.purple[700]!,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: TextFormField(
+                          controller: _remiseController,
+                          decoration: InputDecoration(
+                            labelText: "Remise",
+                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            suffixText: '€',
+                          ),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\,?\d{0,2}')),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _calculerTotal();
+                            });
+                          },
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
