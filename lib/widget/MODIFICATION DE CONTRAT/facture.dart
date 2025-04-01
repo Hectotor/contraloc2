@@ -249,7 +249,68 @@ class _FactureScreenState extends State<FactureScreen> {
                     icon: Icons.attach_money,
                     color: Colors.green[700]!,
                     children: [
-                      _buildTextField("Prix de location", _coutTotalController),
+                      // Champ de date de début
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: TextFormField(
+                          initialValue: widget.data['dateDebut'] ?? '',
+                          decoration: InputDecoration(
+                            labelText: "Date de début",
+                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          readOnly: true,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                      
+                      // Champ de date de fin effective
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: TextFormField(
+                          initialValue: widget.dateFinEffective,
+                          decoration: InputDecoration(
+                            labelText: "Date de fin effective",
+                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          readOnly: true,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                      
+                      // Champ du prix de location initial
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: TextFormField(
+                          initialValue: widget.data['prixLocation'] ?? '',
+                          decoration: InputDecoration(
+                            labelText: "Prix de location initial",
+                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            prefixText: '€',
+                          ),
+                          readOnly: true,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                      
+                      _buildTextField("Prix de location total", _coutTotalController),
                     ],
                   ),
                   const SizedBox(height: 24),
