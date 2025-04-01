@@ -152,26 +152,37 @@ class _FactureScreenState extends State<FactureScreen> {
           DateTime? dateDebut;
           DateTime? dateFin;
           
-          // Essayer de parser le format complet (ex: "mardi 1 avril 2025 à 17:19")
+          // Essayer de parser le format complet avec heure (ex: "mardi 1 avril 2025 à 17:19")
           try {
-            // Extraire juste la partie date (jour, mois, année) en ignorant le jour de la semaine et l'heure
-            RegExp regExp = RegExp(r'\d{1,2}\s+\w+\s+\d{4}');
+            // Extraire la date et l'heure
+            RegExp regExpDate = RegExp(r'\d{1,2}\s+\w+\s+\d{4}');
+            RegExp regExpHeure = RegExp(r'\d{1,2}:\d{2}');
             
             // Pour la date de début
-            var match = regExp.firstMatch(dateDebutStr);
-            if (match != null) {
-              String simplifiedDate = match.group(0)!;
-              dateDebut = DateFormat('d MMMM yyyy', 'fr_FR').parse(simplifiedDate);
+            var matchDate = regExpDate.firstMatch(dateDebutStr);
+            var matchHeure = regExpHeure.firstMatch(dateDebutStr);
+            
+            if (matchDate != null) {
+              String simplifiedDate = matchDate.group(0)!;
+              String heure = matchHeure != null ? matchHeure.group(0)! : "00:00";
+              
+              // Combiner la date et l'heure
+              dateDebut = DateFormat('d MMMM yyyy HH:mm', 'fr_FR').parse("$simplifiedDate $heure");
             }
             
             // Pour la date de fin
-            match = regExp.firstMatch(dateFinStr);
-            if (match != null) {
-              String simplifiedDate = match.group(0)!;
-              dateFin = DateFormat('d MMMM yyyy', 'fr_FR').parse(simplifiedDate);
+            matchDate = regExpDate.firstMatch(dateFinStr);
+            matchHeure = regExpHeure.firstMatch(dateFinStr);
+            
+            if (matchDate != null) {
+              String simplifiedDate = matchDate.group(0)!;
+              String heure = matchHeure != null ? matchHeure.group(0)! : "00:00";
+              
+              // Combiner la date et l'heure
+              dateFin = DateFormat('d MMMM yyyy HH:mm', 'fr_FR').parse("$simplifiedDate $heure");
             }
           } catch (e) {
-            print('Erreur lors de l\'extraction de la date: $e');
+            print('Erreur lors de l\'extraction de la date et de l\'heure: $e');
           }
           
           // Si l'extraction a échoué, essayer d'autres formats courants
@@ -195,18 +206,22 @@ class _FactureScreenState extends State<FactureScreen> {
           
           // Si les deux dates sont valides, calculer la durée
           if (dateDebut != null && dateFin != null) {
-            // Calculer la durée en jours (ajouter 1 car on compte le jour de début et le jour de fin)
-            int dureeJours = dateFin.difference(dateDebut).inDays + 1;
-            dureeJours = dureeJours <= 0 ? 1 : dureeJours; // Au moins 1 jour
+            // Calculer la durée en heures
+            int dureeHeures = dateFin.difference(dateDebut).inHours;
             
-            // Calculer le prix total de location
+            // Calculer le nombre de tranches de 24h (arrondi au supérieur)
+            double dureeJours = dureeHeures / 24.0;
+            dureeJours = (dureeHeures % 24 == 0) ? dureeJours : dureeJours.ceilToDouble();
+            dureeJours = dureeJours <= 0 ? 1.0 : dureeJours; // Au moins 1 tranche de 24h
+            
+            // Calculer le prix total de location (100€ pour 24h)
             double prixLocationTotal = dureeJours * prixLocationJournalier;
             
             // Mettre à jour le champ du prix de location total
             _coutTotalController.text = prixLocationTotal.toStringAsFixed(2).replaceAll('.', ',');
             
             // Afficher les informations de calcul pour le débogage
-            print('Date de début: $dateDebut, Date de fin: $dateFin, Durée: $dureeJours jours, Prix journalier: $prixLocationJournalier€, Total: ${prixLocationTotal}€');
+            print('Date de début: $dateDebut, Date de fin: $dateFin, Durée: $dureeHeures heures ($dureeJours tranches de 24h), Prix par 24h: $prixLocationJournalier€, Total: ${prixLocationTotal}€');
           }
         }
       } catch (e) {
