@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 class FactureScreen extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -53,6 +54,7 @@ class _FactureScreenState extends State<FactureScreen> {
   @override
   void initState() {
     super.initState();
+    initializeDateFormatting('fr_FR', null); // Initialisation des locales françaises
     
     // Initialiser les contrôleurs avec des valeurs par défaut à 0
     _kmSuppDisplayController = TextEditingController(text: "0");
@@ -146,20 +148,66 @@ class _FactureScreenState extends State<FactureScreen> {
         double prixLocationJournalier = double.tryParse(prixLocationStr.replaceAll(',', '.')) ?? 0.0;
         
         if (dateDebutStr.isNotEmpty && dateFinStr.isNotEmpty && prixLocationJournalier > 0) {
-          // Formater les dates (format attendu: dd/MM/yyyy)
-          DateFormat format = DateFormat('dd/MM/yyyy');
-          DateTime dateDebut = format.parse(dateDebutStr);
-          DateTime dateFin = format.parse(dateFinStr);
+          // Extraire les dates en garantissant différents formats possibles
+          DateTime? dateDebut;
+          DateTime? dateFin;
           
-          // Calculer la durée en jours (ajouter 1 car on compte le jour de début et le jour de fin)
-          int dureeJours = dateFin.difference(dateDebut).inDays + 1;
-          dureeJours = dureeJours <= 0 ? 1 : dureeJours; // Au moins 1 jour
+          // Essayer de parser le format complet (ex: "mardi 1 avril 2025 à 17:19")
+          try {
+            // Extraire juste la partie date (jour, mois, année) en ignorant le jour de la semaine et l'heure
+            RegExp regExp = RegExp(r'\d{1,2}\s+\w+\s+\d{4}');
+            
+            // Pour la date de début
+            var match = regExp.firstMatch(dateDebutStr);
+            if (match != null) {
+              String simplifiedDate = match.group(0)!;
+              dateDebut = DateFormat('d MMMM yyyy', 'fr_FR').parse(simplifiedDate);
+            }
+            
+            // Pour la date de fin
+            match = regExp.firstMatch(dateFinStr);
+            if (match != null) {
+              String simplifiedDate = match.group(0)!;
+              dateFin = DateFormat('d MMMM yyyy', 'fr_FR').parse(simplifiedDate);
+            }
+          } catch (e) {
+            print('Erreur lors de l\'extraction de la date: $e');
+          }
           
-          // Calculer le prix total de location
-          double prixLocationTotal = dureeJours * prixLocationJournalier;
+          // Si l'extraction a échoué, essayer d'autres formats courants
+          if (dateDebut == null) {
+            try {
+              // Essayer le format dd/MM/yyyy
+              dateDebut = DateFormat('dd/MM/yyyy').parse(dateDebutStr);
+            } catch (e) {
+              print('Impossible de parser la date de début: $e');
+            }
+          }
           
-          // Mettre à jour le champ du prix de location total
-          _coutTotalController.text = prixLocationTotal.toStringAsFixed(2).replaceAll('.', ',');
+          if (dateFin == null) {
+            try {
+              // Essayer le format dd/MM/yyyy
+              dateFin = DateFormat('dd/MM/yyyy').parse(dateFinStr);
+            } catch (e) {
+              print('Impossible de parser la date de fin: $e');
+            }
+          }
+          
+          // Si les deux dates sont valides, calculer la durée
+          if (dateDebut != null && dateFin != null) {
+            // Calculer la durée en jours (ajouter 1 car on compte le jour de début et le jour de fin)
+            int dureeJours = dateFin.difference(dateDebut).inDays + 1;
+            dureeJours = dureeJours <= 0 ? 1 : dureeJours; // Au moins 1 jour
+            
+            // Calculer le prix total de location
+            double prixLocationTotal = dureeJours * prixLocationJournalier;
+            
+            // Mettre à jour le champ du prix de location total
+            _coutTotalController.text = prixLocationTotal.toStringAsFixed(2).replaceAll('.', ',');
+            
+            // Afficher les informations de calcul pour le débogage
+            print('Date de début: $dateDebut, Date de fin: $dateFin, Durée: $dureeJours jours, Prix journalier: $prixLocationJournalier€, Total: ${prixLocationTotal}€');
+          }
         }
       } catch (e) {
         // En cas d'erreur, garder la valeur actuelle
