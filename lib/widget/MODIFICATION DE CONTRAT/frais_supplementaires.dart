@@ -25,12 +25,12 @@ class FraisSupplementaires extends StatefulWidget {
 
 class _FraisSupplementairesState extends State<FraisSupplementaires> {
   // Contrôleurs pour les champs de texte
-  final TextEditingController _cautionController = TextEditingController();
-  final TextEditingController _fraisNettoyageIntController = TextEditingController();
-  final TextEditingController _fraisNettoyageExtController = TextEditingController();
-  final TextEditingController _fraisCarburantController = TextEditingController();
-  final TextEditingController _fraisRayuresController = TextEditingController();
-  final TextEditingController _fraisAutreController = TextEditingController();
+  late TextEditingController _cautionController;
+  late TextEditingController _fraisNettoyageIntController;
+  late TextEditingController _fraisNettoyageExtController;
+  late TextEditingController _fraisCarburantController;
+  late TextEditingController _fraisRayuresController;
+  late TextEditingController _fraisAutreController;
 
   // Contrôleurs spécifiques pour les champs calculés automatiquement
   late TextEditingController _kmSuppDisplayController;
@@ -55,23 +55,9 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
       'factureFraisCarburantManquant': _fraisCarburantController.text,
       'factureFraisRayuresDommages': _fraisRayuresController.text,
       'factureFraisAutre': _fraisAutreController.text,
+      'factureTypePaiement': _total > 0 ? _typePaiement : '',
       'factureTotalFrais': _total.toStringAsFixed(2).replaceAll('.', ','),
-      
-      // Indiquer que tous les frais sont inclus
-      'includeNettoyageInterieur': _fraisNettoyageIntController.text.isNotEmpty,
-      'includeNettoyageExterieur': _fraisNettoyageExtController.text.isNotEmpty,
-      'includeCarburantManquant': _fraisCarburantController.text.isNotEmpty,
-      'includeRayuresDommages': _fraisRayuresController.text.isNotEmpty,
-      'includeCoutTotal': _coutTotalController.text.isNotEmpty,
-      'includeCaution': _cautionController.text.isNotEmpty,
-      'includeCoutKmSupp': _kmSuppDisplayController.text.isNotEmpty,
-      'includeAutre': _fraisAutreController.text.isNotEmpty,
     };
-    
-    // Ajouter le type de paiement uniquement si le total est supérieur à 0
-    if (_total > 0) {
-      frais['factureTypePaiement'] = _typePaiement;
-    }
     
     // Notifier le parent des changements
     widget.onFraisUpdated(frais);
@@ -80,37 +66,31 @@ class _FraisSupplementairesState extends State<FraisSupplementaires> {
   @override
   void initState() {
     super.initState();
-    // Initialiser les contrôleurs avec des valeurs vides
-    _kmSuppDisplayController = TextEditingController(text: "");
-    _coutTotalController = TextEditingController(text: "");
+    // Initialiser les contrôleurs avec des valeurs par défaut à 0
+    _kmSuppDisplayController = TextEditingController(text: "0");
+    _coutTotalController = TextEditingController(text: "0");
+    _cautionController = TextEditingController(text: "0");
+    _fraisNettoyageIntController = TextEditingController(text: "0");
+    _fraisNettoyageExtController = TextEditingController(text: "0");
+    _fraisCarburantController = TextEditingController(text: "0");
+    _fraisRayuresController = TextEditingController(text: "0");
+    _fraisAutreController = TextEditingController(text: "0");
     
     // Charger les valeurs existantes depuis widget.data
     if (widget.data.isNotEmpty) {
       // Charger les valeurs de base
-      _cautionController.text = widget.data['factureCaution']?.toString() ?? "";
-      _fraisNettoyageIntController.text = widget.data['factureFraisNettoyageInterieur']?.toString() ?? "";
-      _fraisNettoyageExtController.text = widget.data['factureFraisNettoyageExterieur']?.toString() ?? "";
-      _fraisCarburantController.text = widget.data['factureFraisCarburantManquant']?.toString() ?? "";
-      _fraisRayuresController.text = widget.data['factureFraisRayuresDommages']?.toString() ?? "";
-      _fraisAutreController.text = widget.data['factureFraisAutre']?.toString() ?? "";
-      _coutTotalController.text = widget.data['facturePrixLocation']?.toString() ?? "";
+      _cautionController.text = widget.data['factureCaution']?.toString() ?? "0";
+      _fraisNettoyageIntController.text = widget.data['factureFraisNettoyageInterieur']?.toString() ?? "0";
+      _fraisNettoyageExtController.text = widget.data['factureFraisNettoyageExterieur']?.toString() ?? "0";
+      _fraisCarburantController.text = widget.data['factureFraisCarburantManquant']?.toString() ?? "0";
+      _fraisRayuresController.text = widget.data['factureFraisRayuresDommages']?.toString() ?? "0";
+      _fraisAutreController.text = widget.data['factureFraisAutre']?.toString() ?? "0";
+      _coutTotalController.text = widget.data['facturePrixLocation']?.toString() ?? "0";
       
       // Charger le type de paiement s'il existe
       if (widget.data['factureTypePaiement'] != null && _typesPaiement.contains(widget.data['factureTypePaiement'])) {
         _typePaiement = widget.data['factureTypePaiement'];
       }
-      
-      // Calculer le total
-      _calculerTotalSansNotification();
-      setState(() {});
-    } else {
-      // Initialiser avec des valeurs vides si widget.data est vide
-      _cautionController.text = "";
-      _fraisNettoyageIntController.text = "";
-      _fraisNettoyageExtController.text = "";
-      _fraisCarburantController.text = "";
-      _fraisRayuresController.text = "";
-      _fraisAutreController.text = "";
     }
   }
 

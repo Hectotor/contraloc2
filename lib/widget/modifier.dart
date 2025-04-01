@@ -238,35 +238,22 @@ class _ModifierScreenState extends State<ModifierScreen> {
             ? _kilometrageRetourController.text
             : null,
         'photosRetourUrls': allPhotosUrls,
-        'nettoyageInt': _nettoyageIntController.text,
-        'nettoyageExt': _nettoyageExtController.text,
         'carburantManquant': _carburantManquantController.text,
         'signature_retour': signatureRetourBase64,
         'contratCloture': true,
         'dateClotureContrat': DateTime.now().toIso8601String(),
         
         // Ajouter les frais supplémentaires au contrat
-        'factureFraisSupplementaires': fraisFinaux,
-        'facturePrixLocation': fraisFinaux['prixLocation'],
-        'factureCaution': fraisFinaux['caution'],
-        'factureCoutKmSupplementaires': fraisFinaux['coutKmSupplementaires'],
-        'factureFraisNettoyageInterieur': fraisFinaux['fraisNettoyageInterieur'],
-        'factureFraisNettoyageExterieur': fraisFinaux['fraisNettoyageExterieur'],
-        'factureFraisCarburantManquant': fraisFinaux['fraisCarburantManquant'],
-        'factureFraisRayuresDommages': fraisFinaux['fraisRayuresDommages'],
-        'factureFraisAutre': fraisFinaux['fraisAutre'],
-        'factureTypePaiement': fraisFinaux['typePaiement'],
-        'factureTotalFrais': fraisFinaux['totalFrais'],
-        
-        // Ajouter les indicateurs d'inclusion
-        'includeNettoyageInterieur': fraisFinaux['includeNettoyageInterieur'],
-        'includeNettoyageExterieur': fraisFinaux['includeNettoyageExterieur'],
-        'includeCarburantManquant': fraisFinaux['includeCarburantManquant'],
-        'includeRayuresDommages': fraisFinaux['includeRayuresDommages'],
-        'includeCoutTotal': fraisFinaux['includeCoutTotal'],
-        'includeCaution': fraisFinaux['includeCaution'],
-        'includeCoutKmSupp': fraisFinaux['includeCoutKmSupp'],
-        'includeAutre': fraisFinaux['includeAutre'],
+        'facturePrixLocation': fraisFinaux['facturePrixLocation'] ?? '0',
+        'factureCaution': fraisFinaux['factureCaution'] ?? '0',
+        'factureCoutKmSupplementaires': fraisFinaux['factureCoutKmSupplementaires'] ?? '0',
+        'factureFraisNettoyageInterieur': fraisFinaux['factureFraisNettoyageInterieur'] ?? '0',
+        'factureFraisNettoyageExterieur': fraisFinaux['factureFraisNettoyageExterieur'] ?? '0',
+        'factureFraisCarburantManquant': fraisFinaux['factureFraisCarburantManquant'] ?? '0',
+        'factureFraisRayuresDommages': fraisFinaux['factureFraisRayuresDommages'] ?? '0',
+        'factureFraisAutre': fraisFinaux['factureFraisAutre'] ?? '0',
+        'factureTypePaiement': fraisFinaux['factureTypePaiement'] ?? '',
+        'factureTotalFrais': fraisFinaux['factureTotalFrais'] ?? '0',
       };
 
       if (isCollaborateur && adminId != null) {
@@ -284,42 +271,18 @@ class _ModifierScreenState extends State<ModifierScreen> {
           );
           print(' Contrat mis à jour dans la collection de l\'admin: $adminId');
 
-          Map<String, dynamic> vehiculeInfoDetails = await CollaborateurCA.getVehiculeInfo(
-            immatriculation: widget.data['immatriculation'] ?? '',
+          // Calculer le montant total pour les statistiques
+          double montantTotal = CollaborateurCA.calculerMontantTotal(fraisFinaux);
+          
+          // Mettre à jour le contrat avec le montant total
+          await CollaborateurUtil.updateDocument(
+            collection: 'locations',
+            docId: widget.contratId,
+            data: {
+              'montantTotal': montantTotal,
+            },
+            useAdminId: true,
           );
-          
-          double montantTotal = CollaborateurCA.calculerMontantTotal(_fraisSupplementaires);
-          
-          Map<String, dynamic> chiffreData = {
-            'marque': vehiculeInfoDetails['marque'] ?? '',
-            'modele': vehiculeInfoDetails['modele'] ?? '',
-            'immatriculation': vehiculeInfoDetails['immatriculation'] ?? '',
-            'photoVehiculeUrl': vehiculeInfoDetails['photoVehiculeUrl'] ?? '',
-            'facturePrixLocation': _fraisSupplementaires['facturePrixLocation'] ?? 0.0,
-            'factureCoutKmSupplementaires': _fraisSupplementaires['factureCoutKmSupplementaires'] ?? 0.0,
-            'factureFraisNettoyageInterieur': _fraisSupplementaires['factureFraisNettoyageInterieur'] ?? 0.0,
-            'factureFraisNettoyageExterieur': _fraisSupplementaires['factureFraisNettoyageExterieur'] ?? 0.0,
-            'factureFraisCarburantManquant': _fraisSupplementaires['factureFraisCarburantManquant'] ?? 0.0,
-            'factureFraisRayuresDommages': _fraisSupplementaires['factureFraisRayuresDommages'] ?? 0.0,
-            'factureFraisAutre': _fraisSupplementaires['factureFraisAutre'] ?? 0.0,
-            'factureCaution': _fraisSupplementaires['factureCaution'] ?? 0.0,
-            'factureTypePaiement': _fraisSupplementaires['factureTypePaiement'] ?? 'Carte bancaire',
-            'montantTotal': montantTotal,
-            'dateCloture': DateTime.now().toIso8601String(),
-            'contratId': widget.contratId,
-          };
-          
-          final success = await CollaborateurCA.ajouterOuMettreAJourChiffreAffaire(
-            contratId: widget.contratId,
-            data: chiffreData,
-          );
-          
-          if (success) {
-            print(' Données financières enregistrées avec succès dans chiffre_affaire');
-          } else {
-            print(' Échec de l\'enregistrement dans chiffre_affaire');
-            throw Exception('Échec de l\'enregistrement des données financières');
-          }
         } catch (e) {
           print(' Erreur lors de la mise à jour du contrat: $e');
         }
@@ -337,42 +300,18 @@ class _ModifierScreenState extends State<ModifierScreen> {
           );
           print(' Contrat mis à jour dans la collection de l\'administrateur');
 
-          Map<String, dynamic> vehiculeInfoDetails = await CollaborateurCA.getVehiculeInfo(
-            immatriculation: widget.data['immatriculation'] ?? '',
+          // Calculer le montant total pour les statistiques
+          double montantTotal = CollaborateurCA.calculerMontantTotal(fraisFinaux);
+          
+          // Mettre à jour le contrat avec le montant total
+          await CollaborateurUtil.updateDocument(
+            collection: 'locations',
+            docId: widget.contratId,
+            data: {
+              'montantTotal': montantTotal,
+            },
+            useAdminId: false,
           );
-          
-          double montantTotal = CollaborateurCA.calculerMontantTotal(_fraisSupplementaires);
-          
-          Map<String, dynamic> chiffreData = {
-            'marque': vehiculeInfoDetails['marque'] ?? '',
-            'modele': vehiculeInfoDetails['modele'] ?? '',
-            'immatriculation': vehiculeInfoDetails['immatriculation'] ?? '',
-            'photoVehiculeUrl': vehiculeInfoDetails['photoVehiculeUrl'] ?? '',
-            'facturePrixLocation': _fraisSupplementaires['facturePrixLocation'] ?? 0.0,
-            'factureCoutKmSupplementaires': _fraisSupplementaires['factureCoutKmSupplementaires'] ?? 0.0,
-            'factureFraisNettoyageInterieur': _fraisSupplementaires['factureFraisNettoyageInterieur'] ?? 0.0,
-            'factureFraisNettoyageExterieur': _fraisSupplementaires['factureFraisNettoyageExterieur'] ?? 0.0,
-            'factureFraisCarburantManquant': _fraisSupplementaires['factureFraisCarburantManquant'] ?? 0.0,
-            'factureFraisRayuresDommages': _fraisSupplementaires['factureFraisRayuresDommages'] ?? 0.0,
-            'factureFraisAutre': _fraisSupplementaires['factureFraisAutre'] ?? 0.0,
-            'factureCaution': _fraisSupplementaires['factureCaution'] ?? 0.0,
-            'factureTypePaiement': _fraisSupplementaires['factureTypePaiement'] ?? 'Carte bancaire',
-            'montantTotal': montantTotal,
-            'dateCloture': DateTime.now().toIso8601String(),
-            'contratId': widget.contratId,
-          };
-          
-          final success = await CollaborateurCA.ajouterOuMettreAJourChiffreAffaire(
-            contratId: widget.contratId,
-            data: chiffreData,
-          );
-          
-          if (success) {
-            print(' Données financières enregistrées avec succès dans chiffre_affaire');
-          } else {
-            print(' Échec de l\'enregistrement dans chiffre_affaire');
-            throw Exception('Échec de l\'enregistrement des données financières');
-          }
         } catch (e) {
           print(' Erreur lors de la mise à jour du contrat: $e');
         }
