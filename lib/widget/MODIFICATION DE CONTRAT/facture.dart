@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 class FactureScreen extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -133,6 +134,37 @@ class _FactureScreenState extends State<FactureScreen> {
   void _calculerTotal() {
     setState(() {
       double total = 0.0;
+
+      // Calcul du prix de location basé sur la durée
+      try {
+        // Récupérer les dates
+        String dateDebutStr = widget.data['dateDebut'] as String? ?? '';
+        String dateFinStr = widget.dateFinEffective ?? '';
+        String prixLocationStr = widget.data['prixLocation'] as String? ?? '0';
+        
+        // Convertir le prix de location en double
+        double prixLocationJournalier = double.tryParse(prixLocationStr.replaceAll(',', '.')) ?? 0.0;
+        
+        if (dateDebutStr.isNotEmpty && dateFinStr.isNotEmpty && prixLocationJournalier > 0) {
+          // Formater les dates (format attendu: dd/MM/yyyy)
+          DateFormat format = DateFormat('dd/MM/yyyy');
+          DateTime dateDebut = format.parse(dateDebutStr);
+          DateTime dateFin = format.parse(dateFinStr);
+          
+          // Calculer la durée en jours (ajouter 1 car on compte le jour de début et le jour de fin)
+          int dureeJours = dateFin.difference(dateDebut).inDays + 1;
+          dureeJours = dureeJours <= 0 ? 1 : dureeJours; // Au moins 1 jour
+          
+          // Calculer le prix total de location
+          double prixLocationTotal = dureeJours * prixLocationJournalier;
+          
+          // Mettre à jour le champ du prix de location total
+          _coutTotalController.text = prixLocationTotal.toStringAsFixed(2).replaceAll('.', ',');
+        }
+      } catch (e) {
+        // En cas d'erreur, garder la valeur actuelle
+        print('Erreur lors du calcul de la durée de location: $e');
+      }
 
       // Calcul des frais kilométriques
       double kmDepart = double.tryParse(widget.data['kilometrageDepart']?.toString() ?? '0') ?? 0;
