@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FactureScreen extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -36,16 +37,23 @@ class _FactureScreenState extends State<FactureScreen> {
   late TextEditingController _kmSuppDisplayController;
   late TextEditingController _coutTotalController;
 
+  // Contrôleurs pour les champs de kilométrage
+  late TextEditingController _kmDepartController;
+  late TextEditingController _kmAutoriseController;
+  late TextEditingController _kmSuppController;
+  late TextEditingController _kmRetourController;
+
   // Type de paiement
   String _typePaiement = 'Carte bancaire';
   final List<String> _typesPaiement = ['Carte bancaire', 'Espèces', 'Virement'];
 
   // Total calculé
   double _total = 0.0;
-  
+
   @override
   void initState() {
     super.initState();
+    
     // Initialiser les contrôleurs avec des valeurs par défaut à 0
     _kmSuppDisplayController = TextEditingController(text: "0");
     _coutTotalController = TextEditingController(text: "0");
@@ -55,22 +63,51 @@ class _FactureScreenState extends State<FactureScreen> {
     _fraisCarburantController = TextEditingController(text: "0");
     _fraisRayuresController = TextEditingController(text: "0");
     _fraisAutreController = TextEditingController(text: "0");
+
+    // Initialiser les contrôleurs de kilométrage
+    _kmDepartController = TextEditingController(
+      text: widget.data['kilometrageDepart'] != null && 
+          widget.data['kilometrageDepart'].toString().isNotEmpty 
+          ? widget.data['kilometrageDepart'].toString() 
+          : 'Non indiqué au départ du contrat',
+    );
     
+    _kmAutoriseController = TextEditingController(
+      text: widget.data['kilometrageAutorise'] != null && 
+          widget.data['kilometrageAutorise'].toString().isNotEmpty 
+          ? widget.data['kilometrageAutorise'].toString() 
+          : 'Non indiqué au départ du contrat',
+    );
+    
+    _kmSuppController = TextEditingController(
+      text: widget.data['kilometrageSupp'] != null && 
+          widget.data['kilometrageSupp'].toString().isNotEmpty 
+          ? widget.data['kilometrageSupp'].toString() 
+          : 'Non indiqué au départ du contrat',
+    );
+
+    // Initialiser le contrôleur du kilométrage de retour
+    _kmRetourController = TextEditingController(
+      text: widget.data['kilometrageRetour']?.toString() ?? '',
+    );
+
     // Charger les valeurs existantes depuis widget.data
     if (widget.data.isNotEmpty) {
       _cautionController.text = widget.data['factureCaution']?.toString() ?? "0";
-      _fraisNettoyageIntController.text = widget.data['factureFraisNettoyageInterieur']?.toString() ?? "0";
-      _fraisNettoyageExtController.text = widget.data['factureFraisNettoyageExterieur']?.toString() ?? "0";
-      _fraisCarburantController.text = widget.data['factureFraisCarburantManquant']?.toString() ?? "0";
+      _fraisNettoyageIntController.text = widget.data['factureFraisNettoyageInt']?.toString() ?? "0";
+      _fraisNettoyageExtController.text = widget.data['factureFraisNettoyageExt']?.toString() ?? "0";
+      _fraisCarburantController.text = widget.data['factureFraisCarburant']?.toString() ?? "0";
       _fraisRayuresController.text = widget.data['factureFraisRayuresDommages']?.toString() ?? "0";
       _fraisAutreController.text = widget.data['factureFraisAutre']?.toString() ?? "0";
       _coutTotalController.text = widget.data['facturePrixLocation']?.toString() ?? "0";
-      
+
       // Charger le type de paiement s'il existe
       if (widget.data['factureTypePaiement'] != null && _typesPaiement.contains(widget.data['factureTypePaiement'])) {
         _typePaiement = widget.data['factureTypePaiement'];
       }
     }
+
+    _calculerTotal();
   }
 
   @override
@@ -83,33 +120,34 @@ class _FactureScreenState extends State<FactureScreen> {
     _fraisCarburantController.dispose();
     _fraisRayuresController.dispose();
     _fraisAutreController.dispose();
+    _kmDepartController.dispose();
+    _kmAutoriseController.dispose();
+    _kmSuppController.dispose();
+    _kmRetourController.dispose();
     super.dispose();
   }
 
   // Méthode pour notifier le parent des changements
-  void _notifierParent() {
-    Map<String, dynamic> frais = {
-      'facturePrixLocation': _coutTotalController.text,
-      'factureCaution': _cautionController.text,
-      'factureCoutKmSupplementaires': _kmSuppDisplayController.text,
-      'factureFraisNettoyageInterieur': _fraisNettoyageIntController.text,
-      'factureFraisNettoyageExterieur': _fraisNettoyageExtController.text,
-      'factureFraisCarburantManquant': _fraisCarburantController.text,
-      'factureFraisRayuresDommages': _fraisRayuresController.text,
-      'factureFraisAutre': _fraisAutreController.text,
-      'factureTotalFrais': _total.toStringAsFixed(2).replaceAll('.', ','),
-      'factureTypePaiement': _typePaiement,
-    };
-
-    widget.onFraisUpdated(frais);
-    Navigator.pop(context);
-  }
 
   // Calculer le total des frais
   void _calculerTotal() {
     setState(() {
       double total = 0.0;
+
+      // Calcul des frais kilométriques
+      double kmDepart = double.tryParse(widget.data['kilometrageDepart']?.toString() ?? '0') ?? 0;
+      double kmAutorise = double.tryParse(widget.data['kilometrageAutorise']?.toString() ?? '0') ?? 0;
+      double kmRetour = double.tryParse(_kmRetourController.text) ?? 0;
+      double kmSupp = double.tryParse(widget.data['kilometrageSupp']?.toString() ?? '0') ?? 0;
+
+      // Calcul : (kmRetour - (kmDepart + kmAutorise)) * kmSupp
+      double fraisKm = (kmRetour - (kmDepart + kmAutorise)) * kmSupp;
       
+      // Assurer que le résultat est positif
+      fraisKm = fraisKm < 0 ? 0 : fraisKm;
+      
+      _kmSuppDisplayController.text = fraisKm.toStringAsFixed(2).replaceAll('.', ',');
+
       // Ajouter tous les frais qui ont une valeur non nulle
       total += double.tryParse(_coutTotalController.text.replaceAll(',', '.')) ?? 0.0;
       total += double.tryParse(_kmSuppDisplayController.text.replaceAll(',', '.')) ?? 0.0;
@@ -119,13 +157,65 @@ class _FactureScreenState extends State<FactureScreen> {
       total += double.tryParse(_fraisRayuresController.text.replaceAll(',', '.')) ?? 0.0;
       total += double.tryParse(_fraisAutreController.text.replaceAll(',', '.')) ?? 0.0;
       total += double.tryParse(_cautionController.text.replaceAll(',', '.')) ?? 0.0;
-      
+
       _total = total;
     });
   }
 
+  void _sauvegarderFacture() async {
+    try {
+      // Préparer les données à sauvegarder
+      final data = {
+        'facturePrixLocation': double.tryParse(_coutTotalController.text.replaceAll(',', '.')) ?? 0,
+        'factureFraisNettoyageInt': double.tryParse(_fraisNettoyageIntController.text.replaceAll(',', '.')) ?? 0,
+        'factureFraisNettoyageExt': double.tryParse(_fraisNettoyageExtController.text.replaceAll(',', '.')) ?? 0,
+        'factureFraisCarburant': double.tryParse(_fraisCarburantController.text.replaceAll(',', '.')) ?? 0,
+        'factureFraisRayuresDommages': double.tryParse(_fraisRayuresController.text.replaceAll(',', '.')) ?? 0,
+        'factureFraisAutre': double.tryParse(_fraisAutreController.text.replaceAll(',', '.')) ?? 0,
+        'factureTotal': _total,
+        'factureTypePaiement': _typePaiement,
+        'kilometrageRetour': double.tryParse(_kmRetourController.text) ?? 0,
+        'kilometrageSupp': double.tryParse(widget.data['kilometrageSupp']?.toString() ?? '0') ?? 0,
+        'kilometrageDepart': double.tryParse(widget.data['kilometrageDepart']?.toString() ?? '0') ?? 0,
+        'kilometrageAutorise': double.tryParse(widget.data['kilometrageAutorise']?.toString() ?? '0') ?? 0,
+        'factureDate': DateTime.now().toIso8601String(),
+      };
+
+      // Sauvegarder dans la base de données
+      await FirebaseFirestore.instance
+          .collection('factures')
+          .add(data);
+
+      // Afficher un message de succès
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Facture sauvegardée avec succès'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Fermer le formulaire
+      Navigator.pop(context);
+    } catch (e) {
+      // Afficher un message d'erreur
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors de la sauvegarde : ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Logs pour déboguer les valeurs des champs de kilométrage
+    debugPrint('Kilométrage de départ: ${widget.data['kilometrageDepart']}');
+    debugPrint('Kilométrage autorisé: ${widget.data['kilometrageAutorise']}');
+    debugPrint('Kilométrage supplémentaire: ${widget.data['kilometrageSupp']}');
+    debugPrint('Kilométrage de retour: ${_kmRetourController.text}');
+    debugPrint('Frais kilométriques: ${_kmSuppDisplayController.text}');
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -154,7 +244,7 @@ class _FactureScreenState extends State<FactureScreen> {
                   // En-tête avec description
                   _buildHeader(),
                   const SizedBox(height: 24),
-                  
+
                   // Section des frais principaux
                   _buildSection(
                     title: "Frais principaux",
@@ -165,18 +255,113 @@ class _FactureScreenState extends State<FactureScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Section des frais kilométriques
                   _buildSection(
                     title: "Frais kilométriques",
                     icon: Icons.directions_car,
                     color: Colors.blue[700]!,
                     children: [
+                      // Champ de kilométrage de départ
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: TextFormField(
+                          controller: _kmDepartController,
+                          decoration: InputDecoration(
+                            labelText: "Kilométrage de départ",
+                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            suffixText: 'km',
+                          ),
+                          readOnly: true,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+
+                      // Champ de kilométrage autorisé
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: TextFormField(
+                          controller: _kmAutoriseController,
+                          decoration: InputDecoration(
+                            labelText: "Kilométrage autorisé",
+                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            suffixText: 'km',
+                          ),
+                          readOnly: true,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+
+                      // Champ de kilométrage supplémentaire
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: TextFormField(
+                          controller: _kmSuppController,
+                          decoration: InputDecoration(
+                            labelText: "Kilométrage supplémentaire",
+                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            suffixText: 'km',
+                          ),
+                          readOnly: true,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                      
+                      // Champ du kilométrage de retour
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: TextFormField(
+                          controller: _kmRetourController,
+                          decoration: InputDecoration(
+                            labelText: "Kilométrage de retour",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.check_circle),
+                              onPressed: () {
+                                // Fermer le clavier
+                                FocusScope.of(context).unfocus();
+                              },
+                            ),
+                          ),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _calculerTotal();
+                            });
+                          },
+                        ),
+                      ),
+                      
+                      // Champ des frais kilométriques
                       _buildTextField("Frais kilométriques", _kmSuppDisplayController),
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Section des frais additionnels
                   _buildSection(
                     title: "Frais additionnels",
@@ -191,7 +376,7 @@ class _FactureScreenState extends State<FactureScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Section de la caution
                   _buildSection(
                     title: "Caution",
@@ -202,7 +387,7 @@ class _FactureScreenState extends State<FactureScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Section du type de paiement
                   _buildSection(
                     title: "Type de paiement",
@@ -234,7 +419,7 @@ class _FactureScreenState extends State<FactureScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Section du total
                   _buildSection(
                     title: "Total",
@@ -271,25 +456,23 @@ class _FactureScreenState extends State<FactureScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Bouton de validation
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 40),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
                     child: ElevatedButton(
-                      onPressed: _notifierParent,
+                      onPressed: _sauvegarderFacture,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF08004D),
-                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        elevation: 2,
                       ),
                       child: const Text(
                         'Valider',
                         style: TextStyle(
+                          color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
