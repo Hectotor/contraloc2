@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FactureScreen extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -88,7 +87,8 @@ class _FactureScreenState extends State<FactureScreen> {
 
     // Initialiser le contrôleur du kilométrage de retour
     _kmRetourController = TextEditingController(
-      text: widget.data['kilometrageRetour']?.toString() ?? '',
+      // Utiliser la valeur de kilometrageActuel passée en paramètre
+      text: widget.kilometrageActuel.toString(),
     );
 
     // Charger les valeurs existantes depuis widget.data
@@ -167,35 +167,33 @@ class _FactureScreenState extends State<FactureScreen> {
       // Préparer les données à sauvegarder
       final data = {
         'facturePrixLocation': double.tryParse(_coutTotalController.text.replaceAll(',', '.')) ?? 0,
-        'factureFraisNettoyageInt': double.tryParse(_fraisNettoyageIntController.text.replaceAll(',', '.')) ?? 0,
-        'factureFraisNettoyageExt': double.tryParse(_fraisNettoyageExtController.text.replaceAll(',', '.')) ?? 0,
-        'factureFraisCarburant': double.tryParse(_fraisCarburantController.text.replaceAll(',', '.')) ?? 0,
+        'factureCaution': double.tryParse(_cautionController.text.replaceAll(',', '.')) ?? 0,
+        'factureFraisNettoyageInterieur': double.tryParse(_fraisNettoyageIntController.text.replaceAll(',', '.')) ?? 0,
+        'factureFraisNettoyageExterieur': double.tryParse(_fraisNettoyageExtController.text.replaceAll(',', '.')) ?? 0,
+        'factureFraisCarburantManquant': double.tryParse(_fraisCarburantController.text.replaceAll(',', '.')) ?? 0,
         'factureFraisRayuresDommages': double.tryParse(_fraisRayuresController.text.replaceAll(',', '.')) ?? 0,
         'factureFraisAutre': double.tryParse(_fraisAutreController.text.replaceAll(',', '.')) ?? 0,
-        'factureTotal': _total,
+        'factureTotalFrais': _total,
         'factureTypePaiement': _typePaiement,
         'kilometrageRetour': double.tryParse(_kmRetourController.text) ?? 0,
-        'kilometrageSupp': double.tryParse(widget.data['kilometrageSupp']?.toString() ?? '0') ?? 0,
-        'kilometrageDepart': double.tryParse(widget.data['kilometrageDepart']?.toString() ?? '0') ?? 0,
-        'kilometrageAutorise': double.tryParse(widget.data['kilometrageAutorise']?.toString() ?? '0') ?? 0,
-        'factureDate': DateTime.now().toIso8601String(),
       };
 
-      // Sauvegarder dans la base de données
-      await FirebaseFirestore.instance
-          .collection('factures')
-          .add(data);
+      // Mettre à jour les données du widget
+      widget.data.addAll(data);
+
+      // Notifier le parent des changements
+      widget.onFraisUpdated(data);
 
       // Afficher un message de succès
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Facture sauvegardée avec succès'),
+        const SnackBar(
+          content: Text('Facture sauvegardée avec succès'),
           backgroundColor: Colors.green,
         ),
       );
 
-      // Fermer le formulaire
-      Navigator.pop(context);
+      // Fermer le formulaire et renvoyer les données mises à jour
+      Navigator.pop(context, data);
     } catch (e) {
       // Afficher un message d'erreur
       ScaffoldMessenger.of(context).showSnackBar(
@@ -304,19 +302,19 @@ class _FactureScreenState extends State<FactureScreen> {
                         ),
                       ),
 
-                      // Champ de kilométrage supplémentaire
+                      // Champ du tarif kilométrique
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16.0),
                         child: TextFormField(
                           controller: _kmSuppController,
                           decoration: InputDecoration(
-                            labelText: "Kilométrage supplémentaire",
+                            labelText: "Tarif kilométrique",
                             labelStyle: const TextStyle(color: Color(0xFF08004D)),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            suffixText: 'km',
+                            suffixText: '€/km',
                           ),
                           readOnly: true,
                           style: TextStyle(
@@ -460,21 +458,26 @@ class _FactureScreenState extends State<FactureScreen> {
                   // Bouton de validation
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
-                    child: ElevatedButton(
-                      onPressed: _sauvegarderFacture,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF08004D),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Valider',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                    child: Center(
+                      child: SizedBox(
+                        width: 350, // Largeur fixe du bouton
+                        child: ElevatedButton(
+                          onPressed: _sauvegarderFacture,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF08004D),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Valider',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ),

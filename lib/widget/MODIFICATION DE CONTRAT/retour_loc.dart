@@ -175,6 +175,11 @@ class _RetourLocState extends State<RetourLoc> {
         // Bouton pour afficher la page de la facture
         ElevatedButton.icon(
           onPressed: () async {
+            // Mettre à jour les données avec le kilométrage de retour actuel
+            if (widget.kilometrageRetourController.text.isNotEmpty) {
+              widget.data['kilometrageRetour'] = widget.kilometrageRetourController.text;
+            }
+            
             // Récupérer les valeurs de kilométrage
             double kilometrageInitial = double.tryParse(widget.data['kilometrageDepart'] ?? '0') ?? 0;
             double kilometrageActuel = double.tryParse(widget.kilometrageRetourController.text) ?? 0;
@@ -183,8 +188,8 @@ class _RetourLocState extends State<RetourLoc> {
             // Récupérer la date de fin effective
             String dateFinEffective = widget.dateFinEffectifController.text;
             
-            // Afficher la page de la facture
-            await Navigator.push(
+            // Afficher la page de la facture et attendre le résultat
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => FactureScreen(
@@ -197,6 +202,24 @@ class _RetourLocState extends State<RetourLoc> {
                 ),
               ),
             );
+            
+            // Mettre à jour l'interface si des données ont été renvoyées
+            if (result != null && result is Map<String, dynamic>) {
+              setState(() {
+                // Mettre à jour les données locales avec les données de la facture
+                widget.data.addAll(result);
+                
+                // Mettre à jour le contrôleur de kilométrage de retour si nécessaire
+                if (result['kilometrageRetour'] != null) {
+                  widget.kilometrageRetourController.text = result['kilometrageRetour'].toString();
+                }
+              });
+              
+              // Transmettre les données mises à jour au parent
+              if (widget.onFraisUpdated != null) {
+                widget.onFraisUpdated!(result);
+              }
+            }
           },
           icon: const Icon(Icons.receipt_long, color: Colors.white),
           label: const Text(

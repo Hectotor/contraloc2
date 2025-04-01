@@ -195,6 +195,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
       );
       return;
     }
+
     setState(() {
       _isUpdatingContrat = true;
     });
