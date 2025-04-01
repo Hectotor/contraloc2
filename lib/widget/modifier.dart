@@ -12,7 +12,6 @@ import 'package:photo_view/photo_view_gallery.dart';
 import '../utils/pdf.dart';
 import '../USERS/contrat_condition.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
-import 'package:ContraLoc/services/collaborateur_CA.dart';
 import 'MODIFICATION DE CONTRAT/supp_contrat.dart';
 import 'MODIFICATION DE CONTRAT/info_loc.dart';
 import 'MODIFICATION DE CONTRAT/info_loc_retour.dart';
@@ -272,7 +271,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
           print(' Contrat mis à jour dans la collection de l\'admin: $adminId');
 
           // Calculer le montant total pour les statistiques
-          double montantTotal = CollaborateurCA.calculerMontantTotal(fraisFinaux);
+          double montantTotal = _calculerMontantTotal(fraisFinaux);
           
           // Mettre à jour le contrat avec le montant total
           await CollaborateurUtil.updateDocument(
@@ -301,7 +300,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
           print(' Contrat mis à jour dans la collection de l\'administrateur');
 
           // Calculer le montant total pour les statistiques
-          double montantTotal = CollaborateurCA.calculerMontantTotal(fraisFinaux);
+          double montantTotal = _calculerMontantTotal(fraisFinaux);
           
           // Mettre à jour le contrat avec le montant total
           await CollaborateurUtil.updateDocument(
@@ -348,6 +347,22 @@ class _ModifierScreenState extends State<ModifierScreen> {
         _isUpdatingContrat = false;
       });
     }
+  }
+
+  double _calculerMontantTotal(Map<String, dynamic> frais) {
+    double total = 0.0;
+    
+    // Ajouter tous les frais qui ont une valeur non nulle
+    total += double.tryParse(frais['facturePrixLocation'] ?? '0') ?? 0.0;
+    total += double.tryParse(frais['factureCoutKmSupplementaires'] ?? '0') ?? 0.0;
+    total += double.tryParse(frais['factureFraisNettoyageInterieur'] ?? '0') ?? 0.0;
+    total += double.tryParse(frais['factureFraisNettoyageExterieur'] ?? '0') ?? 0.0;
+    total += double.tryParse(frais['factureFraisCarburantManquant'] ?? '0') ?? 0.0;
+    total += double.tryParse(frais['factureFraisRayuresDommages'] ?? '0') ?? 0.0;
+    total += double.tryParse(frais['factureFraisAutre'] ?? '0') ?? 0.0;
+    total += double.tryParse(frais['factureCaution'] ?? '0') ?? 0.0;
+    
+    return total;
   }
 
   void _addPhotoRetour(File photo) {
