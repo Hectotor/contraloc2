@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart'; // Importer la bibliothèque Intl pour utiliser DateFormat
-import 'frais_supplementaires.dart'; // Importer le popup des frais supplémentaires
+import 'facture.dart'; // Importer la nouvelle page FactureScreen
 
 class RetourLoc extends StatefulWidget {
   final TextEditingController dateFinEffectifController;
@@ -172,7 +172,7 @@ class _RetourLocState extends State<RetourLoc> {
           },
         ),
         const SizedBox(height: 10),
-        // Bouton pour afficher le popup des frais supplémentaires
+        // Bouton pour afficher la page de la facture
         ElevatedButton.icon(
           onPressed: () async {
             // Récupérer les valeurs de kilométrage
@@ -183,15 +183,19 @@ class _RetourLocState extends State<RetourLoc> {
             // Récupérer la date de fin effective
             String dateFinEffective = widget.dateFinEffectifController.text;
             
-            // Afficher le popup des frais supplémentaires
-            await showFraisSupplementairesDialog(
+            // Afficher la page de la facture
+            await Navigator.push(
               context,
-              widget.data,
-              _handleFraisUpdated,
-              kilometrageInitial,
-              kilometrageActuel,
-              tarifKilometrique,
-              dateFinEffective,
+              MaterialPageRoute(
+                builder: (context) => FactureScreen(
+                  data: widget.data,
+                  onFraisUpdated: _handleFraisUpdated,
+                  kilometrageInitial: kilometrageInitial,
+                  kilometrageActuel: kilometrageActuel,
+                  tarifKilometrique: tarifKilometrique,
+                  dateFinEffective: dateFinEffective,
+                ),
+              ),
             );
           },
           icon: const Icon(Icons.receipt_long, color: Colors.white),
@@ -218,34 +222,4 @@ class _RetourLocState extends State<RetourLoc> {
       ],
     );
   }
-}
-
-// Fonction pour afficher le popup des frais supplémentaires
-Future<void> showFraisSupplementairesDialog(
-  BuildContext context,
-  Map<String, dynamic> data,
-  Function(Map<String, dynamic>) onFraisUpdated,
-  double kilometrageInitial,
-  double kilometrageActuel,
-  double tarifKilometrique,
-  String dateFinEffective,
-) async {
-  await showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: FraisSupplementaires(
-          data: data,
-          onFraisUpdated: onFraisUpdated,
-          kilometrageInitial: kilometrageInitial,
-          kilometrageActuel: kilometrageActuel,
-          tarifKilometrique: tarifKilometrique,
-          dateFinEffective: dateFinEffective,
-        ),
-      );
-    },
-  );
 }
