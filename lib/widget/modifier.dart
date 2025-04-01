@@ -4,11 +4,12 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart'; 
 import 'package:photo_view/photo_view_gallery.dart';
+import 'package:signature/signature.dart';
 import '../utils/pdf.dart';
 import '../USERS/contrat_condition.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
@@ -19,11 +20,11 @@ import 'MODIFICATION DE CONTRAT/retour_loc.dart';
 import 'MODIFICATION DE CONTRAT/retour_envoie_pdf.dart'; 
 import 'MODIFICATION DE CONTRAT/info_veh.dart';
 import 'MODIFICATION DE CONTRAT/info_client.dart';
-import 'MODIFICATION DE CONTRAT/commentaire_retour.dart';
 import 'MODIFICATION DE CONTRAT/etat_vehicule_retour.dart';
-import 'popup_signature.dart'; 
-import 'navigation.dart'; 
-import 'MODIFICATION DE CONTRAT/cloturer_location.dart'; 
+import 'MODIFICATION DE CONTRAT/commentaire_retour.dart';
+import 'MODIFICATION DE CONTRAT/signature_retour.dart';
+import 'MODIFICATION DE CONTRAT/cloturer_location.dart';
+import 'navigation.dart';
 
 class ModifierScreen extends StatefulWidget {
   final String contratId;
@@ -41,12 +42,19 @@ class _ModifierScreenState extends State<ModifierScreen> {
   final TextEditingController _dateFinEffectifController =
       TextEditingController();
   final TextEditingController _commentaireRetourController =
-      TextEditingController(); 
+      TextEditingController();
+  final SignatureController _signatureRetourController = SignatureController(
+    penStrokeWidth: 3,
+    penColor: Colors.black,
+    exportBackgroundColor: Colors.white,
+  );
   final TextEditingController _kilometrageRetourController =
       TextEditingController();
   final List<File> _photosRetour = [];
   List<String> _photosRetourUrls = [];
   bool _isUpdatingContrat = false; 
+  bool _signatureRetourAccepted = false;
+  String? _signatureRetourBase64;
   final TextEditingController _nettoyageIntController = TextEditingController();
   final TextEditingController _nettoyageExtController = TextEditingController();
   final TextEditingController _carburantManquantController =
@@ -54,8 +62,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
   final TextEditingController _cautionController = TextEditingController();
 
   Map<String, dynamic> _fraisSupplementaires = {};
-
-  String _signatureRetourBase64 = '';
 
   void _handleFraisUpdated(Map<String, dynamic> frais) {
     Future.microtask(() {
@@ -223,7 +229,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         allPhotosUrls.addAll(newUrls);
       }
 
-      String? signatureRetourBase64 = _signatureRetourBase64.isNotEmpty ? _signatureRetourBase64 : null;
+      String? signatureRetourBase64 = _signatureRetourBase64 != null && _signatureRetourBase64!.isNotEmpty ? _signatureRetourBase64 : null;
 
       Map<String, dynamic> fraisFinaux = _fraisSupplementaires;
       
@@ -469,7 +475,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
           'nettoyageExt': _nettoyageExtController.text,
           'carburantManquant': _carburantManquantController.text,
           'caution': _cautionController.text,
-          'signatureRetour': signatureRetourBase64 ?? '',
+          'signatureRetour': _signatureRetourBase64 != null && _signatureRetourBase64!.isNotEmpty ? _signatureRetourBase64 : null,
           'conditions': conditions,
         },
         widget.data['dateFinEffectif'] ?? '',
@@ -500,7 +506,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         widget.data['prixLocation'] ?? '',
         condition: conditions,
         signatureBase64: '',
-        signatureRetourBase64: signatureRetourBase64,
+        signatureRetourBase64: _signatureRetourBase64 != null && _signatureRetourBase64!.isNotEmpty ? _signatureRetourBase64 : null,
         nomCollaborateur: widget.data['nomCollaborateur'] != null && widget.data['prenomCollaborateur'] != null
             ? '${widget.data['prenomCollaborateur']} ${widget.data['nomCollaborateur']}'
             : null,
@@ -574,7 +580,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50], 
+       
       appBar: AppBar(
         title: Text(
           widget.data['status'] == 'restitue' ? "Restitués" : "En cours",
@@ -620,7 +626,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                       onShowFullScreenImages: _showFullScreenImages,
                     ),
                   ],
-                  const SizedBox(height: 50),
+                  const SizedBox(height: 30),
                   if (widget.data['status'] == 'en_cours') ...[
                     RetourLoc(
                       dateFinEffectifController: _dateFinEffectifController,
@@ -630,7 +636,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                       dateDebut: _parseDateWithFallback(widget.data['dateDebut']),
                       onFraisUpdated: _handleFraisUpdated,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 40),
                     EtatVehiculeRetour(
                       photos: _photosRetour,
                       onAddPhoto: _addPhotoRetour,
@@ -640,80 +646,25 @@ class _ModifierScreenState extends State<ModifierScreen> {
                     CommentaireRetourWidget(
                         controller: _commentaireRetourController),
                     const SizedBox(height: 20),
-                    const SizedBox(height: 10),
-                    // Afficher le conteneur de signature si au moins le nom OU le prénom est présent
-                    if ((widget.data['nom'] != null && widget.data['nom'].toString().isNotEmpty) || 
-                        (widget.data['prenom'] != null && widget.data['prenom'].toString().isNotEmpty))
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Signature de Retour',
-                            style: TextStyle(
-                              fontSize: 16, 
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF08004D),
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          if (_signatureRetourBase64.isNotEmpty) ...[
-                            Container(
-                              width: double.infinity,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: Image.memory(
-                                Uri.parse('data:image/png;base64,$_signatureRetourBase64').data!.contentAsBytes(),
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                          ],
-                          Center(
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                final signature = await PopupSignature.showSignatureDialog(
-                                  context,
-                                  title: 'Signature de retour',
-                                  checkboxText: 'Je confirme le retour du véhicule dans les conditions indiquées',
-                                  nom: widget.data['nom'] ?? '',
-                                  prenom: widget.data['prenom'] ?? '',
-                                  existingSignature: _signatureRetourBase64,
-                                );
-                                
-                                if (signature != null) {
-                                  setState(() {
-                                    _signatureRetourBase64 = signature;
-                                  });
-                                }
-                              },
-                              icon: const Icon(Icons.edit),
-                              label: Text(_signatureRetourBase64.isEmpty ? 'Signer le contrat de retour' : 'Modifier la signature'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF08004D),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    // Utilisation du widget SignatureRetourWidget amélioré
+                    if ((widget.data['nom'] != null && widget.data['nom'] != '') || 
+                        (widget.data['prenom'] != null && widget.data['prenom'] != ''))
+                    SignatureRetourWidget(
+                      nom: widget.data['nom'],
+                      prenom: widget.data['prenom'],
+                      controller: _signatureRetourController,
+                      accepted: _signatureRetourAccepted,
+                      onRetourAcceptedChanged: (value) {
+                        setState(() {
+                          _signatureRetourAccepted = value;
+                        });
+                      },
+                      onSignatureChanged: (base64) {
+                        setState(() {
+                          _signatureRetourBase64 = base64;
+                        });
+                      },
                     ),
-                    
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: _isUpdatingContrat

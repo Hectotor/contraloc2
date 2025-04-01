@@ -128,120 +128,199 @@ class _InfoLocState extends State<InfoLoc> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Informations de la Location",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Icon(Icons.date_range, size: 16),
-            SizedBox(width: 8),
-            Expanded(child: Text("Date de début: ${widget.data['dateDebut']}")),
-          ],
-        ),
-        Row(
-          children: [
-            Icon(Icons.date_range, size: 16),
-            SizedBox(width: 8),
-            Expanded(child: Text("Date de fin théorique: ${widget.data['dateFinTheorique']}")),
-          ],
-        ),
-        Row(
-          children: [
-            Icon(Icons.speed, size: 16),
-            SizedBox(width: 8),
-            Expanded(child: Text("Kilométrage de départ: ${widget.data['kilometrageDepart']}")),
-          ],
-        ),
-        Row(
-          children: [
-            Icon(Icons.directions_car, size: 16),
-            SizedBox(width: 8),
-            Expanded(child: Text("Distance autorisée: ${widget.data['kilometrageAutorise']} km")),
-          ],
-        ),
-        Row(
-          children: [
-            Icon(Icons.category, size: 16),
-            SizedBox(width: 8),
-            Expanded(child: Text("Type de location: ${widget.data['typeLocation']}")),
-          ],
-        ),
-        Row(
-          children: [
-            Icon(Icons.local_gas_station, size: 16),
-            SizedBox(width: 8),
-            Expanded(child: Text("Niveau d'essence: ${widget.data['pourcentageEssence']}%")),
-          ],
-        ),
-        const SizedBox(height: 10),
-        if (widget.data['photos'] != null && widget.data['photos'].isNotEmpty)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Photos de la location:",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        _buildLocationInfoSection(context),
+      ],
+    );
+  }
+
+  Widget _buildLocationInfoSection(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // En-tête de section
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.purple[700]!.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
               ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 100,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: widget.data['photos'].length,
-                  itemBuilder: (context, index) {
-                    final photoUrl = widget.data['photos'][index];
-                    return GestureDetector(
-                      onTap: () => widget.onShowFullScreenImages(
-                          context, widget.data['photos'], index),
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Image.network(
-                          photoUrl,
-                          width: 150,
-                          height: 150,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: 150,
-                              height: 150,
-                              color: Colors.grey[300],
-                              child: const Center(
-                                child: Icon(Icons.error, color: Colors.red),
-                              ),
-                            );
-                          },
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              width: 150,
-                              height: 150,
-                              color: Colors.grey[200],
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  value: loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
-                                      : null,
-                                ),
-                              ),
-                            );
-                          },
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.calendar_today, color: Colors.purple[700], size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  "Informations de la location",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple[700],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Contenu de la section
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildInfoRow(context, "Début", widget.data['dateDebut'] ?? "Non spécifié"),
+                const SizedBox(height: 12),
+                _buildInfoRow(context, "Fin théori", widget.data['dateFinTheorique'] ?? "Non spécifié"),
+                const SizedBox(height: 12),
+                _buildInfoRow(context, "Départ", "${widget.data['kilometrageDepart']?.toString() ?? "Non spécifié"} km"),
+                const SizedBox(height: 12),
+                _buildInfoRow(context, "Autorisée", "${widget.data['kilometrageAutorise'] ?? "Non spécifié"} km"),
+                const SizedBox(height: 12),
+                _buildInfoRow(context, "Type loc", widget.data['typeLocation'] ?? "Non spécifié"),
+                const SizedBox(height: 12),
+                _buildInfoRow(context, "Essence", "${widget.data['pourcentageEssence'] ?? "Non spécifié"}%"),
+                
+                // Photos de la location
+                if (widget.data['photos'] != null && widget.data['photos'].isNotEmpty) ...[  
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Icon(Icons.photo_library, color: Colors.purple[700], size: 24),
+                      const SizedBox(width: 12),
+                      Text(
+                        "Photos de la location",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple[700],
                         ),
                       ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          )
-        else
-          const Text("Aucune photo a été prise."),
-        const SizedBox(height: 10),
-        widget.data['commentaire'] == null || widget.data['commentaire'].isEmpty
-            ? const Text("Aucun commentaire a été émis.")
-            : Text("Commentaire: ${widget.data['commentaire']}"),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 100,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: widget.data['photos'].length,
+                      itemBuilder: (context, index) {
+                        final photoUrl = widget.data['photos'][index];
+                        return GestureDetector(
+                          onTap: () => widget.onShowFullScreenImages(
+                              context, widget.data['photos'], index),
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Image.network(
+                              photoUrl,
+                              width: 150,
+                              height: 150,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 150,
+                                  height: 150,
+                                  color: Colors.grey[300],
+                                  child: const Center(
+                                    child: Icon(Icons.error, color: Colors.red),
+                                  ),
+                                );
+                              },
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  width: 150,
+                                  height: 150,
+                                  color: Colors.grey[200],
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      value: loadingProgress.expectedTotalBytes != null
+                                          ? loadingProgress.cumulativeBytesLoaded /
+                                              loadingProgress.expectedTotalBytes!
+                                          : null,
+                                      color: Colors.purple[700],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+                
+                // Commentaire
+                if (widget.data['commentaire'] != null && widget.data['commentaire'].isNotEmpty) ...[  
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Icon(Icons.comment, color: Colors.purple[700], size: 24),
+                      const SizedBox(width: 12),
+                      Text(
+                        "Commentaire",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    widget.data['commentaire'],
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(
+            "$label :",
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Color(0xFF08004D),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[800],
+            ),
+          ),
+        ),
       ],
     );
   }
