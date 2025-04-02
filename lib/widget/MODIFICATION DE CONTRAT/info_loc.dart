@@ -183,18 +183,24 @@ class _InfoLocState extends State<InfoLoc> {
               children: [
                 _buildInfoRow(context, "Début", widget.data['dateDebut'] ?? "Non spécifié"),
                 const SizedBox(height: 12),
-                _buildInfoRow(context, "Fin théori", widget.data['dateFinTheorique'] ?? "Non spécifié"),
-                const SizedBox(height: 12),
+                if (widget.data['dateFinTheorique'] != null && widget.data['dateFinTheorique'].toString().isNotEmpty) ...[
+                  _buildInfoRow(context, "Fin théori", widget.data['dateFinTheorique']),
+                  const SizedBox(height: 12),
+                ],
                 _buildInfoRow(context, "Départ", "${widget.data['kilometrageDepart']?.toString() ?? "Non spécifié"} km"),
                 const SizedBox(height: 12),
                 _buildInfoRow(context, "Autorisée", "${widget.data['kilometrageAutorise'] ?? "Non spécifié"} km"),
                 const SizedBox(height: 12),
                 _buildInfoRow(context, "Type loc", widget.data['typeLocation'] ?? "Non spécifié"),
                 const SizedBox(height: 12),
+                if (widget.data['typeLocation'] == 'Payante') ...[
+                  _buildInfoRow(context, "Accompte", "${widget.data['accompte'] ?? "Non spécifié"} €"),
+                  const SizedBox(height: 12),
+                ],
                 _buildInfoRow(context, "Essence", "${widget.data['pourcentageEssence'] ?? "Non spécifié"}%"),
                 
                 // Photos de la location
-                if (widget.data['photos'] != null && widget.data['photos'].isNotEmpty) ...[  
+                if (widget.data['photos'] != null && widget.data['photos'].isNotEmpty) ...[
                   const SizedBox(height: 20),
                   Row(
                     children: [
@@ -264,7 +270,7 @@ class _InfoLocState extends State<InfoLoc> {
                 ],
                 
                 // Commentaire
-                if (widget.data['commentaire'] != null && widget.data['commentaire'].isNotEmpty) ...[  
+                if (widget.data['commentaire'] != null && widget.data['commentaire'].isNotEmpty) ...[
                   const SizedBox(height: 20),
                   Row(
                     children: [

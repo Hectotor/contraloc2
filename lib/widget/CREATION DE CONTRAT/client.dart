@@ -331,6 +331,35 @@ class _ClientPageState extends State<ClientPage> {
           },
         ),
         title: const Text("Client"),
+        actions: [
+          IconButton(
+            icon: Stack(
+              children: [
+                const Icon(Icons.directions_car, color: Colors.white),
+                if (_immatriculationVehiculeClientController.text.isNotEmpty || 
+                    _kilometrageVehiculeClientController.text.isNotEmpty)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check,
+                        size: 10,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            onPressed: _showVehicleDialog,
+            tooltip: 'Véhicule client',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -389,47 +418,6 @@ class _ClientPageState extends State<ClientPage> {
                       ],
                     ),
                   ],
-                  
-                  const SizedBox(height: 30),
-                  ElevatedButton.icon(
-                    onPressed: _showVehicleDialog,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF000000),
-                      minimumSize: const Size(double.infinity, 56),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 2,
-                    ),
-                    icon: const Icon(
-                      Icons.directions_car,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    label: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          "Véhicule client",
-                          style: TextStyle(
-                            color: Colors.white, 
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (_immatriculationVehiculeClientController.text.isNotEmpty || 
-                            _kilometrageVehiculeClientController.text.isNotEmpty)
-                          const Padding(
-                            padding: EdgeInsets.only(left: 30),
-                            child: Icon(
-                              Icons.check_circle,
-                              color: Colors.white,
-                              size: 25,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
                   
                   const SizedBox(height: 40),
                   ElevatedButton(
