@@ -258,6 +258,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'factureFraisAutre': fraisFinaux['factureFraisAutre'] ?? '0',
         'factureTypePaiement': fraisFinaux['factureTypePaiement'] ?? '',
         'factureTotalFrais': fraisFinaux['factureTotalFrais'] ?? '0',
+        'factureRemise': fraisFinaux['factureRemise'] ?? '0',
       };
 
       if (isCollaborateur && adminId != null) {

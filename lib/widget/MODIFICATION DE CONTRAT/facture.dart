@@ -99,12 +99,13 @@ class _FactureScreenState extends State<FactureScreen> {
     // Charger les valeurs existantes depuis widget.data
     if (widget.data.isNotEmpty) {
       _cautionController.text = widget.data['factureCaution']?.toString() ?? "0";
-      _fraisNettoyageIntController.text = widget.data['factureFraisNettoyageInt']?.toString() ?? "0";
-      _fraisNettoyageExtController.text = widget.data['factureFraisNettoyageExt']?.toString() ?? "0";
-      _fraisCarburantController.text = widget.data['factureFraisCarburant']?.toString() ?? "0";
+      _fraisNettoyageIntController.text = widget.data['factureFraisNettoyageInterieur']?.toString() ?? "0";
+      _fraisNettoyageExtController.text = widget.data['factureFraisNettoyageExterieur']?.toString() ?? "0";
+      _fraisCarburantController.text = widget.data['factureFraisCarburantManquant']?.toString() ?? "0";
       _fraisRayuresController.text = widget.data['factureFraisRayuresDommages']?.toString() ?? "0";
       _fraisAutreController.text = widget.data['factureFraisAutre']?.toString() ?? "0";
       _coutTotalController.text = widget.data['facturePrixLocation']?.toString() ?? "0";
+      _remiseController.text = widget.data['factureRemise']?.toString() ?? "0";
 
       // Charger le type de paiement s'il existe
       if (widget.data['factureTypePaiement'] != null && _typesPaiement.contains(widget.data['factureTypePaiement'])) {
