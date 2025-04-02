@@ -133,6 +133,7 @@ class RetourEnvoiePdf {
           'signatureAller': signatureAllerBase64 ?? '',
           'signatureBase64': signatureBase64 ?? '',
           'signatureRetour': signatureRetourBase64 ?? '',
+          'contratId': (contratData['contratId'] ?? '').toString(),
           
           // Nouveaux champs ajoutés
           'nettoyageInt': (contratData['nettoyageInt'] ?? '').toString(),
@@ -167,6 +168,7 @@ class RetourEnvoiePdf {
         (contratData['rayures'] ?? '').toString(),
         (contratData['dateDebut'] ?? '').toString(),
         (contratData['dateFinTheorique'] ?? '').toString(),
+        (contratData['contratId'] ?? '').toString(),
         dateFinEffectif,
         (contratData['kilometrageDepart'] ?? '').toString(),
         (contratData['kilometrageAutorise'] ?? '').toString(),

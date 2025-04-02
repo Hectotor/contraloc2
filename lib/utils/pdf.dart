@@ -69,7 +69,8 @@ Future<String> generatePdf(
   String kilometrageAutorise,
   String pourcentageEssence,
   String typeLocation,
-  String prixLocation, {
+  String prixLocation,
+  String accompte, {
   required String condition,
   String? signatureBase64, // Signature aller
   String? signatureRetourBase64, // Signature retour
@@ -274,15 +275,8 @@ Future<String> generatePdf(
     }
   }
 
-  // Générer un numéro de contrat unique basé sur la date et l'immatriculation
-  final now = DateTime.now();
-  final dateFormatted = '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year}';
-  final timeFormatted = '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
-  final immatriculation = data['immatriculation'] ?? '';
-  final immatriculationPart = immatriculation.replaceAll('-', '').replaceAll(' ', '').toUpperCase();
-  final clientNom = data['nom'] ?? '';
-  final clientInitial = clientNom.isNotEmpty ? clientNom[0].toUpperCase() : 'X';
-  final numeroContrat = 'CTR-$dateFormatted-$timeFormatted-$clientInitial${immatriculationPart.substring(0, immatriculationPart.length > 3 ? 3 : immatriculationPart.length)}';
+  // Utiliser l'ID du document comme contratId
+  final contratId = data['contratId'] ?? '';
 
   pdf.addPage(
     pw.MultiPage(
@@ -353,10 +347,9 @@ Future<String> generatePdf(
                               font: boldFont,
                               color: PdfColors.black,
                             )),
-                        pw.Text(numeroContrat,
+                        pw.Text(contratId,
                             style: pw.TextStyle(
-                              fontSize: 8,
-                              font: boldFont,
+                              fontSize: 6,
                               color: PdfColors.black,
                             )),
                       ],
@@ -399,6 +392,7 @@ Future<String> generatePdf(
               prixLocation: prixLocation,
               coutTotalTheorique: coutTotalTheorique,
               coutTotal: coutTotal,
+              accompte: accompte, // Ajout du paramètre accompte
               boldFont: boldFont,
               ttf: ttf,
             ),

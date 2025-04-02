@@ -207,4 +207,30 @@ class CreateContrat {
       ),
     );
   }
+
+  static Widget buildAccompteField(TextEditingController controller) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16.0),
+      child: TextField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        inputFormatters: <TextInputFormatter>[
+          FilteringTextInputFormatter.digitsOnly
+        ],
+        decoration: InputDecoration(
+          labelText: "Accompte",
+          hintText: "Montant de l'accompte",
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          // Ajout du bouton de validation
+          suffixIcon: IconButton(
+            icon: Icon(Icons.check_circle,
+                color: Colors.grey[400]),
+            onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
+          ),
+        ),
+      ),
+    );
+  }
 }

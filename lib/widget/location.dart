@@ -77,6 +77,7 @@ class _LocationPageState extends State<LocationPage> {
   bool _isSigning = false;
 
   final TextEditingController _prixLocationController = TextEditingController();
+  final TextEditingController _accompteController = TextEditingController();
   final TextEditingController _nettoyageIntController = TextEditingController();
   final TextEditingController _nettoyageExtController = TextEditingController();
   final TextEditingController _carburantManquantController =
@@ -460,6 +461,7 @@ class _LocationPageState extends State<LocationPage> {
         'franchise': _franchiseController.text,
         'prixRayures': _rayuresController.text,  
         'prixLocation': _prixLocationController.text,
+        'accompte': _accompteController.text,
         'logoUrl': logoUrl,
         'nomEntreprise': nomEntreprise,
         'adresseEntreprise': adresseEntreprise,
@@ -468,6 +470,7 @@ class _LocationPageState extends State<LocationPage> {
         'conditions': conditions, 
         'nomCollaborateur': nomCollaborateur,
         'prenomCollaborateur': prenomCollaborateur,
+        'contratId': contratId,
       });
 
       if (widget.email != null && widget.email!.isNotEmpty) {
@@ -501,11 +504,14 @@ class _LocationPageState extends State<LocationPage> {
           'kilometrageAutorise': _kilometrageAutoriseController.text,
           'typeLocation': _typeLocationController.text,
           'prixLocation': _prixLocationController.text,
+          'accompte': _accompteController.text,
           'kilometrageDepart': _kilometrageDepartController.text,  
           'pourcentageEssence': _pourcentageEssence.toString(),  
           'condition': conditions, 
           'nomCollaborateur': nomCollaborateur, 
           'prenomCollaborateur': prenomCollaborateur, 
+          'contratId': contratId,
+
         };  
 
         final pdfPath = await generatePdf(  
@@ -536,6 +542,7 @@ class _LocationPageState extends State<LocationPage> {
           _pourcentageEssence.toString(),  
           _typeLocationController.text,  
           _prixLocationController.text,  
+          _accompteController.text,
           condition: conditions,  
           nomCollaborateur: nomCollaborateur.isNotEmpty && prenomCollaborateur.isNotEmpty 
               ? '$prenomCollaborateur $nomCollaborateur' 
@@ -662,6 +669,7 @@ class _LocationPageState extends State<LocationPage> {
   @override
   void dispose() {
     _prixLocationController.dispose();
+    _accompteController.dispose();
     super.dispose();
   }
 
@@ -782,6 +790,7 @@ class _LocationPageState extends State<LocationPage> {
                     _prixLocationController.text.isNotEmpty) ...[
                   const SizedBox(height: 35),
                   CreateContrat.buildPrixLocationField(_prixLocationController),
+                  CreateContrat.buildAccompteField(_accompteController),
                   const SizedBox(height: 20),
                 ],
                 const SizedBox(height: 20),

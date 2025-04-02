@@ -24,6 +24,7 @@ class PdfVoitureWidget {
     required String prixLocation,
     required double? coutTotalTheorique,
     required double? coutTotal,
+    required String accompte,
     required pw.Font boldFont,
     required pw.Font ttf,
   }) {
@@ -72,6 +73,7 @@ class PdfVoitureWidget {
               prixLocation,
               coutTotalTheorique,
               coutTotal,
+              accompte,
               ttf),
         ],
       ),
@@ -135,6 +137,7 @@ class PdfVoitureWidget {
       String prixLocation,
       double? coutTotalTheorique,
       double? coutTotal,
+      String accompte,
       pw.Font ttf) {
     
     // Utiliser directement les valeurs passées en paramètre, qui sont déjà traitées
@@ -355,9 +358,11 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.center,
-                  child: pw.Text('', 
-                      textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                  child: accompte.isNotEmpty
+                    ? pw.Text('Accompte: $accompte €', 
+                        textAlign: pw.TextAlign.center,
+                        style: pw.TextStyle(font: ttf, fontSize: 9))
+                    : pw.SizedBox(),
                 ),
               ),
               pw.Expanded(
@@ -606,6 +611,39 @@ class PdfVoitureWidget {
                 child: pw.Container(
                   alignment: pw.Alignment.centerRight,
                   child: pw.Text('Frais de rayures/dommages: ${data['prixRayures'] ?? ''} €',
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 2),
+
+        // Accompte
+        pw.Container(
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                flex: 1,
+                child: pw.Text('Accompte: $accompte €',
+                    style: pw.TextStyle(font: ttf, fontSize: 9)),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text('', 
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                ),
+              ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text('', 
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
