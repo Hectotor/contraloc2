@@ -21,7 +21,6 @@ import 'MODIFICATION DE CONTRAT/retour_envoie_pdf.dart';
 import 'MODIFICATION DE CONTRAT/info_veh.dart';
 import 'MODIFICATION DE CONTRAT/info_client.dart';
 import 'MODIFICATION DE CONTRAT/etat_vehicule_retour.dart';
-import 'MODIFICATION DE CONTRAT/commentaire_retour.dart';
 import 'MODIFICATION DE CONTRAT/signature_retour.dart';
 import 'MODIFICATION DE CONTRAT/cloturer_location.dart';
 import 'navigation.dart';
@@ -641,10 +640,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
                       photos: _photosRetour,
                       onAddPhoto: _addPhotoRetour,
                       onRemovePhoto: _removePhotoRetour,
+                      commentaireController: _commentaireRetourController,
                     ),
-                    const SizedBox(height: 20),
-                    CommentaireRetourWidget(
-                        controller: _commentaireRetourController),
                     const SizedBox(height: 20),
                     // Utilisation du widget SignatureRetourWidget amélioré
                     if ((widget.data['nom'] != null && widget.data['nom'] != '') || 

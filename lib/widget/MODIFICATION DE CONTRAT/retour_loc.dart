@@ -256,7 +256,7 @@ class _RetourLocState extends State<RetourLoc> {
           },
           decoration: InputDecoration(
             hintText: "Sélectionner la date et l'heure de retour",
-            prefixIcon: const Icon(Icons.calendar_today, color: Color(0xFF08004D)),
+            prefixIcon: const Icon(Icons.calendar_today, color: Colors.teal),
             filled: true,
             fillColor: Colors.grey[50],
             border: OutlineInputBorder(
@@ -305,9 +305,9 @@ class _RetourLocState extends State<RetourLoc> {
           controller: widget.kilometrageRetourController,
           decoration: InputDecoration(
             hintText: "Entrez le kilométrage actuel",
-            prefixIcon: const Icon(Icons.speed, color: Color(0xFF08004D)),
+            prefixIcon: const Icon(Icons.speed, color: Colors.teal),
             suffixIcon: IconButton(
-              icon: const Icon(Icons.check_circle, color: Color(0xFF08004D)),
+              icon: Icon(Icons.check_circle, color: Colors.teal[200]),
               onPressed: () {
                 // Fermer le clavier
                 FocusScope.of(context).unfocus();

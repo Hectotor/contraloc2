@@ -3,17 +3,20 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:ContraLoc/USERS/Subscription/abonnement_screen.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
+import 'package:ContraLoc/widget/MODIFICATION DE CONTRAT/commentaire_retour.dart';
 
 class EtatVehiculeRetour extends StatefulWidget {
   final List<File> photos;
   final Function(File) onAddPhoto;
   final Function(int) onRemovePhoto;
+  final TextEditingController? commentaireController;
 
   const EtatVehiculeRetour({
     Key? key,
     required this.photos,
     required this.onAddPhoto,
     required this.onRemovePhoto,
+    this.commentaireController,
   }) : super(key: key);
 
   @override
@@ -22,11 +25,22 @@ class EtatVehiculeRetour extends StatefulWidget {
 
 class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
   bool isPremiumUser = false;
+  late TextEditingController _commentaireController;
 
   @override
   void initState() {
     super.initState();
     _initializeSubscription();
+    _commentaireController = widget.commentaireController ?? TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    // Ne pas disposer le contrôleur s'il a été fourni par le parent
+    if (widget.commentaireController == null) {
+      _commentaireController.dispose();
+    }
+    super.dispose();
   }
 
   Future<void> _initializeSubscription() async {
@@ -241,6 +255,8 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
                 ),
                 const SizedBox(height: 16),
                 if (widget.photos.isNotEmpty && isPremiumUser) _buildPhotoScroll(),
+                const SizedBox(height: 20),
+                CommentaireRetourWidget(controller: _commentaireController),
               ],
             ),
           ),
