@@ -23,6 +23,7 @@ import 'MODIFICATION DE CONTRAT/info_client.dart';
 import 'MODIFICATION DE CONTRAT/etat_vehicule_retour.dart';
 import 'MODIFICATION DE CONTRAT/signature_retour.dart';
 import 'MODIFICATION DE CONTRAT/cloturer_location.dart';
+import 'MODIFICATION DE CONTRAT/facture.dart';
 import 'navigation.dart';
 
 class ModifierScreen extends StatefulWidget {
@@ -56,7 +57,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
   String? _signatureRetourBase64;
   final TextEditingController _nettoyageIntController = TextEditingController();
   final TextEditingController _nettoyageExtController = TextEditingController();
-  final TextEditingController _carburantManquantController =
+  final TextEditingController _niveauEssenceRetourController =
       TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
 
@@ -75,8 +76,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
           _nettoyageExtController.text = frais['nettoyageExt'].toString();
         }
 
-        if (frais['carburantManquant'] != null && frais['carburantManquant'].toString().isNotEmpty) {
-          _carburantManquantController.text = frais['carburantManquant'].toString();
+        if (frais['niveauEssenceRetour'] != null && frais['niveauEssenceRetour'].toString().isNotEmpty) {
+          _niveauEssenceRetourController.text = frais['niveauEssenceRetour'].toString();
         }
 
         if (frais['caution'] != null) {
@@ -99,7 +100,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
     // Conversion des valeurs en String pour éviter les erreurs de type
     _nettoyageIntController.text = widget.data['nettoyageInt']?.toString() ?? '';
     _nettoyageExtController.text = widget.data['nettoyageExt']?.toString() ?? '';
-    _carburantManquantController.text = widget.data['carburantManquant']?.toString() ?? '';
+    _niveauEssenceRetourController.text = widget.data['niveauEssenceRetour']?.toString() ?? '';
     _cautionController.text = widget.data['caution']?.toString() ?? '';
 
     if (widget.data['photosRetourUrls'] != null) {
@@ -242,23 +243,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
             ? _kilometrageRetourController.text
             : null,
         'photosRetourUrls': allPhotosUrls,
-        'carburantManquant': _carburantManquantController.text,
+        'pourcentageEssenceRetour': _niveauEssenceRetourController.text,
         'signature_retour': signatureRetourBase64,
-        'contratCloture': true,
-        'dateClotureContrat': DateTime.now().toIso8601String(),
-        
-        // Ajouter les frais supplémentaires au contrat
-        'facturePrixLocation': fraisFinaux['facturePrixLocation'] ?? '0',
-        'factureCaution': fraisFinaux['factureCaution'] ?? '0',
-        'factureCoutKmSupplementaires': fraisFinaux['factureCoutKmSupplementaires'] ?? '0',
-        'factureFraisNettoyageInterieur': fraisFinaux['factureFraisNettoyageInterieur'] ?? '0',
-        'factureFraisNettoyageExterieur': fraisFinaux['factureFraisNettoyageExterieur'] ?? '0',
-        'factureFraisCarburantManquant': fraisFinaux['factureFraisCarburantManquant'] ?? '0',
-        'factureFraisRayuresDommages': fraisFinaux['factureFraisRayuresDommages'] ?? '0',
-        'factureFraisAutre': fraisFinaux['factureFraisAutre'] ?? '0',
-        'factureTypePaiement': fraisFinaux['factureTypePaiement'] ?? '',
-        'factureTotalFrais': fraisFinaux['factureTotalFrais'] ?? '0',
-        'factureRemise': fraisFinaux['factureRemise'] ?? '0',
       };
 
       if (isCollaborateur && adminId != null) {
@@ -275,19 +261,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
             useAdminId: true,
           );
           print(' Contrat mis à jour dans la collection de l\'admin: $adminId');
-
-          // Calculer le montant total pour les statistiques
-          double montantTotal = _calculerMontantTotal(fraisFinaux);
-          
-          // Mettre à jour le contrat avec le montant total
-          await CollaborateurUtil.updateDocument(
-            collection: 'locations',
-            docId: widget.contratId,
-            data: {
-              'montantTotal': montantTotal,
-            },
-            useAdminId: true,
-          );
         } catch (e) {
           print(' Erreur lors de la mise à jour du contrat: $e');
         }
@@ -304,19 +277,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
             useAdminId: false,
           );
           print(' Contrat mis à jour dans la collection de l\'administrateur');
-
-          // Calculer le montant total pour les statistiques
-          double montantTotal = _calculerMontantTotal(fraisFinaux);
-          
-          // Mettre à jour le contrat avec le montant total
-          await CollaborateurUtil.updateDocument(
-            collection: 'locations',
-            docId: widget.contratId,
-            data: {
-              'montantTotal': montantTotal,
-            },
-            useAdminId: false,
-          );
         } catch (e) {
           print(' Erreur lors de la mise à jour du contrat: $e');
         }
@@ -353,22 +313,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
         _isUpdatingContrat = false;
       });
     }
-  }
-
-  double _calculerMontantTotal(Map<String, dynamic> frais) {
-    double total = 0.0;
-    
-    // Ajouter tous les frais qui ont une valeur non nulle
-    total += double.tryParse(frais['facturePrixLocation'] ?? '0') ?? 0.0;
-    total += double.tryParse(frais['factureCoutKmSupplementaires'] ?? '0') ?? 0.0;
-    total += double.tryParse(frais['factureFraisNettoyageInterieur'] ?? '0') ?? 0.0;
-    total += double.tryParse(frais['factureFraisNettoyageExterieur'] ?? '0') ?? 0.0;
-    total += double.tryParse(frais['factureFraisCarburantManquant'] ?? '0') ?? 0.0;
-    total += double.tryParse(frais['factureFraisRayuresDommages'] ?? '0') ?? 0.0;
-    total += double.tryParse(frais['factureFraisAutre'] ?? '0') ?? 0.0;
-    total += double.tryParse(frais['factureCaution'] ?? '0') ?? 0.0;
-    
-    return total;
   }
 
   void _addPhotoRetour(File photo) {
@@ -473,7 +417,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
           ...widget.data,
           'nettoyageInt': _nettoyageIntController.text,
           'nettoyageExt': _nettoyageExtController.text,
-          'carburantManquant': _carburantManquantController.text,
+          'pourcentageEssenceRetour': _niveauEssenceRetourController.text,
           'caution': _cautionController.text,
           'signatureRetour': _signatureRetourBase64 != null && _signatureRetourBase64!.isNotEmpty ? _signatureRetourBase64 : null,
           'conditions': conditions,
@@ -631,6 +575,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                     RetourLoc(
                       dateFinEffectifController: _dateFinEffectifController,
                       kilometrageRetourController: _kilometrageRetourController,
+                      niveauEssenceRetourController: _niveauEssenceRetourController,
                       data: widget.data,
                       selectDateTime: _selectDateTime,
                       dateDebut: _parseDateWithFallback(widget.data['dateDebut']),
@@ -697,16 +642,69 @@ class _ModifierScreenState extends State<ModifierScreen> {
                   Padding(
                     padding: const EdgeInsets.only(
                         bottom: 30.0), 
-                    child: ElevatedButton(
-                      onPressed: _generatePdf,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
-                      child: const Text(
-                        "Afficher le contrat",
-                        style: TextStyle(color: Colors.white, fontSize: 18),
-                      ),
+                    child: Column(
+                      children: [
+                        if (widget.data['status'] == 'restitue') ...[
+                          ElevatedButton(
+                            onPressed: () async {
+                              // Mettre à jour les données avec le kilométrage de retour actuel
+                              if (_kilometrageRetourController.text.isNotEmpty) {
+                                widget.data['kilometrageRetour'] = _kilometrageRetourController.text;
+                              }
+                              
+                              // Récupérer les valeurs de kilométrage
+                              double kilometrageInitial = double.tryParse(widget.data['kilometrageDepart'] ?? '0') ?? 0;
+                              double kilometrageActuel = double.tryParse(_kilometrageRetourController.text) ?? 0;
+                              double tarifKilometrique = double.tryParse(widget.data['tarifKilometrique'] ?? '0') ?? 0;
+                              
+                              // Récupérer la date de fin effective
+                              String dateFinEffective = _dateFinEffectifController.text;
+                              
+                              // Afficher la page de la facture
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => FactureScreen(
+                                    data: widget.data,
+                                    onFraisUpdated: _handleFraisUpdated,
+                                    kilometrageInitial: kilometrageInitial,
+                                    kilometrageActuel: kilometrageActuel,
+                                    tarifKilometrique: tarifKilometrique,
+                                    dateFinEffective: dateFinEffective,
+                                  ),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.teal, 
+                              minimumSize: const Size(double.infinity, 50),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.receipt_long, color: Colors.white),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Facturer la location",
+                                  style: TextStyle(color: Colors.white, fontSize: 18),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                        ElevatedButton(
+                          onPressed: _generatePdf,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            minimumSize: const Size(double.infinity, 50),
+                          ),
+                          child: const Text(
+                            "Afficher le contrat",
+                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 20),

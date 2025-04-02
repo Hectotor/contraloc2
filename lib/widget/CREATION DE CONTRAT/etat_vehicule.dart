@@ -76,7 +76,7 @@ class _EtatVehiculeState extends State<EtatVehicule> {
               onPressed: () => Navigator.pop(context),
               child: const Text(
                 "Plus tard",
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: Colors.black),
               ),
             ),
             TextButton(
@@ -192,17 +192,17 @@ class _EtatVehiculeState extends State<EtatVehicule> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.orange.shade200),
+              border: Border.all(color: Colors.black),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock, color: Colors.orange[700], size: 20),
+                Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock, color: Colors.black, size: 20),
                 const SizedBox(width: 10),
                 Text(
                   isPremiumUser ? "Ajouter des photos" : "Fonctionnalité Premium",
                   style: TextStyle(
-                    color: Colors.orange[700],
+                    color: Colors.black,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),

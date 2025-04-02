@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart'; // Importer la bibliothèque Intl pour utiliser DateFormat
-import 'facture.dart'; // Importer la nouvelle page FactureScreen
 
 class RetourLoc extends StatefulWidget {
   final TextEditingController dateFinEffectifController;
   final TextEditingController kilometrageRetourController;
+  final TextEditingController niveauEssenceRetourController;
   final Map<String, dynamic> data;
   final Future<void> Function(TextEditingController) selectDateTime;
   final DateTime dateDebut;
@@ -15,6 +15,7 @@ class RetourLoc extends StatefulWidget {
     Key? key,
     required this.dateFinEffectifController,
     required this.kilometrageRetourController,
+    required this.niveauEssenceRetourController,
     required this.data,
     required this.selectDateTime,
     required this.dateDebut,
@@ -100,79 +101,8 @@ class _RetourLocState extends State<RetourLoc> {
                 const SizedBox(height: 20),
                 _buildKilometrageRetourField(context),
                 const SizedBox(height: 20),
-                // Bouton de facturation intégré et plus discret
-                InkWell(
-                  onTap: () async {
-                    // Mettre à jour les données avec le kilométrage de retour actuel
-                    if (widget.kilometrageRetourController.text.isNotEmpty) {
-                      widget.data['kilometrageRetour'] = widget.kilometrageRetourController.text;
-                    }
-                    
-                    // Récupérer les valeurs de kilométrage
-                    double kilometrageInitial = double.tryParse(widget.data['kilometrageDepart'] ?? '0') ?? 0;
-                    double kilometrageActuel = double.tryParse(widget.kilometrageRetourController.text) ?? 0;
-                    double tarifKilometrique = double.tryParse(widget.data['tarifKilometrique'] ?? '0') ?? 0;
-                    
-                    // Récupérer la date de fin effective
-                    String dateFinEffective = widget.dateFinEffectifController.text;
-                    
-                    // Afficher la page de la facture et attendre le résultat
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => FactureScreen(
-                          data: widget.data,
-                          onFraisUpdated: widget.onFraisUpdated ?? (frais) {},
-                          kilometrageInitial: kilometrageInitial,
-                          kilometrageActuel: kilometrageActuel,
-                          tarifKilometrique: tarifKilometrique,
-                          dateFinEffective: dateFinEffective,
-                        ),
-                      ),
-                    );
-                    
-                    // Mettre à jour l'interface si des données ont été renvoyées
-                    if (result != null && result is Map<String, dynamic>) {
-                      setState(() {
-                        // Mettre à jour les données locales avec les données de la facture
-                        widget.data.addAll(result);
-                        
-                        // Mettre à jour le contrôleur de kilométrage de retour si nécessaire
-                        if (result['kilometrageRetour'] != null) {
-                          widget.kilometrageRetourController.text = result['kilometrageRetour'].toString();
-                        }
-                      });
-                      
-                      // Transmettre les données mises à jour au parent
-                      if (widget.onFraisUpdated != null) {
-                        widget.onFraisUpdated!(result);
-                      }
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.teal.shade200),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.receipt_long, color: Colors.teal[700], size: 20),
-                        const SizedBox(width: 10),
-                        Text(
-                          "Facturer la location",
-                          style: TextStyle(
-                            color: Colors.teal[700],
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                _buildNiveauEssenceField(context),
+                const SizedBox(height: 20),
               ],
             ),
           ),
@@ -365,6 +295,122 @@ class _RetourLocState extends State<RetourLoc> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildNiveauEssenceField(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Niveau d'essence au retour",
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.local_gas_station, color: Colors.teal),
+                  const SizedBox(width: 10),
+                  Text(
+                    "Sélectionnez le niveau d'essence",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildEssenceOption("0", "Vide"),
+                  _buildEssenceOption("1/4", "1/4"),
+                  _buildEssenceOption("1/2", "1/2"),
+                  _buildEssenceOption("3/4", "3/4"),
+                  _buildEssenceOption("1", "Plein"),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEssenceOption(String value, String label) {
+    // Convertir la valeur du contrôleur en format comparable
+    String currentValue = widget.niveauEssenceRetourController.text;
+    String valueAsPercentage;
+    
+    switch (value) {
+      case "0": valueAsPercentage = "0"; break;
+      case "1/4": valueAsPercentage = "25"; break;
+      case "1/2": valueAsPercentage = "50"; break;
+      case "3/4": valueAsPercentage = "75"; break;
+      case "1": valueAsPercentage = "100"; break;
+      default: valueAsPercentage = "0";
+    }
+    
+    bool isSelected = currentValue == valueAsPercentage;
+    
+    return InkWell(
+      onTap: () {
+        setState(() {
+          // Convertir la valeur sélectionnée en pourcentage
+          String percentage;
+          switch (value) {
+            case "0": percentage = "0"; break;
+            case "1/4": percentage = "25"; break;
+            case "1/2": percentage = "50"; break;
+            case "3/4": percentage = "75"; break;
+            case "1": percentage = "100"; break;
+            default: percentage = "0";
+          }
+          
+          widget.niveauEssenceRetourController.text = percentage;
+          // Mettre à jour les données
+          if (widget.onFraisUpdated != null) {
+            widget.onFraisUpdated!({'pourcentageEssenceRetour': percentage});
+          }
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.teal.withOpacity(0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? Colors.teal : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.teal[700] : Colors.grey[700],
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

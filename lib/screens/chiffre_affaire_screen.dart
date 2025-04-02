@@ -32,6 +32,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     'factureFraisRayuresDommages': true,
     'factureFraisAutre': true,
     'factureCaution': true,
+    'factureRemise': true,
   };
   
   List<Map<String, dynamic>> _contrats = [];
@@ -93,37 +94,19 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       final String? adminId = isCollaborateur ? userData['adminId'] as String? : null;
       final String userId = isCollaborateur && adminId != null ? adminId : user.uid;
 
-      // Récupérer tous les contrats clôturés
+      // Récupérer tous les contrats avec une date de facture (au lieu de contrats clôturés)
       QuerySnapshot contratsSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
-          .collection('chiffre_affaire')
+          .collection('locations')
+          .where('dateFacture', isNull: false) // Seulement les contrats facturés
           .get();
-
-      // Récupérer tous les véhicules
-      QuerySnapshot vehiculesSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('vehicules')
-          .get();
-
-      // Liste des véhicules
-      List<String> vehicules = ['Tous'];
-      for (var doc in vehiculesSnapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        String marque = data['marque'] ?? '';
-        String modele = data['modele'] ?? '';
-        String immatriculation = data['immatriculation'] ?? '';
-        
-        if (marque.isNotEmpty && modele.isNotEmpty) {
-          vehicules.add('$marque $modele ($immatriculation)');
-        }
-      }
 
       // Traiter les contrats
       List<Map<String, dynamic>> contrats = [];
       double chiffreTotal = 0;
       Set<String> years = {};
+      Map<String, Map<String, dynamic>> vehiculesMap = {};
       
       for (var doc in contratsSnapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
@@ -146,42 +129,60 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
           'photoVehiculeUrl': data['photoVehiculeUrl'] ?? '',
         };
         
-        // Récupérer les données financières
-        double prixLocation = (data['facturePrixLocation'] ?? 0.0).toDouble();
-        double coutKmSupplementaires = (data['factureCoutKmSupplementaires'] ?? 0.0).toDouble();
-        double fraisNettoyageInterieur = (data['factureFraisNettoyageInterieur'] ?? 0.0).toDouble();
-        double fraisNettoyageExterieur = (data['factureFraisNettoyageExterieur'] ?? 0.0).toDouble();
-        double fraisCarburantManquant = (data['factureFraisCarburantManquant'] ?? 0.0).toDouble();
-        double fraisRayuresDommages = (data['factureFraisRayuresDommages'] ?? 0.0).toDouble();
-        double fraisAutre = (data['factureFraisAutre'] ?? 0.0).toDouble();
-        double caution = (data['factureCaution'] ?? 0.0).toDouble();
-        double montantTotal = (data['montantTotal'] ?? 0.0).toDouble();
+        // Ajouter le véhicule à la map des véhicules si pas déjà présent
+        if (!vehiculesMap.containsKey(vehiculeInfoStr) && vehiculeInfoStr.isNotEmpty) {
+          vehiculesMap[vehiculeInfoStr] = vehiculeDetails;
+        }
         
-        // Récupérer la date de clôture
-        DateTime dateCloture;
+        // Récupérer les données financières
+        // Convertir les valeurs en double (gérer les cas où les valeurs sont des strings ou des doubles)
+        double prixLocation = _convertToDouble(data['facturePrixLocation'] ?? '0');
+        double caution = _convertToDouble(data['factureCaution'] ?? '0');
+        double coutKmSupplementaires = _convertToDouble(data['factureCoutKmSupplementaires'] ?? '0');
+        double fraisNettoyageInterieur = _convertToDouble(data['factureFraisNettoyageInterieur'] ?? '0');
+        double fraisNettoyageExterieur = _convertToDouble(data['factureFraisNettoyageExterieur'] ?? '0');
+        double fraisCarburantManquant = _convertToDouble(data['factureFraisCarburantManquant'] ?? '0');
+        double fraisRayuresDommages = _convertToDouble(data['factureFraisRayuresDommages'] ?? '0');
+        double fraisAutre = _convertToDouble(data['factureFraisAutre'] ?? '0');
+        double remise = _convertToDouble(data['factureRemise'] ?? '0');
+        
+        // Récupérer le total des frais s'il existe, sinon le calculer
+        double montantTotal = _convertToDouble(data['factureTotalFrais'] ?? '0');
+        if (montantTotal == 0) {
+          montantTotal = prixLocation + caution + coutKmSupplementaires + 
+                       fraisNettoyageInterieur + fraisNettoyageExterieur + 
+                       fraisCarburantManquant + fraisRayuresDommages + fraisAutre - remise;
+        }
+        
+        // Récupérer la date de facture (au lieu de la date de clôture)
+        DateTime dateFacture;
         try {
-          dateCloture = DateTime.parse(data['dateCloture'] ?? DateTime.now().toIso8601String());
+          // Essayer d'abord de parser comme une date ISO
+          dateFacture = DateTime.parse(data['dateFacture'] ?? DateTime.now().toIso8601String());
         } catch (e) {
-          dateCloture = DateTime.now();
+          // Si ça échoue, utiliser la date actuelle
+          dateFacture = DateTime.now();
         }
         
         // Ajouter l'année à la liste des années disponibles
-        years.add(dateCloture.year.toString());
+        years.add(dateFacture.year.toString());
         
         // Ajouter à la liste des contrats
         contrats.add({
           'vehiculeInfoStr': vehiculeInfoStr,
           'vehiculeDetails': vehiculeDetails,
           'facturePrixLocation': prixLocation,
+          'factureCaution': caution,
           'factureCoutKmSupplementaires': coutKmSupplementaires,
           'factureFraisNettoyageInterieur': fraisNettoyageInterieur,
           'factureFraisNettoyageExterieur': fraisNettoyageExterieur,
           'factureFraisCarburantManquant': fraisCarburantManquant,
           'factureFraisRayuresDommages': fraisRayuresDommages,
           'factureFraisAutre': fraisAutre,
-          'factureCaution': caution,
-          'montantTotal': montantTotal,
-          'dateCloture': dateCloture,
+          'factureRemise': remise,
+          'factureTypePaiement': data['factureTypePaiement'] ?? '',
+          'factureTotalFrais': montantTotal,
+          'dateCloture': dateFacture, // On utilise dateFacture mais on garde le nom dateCloture pour compatibilité
         });
         
         chiffreTotal += montantTotal;
@@ -211,6 +212,19 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     }
   }
   
+  // Méthode utilitaire pour convertir en double
+  double _convertToDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      // Remplacer la virgule par un point pour la conversion
+      String valueStr = value.replaceAll(',', '.');
+      return double.tryParse(valueStr) ?? 0.0;
+    }
+    return 0.0;
+  }
+  
   void _calculerTousLesChiffres() {
     _calculerChiffreParPeriode();
     _calculerChiffreParVehicule();
@@ -222,7 +236,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     double chiffrePeriodeSelectionnee = 0;
     
     for (var contrat in _contrats) {
-      DateTime dateCloture = contrat['dateCloture'];
+      DateTime dateCloture = contrat['dateCloture']; // On utilise la date de facture stockée dans dateCloture
       double montant = 0;
       if (_filtresCalcul['facturePrixLocation']!) montant += contrat['facturePrixLocation'];
       if (_filtresCalcul['factureCoutKmSupplementaires']!) montant += contrat['factureCoutKmSupplementaires'];
@@ -232,6 +246,11 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       if (_filtresCalcul['factureFraisRayuresDommages']!) montant += contrat['factureFraisRayuresDommages'];
       if (_filtresCalcul['factureFraisAutre']!) montant += contrat['factureFraisAutre'];
       if (_filtresCalcul['factureCaution']!) montant += contrat['factureCaution'];
+      
+      // Soustraire la remise si elle existe et si le filtre est actif
+      if (_filtresCalcul['factureRemise']! && contrat.containsKey('factureRemise')) {
+        montant -= contrat['factureRemise'];
+      }
       
       // Filtrer par année si nécessaire
       if (dateCloture.year.toString() != _selectedYear) {
@@ -293,7 +312,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     Map<String, Map<String, dynamic>> detailsVehicules = {};
     
     for (var contrat in _contrats) {
-      DateTime dateCloture = contrat['dateCloture'];
+      DateTime dateCloture = contrat['dateCloture']; // On utilise la date de facture stockée dans dateCloture
       if (!_estDansPeriodeSelectionnee(dateCloture)) {
         continue;
       }
@@ -329,6 +348,11 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       }
       if (_filtresCalcul['factureCaution'] == true) {
         montant += contrat['factureCaution'] ?? 0;
+      }
+      
+      // Soustraire la remise si elle existe et si le filtre est actif
+      if (_filtresCalcul['factureRemise']! && contrat.containsKey('factureRemise')) {
+        montant -= contrat['factureRemise'];
       }
       
       if (chiffreParVehicule.containsKey(vehiculeInfoStr)) {
@@ -407,21 +431,16 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       }
     }
     
-    if (_selectedPeriod == 'Jour') {
-      return DateFormat('yyyy-MM-dd').format(date) == DateFormat('yyyy-MM-dd').format(DateTime.now());
-    } else if (_selectedPeriod == 'Semaine') {
-      int weekNumber = ((date.difference(DateTime(date.year, 1, 1)).inDays) / 7).floor() + 1;
-      int currentWeekNumber = ((DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays) / 7).floor() + 1;
-      return weekNumber == currentWeekNumber && date.year == DateTime.now().year;
-    } else if (_selectedPeriod == 'Mois') {
-      return DateFormat('yyyy-MM').format(date) == DateFormat('yyyy-MM').format(DateTime.now());
-    } else if (_selectedPeriod == 'Trimestre') {
-      int trimestre = ((date.month - 1) / 3).floor() + 1;
-      int currentTrimestre = ((DateTime.now().month - 1) / 3).floor() + 1;
-      return trimestre == currentTrimestre && date.year == DateTime.now().year;
-    } else if (_selectedPeriod == 'Année') {
-      return DateFormat('yyyy').format(date) == _selectedYear;
+    // Pour la période sélectionnée, nous comparons maintenant avec la date actuelle
+    // seulement si la période est 'Jour', 'Semaine', 'Mois' ou 'Trimestre'
+    // Pour 'Année', nous utilisons simplement l'année sélectionnée
+    
+    if (_selectedPeriod == 'Année') {
+      return date.year.toString() == _selectedYear;
     }
+    
+    // Pour les autres périodes, nous filtrons en fonction de la période sélectionnée
+    // sans comparer à la date actuelle
     return true;
   }
 

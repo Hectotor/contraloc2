@@ -94,18 +94,98 @@ class CreateContrat {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          "Niveau d'essence (%)",
+          "Niveau d'essence",
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
-        Slider(
-          value: pourcentageEssence.toDouble(),
-          min: 0,
-          max: 100,
-          divisions: 20,
-          label: "$pourcentageEssence%",
-          onChanged: (value) => onChanged(value),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.local_gas_station, color: Colors.black),
+                  const SizedBox(width: 10),
+                  Text(
+                    "Sélectionnez le niveau d'essence",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildEssenceOption("0", "Vide", pourcentageEssence, onChanged),
+                  _buildEssenceOption("1/4", "1/4", pourcentageEssence, onChanged),
+                  _buildEssenceOption("1/2", "1/2", pourcentageEssence, onChanged),
+                  _buildEssenceOption("3/4", "3/4", pourcentageEssence, onChanged),
+                  _buildEssenceOption("1", "Plein", pourcentageEssence, onChanged),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
+    );
+  }
+
+  static Widget _buildEssenceOption(String value, String label, int currentValue, Function onChanged) {
+    // Convertir la valeur actuelle en format comparable
+    String currentValueStr;
+    if (currentValue <= 0) currentValueStr = "0";
+    else if (currentValue <= 25) currentValueStr = "1/4";
+    else if (currentValue <= 50) currentValueStr = "1/2";
+    else if (currentValue <= 75) currentValueStr = "3/4";
+    else currentValueStr = "1";
+    
+    bool isSelected = currentValueStr == value;
+    
+    return InkWell(
+      onTap: () {
+        // Convertir la valeur sélectionnée en pourcentage
+        String percentage;
+        switch (value) {
+          case "0": percentage = "0"; break;
+          case "1/4": percentage = "25"; break;
+          case "1/2": percentage = "50"; break;
+          case "3/4": percentage = "75"; break;
+          case "1": percentage = "100"; break;
+          default: percentage = "0";
+        }
+        onChanged(int.parse(percentage));
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.black.withOpacity(0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? Colors.black : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.black : Colors.grey[700],
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
