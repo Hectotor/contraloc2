@@ -38,14 +38,8 @@ class _RetourLocState extends State<RetourLoc> {
       widget.dateFinEffectifController.text = widget.data['dateFinEffectif'];
     }
     
-    // Initialiser le niveau d'essence à 50% (1/2) par défaut si vide
-    if (widget.niveauEssenceRetourController.text.isEmpty) {
-      widget.niveauEssenceRetourController.text = "50";
-      // Mettre à jour les données
-      if (widget.onFraisUpdated != null) {
-        widget.onFraisUpdated!({'pourcentageEssenceRetour': "50"});
-      }
-    }
+    // Ne pas initialiser automatiquement le niveau d'essence
+    // Laisser vide jusqu'à ce que l'utilisateur le définisse explicitement
   }
 
   @override

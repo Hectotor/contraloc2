@@ -383,7 +383,11 @@ class _ModifierScreenState extends State<ModifierScreen> {
       final localPdfPath = '${appDir.path}/contrat_${widget.contratId}.pdf';
       final localPdfFile = File(localPdfPath);
       
-      if (await localPdfFile.exists()) {
+      // Vérifier si le contrat est en cours
+      bool isContratEnCours = widget.data['status'] == 'en_cours';
+      
+      // Si le PDF existe en cache ET que le contrat n'est PAS en cours, utiliser la version cachée
+      if (await localPdfFile.exists() && !isContratEnCours) {
         print(' PDF trouvé en cache local, ouverture directe');
         
         if (dialogShown && context.mounted) {
@@ -395,8 +399,13 @@ class _ModifierScreenState extends State<ModifierScreen> {
         return;
       }
       
-      print(' PDF non trouvé en cache local, génération sans appels Firestore...');
-
+      // Si le contrat est en cours ou si le PDF n'existe pas en cache, générer un nouveau PDF
+      if (isContratEnCours) {
+        print(' Contrat en cours, génération d\'un nouveau PDF sans utiliser le cache');
+      } else {
+        print(' PDF non trouvé en cache local, génération sans appels Firestore...');
+      }
+      
       final status = await CollaborateurUtil.checkCollaborateurStatus();
       final userId = status['userId'];
       final isCollaborateur = status['isCollaborateur'] == true;
@@ -457,8 +466,13 @@ class _ModifierScreenState extends State<ModifierScreen> {
       );
       
       try {
-        await File(pdfPath).copy(localPdfPath);
-        print(' PDF sauvegardé en cache local: $localPdfPath');
+        // Ne sauvegarder en cache que si le contrat n'est PAS en cours
+        if (!isContratEnCours) {
+          await File(pdfPath).copy(localPdfPath);
+          print(' PDF sauvegardé en cache local: $localPdfPath');
+        } else {
+          print(' Contrat en cours - PDF non sauvegardé en cache');
+        }
       } catch (e) {
         print(' Erreur lors de la sauvegarde du PDF en cache local: $e');
       }
@@ -499,6 +513,44 @@ class _ModifierScreenState extends State<ModifierScreen> {
           ),
         );
       }
+    }
+  }
+
+  // Fonction pour vider le cache des PDF
+  Future<void> _clearPdfCache() async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final directory = Directory(appDir.path);
+      
+      // Lister tous les fichiers du répertoire
+      final files = directory.listSync();
+      
+      // Filtrer pour ne garder que les fichiers PDF
+      final pdfFiles = files.where((file) => 
+        file.path.toLowerCase().endsWith('.pdf') && 
+        file.path.contains('contrat_')
+      );
+      
+      // Supprimer chaque fichier PDF
+      for (var file in pdfFiles) {
+        await File(file.path).delete();
+        print('Suppression du fichier caché: ${file.path}');
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cache des PDF vidé avec succès'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('Erreur lors de la suppression du cache: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors du vidage du cache: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -701,6 +753,18 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           ),
                           child: const Text(
                             "Afficher le contrat",
+                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                          onPressed: _clearPdfCache,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            minimumSize: const Size(double.infinity, 50),
+                          ),
+                          child: const Text(
+                            "Vider le cache des PDF",
                             style: TextStyle(color: Colors.white, fontSize: 18),
                           ),
                         ),
