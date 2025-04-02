@@ -351,91 +351,142 @@ class _ContratScreenState extends State<ContratScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        physics: const BouncingScrollPhysics(),
+      body: Column(
         children: [
-          // Contrats en cours
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: contrat_encours.ContratEnCours(
-              searchText: '',
-              onContractsCountChanged: _updateActiveContractsCount,
+          // Widgets invisibles pour charger les données initiales
+          Offstage(
+            offstage: true,
+            child: SizedBox(
+              height: 0,
+              width: 0,
+              child: contrat_encours.ContratEnCours(
+                searchText: '',
+                onContractsCountChanged: _updateActiveContractsCount,
+              ),
             ),
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              return SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(1.0, 0.0),
-                  end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeInOut,
-                )),
-                child: child,
-              );
-            },
           ),
-          
-          // Contrats restitués
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: contrat_restitues.ContratRestitues(
-              searchText: '',
-              onContractsCountChanged: _updateReturnedContractsCount,
+          Offstage(
+            offstage: true,
+            child: SizedBox(
+              height: 0,
+              width: 0,
+              child: contrat_restitues.ContratRestitues(
+                searchText: '',
+                onContractsCountChanged: _updateReturnedContractsCount,
+              ),
             ),
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              return SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(1.0, 0.0),
-                  end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeInOut,
-                )),
-                child: child,
-              );
-            },
           ),
-          
-          // Calendrier
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: calendar_screen.CalendarScreen(
-              onEventsCountChanged: _updateCalendarEventsCount,
+          Offstage(
+            offstage: true,
+            child: SizedBox(
+              height: 0,
+              width: 0,
+              child: calendar_screen.CalendarScreen(
+                onEventsCountChanged: _updateCalendarEventsCount,
+              ),
             ),
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              return SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(1.0, 0.0),
-                  end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeInOut,
-                )),
-                child: child,
-              );
-            },
           ),
-          
-          // Contrats supprimés
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: contrat_supprimes.ContratSupprimes(
-              searchText: '',
-              onContractsCountChanged: _updateDeletedContractsCount,
+          Offstage(
+            offstage: true,
+            child: SizedBox(
+              height: 0,
+              width: 0,
+              child: contrat_supprimes.ContratSupprimes(
+                searchText: '',
+                onContractsCountChanged: _updateDeletedContractsCount,
+              ),
             ),
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              return SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(1.0, 0.0),
-                  end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeInOut,
-                )),
-                child: child,
-              );
-            },
+          ),
+          // TabBar pour la navigation entre les onglets
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              physics: const BouncingScrollPhysics(),
+              children: [
+                // Contrats en cours
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: contrat_encours.ContratEnCours(
+                    searchText: '',
+                    onContractsCountChanged: _updateActiveContractsCount,
+                  ),
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    return SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(1.0, 0.0),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeInOut,
+                      )),
+                      child: child,
+                    );
+                  },
+                ),
+                
+                // Contrats restitués
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: contrat_restitues.ContratRestitues(
+                    searchText: '',
+                    onContractsCountChanged: _updateReturnedContractsCount,
+                  ),
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    return SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(1.0, 0.0),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeInOut,
+                      )),
+                      child: child,
+                    );
+                  },
+                ),
+                
+                // Calendrier
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: calendar_screen.CalendarScreen(
+                    onEventsCountChanged: _updateCalendarEventsCount,
+                  ),
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    return SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(1.0, 0.0),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeInOut,
+                      )),
+                      child: child,
+                    );
+                  },
+                ),
+                
+                // Contrats supprimés
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: contrat_supprimes.ContratSupprimes(
+                    searchText: '',
+                    onContractsCountChanged: _updateDeletedContractsCount,
+                  ),
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    return SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(1.0, 0.0),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeInOut,
+                      )),
+                      child: child,
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ],
       ),

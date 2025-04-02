@@ -262,9 +262,76 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
 
                   final contrats = snapshot.data!.docs;
 
+                  // Filtrer les contrats selon le texte de recherche
                   final filteredContrats = contrats.where((contrat) {
                     return _filterContract(contrat, _searchController.text);
                   }).toList();
+
+                  // Trier les contrats par nombre de jours restants (du plus petit au plus grand)
+                  filteredContrats.sort((a, b) {
+                    DateTime dateSuppressionA;
+                    DateTime dateSuppressionB;
+                    
+                    try {
+                      // Essayer de récupérer la date de suppression
+                      if (a['dateSuppressionDefinitive'] != null) {
+                        // Vérifier si c'est un Timestamp ou une String
+                        if (a['dateSuppressionDefinitive'] is Timestamp) {
+                          dateSuppressionA = (a['dateSuppressionDefinitive'] as Timestamp).toDate();
+                        } else if (a['dateSuppressionDefinitive'] is String) {
+                          // Si c'est une String, essayer de la parser
+                          dateSuppressionA = DateTime.parse(a['dateSuppressionDefinitive']);
+                        } else {
+                          // Valeur par défaut
+                          dateSuppressionA = DateTime.now().add(Duration(days: 90));
+                        }
+                      } else if (a['datesuppression'] != null) {
+                        // Essayer avec le champ 'datesuppression'
+                        if (a['datesuppression'] is Timestamp) {
+                          dateSuppressionA = (a['datesuppression'] as Timestamp).toDate();
+                        } else if (a['datesuppression'] is String) {
+                          dateSuppressionA = DateTime.parse(a['datesuppression']);
+                        } else {
+                          dateSuppressionA = DateTime.now().add(Duration(days: 90));
+                        }
+                      } else {
+                        // Si aucun champ n'est disponible
+                        dateSuppressionA = DateTime.now().add(Duration(days: 90));
+                      }
+                      
+                      // Même chose pour le document B
+                      if (b['dateSuppressionDefinitive'] != null) {
+                        if (b['dateSuppressionDefinitive'] is Timestamp) {
+                          dateSuppressionB = (b['dateSuppressionDefinitive'] as Timestamp).toDate();
+                        } else if (b['dateSuppressionDefinitive'] is String) {
+                          dateSuppressionB = DateTime.parse(b['dateSuppressionDefinitive']);
+                        } else {
+                          dateSuppressionB = DateTime.now().add(Duration(days: 90));
+                        }
+                      } else if (b['datesuppression'] != null) {
+                        if (b['datesuppression'] is Timestamp) {
+                          dateSuppressionB = (b['datesuppression'] as Timestamp).toDate();
+                        } else if (b['datesuppression'] is String) {
+                          dateSuppressionB = DateTime.parse(b['datesuppression']);
+                        } else {
+                          dateSuppressionB = DateTime.now().add(Duration(days: 90));
+                        }
+                      } else {
+                        dateSuppressionB = DateTime.now().add(Duration(days: 90));
+                      }
+                    } catch (e) {
+                      // En cas d'erreur, utiliser des valeurs par défaut
+                      print('Erreur lors du tri des contrats supprimés: $e');
+                      return 0; // Garder l'ordre d'origine
+                    }
+                    
+                    // Calculer les jours restants
+                    final joursRestantsA = dateSuppressionA.difference(DateTime.now()).inDays;
+                    final joursRestantsB = dateSuppressionB.difference(DateTime.now()).inDays;
+                    
+                    // Trier du plus petit au plus grand nombre de jours
+                    return joursRestantsA.compareTo(joursRestantsB);
+                  });
 
                   if (widget.onContractsCountChanged != null) {
                     widget.onContractsCountChanged!(filteredContrats.length);
