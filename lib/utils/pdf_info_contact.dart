@@ -119,10 +119,12 @@ class PdfInfoContactWidget {
               style: pw.TextStyle(font: ttf, fontSize: 9)),
           pw.Text('Numéro de permis: ${clientData['numeroPermis']}',
               style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.Text('Immatriculation véhicule: ${clientData['immatriculationVehiculeClient']}',
-              style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.Text('Kilométrage véhicule: ${clientData['kilometrageVehiculeClient']}',
-              style: pw.TextStyle(font: ttf, fontSize: 9)),
+          if (clientData['immatriculationVehiculeClient'] != null && clientData['immatriculationVehiculeClient'].toString().isNotEmpty)
+            pw.Text('Immatriculation véhicule: ${clientData['immatriculationVehiculeClient']}',
+                style: pw.TextStyle(font: ttf, fontSize: 9)),
+          if (clientData['kilometrageVehiculeClient'] != null && clientData['kilometrageVehiculeClient'].toString().isNotEmpty)
+            pw.Text('Kilométrage véhicule: ${clientData['kilometrageVehiculeClient']}',
+                style: pw.TextStyle(font: ttf, fontSize: 9)),
         ],
       ),
     );

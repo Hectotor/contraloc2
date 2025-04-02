@@ -137,7 +137,7 @@ class RetourEnvoiePdf {
           // Nouveaux champs ajoutés
           'nettoyageInt': (contratData['nettoyageInt'] ?? '').toString(),
           'nettoyageExt': (contratData['nettoyageExt'] ?? '').toString(),
-          'pourcentageEssenceRetour': (contratData['niveauEssenceRetour'] ?? '').toString(),
+          'pourcentageEssenceRetour': (contratData['pourcentageEssenceRetour'] ?? '').toString(),
           'carburantManquant': (contratData['carburantManquant'] ?? '').toString(),
           'prixRayures': (contratData['prixRayures'] ?? '').toString(),
           'caution': (contratData['caution'] ?? '').toString(),

@@ -531,6 +531,10 @@ class PdfVoitureWidget {
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
+              pw.Expanded(
+                flex: 1,
+                child: pw.Container(),
+              ),
             ],
           ),
         ),

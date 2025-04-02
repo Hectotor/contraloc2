@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FactureScreen extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -282,8 +283,26 @@ class _FactureScreenState extends State<FactureScreen> {
         'factureRemise': double.tryParse(_remiseController.text.replaceAll(',', '.')) ?? 0, // Ajouter la remise
         'factureTotalFrais': _total,
         'factureTypePaiement': _typePaiement,
-        'kilometrageRetour': double.tryParse(_kmRetourController.text) ?? 0,
+        'dateFacture': Timestamp.now(),
       };
+
+      // Vérifier que l'ID du contrat existe
+      if (widget.data['id'] == null) {
+        // Afficher une erreur si l'ID est manquant
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erreur: Impossible de mettre à jour le contrat car l\'ID est manquant'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
+      // Mettre à jour directement le document de location existant
+      await FirebaseFirestore.instance
+          .collection('locations')
+          .doc(widget.data['id'])
+          .update(data);
 
       // Mettre à jour les données du widget
       widget.data.addAll(data);
