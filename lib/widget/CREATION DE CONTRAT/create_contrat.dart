@@ -142,11 +142,17 @@ class CreateContrat {
   static Widget _buildEssenceOption(String value, String label, int currentValue, Function onChanged) {
     // Convertir la valeur actuelle en format comparable
     String currentValueStr;
-    if (currentValue <= 0) currentValueStr = "0";
-    else if (currentValue <= 25) currentValueStr = "1/4";
-    else if (currentValue <= 50) currentValueStr = "1/2";
-    else if (currentValue <= 75) currentValueStr = "3/4";
-    else currentValueStr = "1";
+    if (currentValue <= 0) {
+      currentValueStr = "0";
+    } else if (currentValue <= 25) {
+      currentValueStr = "1/4";
+    } else if (currentValue <= 50) {
+      currentValueStr = "1/2";
+    } else if (currentValue <= 75) {
+      currentValueStr = "3/4";
+    } else {
+      currentValueStr = "1";
+    }
     
     bool isSelected = currentValueStr == value;
     
@@ -167,10 +173,10 @@ class CreateContrat {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.black.withOpacity(0.2) : Colors.transparent,
+          color: isSelected ? Colors.black.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? Colors.black : Colors.grey[300]!,
+            color: isSelected ? Colors.black.withOpacity(0.3) : Colors.grey[300]!,
             width: isSelected ? 2 : 1,
           ),
         ),
