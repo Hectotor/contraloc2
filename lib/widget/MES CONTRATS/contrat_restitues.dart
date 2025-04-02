@@ -7,8 +7,9 @@ import 'search_filtre.dart';
 
 class ContratRestitues extends StatefulWidget {
   final String searchText;
+  final Function(int)? onContractsCountChanged;
 
-  ContratRestitues({Key? key, required this.searchText}) : super(key: key);
+  ContratRestitues({Key? key, required this.searchText, this.onContractsCountChanged}) : super(key: key);
 
   @override
   _ContratRestituesState createState() => _ContratRestituesState();
@@ -72,7 +73,7 @@ class _ContratRestituesState extends State<ContratRestitues> {
             .doc(effectiveUserId)
             .collection('locations')
             .where('status', isEqualTo: 'restitue')
-            .orderBy('dateRestitution', descending: true)
+            .orderBy('dateFinEffectif', descending: true)
             .snapshots();
       });
     }
@@ -87,7 +88,7 @@ class _ContratRestituesState extends State<ContratRestitues> {
         .doc(effectiveUserId)
         .collection('locations')
         .where('status', isEqualTo: 'restitue')
-        .orderBy('dateRestitution', descending: true)
+        .orderBy('dateFinEffectif', descending: true)
         .snapshots();
   }
 
@@ -225,6 +226,10 @@ class _ContratRestituesState extends State<ContratRestitues> {
                   final filteredContrats = contrats.where((contrat) {
                     return _filterContract(contrat, _searchController.text);
                   }).toList();
+
+                  if (widget.onContractsCountChanged != null) {
+                    widget.onContractsCountChanged!(filteredContrats.length);
+                  }
 
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 8),

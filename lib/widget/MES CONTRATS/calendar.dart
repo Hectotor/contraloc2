@@ -6,6 +6,10 @@ import 'package:ContraLoc/widget/MES%20CONTRATS/vehicle_access_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class CalendarScreen extends StatefulWidget {
+  final Function(int)? onEventsCountChanged;
+
+  CalendarScreen({Key? key, this.onEventsCountChanged}) : super(key: key);
+
   @override
   _CalendarScreenState createState() => _CalendarScreenState();
 }
@@ -163,6 +167,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               final dateB = (b.data() as Map<String, dynamic>)['dateReservation'] as Timestamp;
               return dateA.compareTo(dateB); 
             });
+
+            if (widget.onEventsCountChanged != null) {
+              widget.onEventsCountChanged!(contrats.length);
+            }
 
             return Column(
               children: [

@@ -302,7 +302,7 @@ class _InfoVehiculeState extends State<InfoVehicule> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Color(0xFF08004D).withOpacity(0.1),
+              color: Colors.green[700]!.withOpacity(0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -310,14 +310,14 @@ class _InfoVehiculeState extends State<InfoVehicule> {
             ),
             child: Row(
               children: [
-                Icon(Icons.directions_car, color: Color(0xFF08004D), size: 24),
+                Icon(Icons.directions_car, color: Colors.green[700], size: 24),
                 const SizedBox(width: 12),
                 Text(
                   "Détails du véhicule",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF08004D),
+                    color: Colors.green[700]!,
                   ),
                 ),
               ],

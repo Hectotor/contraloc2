@@ -36,115 +36,73 @@ class _ContratScreenState extends State<ContratScreen>
   int _calendarEventsCount = 0;
   int _deletedContractsCount = 0;
   
-  // Système de cache pour les contrats
-  final Map<String, List<DocumentSnapshot>> _contractsCache = {};
-  final Map<String, DateTime> _cacheTimestamps = {};
-  final Duration _cacheDuration = Duration(minutes: 5); // Durée de validité du cache
-  
-  // Clés de cache pour les différents types de contrats
-  static const String _activeContractsKey = 'active_contracts';
-  static const String _returnedContractsKey = 'returned_contracts';
-  static const String _calendarContractsKey = 'calendar_contracts';
-  static const String _deletedContractsKey = 'deleted_contracts';
-  
-  // Méthode pour invalider le cache
-  void _invalidateCache() {
-    _contractsCache.clear();
-    _cacheTimestamps.clear();
-  }
-  
-  // Méthode pour récupérer les contrats par catégorie
-  Future<List<DocumentSnapshot>> _getContractsByCategory(String categoryKey) async {
-    if (_cacheTimestamps[categoryKey] != null &&
-        DateTime.now().difference(_cacheTimestamps[categoryKey]!) < _cacheDuration) {
-      // Récupérer les données du cache
-      final cachedContracts = _contractsCache[categoryKey];
-      if (cachedContracts != null) {
-        return cachedContracts;
-      }
-    }
-    
-    final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
-    if (effectiveUserId == null) return [];
-    
-    try {
-      QuerySnapshot querySnapshot;
-      switch (categoryKey) {
-        case _activeContractsKey:
-          querySnapshot = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(effectiveUserId)
-              .collection('locations')
-              .where('status', isEqualTo: 'en_cours')
-              .get();
-          break;
-        case _returnedContractsKey:
-          querySnapshot = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(effectiveUserId)
-              .collection('locations')
-              .where('status', isEqualTo: 'restitue')
-              .get();
-          break;
-        case _calendarContractsKey:
-          querySnapshot = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(effectiveUserId)
-              .collection('locations')
-              .where('status', isEqualTo: 'réservé')
-              .get();
-          break;
-        case _deletedContractsKey:
-          querySnapshot = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(effectiveUserId)
-              .collection('locations')
-              .where('statussupprime', isEqualTo: 'supprimé')
-              .get();
-          break;
-        default:
-          return [];
-      }
-      
-      // Stocker les données en cache
-      _contractsCache[categoryKey] = querySnapshot.docs;
-      _cacheTimestamps[categoryKey] = DateTime.now();
-      
-      return querySnapshot.docs;
-    } catch (e) {
-      print('Erreur lors de la récupération des contrats: $e');
-      return [];
+  // Méthode pour mettre à jour le compteur de contrats en cours
+  void _updateActiveContractsCount(int count) {
+    // Utiliser Future.microtask pour éviter d'appeler setState pendant la phase de build
+    if (_activeContractsCount != count) {
+      Future.microtask(() {
+        if (mounted) {
+          setState(() {
+            _activeContractsCount = count;
+          });
+        }
+      });
     }
   }
   
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-    
-    // Set the initial tab based on the showRestitues parameter
-    if (widget.showRestitues) {
-      _tabController.index = 1; // Restitués tab
+  // Méthode pour mettre à jour le compteur de contrats restitués
+  void _updateReturnedContractsCount(int count) {
+    if (_returnedContractsCount != count) {
+      Future.microtask(() {
+        if (mounted) {
+          setState(() {
+            _returnedContractsCount = count;
+          });
+        }
+      });
     }
-    
-    // Initialiser le gestionnaire d'accès aux véhicules
-    _vehicleAccessManager = vehicle_access_manager.VehicleAccessManager();
-    _initializeAccess();
+  }
+
+  // Méthode pour mettre à jour le compteur d'événements du calendrier
+  void _updateCalendarEventsCount(int count) {
+    if (_calendarEventsCount != count) {
+      Future.microtask(() {
+        if (mounted) {
+          setState(() {
+            _calendarEventsCount = count;
+          });
+        }
+      });
+    }
+  }
+
+  // Méthode pour mettre à jour le compteur de contrats supprimés
+  void _updateDeletedContractsCount(int count) {
+    if (_deletedContractsCount != count) {
+      Future.microtask(() {
+        if (mounted) {
+          setState(() {
+            _deletedContractsCount = count;
+          });
+        }
+      });
+    }
   }
   
   // Méthode pour initialiser l'accès et charger les compteurs
   Future<void> _initializeAccess() async {
-    await _vehicleAccessManager.initialize();
-    _targetUserId = _vehicleAccessManager.getTargetUserId();
-    _isInitialized = true;
-    
-    // Vérifier et supprimer les contrats expirés (après 90 jours)
-    await _checkAndDeleteExpiredContracts();
-    
-    // Charger les compteurs
-    _loadContractCounts();
+    try {
+      await _vehicleAccessManager.initialize();
+      _targetUserId = await _vehicleAccessManager.getTargetUserId();
+      _isInitialized = true;
+      
+      // Vérifier et supprimer les contrats expirés (après 90 jours)
+      await _checkAndDeleteExpiredContracts();
+    } catch (e) {
+      print("Erreur lors de l'initialisation de l'accès: $e");
+    }
   }
-  
+
   // Méthode pour vérifier et supprimer les contrats expirés
   Future<void> _checkAndDeleteExpiredContracts() async {
     if (!_isInitialized) return;
@@ -186,46 +144,25 @@ class _ContratScreenState extends State<ContratScreen>
         
         await batch.commit();
         print('${expiredContracts.length} contrats expirés ont été marqués comme supprimés');
-        
-        // Invalider le cache après la suppression des contrats
-        _invalidateCache();
       }
     } catch (e) {
       print('Erreur lors de la suppression des contrats expirés: $e');
     }
   }
   
-  // Méthode pour charger les compteurs de contrats
-  Future<void> _loadContractCounts() async {
-    if (!_isInitialized) return;
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
     
-    final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
-    if (effectiveUserId == null) return;
-    
-    try {
-      // Récupérer les contrats par catégorie
-      final activeContracts = await _getContractsByCategory(_activeContractsKey);
-      final returnedContracts = await _getContractsByCategory(_returnedContractsKey);
-      final calendarContracts = await _getContractsByCategory(_calendarContractsKey);
-      final deletedContracts = await _getContractsByCategory(_deletedContractsKey);
-      
-      // Compter localement les contrats par catégorie
-      int activeCount = activeContracts.length;
-      int returnedCount = returnedContracts.length;
-      int calendarCount = calendarContracts.length;
-      int deletedCount = deletedContracts.length;
-      
-      if (mounted) {
-        setState(() {
-          _activeContractsCount = activeCount;
-          _returnedContractsCount = returnedCount;
-          _calendarEventsCount = calendarCount;
-          _deletedContractsCount = deletedCount;
-        });
-      }
-    } catch (e) {
-      print('Erreur lors du chargement des compteurs: $e');
+    // Set the initial tab based on the showRestitues parameter
+    if (widget.showRestitues) {
+      _tabController.index = 1; // Restitués tab
     }
+    
+    // Initialiser le gestionnaire d'accès aux véhicules
+    _vehicleAccessManager = vehicle_access_manager.VehicleAccessManager();
+    _initializeAccess();
   }
 
   @override
@@ -421,7 +358,10 @@ class _ContratScreenState extends State<ContratScreen>
           // Contrats en cours
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
-            child: contrat_encours.ContratEnCours(searchText: ''),
+            child: contrat_encours.ContratEnCours(
+              searchText: '',
+              onContractsCountChanged: _updateActiveContractsCount,
+            ),
             transitionBuilder: (Widget child, Animation<double> animation) {
               return SlideTransition(
                 position: Tween<Offset>(
@@ -439,7 +379,10 @@ class _ContratScreenState extends State<ContratScreen>
           // Contrats restitués
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
-            child: contrat_restitues.ContratRestitues(searchText: ''),
+            child: contrat_restitues.ContratRestitues(
+              searchText: '',
+              onContractsCountChanged: _updateReturnedContractsCount,
+            ),
             transitionBuilder: (Widget child, Animation<double> animation) {
               return SlideTransition(
                 position: Tween<Offset>(
@@ -457,7 +400,9 @@ class _ContratScreenState extends State<ContratScreen>
           // Calendrier
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
-            child: calendar_screen.CalendarScreen(),
+            child: calendar_screen.CalendarScreen(
+              onEventsCountChanged: _updateCalendarEventsCount,
+            ),
             transitionBuilder: (Widget child, Animation<double> animation) {
               return SlideTransition(
                 position: Tween<Offset>(
@@ -475,7 +420,10 @@ class _ContratScreenState extends State<ContratScreen>
           // Contrats supprimés
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
-            child: contrat_supprimes.ContratSupprimes(searchText: ''),
+            child: contrat_supprimes.ContratSupprimes(
+              searchText: '',
+              onContractsCountChanged: _updateDeletedContractsCount,
+            ),
             transitionBuilder: (Widget child, Animation<double> animation) {
               return SlideTransition(
                 position: Tween<Offset>(

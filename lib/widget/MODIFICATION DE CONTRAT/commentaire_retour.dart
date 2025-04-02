@@ -16,7 +16,7 @@ class CommentaireRetourWidget extends StatelessWidget {
         suffixIcon: Padding(
           padding: const EdgeInsets.only(bottom: 64),
           child: IconButton(
-            icon: Icon(Icons.check_circle, color: Colors.orange[200]),
+            icon: Icon(Icons.check_circle, color: Colors.orange[200]!),
             onPressed: () {
               // Fermer le clavier
               FocusScope.of(context).unfocus();
@@ -38,6 +38,10 @@ class CommentaireRetourWidget extends StatelessWidget {
           borderSide: BorderSide(color: Colors.orange[200]!),
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      ),
+      style: TextStyle(
+        fontSize: 16,
+        color: Colors.orange[800],
       ),
     );
   }

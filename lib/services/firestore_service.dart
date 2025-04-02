@@ -31,7 +31,7 @@ class FirestoreService {
         .collection('locations')
         .where('status', isEqualTo: 'restitue')
         // Ne pas filtrer par statussupprime car le champ peut ne pas exister
-        .orderBy('dateRestitution', descending: true)
+        .orderBy('dateFinEffectif', descending: true)
         .snapshots();
   }
 

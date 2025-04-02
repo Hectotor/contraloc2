@@ -7,8 +7,9 @@ import 'search_filtre.dart';
 
 class ContratEnCours extends StatefulWidget {
   final String searchText;
+  final Function(int)? onContractsCountChanged;
 
-  ContratEnCours({Key? key, required this.searchText}) : super(key: key);
+  ContratEnCours({Key? key, required this.searchText, this.onContractsCountChanged}) : super(key: key);
 
   @override
   _ContratEnCoursState createState() => _ContratEnCoursState();
@@ -226,6 +227,10 @@ class _ContratEnCoursState extends State<ContratEnCours> {
                   final filteredContrats = contrats.where((contrat) {
                     return _filterContract(contrat, _searchController.text);
                   }).toList();
+
+                  if (widget.onContractsCountChanged != null) {
+                    widget.onContractsCountChanged!(filteredContrats.length);
+                  }
 
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 8),

@@ -7,8 +7,9 @@ import 'search_filtre.dart';
 
 class ContratSupprimes extends StatefulWidget {
   final String searchText;
+  final Function(int)? onContractsCountChanged;
 
-  ContratSupprimes({Key? key, required this.searchText}) : super(key: key);
+  ContratSupprimes({Key? key, required this.searchText, this.onContractsCountChanged}) : super(key: key);
 
   @override
   _ContratSupprimesState createState() => _ContratSupprimesState();
@@ -265,6 +266,10 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
                     return _filterContract(contrat, _searchController.text);
                   }).toList();
 
+                  if (widget.onContractsCountChanged != null) {
+                    widget.onContractsCountChanged!(filteredContrats.length);
+                  }
+
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: filteredContrats.length,
@@ -519,7 +524,7 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
                                                   ],
                                                 ),
                                                 Text(
-                                                  "${data['dateFinEffectif'] ?? data['dateRestitution'] ?? 'Non restitué'}",
+                                                  "${data['dateFinEffectif'] ?? 'Non restitué'}",
                                                   style: TextStyle(
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w500,
