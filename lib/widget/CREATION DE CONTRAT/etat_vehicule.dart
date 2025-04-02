@@ -185,65 +185,74 @@ class _EtatVehiculeState extends State<EtatVehicule> {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
-        ElevatedButton.icon(
-          onPressed: isLoading ? null : isPremiumUser ? _pickImage : _showPremiumDialog,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        InkWell(
+          onTap: isLoading ? null : isPremiumUser ? _pickImage : _showPremiumDialog,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock, color: Colors.orange[700], size: 20),
+                const SizedBox(width: 10),
+                Text(
+                  isPremiumUser ? "Ajouter des photos" : "Fonctionnalité Premium",
+                  style: TextStyle(
+                    color: Colors.orange[700],
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
           ),
-          icon: Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock,
-              color: Colors.white),
-          label: Text(
-            isPremiumUser ? "Ajouter des photos" : "Ajouter des photos",
-            style: const TextStyle(color: Colors.white, fontSize: 18),
-          ),
         ),
-        const SizedBox(height: 10),
-        if (widget.photos.isNotEmpty && isPremiumUser) _buildPhotoScroll(),
+        const SizedBox(height: 16),
+        if (widget.photos.isNotEmpty) _buildPhotoScroll(),
       ],
     );
   }
 
   Widget _buildPhotoScroll() {
     return SizedBox(
-      height: 250,
+      height: 150,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: widget.photos.length,
         itemBuilder: (context, index) {
           return Stack(
             children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.file(
-                    widget.photos[index],
-                    width: 200,
-                    height: 250,
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  image: DecorationImage(
+                    image: FileImage(widget.photos[index]),
                     fit: BoxFit.cover,
                   ),
                 ),
               ),
               Positioned(
-                top: 0,
-                right: 0,
+                top: 5,
+                right: 13,
                 child: GestureDetector(
-                  onTap: () {
-                    widget.onRemovePhoto(index);
-                  },
+                  onTap: () => widget.onRemovePhoto(index),
                   child: Container(
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: Colors.red,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.close,
+                      size: 16,
                       color: Colors.white,
-                      size: 20,
                     ),
                   ),
                 ),

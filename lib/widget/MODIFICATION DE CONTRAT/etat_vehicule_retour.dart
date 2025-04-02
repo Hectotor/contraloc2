@@ -212,49 +212,29 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
               children: [
                 Container(
                   width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: isPremiumUser ? [
-                      BoxShadow(
-                        color: Colors.orange.withOpacity(0.3),
-                        spreadRadius: 1,
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ] : [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.3),
-                        spreadRadius: 1,
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton.icon(
-                    onPressed: isPremiumUser ? _pickImage : _showPremiumDialog,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isPremiumUser ? Colors.orange[300] : Colors.grey[400],
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      minimumSize: const Size(double.infinity, 56),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    icon: Icon(
-                      isPremiumUser ? Icons.add_a_photo : Icons.lock,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    label: Text(
-                      isPremiumUser
-                          ? "Ajouter des photos"
-                          : "Ajouter des photos (Premium)",
-                      style: const TextStyle(
+                  child: InkWell(
+                    onTap: isPremiumUser ? _pickImage : _showPremiumDialog,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                      decoration: BoxDecoration(
                         color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock, color: Colors.orange[700], size: 20),
+                          const SizedBox(width: 10),
+                          Text(
+                            isPremiumUser ? "Ajouter des photos" : "Fonctionnalité Premium",
+                            style: TextStyle(
+                              color: Colors.orange[700],
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
