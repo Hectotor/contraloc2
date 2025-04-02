@@ -73,7 +73,7 @@ class _ContratRestituesState extends State<ContratRestitues> {
             .doc(effectiveUserId)
             .collection('locations')
             .where('status', isEqualTo: 'restitue')
-            .orderBy('dateFinEffectif', descending: true)
+            .orderBy('dateRestitution', descending: true)
             .snapshots();
       });
     }
@@ -88,7 +88,7 @@ class _ContratRestituesState extends State<ContratRestitues> {
         .doc(effectiveUserId)
         .collection('locations')
         .where('status', isEqualTo: 'restitue')
-        .orderBy('dateFinEffectif', descending: true)
+        .orderBy('dateRestitution', descending: true)
         .snapshots();
   }
 
