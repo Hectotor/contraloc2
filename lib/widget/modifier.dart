@@ -5,14 +5,12 @@ import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart'; 
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:signature/signature.dart';
-import '../utils/pdf.dart';
 import '../utils/affichage_facture_pdf.dart';
-import '../USERS/contrat_condition.dart';
+import '../utils/affichage_contrat_pdf.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
 import 'MODIFICATION DE CONTRAT/supp_contrat.dart';
 import 'MODIFICATION DE CONTRAT/info_loc.dart';
@@ -337,195 +335,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
     );
   }
 
-  Future<void> _generatePdf() async {
-    bool dialogShown = false;
-    if (context.mounted) {
-      dialogShown = true;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    try {
-      final appDir = await getApplicationDocumentsDirectory();
-      final localPdfPath = '${appDir.path}/contrat_${widget.contratId}.pdf';
-      final localPdfFile = File(localPdfPath);
-      
-      // Vérifier si le contrat est en cours
-      bool isContratEnCours = widget.data['status'] == 'en_cours';
-      
-      // Si le PDF existe en cache ET que le contrat n'est PAS en cours, utiliser la version cachée
-      if (await localPdfFile.exists() && !isContratEnCours) {
-        print(' PDF trouvé en cache local, ouverture directe');
-        
-        if (dialogShown && context.mounted) {
-          Navigator.pop(context);
-          dialogShown = false;
-        }
-        
-        await OpenFilex.open(localPdfPath);
-        return;
-      }
-      
-      // Si le contrat est en cours ou si le PDF n'existe pas en cache, générer un nouveau PDF
-      if (isContratEnCours) {
-        print(' Contrat en cours, génération d\'un nouveau PDF sans utiliser le cache');
-      } else {
-        print(' PDF non trouvé en cache local, génération sans appels Firestore...');
-      }
-      
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
-      final userId = status['userId'];
-      final isCollaborateur = status['isCollaborateur'] == true;
-      
-      print(' Génération PDF - userId: $userId, isCollaborateur: $isCollaborateur');
-
-      String conditions = widget.data['conditions'] ?? ContratModifier.defaultContract;
-      
-      String? signatureRetourBase64 = widget.data['signature_retour'] ?? widget.data['signatureRetour'];
-      
-      print(' Signature de retour récupérée : ${signatureRetourBase64 != null ? 'Présente' : 'Absente'}');
-      print(' Conditions personnalisées récupérées : ${conditions != ContratModifier.defaultContract ? 'Personnalisées' : 'Par défaut'}');
-
-      final userData = await CollaborateurUtil.getAuthData();
-
-      final pdfPath = await generatePdf(
-        {
-          ...widget.data,
-          'nettoyageInt': _nettoyageIntController.text,
-          'nettoyageExt': _nettoyageExtController.text,
-          'pourcentageEssenceRetour': _niveauEssenceRetourController.text,
-          'caution': _cautionController.text,
-          'signatureRetour': _signatureRetourBase64 != null && _signatureRetourBase64!.isNotEmpty ? _signatureRetourBase64 : null,
-          'conditions': conditions,
-          'contratId': widget.contratId,
-        },
-        widget.data['dateFinEffectif'] ?? '',
-        widget.data['kilometrageRetour'] ?? '',
-        widget.data['commentaireRetour'] ?? '',
-        [],  // photosRetour
-        widget.data['nomEntreprise'] ?? userData['nomEntreprise'] ?? '',
-        widget.data['logoUrl'] ?? userData['logoUrl'] ?? '',
-        widget.data['adresseEntreprise'] ?? userData['adresse'] ?? '',
-        widget.data['telephoneEntreprise'] ?? userData['telephone'] ?? '',
-        widget.data['siretEntreprise'] ?? userData['siret'] ?? '',
-        widget.data['commentaireRetour'] ?? '',
-        widget.data['typeCarburant'] ?? '',
-        widget.data['boiteVitesses'] ?? '',
-        widget.data['vin'] ?? '',
-        widget.data['assuranceNom'] ?? '',
-        widget.data['assuranceNumero'] ?? '',
-        widget.data['franchise'] ?? '',
-        widget.data['kilometrageSupp'] ?? '',
-        widget.data['rayures'] ?? '',
-        widget.data['dateDebut'] ?? '',
-        widget.data['dateFinTheorique'] ?? '',
-        widget.data['dateFinEffectif'] ?? '',
-        widget.data['kilometrageDepart'] ?? '',
-        widget.data['kilometrageAutorise'] ?? '',
-        (widget.data['pourcentageEssence'] ?? '').toString(),
-        widget.data['typeLocation'] ?? '',
-        widget.data['prixLocation'] ?? '',
-        widget.data['accompte'] ?? '',
-        condition: conditions,
-        signatureBase64: '',
-        signatureRetourBase64: _signatureRetourBase64 != null && _signatureRetourBase64!.isNotEmpty ? _signatureRetourBase64 : null,
-        nomCollaborateur: widget.data['nomCollaborateur'] != null && widget.data['prenomCollaborateur'] != null
-            ? '${widget.data['prenomCollaborateur']} ${widget.data['nomCollaborateur']}'
-            : null,
-      );
-      
-      try {
-        // Ne sauvegarder en cache que si le contrat n'est PAS en cours
-        if (!isContratEnCours) {
-          await File(pdfPath).copy(localPdfPath);
-          print(' PDF sauvegardé en cache local: $localPdfPath');
-        } else {
-          print(' Contrat en cours - PDF non sauvegardé en cache');
-        }
-      } catch (e) {
-        print(' Erreur lors de la sauvegarde du PDF en cache local: $e');
-      }
-
-      if (dialogShown && context.mounted) {
-        Navigator.pop(context);
-        dialogShown = false;
-      }
-
-      await OpenFilex.open(pdfPath);
-
-    } catch (e) {
-      print(' Erreur lors de la génération du PDF : $e');
-      
-      if (dialogShown && context.mounted) {
-        Navigator.pop(context);
-        dialogShown = false;
-
-        String errorMessage = 'Une erreur est survenue lors de la génération du PDF.';
-        if (e.toString().contains('unavailable')) {
-          errorMessage = 'Problème de connexion au serveur. Vérifiez votre connexion internet et réessayez.';
-        } else if (e.toString().contains('permission-denied')) {
-          errorMessage = 'Vous n\'avez pas les permissions nécessaires pour accéder à ce contrat.';
-        } else {
-          errorMessage = 'Erreur : ${e.toString()}';
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'Réessayer',
-              onPressed: () {
-                _generatePdf();
-              },
-            ),
-          ),
-        );
-      }
-    }
-  }
-
-  // Fonction pour vider le cache des PDF
-  Future<void> _clearPdfCache() async {
-    try {
-      final appDir = await getApplicationDocumentsDirectory();
-      final directory = Directory(appDir.path);
-      
-      // Lister tous les fichiers du répertoire
-      final files = directory.listSync();
-      
-      // Filtrer pour ne garder que les fichiers PDF
-      final pdfFiles = files.where((file) => 
-        file.path.toLowerCase().endsWith('.pdf') && 
-        file.path.contains('contrat_')
-      );
-      
-      // Supprimer chaque fichier PDF
-      for (var file in pdfFiles) {
-        await File(file.path).delete();
-        print('Suppression du fichier caché: ${file.path}');
-      }
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cache des PDF vidé avec succès'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      print('Erreur lors de la suppression du cache: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors du vidage du cache: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
   DateTime _parseDateWithFallback(String dateStr) {
     try {
       return DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(dateStr);
@@ -718,7 +527,16 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           const SizedBox(height: 20),
                         ],
                         ElevatedButton(
-                          onPressed: _generatePdf,
+                          onPressed: () => AffichageContratPdf.genererEtAfficherContratPdf(
+                            context: context,
+                            data: widget.data,
+                            contratId: widget.contratId,
+                            nettoyageIntController: _nettoyageIntController,
+                            nettoyageExtController: _nettoyageExtController,
+                            niveauEssenceRetourController: _niveauEssenceRetourController,
+                            cautionController: _cautionController,
+                            signatureRetourBase64: _signatureRetourBase64,
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange,
                             minimumSize: const Size(double.infinity, 50),
@@ -753,7 +571,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                         ),
                         const SizedBox(height: 10),
                         ElevatedButton(
-                          onPressed: _clearPdfCache,
+                          onPressed: () => AffichageContratPdf.viderCachePdf(context),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
                             minimumSize: const Size(double.infinity, 50),
