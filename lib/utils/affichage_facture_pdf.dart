@@ -76,27 +76,46 @@ class AffichageFacturePdf {
           return 0.0;
         }
         
-        // Préparer les données de la facture
-        // Essayer d'abord de récupérer les données avec le préfixe 'facture'
-        factureData = {
-          'facturePrixLocation': parseDouble(contratDataComplete['facturePrixLocation']),
-          'factureCaution': parseDouble(contratDataComplete['factureCaution']),
-          'factureFraisNettoyageInterieur': parseDouble(contratDataComplete['factureFraisNettoyageInterieur']),
-          'factureFraisNettoyageExterieur': parseDouble(contratDataComplete['factureFraisNettoyageExterieur']),
-          'factureFraisCarburantManquant': parseDouble(contratDataComplete['factureFraisCarburantManquant']),
-          'factureFraisRayuresDommages': parseDouble(contratDataComplete['factureFraisRayuresDommages']),
-          'factureFraisAutre': parseDouble(contratDataComplete['factureFraisAutre']),
-          'factureFraisKilometrique': parseDouble(contratDataComplete['factureFraisKilometrique']),
-          'factureRemise': parseDouble(contratDataComplete['factureRemise']),
-          'factureTotalFrais': parseDouble(contratDataComplete['factureTotalFrais']),
-          'factureTypePaiement': contratDataComplete['factureTypePaiement'] ?? 'Carte bancaire',
-          'dateFacture': contratDataComplete['dateFacture'] ?? Timestamp.now(),
-        };
+        // Vérifier si les données de facture sont stockées dans un objet 'facture'
+        if (contratDataComplete.containsKey('facture') && contratDataComplete['facture'] is Map) {
+          // Utiliser directement l'objet facture
+          Map<String, dynamic> factureObj = contratDataComplete['facture'] as Map<String, dynamic>;
+          factureData = factureObj;
+          print('Données de facture récupérées depuis l\'objet facture: $factureData');
+        } else {
+          // Préparer les données de la facture à partir des champs directs
+          // Essayer d'abord de récupérer les données avec le préfixe 'facture'
+          factureData = {
+            'facturePrixLocation': parseDouble(contratDataComplete['facturePrixLocation']),
+            'factureCaution': parseDouble(contratDataComplete['factureCaution']),
+            'factureFraisNettoyageInterieur': parseDouble(contratDataComplete['factureFraisNettoyageInterieur']),
+            'factureFraisNettoyageExterieur': parseDouble(contratDataComplete['factureFraisNettoyageExterieur']),
+            'factureFraisCarburantManquant': parseDouble(contratDataComplete['factureFraisCarburantManquant']),
+            'factureFraisRayuresDommages': parseDouble(contratDataComplete['factureFraisRayuresDommages']),
+            'factureFraisAutre': parseDouble(contratDataComplete['factureFraisAutre']),
+            'factureFraisKilometrique': parseDouble(contratDataComplete['factureFraisKilometrique']),
+            'factureRemise': parseDouble(contratDataComplete['factureRemise']),
+            'factureTotalFrais': parseDouble(contratDataComplete['factureTotalFrais']),
+            'factureTypePaiement': contratDataComplete['factureTypePaiement'] ?? 'Carte bancaire',
+            'dateFacture': contratDataComplete['dateFacture'] ?? Timestamp.now(),
+          };
+          print('Données de facture récupérées depuis les champs directs: $factureData');
+        }
         
         // Vérifier si les données de facture sont disponibles
-        bool factureDataExist = factureData['facturePrixLocation'] > 0 || 
-                              factureData['factureFraisKilometrique'] > 0 || 
-                              factureData['factureFraisNettoyageInterieur'] > 0;
+        bool factureDataExist = false;
+        try {
+          // Convertir les valeurs en nombres si nécessaire pour la comparaison
+          double prixLocation = parseDouble(factureData['facturePrixLocation']);
+          double fraisKilometrique = parseDouble(factureData['factureFraisKilometrique']);
+          double fraisNettoyageInt = parseDouble(factureData['factureFraisNettoyageInterieur']);
+          
+          factureDataExist = prixLocation > 0 || fraisKilometrique > 0 || fraisNettoyageInt > 0;
+        } catch (e) {
+          print('Erreur lors de la vérification des données de facture: $e');
+          // Si une erreur se produit, considérer que les données existent pour continuer
+          factureDataExist = true;
+        }
         
         // Si aucune facture n'a été créée, afficher une facture vide
         if (!factureDataExist) {
@@ -127,6 +146,12 @@ class AffichageFacturePdf {
       String telephone = (contratData['telephoneEntreprise'] ?? userData['telephone'] ?? '').toString();
       String siret = (contratData['siretEntreprise'] ?? userData['siret'] ?? '').toString();
 
+      // Vérifier si le prix est TTC ou HT
+      bool isTTC = true; // Par défaut, on affiche les prix TTC
+      if (factureData.containsKey('factureTTC')) {
+        isTTC = factureData['factureTTC'] ?? true;
+      }
+
       // Générer le PDF de facture
       final pdfPath = await FacturePdfGenerator.generateFacturePdf(
         data: contratData,
@@ -136,6 +161,7 @@ class AffichageFacturePdf {
         adresse: adresse,
         telephone: telephone,
         siret: siret,
+        isTTC: isTTC, // Passer le paramètre isTTC
       );
 
       // Fermer le dialogue de chargement

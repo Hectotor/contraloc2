@@ -51,6 +51,9 @@ class _FactureScreenState extends State<FactureScreen> {
   // Type de paiement
   String _typePaiement = 'Carte bancaire';
   final List<String> _typesPaiement = ['Carte bancaire', 'Espèces', 'Virement'];
+  
+  // Option pour afficher les prix TTC ou HT
+  bool _isTTC = true;
 
   // Total calculé
   double _total = 0.0;
@@ -293,91 +296,91 @@ class _FactureScreenState extends State<FactureScreen> {
     });
   }
 
-  void _sauvegarderDonneesFrais() async {
+  Future<void> _sauvegarderDonneesFrais() async {
     try {
-      // Préparer les données à sauvegarder
-      final data = {
-        // Utiliser null si les champs sont vides pour facturePrixLocation et factureFraisKilometrique
-        'facturePrixLocation': _coutTotalController.text.isEmpty ? null : 
-                          double.tryParse(_coutTotalController.text.replaceAll(',', '.')) ?? 0,
-        'factureCaution': double.tryParse(_cautionController.text.replaceAll(',', '.')) ?? 0,
-        'factureFraisNettoyageInterieur': double.tryParse(_fraisNettoyageIntController.text.replaceAll(',', '.')) ?? 0,
-        'factureFraisNettoyageExterieur': double.tryParse(_fraisNettoyageExtController.text.replaceAll(',', '.')) ?? 0,
-        'factureFraisCarburantManquant': double.tryParse(_fraisCarburantController.text.replaceAll(',', '.')) ?? 0,
-        'factureFraisRayuresDommages': double.tryParse(_fraisRayuresController.text.replaceAll(',', '.')) ?? 0,
-        'factureFraisAutre': double.tryParse(_fraisAutreController.text.replaceAll(',', '.')) ?? 0,
-        'factureFraisKilometrique': _kmSuppDisplayController.text.isEmpty ? null : 
-                              double.tryParse(_kmSuppDisplayController.text.replaceAll(',', '.')) ?? 0,
-        'factureRemise': double.tryParse(_remiseController.text.replaceAll(',', '.')) ?? 0,
-        'factureTotalFrais': _total,
-        'factureTypePaiement': _typePaiement,
-        'dateFacture': Timestamp.now(),
-      };
-
-      // Vérifier que l'ID du contrat existe
-      String? contratId = widget.data['contratId'] ?? widget.data['id'];
-      if (contratId == null) {
-        // Afficher une erreur si l'ID est manquant
+      // Obtenir l'utilisateur actuel
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erreur: Impossible de mettre à jour le contrat car l\'ID est manquant'),
-            backgroundColor: Colors.red,
-          ),
+          const SnackBar(content: Text('Utilisateur non connecté')),
         );
         return;
       }
-      
-      // Utiliser la méthode set avec merge:true et la bonne structure de collection
-      // Récupérer l'ID de l'administrateur
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('Utilisateur non connecté');
-      }
-      
+
+      // Convertir les valeurs des contrôleurs en nombres
+      double caution = double.tryParse(_cautionController.text.replaceAll(',', '.')) ?? 0.0;
+      double fraisNettoyageInt = double.tryParse(_fraisNettoyageIntController.text.replaceAll(',', '.')) ?? 0.0;
+      double fraisNettoyageExt = double.tryParse(_fraisNettoyageExtController.text.replaceAll(',', '.')) ?? 0.0;
+      double fraisCarburant = double.tryParse(_fraisCarburantController.text.replaceAll(',', '.')) ?? 0.0;
+      double fraisRayures = double.tryParse(_fraisRayuresController.text.replaceAll(',', '.')) ?? 0.0;
+      double fraisAutre = double.tryParse(_fraisAutreController.text.replaceAll(',', '.')) ?? 0.0;
+      double remise = double.tryParse(_remiseController.text.replaceAll(',', '.')) ?? 0.0;
+      String fraisKilometrique = _kmSuppDisplayController.text;
+
+      // Créer un objet avec les données de la facture
+      Map<String, dynamic> factureData = {
+        'factureCaution': caution,
+        'factureFraisNettoyageInterieur': fraisNettoyageInt,
+        'factureFraisNettoyageExterieur': fraisNettoyageExt,
+        'factureFraisCarburantManquant': fraisCarburant,
+        'factureFraisRayuresDommages': fraisRayures,
+        'factureFraisAutre': fraisAutre,
+        'factureRemise': remise,
+        'factureFraisKilometrique': fraisKilometrique,
+        'facturePrixLocation': widget.data['prixLocation'] ?? '0',
+        'factureTypePaiement': _typePaiement,
+        'dateFacture': Timestamp.now(),
+        'factureTTC': _isTTC, // Ajout du paramètre pour indiquer si le prix est TTC ou HT
+      };
+
       // Vérifier si l'utilisateur est un collaborateur
       final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
       final String targetId = collaborateurStatus['isCollaborateur'] 
           ? collaborateurStatus['adminId'] ?? user.uid 
           : user.uid;
+
+      // Mettre à jour les données dans Firestore
+      // Utiliser la structure correcte: users/[userId]/locations/[contratId]
+      // Vérifier et afficher l'ID du contrat pour le débogage
+      String? contratId = widget.data['id'];
+      print('ID du contrat: $contratId');
+      print('Données du widget: ${widget.data}');
       
-      print('uD83DuDCDD Début de la mise à jour du document: users/$targetId/locations/$contratId');
-      print('uD83DuDCC4 Données à mettre à jour: $data');
+      if (contratId == null || contratId.isEmpty) {
+        // Essayer d'utiliser contratId s'il existe
+        contratId = widget.data['contratId'];
+        print('Tentative avec contratId alternatif: $contratId');
+      }
+      
+      if (contratId == null || contratId.isEmpty) {
+        throw Exception('ID du contrat non trouvé dans les données');
+      }
       
       await FirebaseFirestore.instance
           .collection('users')
           .doc(targetId)
           .collection('locations')
           .doc(contratId)
-          .set(data, SetOptions(merge: true))
-          .then((_) => print('u2705 Facture mise à jour avec succès'))
-          .catchError((error) {
-            print('u274C Erreur lors de la mise à jour: $error');
-            throw error;
-          });
+          .update({
+        'facture': factureData,
+        'kilometrageRetour': _kmRetourController.text,
+        'dateFinEffectif': widget.dateFinEffective,
+      });
 
-      // Mettre à jour les données du widget
-      widget.data.addAll(data);
-
-      // Notifier le parent des changements
-      widget.onFraisUpdated(data);
+      // Appeler la fonction de callback pour mettre à jour les données dans l'écran parent
+      widget.onFraisUpdated(factureData);
 
       // Afficher un message de succès
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Facture sauvegardée avec succès'),
-          backgroundColor: Colors.green,
-        ),
+        const SnackBar(content: Text('Facture enregistrée avec succès')),
       );
 
-      // Fermer le formulaire et renvoyer les données mises à jour
-      Navigator.pop(context, data);
+      // Fermer l'écran
+      Navigator.pop(context);
     } catch (e) {
-      // Afficher un message d'erreur
+      print('Erreur lors de la sauvegarde des frais: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors de la sauvegarde : ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Erreur lors de la sauvegarde: $e')),
       );
     }
   }
@@ -848,6 +851,50 @@ class _FactureScreenState extends State<FactureScreen> {
               fontSize: 16,
               color: Colors.grey[600],
             ),
+          ),
+          const SizedBox(height: 16),
+          // Option pour choisir entre prix HT et TTC
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Type de prix:',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF08004D),
+                ),
+              ),
+              Row(
+                children: [
+                  Text(
+                    'HT',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: !_isTTC ? Color(0xFF08004D) : Colors.grey,
+                      fontWeight: !_isTTC ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  Switch(
+                    value: _isTTC,
+                    onChanged: (value) {
+                      setState(() {
+                        _isTTC = value;
+                      });
+                    },
+                    activeColor: Color(0xFF08004D),
+                  ),
+                  Text(
+                    'TTC',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: _isTTC ? Color(0xFF08004D) : Colors.grey,
+                      fontWeight: _isTTC ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
       ),

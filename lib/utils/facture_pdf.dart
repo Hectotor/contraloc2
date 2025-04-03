@@ -21,6 +21,7 @@ class FacturePdfGenerator {
     required String adresse,
     required String telephone,
     required String siret,
+    bool isTTC = true, // Ajout du paramètre pour indiquer si le prix est TTC ou HT
 
   }) async {
     // Initialiser le format de date français
@@ -63,15 +64,15 @@ class FacturePdfGenerator {
         : formatDate.format(DateTime.now());
     
     // Récupérer les montants
-    final prixLocation = factureData['facturePrixLocation'] != null ? double.tryParse(factureData['facturePrixLocation'].toString()) ?? 0.0 : 0.0;
-    final fraisNettoyageInt = factureData['factureFraisNettoyageInterieur'] ?? 0.0;
-    final fraisNettoyageExt = factureData['factureFraisNettoyageExterieur'] ?? 0.0;
-    final fraisCarburant = factureData['factureFraisCarburantManquant'] ?? 0.0;
-    final fraisRayures = factureData['factureFraisRayuresDommages'] ?? 0.0;
-    final fraisAutre = factureData['factureFraisAutre'] ?? 0.0;
-    final fraisKilometrique = factureData['factureFraisKilometrique'] != null ? double.tryParse(factureData['factureFraisKilometrique'].toString()) ?? 0.0 : 0.0;
-    final remise = factureData['factureRemise'] ?? 0.0;
-    final caution = factureData['factureCaution'] ?? 0.0;
+    final prixLocation = _parseDouble(factureData['facturePrixLocation']);
+    final fraisNettoyageInt = _parseDouble(factureData['factureFraisNettoyageInterieur']);
+    final fraisNettoyageExt = _parseDouble(factureData['factureFraisNettoyageExterieur']);
+    final fraisCarburant = _parseDouble(factureData['factureFraisCarburantManquant']);
+    final fraisRayures = _parseDouble(factureData['factureFraisRayuresDommages']);
+    final fraisAutre = _parseDouble(factureData['factureFraisAutre']);
+    final fraisKilometrique = _parseDouble(factureData['factureFraisKilometrique']);
+    final remise = _parseDouble(factureData['factureRemise']);
+    final caution = _parseDouble(factureData['factureCaution']);
     
     // Calculer le total HT (sans TVA)
     final totalHT = prixLocation + fraisNettoyageInt + fraisNettoyageExt + 
@@ -216,42 +217,42 @@ class FacturePdfGenerator {
               // Lignes du tableau
               _tableRow(
                 'Location du véhicule $vehicule',
-                formatMonetaire.format(prixLocation),
+                isTTC ? formatMonetaire.format(prixLocation + (prixLocation * tauxTVA)) : formatMonetaire.format(prixLocation),
               ),
               if (fraisKilometrique > 0)
                 _tableRow(
                   'Frais kilométriques',
-                  formatMonetaire.format(fraisKilometrique),
+                  isTTC ? formatMonetaire.format(fraisKilometrique + (fraisKilometrique * tauxTVA)) : formatMonetaire.format(fraisKilometrique),
                 ),
               if (fraisNettoyageInt > 0)
                 _tableRow(
                   'Nettoyage intérieur',
-                  formatMonetaire.format(fraisNettoyageInt),
+                  isTTC ? formatMonetaire.format(fraisNettoyageInt + (fraisNettoyageInt * tauxTVA)) : formatMonetaire.format(fraisNettoyageInt),
                 ),
               if (fraisNettoyageExt > 0)
                 _tableRow(
                   'Nettoyage extérieur',
-                  formatMonetaire.format(fraisNettoyageExt),
+                  isTTC ? formatMonetaire.format(fraisNettoyageExt + (fraisNettoyageExt * tauxTVA)) : formatMonetaire.format(fraisNettoyageExt),
                 ),
               if (fraisCarburant > 0)
                 _tableRow(
                   'Frais de carburant manquant',
-                  formatMonetaire.format(fraisCarburant),
+                  isTTC ? formatMonetaire.format(fraisCarburant + (fraisCarburant * tauxTVA)) : formatMonetaire.format(fraisCarburant),
                 ),
               if (fraisRayures > 0)
                 _tableRow(
                   'Frais pour rayures/dommages',
-                  formatMonetaire.format(fraisRayures),
+                  isTTC ? formatMonetaire.format(fraisRayures + (fraisRayures * tauxTVA)) : formatMonetaire.format(fraisRayures),
                 ),
               if (fraisAutre > 0)
                 _tableRow(
                   'Autres frais',
-                  formatMonetaire.format(fraisAutre),
+                  isTTC ? formatMonetaire.format(fraisAutre + (fraisAutre * tauxTVA)) : formatMonetaire.format(fraisAutre),
                 ),
               if (caution > 0)
                 _tableRow(
                   'Caution',
-                  formatMonetaire.format(caution),
+                  isTTC ? formatMonetaire.format(caution + (caution * tauxTVA)) : formatMonetaire.format(caution),
                 ),
             ],
           ),
@@ -265,6 +266,22 @@ class FacturePdfGenerator {
               width: 180,
               child: pw.Column(
                 children: [
+                  // Indicateur HT/TTC
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 6),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.blue100,
+                      borderRadius: pw.BorderRadius.circular(4),
+                    ),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text('Type de prix:', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                        pw.Text(isTTC ? 'TTC' : 'HT', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
                   _summaryRow('Total HT', formatMonetaire.format(totalHT)),
                   _summaryRow('TVA (20%)', formatMonetaire.format(montantTVA)),
                   if (remise > 0)
@@ -479,5 +496,9 @@ class FacturePdfGenerator {
     } catch (e) {
       return '0';
     }
+  }
+
+  static double _parseDouble(dynamic value) {
+    return double.tryParse(value.toString()) ?? 0.0;
   }
 }
