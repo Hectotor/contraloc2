@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ContraLoc/services/collaborateur_util.dart';
 
 class FactureScreen extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -269,7 +270,7 @@ class _FactureScreenState extends State<FactureScreen> {
     });
   }
 
-  void _sauvegarderFacture() async {
+  void _sauvegarderDonneesFrais() async {
     try {
       // Préparer les données à sauvegarder
       final data = {
@@ -280,14 +281,15 @@ class _FactureScreenState extends State<FactureScreen> {
         'factureFraisCarburantManquant': double.tryParse(_fraisCarburantController.text.replaceAll(',', '.')) ?? 0,
         'factureFraisRayuresDommages': double.tryParse(_fraisRayuresController.text.replaceAll(',', '.')) ?? 0,
         'factureFraisAutre': double.tryParse(_fraisAutreController.text.replaceAll(',', '.')) ?? 0,
-        'factureRemise': double.tryParse(_remiseController.text.replaceAll(',', '.')) ?? 0, // Ajouter la remise
+        'factureRemise': double.tryParse(_remiseController.text.replaceAll(',', '.')) ?? 0,
         'factureTotalFrais': _total,
         'factureTypePaiement': _typePaiement,
         'dateFacture': Timestamp.now(),
       };
 
       // Vérifier que l'ID du contrat existe
-      if (widget.data['id'] == null) {
+      String? contratId = widget.data['contratId'] ?? widget.data['id'];
+      if (contratId == null) {
         // Afficher une erreur si l'ID est manquant
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -298,11 +300,13 @@ class _FactureScreenState extends State<FactureScreen> {
         return;
       }
       
-      // Mettre à jour directement le document de location existant
-      await FirebaseFirestore.instance
-          .collection('locations')
-          .doc(widget.data['id'])
-          .update(data);
+      // Utiliser CollaborateurUtil pour gérer les permissions
+      await CollaborateurUtil.updateDocument(
+        collection: 'locations',
+        docId: contratId,
+        data: data,
+        useAdminId: true, // Important pour les collaborateurs
+      );
 
       // Mettre à jour les données du widget
       widget.data.addAll(data);
@@ -683,7 +687,7 @@ class _FactureScreenState extends State<FactureScreen> {
                       child: SizedBox(
                         width: 350, // Largeur fixe du bouton
                         child: ElevatedButton(
-                          onPressed: _sauvegarderFacture,
+                          onPressed: _sauvegarderDonneesFrais,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF08004D),
                             padding: const EdgeInsets.symmetric(vertical: 16),

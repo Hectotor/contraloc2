@@ -719,7 +719,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => FactureScreen(
-                                    data: widget.data,
+                                    data: {...widget.data, 'contratId': widget.contratId},
                                     onFraisUpdated: _handleFraisUpdated,
                                     kilometrageInitial: kilometrageInitial,
                                     kilometrageActuel: kilometrageActuel,
