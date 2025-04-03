@@ -114,288 +114,328 @@ class _ContratEnCoursState extends State<ContratEnCours> {
       return _photoUrlCache[cacheKey];
     }
 
-    // Utiliser le gestionnaire d'accès aux véhicules pour récupérer le véhicule par immatriculation
-    final vehiculeDoc = await _vehicleAccessManager.getVehicleByImmatriculation(immatriculation);
+    try {
+      // Utiliser le gestionnaire d'accès aux véhicules pour récupérer le véhicule par immatriculation
+      final vehiculeDoc = await _vehicleAccessManager.getVehicleByImmatriculation(immatriculation);
 
-    if (vehiculeDoc.docs.isNotEmpty) {
-      // Accéder aux données de manière sûre
-      final data = vehiculeDoc.docs.first.data();
-      String? photoUrl;
-      
-      if (data != null && data is Map<String, dynamic>) {
-        photoUrl = data['photoVehiculeUrl'] as String?;
+      if (vehiculeDoc.docs.isNotEmpty) {
+        // Accéder aux données de manière sûre
+        final data = vehiculeDoc.docs.first.data();
+        String? photoUrl;
+        
+        if (data != null && data is Map<String, dynamic>) {
+          if (data.containsKey('photoUrls') && data['photoUrls'] is List && (data['photoUrls'] as List).isNotEmpty) {
+            photoUrl = (data['photoUrls'] as List).first.toString();
+          } else if (data.containsKey('photoVehiculeUrl')) {
+            photoUrl = data['photoVehiculeUrl'] as String?;
+          }
+        }
+        
+        _photoUrlCache[cacheKey] = photoUrl;
+        return photoUrl;
       }
       
-      _photoUrlCache[cacheKey] = photoUrl;
-      return photoUrl;
+      _photoUrlCache[cacheKey] = null;
+      return null;
+    } catch (e) {
+      print("Erreur lors de la récupération de la photo du véhicule: $e");
+      _photoUrlCache[cacheKey] = null;
+      return null;
     }
-    return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF08004D).withOpacity(0.05), Colors.white],
-          ),
-        ),
-        child: Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.all(16),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(15),
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Rechercher un contrat...',
-                    prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 15),
+      body: Column(
+        children: [
+          // Barre de recherche améliorée
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 3),
                   ),
-                  onChanged: (value) {
-                    setState(() {});
-                  },
-                ),
+                ],
               ),
-            ),
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: _getActiveContractsStream(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF08004D)),
-                      ),
-                    );
-                  }
-
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-                          const SizedBox(height: 16),
-                          const Text(
-                            "Erreur de chargement des contrats",
-                            style: TextStyle(fontSize: 18, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.description_outlined, size: 48, color: Colors.grey[400]),
-                          const SizedBox(height: 16),
-                          const Text(
-                            "Aucun contrat en cours trouvé",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  final contrats = snapshot.data!.docs;
-
-                  final filteredContrats = contrats.where((contrat) {
-                    return _filterContract(contrat, _searchController.text);
-                  }).toList();
-
-                  if (widget.onContractsCountChanged != null) {
-                    widget.onContractsCountChanged!(filteredContrats.length);
-                  }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: filteredContrats.length,
-                    itemBuilder: (context, index) {
-                      final contrat = filteredContrats[index];
-                      final data = contrat.data() as Map<String, dynamic>;
-
-                      return FutureBuilder<String?>(
-                        future: _getVehiclePhotoUrl(data['immatriculation']),
-                        builder: (context, snapshot) {
-                          final photoUrl = snapshot.data;
-
-                          return Container(
-                            margin: EdgeInsets.symmetric(
-                              horizontal: MediaQuery.of(context).size.width * 0.05,
-                              vertical: 8,
-                            ),
-                            child: Material(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(15),
-                              elevation: 2,
-                              shadowColor: Colors.black.withOpacity(0.1),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(15),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ModifierScreen(
-                                        contratId: contrat.id,
-                                        data: data,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: MediaQuery.of(context).size.width * 0.2,
-                                        height: MediaQuery.of(context).size.width * 0.2,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(12),
-                                          color: Colors.grey[100],
-                                        ),
-                                        child: (photoUrl != null && photoUrl.isNotEmpty)
-                                            ? ClipRRect(
-                                                borderRadius: BorderRadius.circular(12),
-                                                child: Image.network(
-                                                  photoUrl,
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              )
-                                            : const Center(
-                                                child: Icon(
-                                                  Icons.directions_car,
-                                                  size: 40,
-                                                  color: Color(0xFF08004D),
-                                                ),
-                                              ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              "${data['nom'] ?? ''} ${data['prenom'] ?? ''}",
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                                color: Color(0xFF08004D),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Icon(Icons.calendar_today, 
-                                                  size: 16,
-                                                  color: Color(0xFF08004D),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        "Date de début",
-                                                        style: TextStyle(
-                                                          fontSize: 14,
-                                                          color: Colors.grey[700],
-                                                        ),
-                                                      ),
-                                                      Text(
-                                                        "${data['dateDebut'] ?? ''}",
-                                                        style: TextStyle(
-                                                          fontSize: 14,
-                                                          fontWeight: FontWeight.w500,
-                                                          color: Colors.grey[900],
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Icon(Icons.directions_car_filled, 
-                                                  size: 16,
-                                                  color: Color(0xFF08004D),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        "Immatriculation",
-                                                        style: TextStyle(
-                                                          fontSize: 14,
-                                                          color: Colors.grey[700],
-                                                        ),
-                                                      ),
-                                                      Text(
-                                                        "${data['immatriculation'] ?? ''}",
-                                                        style: TextStyle(
-                                                          fontSize: 14,
-                                                          fontWeight: FontWeight.w500,
-                                                          color: Colors.grey[900],
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Icon(
-                                        Icons.chevron_right,
-                                        color: Colors.grey[400],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  );
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Rechercher un contrat...',
+                  prefixIcon: Icon(Icons.search, color: Color(0xFF08004D).withOpacity(0.6)),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                ),
+                onChanged: (value) {
+                  setState(() {});
                 },
               ),
             ),
-          ],
+          ),
+          // Liste des contrats
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _getActiveContractsStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF08004D)),
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "Erreur de chargement des contrats",
+                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.description_outlined, size: 48, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "Aucun contrat en cours trouvé",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final contrats = snapshot.data!.docs;
+
+                final filteredContrats = contrats.where((contrat) {
+                  return _filterContract(contrat, _searchController.text);
+                }).toList();
+
+                if (widget.onContractsCountChanged != null) {
+                  widget.onContractsCountChanged!(filteredContrats.length);
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: filteredContrats.length,
+                  itemBuilder: (context, index) {
+                    final contrat = filteredContrats[index];
+                    final data = contrat.data() as Map<String, dynamic>;
+
+                    return FutureBuilder<String?>(
+                      future: _getVehiclePhotoUrl(data['immatriculation']),
+                      builder: (context, snapshot) {
+                        final photoUrl = snapshot.data;
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                          child: _buildContractCard(context, contrat.id, data, photoUrl),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContractCard(BuildContext context, String contratId, Map<String, dynamic> data, String? photoUrl) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.20),
+
+            blurRadius: 4,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ModifierScreen(
+                  contratId: contratId,
+                  data: data,
+                ),
+              ),
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // En-tête de la carte
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Color(0xFF08004D).withOpacity(0.1),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.description, color: Color(0xFF08004D), size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "${data['nom'] ?? ''} ${data['prenom'] ?? ''}",
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF08004D),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Contenu de la carte
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Photo du véhicule
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.grey[100],
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 6,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: (photoUrl != null && photoUrl.isNotEmpty)
+                          ? Image.network(
+                              photoUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => const Center(
+                                child: Icon(
+                                  Icons.directions_car,
+                                  size: 40,
+                                  color: Color(0xFF08004D),
+                                ),
+                              ),
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                    color: Color(0xFF08004D),
+                                  ),
+                                );
+                              },
+                            )
+                          : const Center(
+                              child: Icon(
+                                Icons.directions_car,
+                                size: 40,
+                                color: Color(0xFF08004D),
+                              ),
+                            ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Informations du contrat
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildInfoRow("Début", data['dateDebut'] ?? "Non spécifié"),
+                          const SizedBox(height: 12),
+                          _buildInfoRow("Véhicule", data['immatriculation'] ?? "Non spécifié"),
+                          if (data['marque'] != null && data['modele'] != null) ...[  
+                            const SizedBox(height: 12),
+                            _buildInfoRow("Modèle", "${data['marque']} ${data['modele']}"),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 70,
+          child: Text(
+            "$label :",
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: Color(0xFF08004D),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[800],
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }
