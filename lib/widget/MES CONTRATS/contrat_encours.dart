@@ -108,6 +108,47 @@ class _ContratEnCoursState extends State<ContratEnCours> {
     return SearchFiltre.filterContract(doc, searchText);
   }
 
+  // Fonction pour formater les dates Timestamp en String
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return "Non spécifié";
+    
+    // Format spécifique pour les dates de début qui sont au format "mercredi 2 avril 2025 à 20:39"
+    if (timestamp is String) {
+      try {
+        // Découper la chaîne pour en extraire les composants
+        List<String> parts = timestamp.split(' ');
+        if (parts.length >= 4) { // Format typique: "mercredi 2 avril 2025 à 20:39"
+          String jour = parts[1].padLeft(2, '0'); // Le jour
+
+          // Conversion du mois en numéro
+          String moisTexte = parts[2].toLowerCase();
+          Map<String, String> moisMap = {
+            'janvier': '01', 'février': '02', 'mars': '03', 'avril': '04',
+            'mai': '05', 'juin': '06', 'juillet': '07', 'août': '08',
+            'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12'
+          };
+          String mois = moisMap[moisTexte] ?? '01';
+          
+          String annee = parts[3]; // L'année
+        
+          return "$jour/$mois/$annee";
+        }
+      } catch (e) {
+        return timestamp; // En cas d'erreur, retourner la chaîne originale
+      }
+      return timestamp;
+    }
+    
+    if (timestamp is Timestamp) {
+      DateTime dateTime = timestamp.toDate();
+      
+      // Format JJ/MM/AAAA pour toutes les dates, même si isFullFormat est vrai
+      return "${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}";
+    }
+    
+    return "Format inconnu";
+  }
+
   Future<String?> _getVehiclePhotoUrl(String immatriculation) async {
     final cacheKey = immatriculation;
     if (_photoUrlCache.containsKey(cacheKey)) {
@@ -390,7 +431,7 @@ class _ContratEnCoursState extends State<ContratEnCours> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildInfoRow("Début", data['dateDebut'] ?? "Non spécifié"),
+                          _buildInfoRow("Début", _formatTimestamp(data['dateDebut'])),
                           const SizedBox(height: 12),
                           _buildInfoRow("Véhicule", data['immatriculation'] ?? "Non spécifié"),
                           if (data['marque'] != null && data['modele'] != null) ...[  
