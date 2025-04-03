@@ -112,12 +112,6 @@ class FacturePdfGenerator {
                         child: pw.Image(logoImage, fit: pw.BoxFit.contain),
                       )
                     : pw.Container(),
-                  pw.SizedBox(height: 4),
-                  // Informations de l'entreprise sous le logo
-                  pw.Text(nomEntreprise, style: pw.TextStyle(fontSize: 10, font: boldFont)),
-                  pw.Text(adresse, style: pw.TextStyle(fontSize: 8, font: ttf)),
-                  pw.Text('Tél: $telephone', style: pw.TextStyle(fontSize: 8, font: ttf)),
-                  pw.Text('SIRET: $siret', style: pw.TextStyle(fontSize: 8, font: ttf)),
                 ],
               ),
               
@@ -166,7 +160,7 @@ class FacturePdfGenerator {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text('Détails de la location', 
-                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(height: 4), 
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -175,11 +169,11 @@ class FacturePdfGenerator {
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text('Véhicule: $vehicule', style: pw.TextStyle(fontSize: 9)),
+                          pw.Text('Véhicule: $vehicule', style: pw.TextStyle(fontSize: 10)),
                           pw.SizedBox(height: 2), 
-                          pw.Text('Du: $dateDebut', style: pw.TextStyle(fontSize: 9)),
+                          pw.Text('Du: $dateDebut', style: pw.TextStyle(fontSize: 10)),
                           pw.SizedBox(height: 2), 
-                          pw.Text('Au: $dateFin', style: pw.TextStyle(fontSize: 9)),
+                          pw.Text('Au: $dateFin', style: pw.TextStyle(fontSize: 10)),
                         ],
                       ),
                     ),
@@ -187,11 +181,11 @@ class FacturePdfGenerator {
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text('Km départ: $kmDepart', style: pw.TextStyle(fontSize: 9)),
+                          pw.Text('Km départ: $kmDepart', style: pw.TextStyle(fontSize: 10)),
                           pw.SizedBox(height: 2), 
-                          pw.Text('Km retour: $kmRetour', style: pw.TextStyle(fontSize: 9)),
+                          pw.Text('Km retour: $kmRetour', style: pw.TextStyle(fontSize: 10)),
                           pw.SizedBox(height: 2), 
-                          pw.Text('Km parcourus: $kmParcourus', style: pw.TextStyle(fontSize: 9)),
+                          pw.Text('Km parcourus: $kmParcourus', style: pw.TextStyle(fontSize: 10)),
                         ],
                       ),
                     ),
@@ -360,7 +354,7 @@ class FacturePdfGenerator {
       padding: const pw.EdgeInsets.all(3), 
       child: pw.Text(
         text,
-        style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
+        style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11), 
         textAlign: pw.TextAlign.center,
       ),
     );
@@ -372,11 +366,11 @@ class FacturePdfGenerator {
       children: [
         pw.Padding(
           padding: const pw.EdgeInsets.all(3), 
-          child: pw.Text(description, style: pw.TextStyle(fontSize: 9)),
+          child: pw.Text(description, style: pw.TextStyle(fontSize: 10)), 
         ),
         pw.Padding(
           padding: const pw.EdgeInsets.all(3), 
-          child: pw.Text(amount, textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 9)),
+          child: pw.Text(amount, textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 10)), 
         ),
       ],
     );
@@ -389,7 +383,7 @@ class FacturePdfGenerator {
         border: pw.Border(top: pw.BorderSide(color: PdfColors.grey400)),
         color: PdfColors.blue50,
       ) : null,
-      padding: const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 6),
+      padding: const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 6), 
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
@@ -397,7 +391,7 @@ class FacturePdfGenerator {
             label,
             style: pw.TextStyle(
               fontWeight: isTotal ? pw.FontWeight.bold : pw.FontWeight.normal,
-              fontSize: 9,
+              fontSize: 11, 
             ),
           ),
           pw.Text(
@@ -405,7 +399,7 @@ class FacturePdfGenerator {
             style: pw.TextStyle(
               fontWeight: isTotal ? pw.FontWeight.bold : pw.FontWeight.normal,
               color: isPositive ? PdfColors.green700 : null,
-              fontSize: 9,
+              fontSize: 11, 
             ),
           ),
         ],
