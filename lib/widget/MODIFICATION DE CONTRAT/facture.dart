@@ -40,7 +40,7 @@ class _FactureScreenState extends State<FactureScreen> {
 
   // Contrôleurs spécifiques pour les champs calculés automatiquement
   late TextEditingController _kmSuppDisplayController;
-  late TextEditingController _coutTotalController;
+  late TextEditingController _fraisPrixLocationController;
 
   // Contrôleurs pour les champs de kilométrage
   late TextEditingController _kmDepartController;
@@ -65,7 +65,7 @@ class _FactureScreenState extends State<FactureScreen> {
     
     // Initialiser les contrôleurs avec des valeurs par défaut à 0
     _kmSuppDisplayController = TextEditingController(text: "0");
-    _coutTotalController = TextEditingController(text: "0");
+    _fraisPrixLocationController = TextEditingController(text: "0");
     _cautionController = TextEditingController(text: "0");
     _fraisNettoyageIntController = TextEditingController(text: "0");
     _fraisNettoyageExtController = TextEditingController(text: "0");
@@ -110,7 +110,7 @@ class _FactureScreenState extends State<FactureScreen> {
       _fraisCarburantController.text = widget.data['factureFraisCarburantManquant']?.toString() ?? "0";
       _fraisRayuresController.text = widget.data['factureFraisRayuresDommages']?.toString() ?? "0";
       _fraisAutreController.text = widget.data['factureFraisAutre']?.toString() ?? "0";
-      _coutTotalController.text = widget.data['facturePrixLocation']?.toString() ?? "0";
+      _fraisPrixLocationController.text = widget.data['facturePrixLocation']?.toString() ?? "0";
       _kmSuppDisplayController.text = widget.data['factureFraisKilometrique']?.toString() ?? "0";
       _remiseController.text = widget.data['factureRemise']?.toString() ?? "0";
 
@@ -126,7 +126,7 @@ class _FactureScreenState extends State<FactureScreen> {
   @override
   void dispose() {
     _kmSuppDisplayController.dispose();
-    _coutTotalController.dispose();
+    _fraisPrixLocationController.dispose();
     _cautionController.dispose();
     _fraisNettoyageIntController.dispose();
     _fraisNettoyageExtController.dispose();
@@ -152,7 +152,7 @@ class _FactureScreenState extends State<FactureScreen> {
 
       // Vérifier si l'utilisateur a modifié manuellement les valeurs
       if (widget.data.containsKey('facturePrixLocation') && 
-          _coutTotalController.text != widget.data['facturePrixLocation']?.toString()) {
+          _fraisPrixLocationController.text != widget.data['facturePrixLocation']?.toString()) {
         prixLocationModifie = true;
       }
 
@@ -172,7 +172,7 @@ class _FactureScreenState extends State<FactureScreen> {
         double prixLocationJournalier = double.tryParse(prixLocationStr.replaceAll(',', '.')) ?? 0.0;
         
         // Ne pas recalculer si l'utilisateur a modifié manuellement ou vidé le champ
-        if (!prixLocationModifie && _coutTotalController.text.isNotEmpty && 
+        if (!prixLocationModifie && _fraisPrixLocationController.text.isNotEmpty && 
             dateDebutStr.isNotEmpty && dateFinStr.isNotEmpty && prixLocationJournalier > 0) {
           // Extraire les dates en garantissant différents formats possibles
           DateTime? dateDebut;
@@ -244,7 +244,7 @@ class _FactureScreenState extends State<FactureScreen> {
             double prixLocationTotal = dureeJours * prixLocationJournalier;
             
             // Mettre à jour le champ du prix de location total
-            _coutTotalController.text = prixLocationTotal.toStringAsFixed(2).replaceAll('.', ',');
+            _fraisPrixLocationController.text = prixLocationTotal.toStringAsFixed(2).replaceAll('.', ',');
             
             // Afficher les informations de calcul pour le débogage
             print('Date de début: $dateDebut, Date de fin: $dateFin, Durée: $dureeHeures heures ($dureeJours tranches de 24h), Prix par 24h: $prixLocationJournalier€, Total: ${prixLocationTotal}€');
@@ -272,8 +272,8 @@ class _FactureScreenState extends State<FactureScreen> {
       }
 
       // Ajouter tous les frais qui ont une valeur non nulle
-      if (_coutTotalController.text.isNotEmpty) {
-        total += double.tryParse(_coutTotalController.text.replaceAll(',', '.')) ?? 0.0;
+      if (_fraisPrixLocationController.text.isNotEmpty) {
+        total += double.tryParse(_fraisPrixLocationController.text.replaceAll(',', '.')) ?? 0.0;
       }
       if (_kmSuppDisplayController.text.isNotEmpty) {
         total += double.tryParse(_kmSuppDisplayController.text.replaceAll(',', '.')) ?? 0.0;
@@ -327,7 +327,7 @@ class _FactureScreenState extends State<FactureScreen> {
         'factureFraisAutre': fraisAutre,
         'factureRemise': remise,
         'factureFraisKilometrique': fraisKilometrique,
-        'facturePrixLocation': widget.data['prixLocation'] ?? '0',
+        'facturePrixLocation': _fraisPrixLocationController.text,
         'factureTypePaiement': _typePaiement,
         'dateFacture': Timestamp.now(),
         'factureTTC': _isTTC, // Ajout du paramètre pour indiquer si le prix est TTC ou HT
@@ -487,7 +487,7 @@ class _FactureScreenState extends State<FactureScreen> {
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16.0),
                         child: TextFormField(
-                          controller: _coutTotalController,
+                          controller: _fraisPrixLocationController,
                           decoration: InputDecoration(
                             labelText: "Prix de location total",
                             labelStyle: const TextStyle(color: Color(0xFF08004D)),
