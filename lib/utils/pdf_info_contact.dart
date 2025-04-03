@@ -10,8 +10,8 @@ class PdfInfoContactWidget {
     required Map<String, dynamic> clientData,
     required pw.Font boldFont,
     required pw.Font ttf,
-    pw.ImageProvider? logoImage, // Ajout du paramètre logoImage
-    String? nomCollaborateur, // Ajout du paramètre pour le nom du collaborateur
+    pw.ImageProvider? logoImage,
+    String? nomCollaborateur,
   }) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -23,8 +23,8 @@ class PdfInfoContactWidget {
           siret: siret,
           boldFont: boldFont,
           ttf: ttf,
-          logoImage: logoImage, // Passage du logoImage
-          nomCollaborateur: nomCollaborateur, // Passage du nom du collaborateur
+          logoImage: logoImage,
+          nomCollaborateur: nomCollaborateur,
         ),
         _buildClientInfo(
           clientData: clientData,
@@ -42,44 +42,42 @@ class PdfInfoContactWidget {
     required String siret,
     required pw.Font boldFont,
     required pw.Font ttf,
-    pw.ImageProvider? logoImage, // On peut garder le paramètre mais ne pas l'utiliser
-    String? nomCollaborateur, // Ajout du paramètre pour le nom du collaborateur
+    pw.ImageProvider? logoImage,
+    String? nomCollaborateur,
   }) {
     return pw.Container(
-      width: 250,
-      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 15),
+      width: 200,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: pw.BoxDecoration(
         color: PdfColors.grey100,
-        border: pw.Border.all(color: PdfColors.black),
-        borderRadius: pw.BorderRadius.circular(8),
+        border: pw.Border.all(color: PdfColors.grey400),
+        borderRadius: pw.BorderRadius.circular(4),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          // Suppression du bloc logo ici
           pw.Text('Informations Loueur:',
               style: pw.TextStyle(
-                fontSize: 15,
+                fontSize: 10,
                 font: boldFont,
                 color: PdfColors.blue900,
               )),
-          pw.Divider(color: PdfColors.black),
-          pw.SizedBox(height: 2),
+          pw.Divider(color: PdfColors.grey400, thickness: 0.5),
+          pw.SizedBox(height: 1),
           pw.Text(nomEntreprise,
-              style: pw.TextStyle(fontSize: 12, font: boldFont)),
-          pw.SizedBox(height: 2),
-          // Ajout du nom du collaborateur s'il est disponible
+              style: pw.TextStyle(fontSize: 9, font: boldFont)),
+          pw.SizedBox(height: 1),
           if (nomCollaborateur != null && nomCollaborateur.isNotEmpty)
-            pw.Text('Contrat créé par: $nomCollaborateur', style: pw.TextStyle(font: ttf, fontSize: 9)),
+            pw.Text('Contrat créé par: $nomCollaborateur', style: pw.TextStyle(font: ttf, fontSize: 8)),
           if (nomCollaborateur != null && nomCollaborateur.isNotEmpty)
-            pw.SizedBox(height: 2),
+            pw.SizedBox(height: 1),
           if (adresse.isNotEmpty)
-            pw.Text('Adresse: $adresse', style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.SizedBox(height: 2),
+            pw.Text('Adresse: $adresse', style: pw.TextStyle(font: ttf, fontSize: 8)),
+          pw.SizedBox(height: 1),
           if (telephone.isNotEmpty)
-            pw.Text('Téléphone: $telephone', style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.SizedBox(height: 2),
-          pw.Text('SIRET: $siret', style: pw.TextStyle(font: ttf, fontSize: 9)),
+            pw.Text('Téléphone: $telephone', style: pw.TextStyle(font: ttf, fontSize: 8)),
+          pw.SizedBox(height: 1),
+          pw.Text('SIRET: $siret', style: pw.TextStyle(font: ttf, fontSize: 8)),
         ],
       ),
     );
@@ -91,40 +89,33 @@ class PdfInfoContactWidget {
     required pw.Font ttf,
   }) {
     return pw.Container(
-      width: 250,
-      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 15),
+      width: 200,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: pw.BoxDecoration(
         color: PdfColors.grey100,
-        border: pw.Border.all(color: PdfColors.black),
-        borderRadius: pw.BorderRadius.circular(8),
+        border: pw.Border.all(color: PdfColors.grey400),
+        borderRadius: pw.BorderRadius.circular(4),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text('Informations Client:',
               style: pw.TextStyle(
-                fontSize: 15,
+                fontSize: 10,
                 font: boldFont,
                 color: PdfColors.blue900,
               )),
-          pw.Divider(color: PdfColors.black),
-          pw.Text('Nom: ${clientData['nom']}', style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.Text('Prénom: ${clientData['prenom']}',
-              style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.Text('Adresse: ${clientData['adresse']}',
-              style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.Text('Téléphone: ${clientData['telephone']}',
-              style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.Text('Email: ${clientData['email']}',
-              style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.Text('Numéro de permis: ${clientData['numeroPermis']}',
-              style: pw.TextStyle(font: ttf, fontSize: 9)),
+          pw.Divider(color: PdfColors.grey400, thickness: 0.5),
+          pw.Text('Nom: ${clientData['nom']}', style: pw.TextStyle(font: ttf, fontSize: 8)),
+          pw.Text('Prénom: ${clientData['prenom']}', style: pw.TextStyle(font: ttf, fontSize: 8)),
+          pw.Text('Adresse: ${clientData['adresse']}', style: pw.TextStyle(font: ttf, fontSize: 8)),
+          pw.Text('Téléphone: ${clientData['telephone']}', style: pw.TextStyle(font: ttf, fontSize: 8)),
+          pw.Text('Email: ${clientData['email']}', style: pw.TextStyle(font: ttf, fontSize: 8)),
+          pw.Text('Numéro de permis: ${clientData['numeroPermis']}', style: pw.TextStyle(font: ttf, fontSize: 8)),
           if (clientData['immatriculationVehiculeClient'] != null && clientData['immatriculationVehiculeClient'].toString().isNotEmpty)
-            pw.Text('Immatriculation véhicule: ${clientData['immatriculationVehiculeClient']}',
-                style: pw.TextStyle(font: ttf, fontSize: 9)),
+            pw.Text('Immatriculation véhicule: ${clientData['immatriculationVehiculeClient']}', style: pw.TextStyle(font: ttf, fontSize: 8)),
           if (clientData['kilometrageVehiculeClient'] != null && clientData['kilometrageVehiculeClient'].toString().isNotEmpty)
-            pw.Text('Kilométrage véhicule: ${clientData['kilometrageVehiculeClient']}',
-                style: pw.TextStyle(font: ttf, fontSize: 9)),
+            pw.Text('Kilométrage véhicule: ${clientData['kilometrageVehiculeClient']}', style: pw.TextStyle(font: ttf, fontSize: 8)),
         ],
       ),
     );

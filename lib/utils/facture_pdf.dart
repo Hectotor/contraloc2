@@ -8,22 +8,12 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter/services.dart' show NetworkAssetBundle, rootBundle;
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'pdf_info_contact.dart';
 
 /// Classe utilitaire pour générer des PDF de facture
 class FacturePdfGenerator {
   /// Génère un PDF de facture avec un design professionnel
-  /// 
-  /// Paramètres:
-  /// - data: Les données du contrat
-  /// - factureData: Les données spécifiques à la facture
-  /// - logoUrl: L'URL du logo de l'entreprise
-  /// - nomEntreprise: Le nom de l'entreprise
-  /// - adresse: L'adresse de l'entreprise
-  /// - telephone: Le numéro de téléphone de l'entreprise
-  /// - siret: Le numéro SIRET de l'entreprise
-  /// - iban: L'IBAN de l'entreprise (optionnel)
-  /// - bic: Le BIC de l'entreprise (optionnel)
-  static Future<String> generateFacturePdf({
+    static Future<String> generateFacturePdf({
     required Map<String, dynamic> data,
     required Map<String, dynamic> factureData,
     required String logoUrl,
@@ -31,8 +21,7 @@ class FacturePdfGenerator {
     required String adresse,
     required String telephone,
     required String siret,
-    String? iban,
-    String? bic,
+
   }) async {
     // Initialiser le format de date français
     await initializeDateFormatting('fr_FR', null);
@@ -55,15 +44,8 @@ class FacturePdfGenerator {
     // Charger le logo
     pw.MemoryImage? logoImage = await _loadImageFromFirebaseStorage(logoUrl);
 
-    // Récupérer les informations du client
-    final nomClient = '${data['prenom']} ${data['nom']}';
-    final adresseClient = data['adresse'] ?? '';
-    final emailClient = data['email'] ?? '';
-    final telephoneClient = data['telephone'] ?? '';
-
     // Récupérer les informations du véhicule
-    final vehicule = '${data['marque']} ${data['modele']}';
-    final immatriculation = data['immatriculation'] ?? '';
+    final vehicule = '${data['marque']} ${data['modele']} (${data['immatriculation'] ?? ''})';
     
     // Récupérer les dates du contrat
     final dateDebut = _formatDate(data['dateDebut']);
@@ -81,18 +63,19 @@ class FacturePdfGenerator {
         : formatDate.format(DateTime.now());
     
     // Récupérer les montants
-    final prixLocation = factureData['facturePrixLocation'] ?? 0.0;
+    final prixLocation = factureData['facturePrixLocation'] != null ? double.tryParse(factureData['facturePrixLocation'].toString()) ?? 0.0 : 0.0;
     final fraisNettoyageInt = factureData['factureFraisNettoyageInterieur'] ?? 0.0;
     final fraisNettoyageExt = factureData['factureFraisNettoyageExterieur'] ?? 0.0;
     final fraisCarburant = factureData['factureFraisCarburantManquant'] ?? 0.0;
     final fraisRayures = factureData['factureFraisRayuresDommages'] ?? 0.0;
     final fraisAutre = factureData['factureFraisAutre'] ?? 0.0;
+    final fraisKilometrique = factureData['factureFraisKilometrique'] != null ? double.tryParse(factureData['factureFraisKilometrique'].toString()) ?? 0.0 : 0.0;
     final remise = factureData['factureRemise'] ?? 0.0;
     final caution = factureData['factureCaution'] ?? 0.0;
     
     // Calculer le total HT (sans TVA)
     final totalHT = prixLocation + fraisNettoyageInt + fraisNettoyageExt + 
-                   fraisCarburant + fraisRayures + fraisAutre - remise;
+                   fraisCarburant + fraisRayures + fraisAutre + fraisKilometrique - remise;
     
     // Calculer la TVA (20%)
     final tauxTVA = 0.20;
@@ -105,291 +88,243 @@ class FacturePdfGenerator {
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(40),
+        margin: const pw.EdgeInsets.all(30), 
         theme: pw.ThemeData.withFont(
           base: ttf,
           bold: boldFont,
           italic: italicFont,
         ),
-        header: (pw.Context context) {
-          return pw.Row(
+        build: (pw.Context context) => [
+          // En-tête avec logo et informations de l'entreprise
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               // Logo et informations de l'entreprise
               pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  if (logoImage != null)
-                    pw.Image(logoImage, width: 120),
-                  pw.SizedBox(height: 5),
-                  pw.Text(nomEntreprise, style: pw.TextStyle(font: boldFont, fontSize: 14)),
-                  pw.Text(adresse, style: pw.TextStyle(fontSize: 10)),
-                  pw.Text('Tél: $telephone', style: pw.TextStyle(fontSize: 10)),
-                  pw.Text('SIRET: $siret', style: pw.TextStyle(fontSize: 10)),
+                  // Logo
+                  logoImage != null
+                    ? pw.Container(
+                        height: 60,  
+                        width: 120,
+                        child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+                      )
+                    : pw.Container(),
+                  pw.SizedBox(height: 4),
+                  // Informations de l'entreprise sous le logo
+                  pw.Text(nomEntreprise, style: pw.TextStyle(fontSize: 10, font: boldFont)),
+                  pw.Text(adresse, style: pw.TextStyle(fontSize: 8, font: ttf)),
+                  pw.Text('Tél: $telephone', style: pw.TextStyle(fontSize: 8, font: ttf)),
+                  pw.Text('SIRET: $siret', style: pw.TextStyle(fontSize: 8, font: ttf)),
                 ],
               ),
-              // Informations de la facture
+              
+              // Informations de facture (numéro et date) à droite
               pw.Container(
-                padding: const pw.EdgeInsets.all(10),
-                decoration: pw.BoxDecoration(
-                  color: PdfColors.blue50,
-                  border: pw.Border.all(color: PdfColors.blue800),
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
-                ),
+                width: 200,
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
-                    pw.Text('FACTURE', style: pw.TextStyle(font: boldFont, fontSize: 18, color: PdfColors.blue800)),
-                    pw.SizedBox(height: 5),
-                    pw.Text('N° $numeroFacture', style: pw.TextStyle(fontSize: 12)),
-                    pw.Text('Date: $dateFacture', style: pw.TextStyle(fontSize: 12)),
+                    pw.Text('FACTURE', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                    pw.SizedBox(height: 2),
+                    pw.Text('N° $numeroFacture', style: pw.TextStyle(fontSize: 10)),
+                    pw.SizedBox(height: 2),
+                    pw.Text('Date: $dateFacture', style: pw.TextStyle(fontSize: 9)),
                   ],
                 ),
               ),
             ],
-          );
-        },
-        footer: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              pw.Divider(color: PdfColors.grey400),
-              pw.SizedBox(height: 5),
-              pw.Text(
-                '$nomEntreprise - $adresse - SIRET: $siret',
-                style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
-                textAlign: pw.TextAlign.center,
-              ),
-              if (iban != null && bic != null)
-                pw.Text(
-                  'IBAN: $iban - BIC: $bic',
-                  style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
-                  textAlign: pw.TextAlign.center,
-                ),
-              pw.SizedBox(height: 5),
-              pw.Text(
-                'Page ${context.pageNumber} sur ${context.pagesCount}',
-                style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
-                textAlign: pw.TextAlign.center,
-              ),
-            ],
-          );
-        },
-        build: (pw.Context context) => [
-          // Informations du client
-          pw.Container(
-            margin: const pw.EdgeInsets.only(top: 20),
-            child: pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Expanded(
-                  child: pw.Container(
-                    padding: const pw.EdgeInsets.all(10),
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.grey400),
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
-                    ),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('FACTURER À:', style: pw.TextStyle(font: boldFont, fontSize: 12)),
-                        pw.SizedBox(height: 5),
-                        pw.Text(nomClient, style: pw.TextStyle(fontSize: 11)),
-                        pw.Text(adresseClient, style: pw.TextStyle(fontSize: 10)),
-                        if (emailClient.isNotEmpty) pw.Text('Email: $emailClient', style: pw.TextStyle(fontSize: 10)),
-                        if (telephoneClient.isNotEmpty) pw.Text('Tél: $telephoneClient', style: pw.TextStyle(fontSize: 10)),
-                      ],
-                    ),
-                  ),
-                ),
-                pw.SizedBox(width: 20),
-                pw.Expanded(
-                  child: pw.Container(
-                    padding: const pw.EdgeInsets.all(10),
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.grey400),
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
-                    ),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('INFORMATIONS DE LOCATION:', style: pw.TextStyle(font: boldFont, fontSize: 12)),
-                        pw.SizedBox(height: 5),
-                        pw.Text('Véhicule: $vehicule', style: pw.TextStyle(fontSize: 10)),
-                        pw.Text('Immatriculation: $immatriculation', style: pw.TextStyle(fontSize: 10)),
-                        pw.Text('Période: du $dateDebut au $dateFin', style: pw.TextStyle(fontSize: 10)),
-                        pw.Text('Kilométrage: $kmDepart km → $kmRetour km ($kmParcourus km)', style: pw.TextStyle(fontSize: 10)),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
           
-          // Détail de la facture
-          pw.SizedBox(height: 30),
-          pw.Text('DÉTAIL DE LA FACTURE', style: pw.TextStyle(font: boldFont, fontSize: 14, color: PdfColors.blue800)),
-          pw.SizedBox(height: 10),
+          pw.SizedBox(height: 10),  
           
-          // Tableau des prestations
-          pw.Table(
-            border: pw.TableBorder.all(color: PdfColors.grey400),
-            columnWidths: {
-              0: const pw.FlexColumnWidth(4),
-              1: const pw.FlexColumnWidth(1),
-              2: const pw.FlexColumnWidth(1),
-              3: const pw.FlexColumnWidth(1.5),
-            },
-            children: [
-              // En-tête du tableau
-              pw.TableRow(
-                decoration: pw.BoxDecoration(color: PdfColors.blue50),
-                children: [
-                  _tableHeader('Description'),
-                  _tableHeader('Quantité'),
-                  _tableHeader('Prix unitaire'),
-                  _tableHeader('Montant HT'),
-                ],
-              ),
-              
-              // Ligne pour le prix de location
-              if (prixLocation > 0)
-                _tableRow(
-                  'Location véhicule $vehicule',
-                  '1',
-                  formatMonetaire.format(prixLocation),
-                  formatMonetaire.format(prixLocation),
-                ),
-              
-              // Ligne pour le nettoyage intérieur
-              if (fraisNettoyageInt > 0)
-                _tableRow(
-                  'Frais de nettoyage intérieur',
-                  '1',
-                  formatMonetaire.format(fraisNettoyageInt),
-                  formatMonetaire.format(fraisNettoyageInt),
-                ),
-              
-              // Ligne pour le nettoyage extérieur
-              if (fraisNettoyageExt > 0)
-                _tableRow(
-                  'Frais de nettoyage extérieur',
-                  '1',
-                  formatMonetaire.format(fraisNettoyageExt),
-                  formatMonetaire.format(fraisNettoyageExt),
-                ),
-              
-              // Ligne pour le carburant manquant
-              if (fraisCarburant > 0)
-                _tableRow(
-                  'Frais de carburant manquant',
-                  '1',
-                  formatMonetaire.format(fraisCarburant),
-                  formatMonetaire.format(fraisCarburant),
-                ),
-              
-              // Ligne pour les rayures et dommages
-              if (fraisRayures > 0)
-                _tableRow(
-                  'Frais pour rayures et dommages',
-                  '1',
-                  formatMonetaire.format(fraisRayures),
-                  formatMonetaire.format(fraisRayures),
-                ),
-              
-              // Ligne pour les autres frais
-              if (fraisAutre > 0)
-                _tableRow(
-                  'Autres frais',
-                  '1',
-                  formatMonetaire.format(fraisAutre),
-                  formatMonetaire.format(fraisAutre),
-                ),
-              
-              // Ligne pour la remise
-              if (remise > 0)
-                _tableRow(
-                  'Remise',
-                  '1',
-                  '-${formatMonetaire.format(remise)}',
-                  '-${formatMonetaire.format(remise)}',
-                ),
-            ],
+          // Informations de contact (utilisant PdfInfoContactWidget)
+          PdfInfoContactWidget.build(
+            nomEntreprise: nomEntreprise,
+            adresse: adresse,
+            telephone: telephone,
+            siret: siret,
+            clientData: data,
+            boldFont: boldFont,
+            ttf: ttf,
+            logoImage: null, // Pas besoin de logo ici car on l'a déjà affiché en haut
           ),
           
-          // Récapitulatif des montants
-          pw.SizedBox(height: 20),
-          pw.Container(
-            alignment: pw.Alignment.centerRight,
-            child: pw.Container(
-              width: 200,
-              child: pw.Column(
-                children: [
-                  _summaryRow('Total HT:', formatMonetaire.format(totalHT)),
-                  _summaryRow('TVA (20%):', formatMonetaire.format(montantTVA)),
-                  _summaryRow('Total TTC:', formatMonetaire.format(totalTTC), isTotal: true),
-                  if (caution > 0)
-                    pw.SizedBox(height: 10),
-                  if (caution > 0)
-                    _summaryRow('Caution restituée:', formatMonetaire.format(caution), isPositive: true),
-                ],
-              ),
-            ),
-          ),
+          pw.SizedBox(height: 6),  // Réduction de l'espacement
           
-          // Informations de paiement
-          pw.SizedBox(height: 30),
+          // Détails de la location
           pw.Container(
-            padding: const pw.EdgeInsets.all(10),
+            padding: const pw.EdgeInsets.all(8), 
             decoration: pw.BoxDecoration(
-              color: PdfColors.blue50,
-              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
+              color: PdfColors.grey100,
+              border: pw.Border.all(color: PdfColors.grey400),
+              borderRadius: pw.BorderRadius.circular(4), 
             ),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text('INFORMATIONS DE PAIEMENT', style: pw.TextStyle(font: boldFont, fontSize: 12)),
-                pw.SizedBox(height: 5),
-                pw.Text('Mode de paiement: ${factureData['factureTypePaiement'] ?? "Non spécifié"}', style: pw.TextStyle(fontSize: 10)),
-                if (iban != null && bic != null) ...[                  
-                  pw.Text('IBAN: $iban', style: pw.TextStyle(fontSize: 10)),
-                  pw.Text('BIC: $bic', style: pw.TextStyle(fontSize: 10)),
-                ],
-                pw.SizedBox(height: 5),
-                pw.Text('Facture payable à réception. Merci pour votre confiance.', style: pw.TextStyle(fontSize: 10, font: italicFont)),
+                pw.Text('Détails de la location', 
+                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 4), 
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('Véhicule: $vehicule', style: pw.TextStyle(fontSize: 9)),
+                          pw.SizedBox(height: 2), 
+                          pw.Text('Du: $dateDebut', style: pw.TextStyle(fontSize: 9)),
+                          pw.SizedBox(height: 2), 
+                          pw.Text('Au: $dateFin', style: pw.TextStyle(fontSize: 9)),
+                        ],
+                      ),
+                    ),
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('Km départ: $kmDepart', style: pw.TextStyle(fontSize: 9)),
+                          pw.SizedBox(height: 2), 
+                          pw.Text('Km retour: $kmRetour', style: pw.TextStyle(fontSize: 9)),
+                          pw.SizedBox(height: 2), 
+                          pw.Text('Km parcourus: $kmParcourus', style: pw.TextStyle(fontSize: 9)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
           
-          // Conditions générales
-          pw.SizedBox(height: 30),
-          pw.Text('CONDITIONS GÉNÉRALES', style: pw.TextStyle(font: boldFont, fontSize: 12)),
-          pw.SizedBox(height: 5),
-          pw.Text(
-            'Cette facture est soumise à nos conditions générales de vente. ' +
-            'Tout retard de paiement entraînera des pénalités calculées au taux légal en vigueur. ' +
-            'Une indemnité forfaitaire de 40€ pour frais de recouvrement sera due en cas de retard de paiement.',
-            style: pw.TextStyle(fontSize: 8),
+          pw.SizedBox(height: 8),  
+          
+          // Détails de la facture
+          pw.Table(
+            border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+            columnWidths: {
+              0: const pw.FlexColumnWidth(3),
+              1: const pw.FlexColumnWidth(1),
+            },
+            children: [
+              // En-tête du tableau
+              pw.TableRow(
+                decoration: pw.BoxDecoration(color: PdfColors.grey200),
+                children: [
+                  _tableHeader('Description'),
+                  _tableHeader('Montant'),
+                ],
+              ),
+              // Lignes du tableau
+              _tableRow(
+                'Location du véhicule $vehicule',
+                formatMonetaire.format(prixLocation),
+              ),
+              if (fraisKilometrique > 0)
+                _tableRow(
+                  'Frais kilométriques',
+                  formatMonetaire.format(fraisKilometrique),
+                ),
+              if (fraisNettoyageInt > 0)
+                _tableRow(
+                  'Nettoyage intérieur',
+                  formatMonetaire.format(fraisNettoyageInt),
+                ),
+              if (fraisNettoyageExt > 0)
+                _tableRow(
+                  'Nettoyage extérieur',
+                  formatMonetaire.format(fraisNettoyageExt),
+                ),
+              if (fraisCarburant > 0)
+                _tableRow(
+                  'Frais de carburant manquant',
+                  formatMonetaire.format(fraisCarburant),
+                ),
+              if (fraisRayures > 0)
+                _tableRow(
+                  'Frais pour rayures/dommages',
+                  formatMonetaire.format(fraisRayures),
+                ),
+              if (fraisAutre > 0)
+                _tableRow(
+                  'Autres frais',
+                  formatMonetaire.format(fraisAutre),
+                ),
+              if (caution > 0)
+                _tableRow(
+                  'Caution',
+                  formatMonetaire.format(caution),
+                ),
+            ],
+          ),
+          
+          pw.SizedBox(height: 6),  
+          
+          // Récapitulatif
+          pw.Container(
+            alignment: pw.Alignment.centerRight,
+            child: pw.Container(
+              width: 180,
+              child: pw.Column(
+                children: [
+                  _summaryRow('Total HT', formatMonetaire.format(totalHT)),
+                  _summaryRow('TVA (20%)', formatMonetaire.format(montantTVA)),
+                  if (remise > 0)
+                    _summaryRow('Remise', formatMonetaire.format(remise), isPositive: true),
+                  _summaryRow('Total TTC', formatMonetaire.format(totalTTC), isTotal: true),
+                ],
+              ),
+            ),
+          ),
+          
+          pw.SizedBox(height: 10),  
+          
+          // Informations de paiement
+          pw.Container(
+            padding: const pw.EdgeInsets.all(6),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey100,
+              border: pw.Border.all(color: PdfColors.grey400),
+              borderRadius: pw.BorderRadius.circular(4), 
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Informations de paiement', 
+                  style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                pw.Divider(color: PdfColors.grey400, thickness: 0.5),
+                pw.Text('Mode de paiement: ${factureData['factureTypePaiement'] ?? "Carte bancaire"}', 
+                  style: pw.TextStyle(fontSize: 9)),
+              ],
+            ),
           ),
         ],
       ),
     );
-
-    // Sauvegarder le PDF
-    final directory = await getTemporaryDirectory();
-    final path = '${directory.path}/facture_${data['id'] ?? DateTime.now().millisecondsSinceEpoch}.pdf';
-    final output = File(path);
-    await output.writeAsBytes(await pdf.save());
-
-    return path;
+    
+    // Sauvegarder le PDF dans un fichier temporaire
+    final output = await getTemporaryDirectory();
+    final file = File('${output.path}/facture_${DateTime.now().millisecondsSinceEpoch}.pdf');
+    await file.writeAsBytes(await pdf.save());
+    
+    return file.path;
   }
 
   /// Charge une image depuis Firebase Storage
   static Future<pw.MemoryImage?> _loadImageFromFirebaseStorage(String logoUrl) async {
-    // Vérifier si l'URL est valide
-    if (logoUrl.isEmpty || !logoUrl.startsWith('https://')) {
-      print("URL du logo invalide: $logoUrl");
+    // Vérifier si l'URL est vide
+    if (logoUrl.isEmpty) {
+      print("URL du logo vide, aucun logo ne sera affiché");
+      return null;
+    }
+    
+    // Vérifier si l'URL a un format valide
+    if (!logoUrl.startsWith('https://')) {
+      print("URL du logo invalide (ne commence pas par https://): $logoUrl");
       return null;
     }
     
@@ -399,6 +334,8 @@ class FacturePdfGenerator {
       final bytes = response.buffer.asUint8List();
       return pw.MemoryImage(bytes);
     } catch (httpError) {
+      print("Erreur lors du chargement du logo via HTTP: $httpError");
+      
       // Si HTTP échoue, essayer via Firebase Storage
       try {
         final Uint8List? logoBytes = await FirebaseStorage.instance
@@ -409,7 +346,7 @@ class FacturePdfGenerator {
           return pw.MemoryImage(logoBytes);
         }
       } catch (e) {
-        // Erreur silencieuse - nous avons déjà essayé HTTP
+        print("Erreur lors du chargement du logo via Firebase Storage: $e");
       }
     }
     
@@ -420,34 +357,26 @@ class FacturePdfGenerator {
   /// Crée un en-tête de tableau
   static pw.Widget _tableHeader(String text) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.all(5),
+      padding: const pw.EdgeInsets.all(3), 
       child: pw.Text(
         text,
-        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+        style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
         textAlign: pw.TextAlign.center,
       ),
     );
   }
 
   /// Crée une ligne de tableau
-  static pw.TableRow _tableRow(String description, String quantity, String unitPrice, String amount) {
+  static pw.TableRow _tableRow(String description, String amount) {
     return pw.TableRow(
       children: [
         pw.Padding(
-          padding: const pw.EdgeInsets.all(5),
-          child: pw.Text(description),
+          padding: const pw.EdgeInsets.all(3), 
+          child: pw.Text(description, style: pw.TextStyle(fontSize: 9)),
         ),
         pw.Padding(
-          padding: const pw.EdgeInsets.all(5),
-          child: pw.Text(quantity, textAlign: pw.TextAlign.center),
-        ),
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(5),
-          child: pw.Text(unitPrice, textAlign: pw.TextAlign.right),
-        ),
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(5),
-          child: pw.Text(amount, textAlign: pw.TextAlign.right),
+          padding: const pw.EdgeInsets.all(3), 
+          child: pw.Text(amount, textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 9)),
         ),
       ],
     );
@@ -460,7 +389,7 @@ class FacturePdfGenerator {
         border: pw.Border(top: pw.BorderSide(color: PdfColors.grey400)),
         color: PdfColors.blue50,
       ) : null,
-      padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+      padding: const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 6),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
@@ -468,6 +397,7 @@ class FacturePdfGenerator {
             label,
             style: pw.TextStyle(
               fontWeight: isTotal ? pw.FontWeight.bold : pw.FontWeight.normal,
+              fontSize: 9,
             ),
           ),
           pw.Text(
@@ -475,6 +405,7 @@ class FacturePdfGenerator {
             style: pw.TextStyle(
               fontWeight: isTotal ? pw.FontWeight.bold : pw.FontWeight.normal,
               color: isPositive ? PdfColors.green700 : null,
+              fontSize: 9,
             ),
           ),
         ],

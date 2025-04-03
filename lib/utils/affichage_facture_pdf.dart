@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -17,8 +16,9 @@ class AffichageFacturePdf {
     required String contratId,
     Map<String, dynamic>? factureData,
   }) async {
-    // Afficher un dialogue de chargement
     bool dialogShown = false;
+    
+    // Afficher un dialogue de chargement
     if (context.mounted) {
       dialogShown = true;
       showDialog(
@@ -62,31 +62,70 @@ class AffichageFacturePdf {
 
         Map<String, dynamic> contratDataComplete = contratDoc.data() as Map<String, dynamic>? ?? {};
         
-        // Préparer les données de la facture à partir des données du contrat
+        // Fonction pour convertir en double
+        double parseDouble(dynamic value) {
+          if (value == null) return 0.0;
+          if (value is num) return value.toDouble();
+          if (value is String) {
+            try {
+              return double.parse(value.replaceAll(',', '.'));
+            } catch (e) {
+              return 0.0;
+            }
+          }
+          return 0.0;
+        }
+        
+        // Préparer les données de la facture
+        // Essayer d'abord de récupérer les données avec le préfixe 'facture'
         factureData = {
-          'facturePrixLocation': contratDataComplete['prixLocation'] ?? 0,
-          'factureCaution': contratDataComplete['caution'] ?? 0,
-          'factureFraisNettoyageInterieur': contratDataComplete['nettoyageInt'] ?? 0,
-          'factureFraisNettoyageExterieur': contratDataComplete['nettoyageExt'] ?? 0,
-          'factureFraisCarburantManquant': contratDataComplete['fraisCarburantManquant'] ?? 0,
-          'factureFraisRayuresDommages': contratDataComplete['fraisRayuresDommages'] ?? 0,
-          'factureFraisAutre': contratDataComplete['fraisAutre'] ?? 0,
-          'factureRemise': contratDataComplete['remise'] ?? 0,
-          'factureTotalFrais': contratDataComplete['totalFrais'] ?? 0,
-          'factureTypePaiement': contratDataComplete['typePaiement'] ?? 'Carte bancaire',
-          'dateFacture': Timestamp.now(),
+          'facturePrixLocation': parseDouble(contratDataComplete['facturePrixLocation']),
+          'factureCaution': parseDouble(contratDataComplete['factureCaution']),
+          'factureFraisNettoyageInterieur': parseDouble(contratDataComplete['factureFraisNettoyageInterieur']),
+          'factureFraisNettoyageExterieur': parseDouble(contratDataComplete['factureFraisNettoyageExterieur']),
+          'factureFraisCarburantManquant': parseDouble(contratDataComplete['factureFraisCarburantManquant']),
+          'factureFraisRayuresDommages': parseDouble(contratDataComplete['factureFraisRayuresDommages']),
+          'factureFraisAutre': parseDouble(contratDataComplete['factureFraisAutre']),
+          'factureFraisKilometrique': parseDouble(contratDataComplete['factureFraisKilometrique']),
+          'factureRemise': parseDouble(contratDataComplete['factureRemise']),
+          'factureTotalFrais': parseDouble(contratDataComplete['factureTotalFrais']),
+          'factureTypePaiement': contratDataComplete['factureTypePaiement'] ?? 'Carte bancaire',
+          'dateFacture': contratDataComplete['dateFacture'] ?? Timestamp.now(),
         };
+        
+        // Vérifier si les données de facture sont disponibles
+        bool factureDataExist = factureData['facturePrixLocation'] > 0 || 
+                              factureData['factureFraisKilometrique'] > 0 || 
+                              factureData['factureFraisNettoyageInterieur'] > 0;
+        
+        // Si aucune facture n'a été créée, afficher une facture vide
+        if (!factureDataExist) {
+          // Afficher un message à l'utilisateur
+          if (dialogShown && context.mounted) {
+            Navigator.pop(context);
+          }
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Aucune facture n'a été créée pour ce contrat. Veuillez d'abord créer une facture."),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
+        }
       }
 
       // Récupérer les informations de l'entreprise
       Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>? ?? {};
-      String logoUrl = (userData['logoUrl'] ?? '').toString();
-      String nomEntreprise = (userData['nomEntreprise'] ?? 'Mon Entreprise').toString();
-      String adresse = (userData['adresse'] ?? '').toString();
-      String telephone = (userData['telephone'] ?? '').toString();
-      String siret = (userData['siret'] ?? '').toString();
-      String? iban = userData['iban'];
-      String? bic = userData['bic'];
+      
+      // Utiliser les données du contrat en priorité, puis celles de l'utilisateur si non disponibles
+      String logoUrl = (contratData['logoUrl'] ?? userData['logoUrl'] ?? '').toString();
+      String nomEntreprise = (contratData['nomEntreprise'] ?? userData['nomEntreprise'] ?? 'Mon Entreprise').toString();
+      String adresse = (contratData['adresseEntreprise'] ?? userData['adresse'] ?? '').toString();
+      String telephone = (contratData['telephoneEntreprise'] ?? userData['telephone'] ?? '').toString();
+      String siret = (contratData['siretEntreprise'] ?? userData['siret'] ?? '').toString();
 
       // Générer le PDF de facture
       final pdfPath = await FacturePdfGenerator.generateFacturePdf(
@@ -97,8 +136,6 @@ class AffichageFacturePdf {
         adresse: adresse,
         telephone: telephone,
         siret: siret,
-        iban: iban,
-        bic: bic,
       );
 
       // Fermer le dialogue de chargement

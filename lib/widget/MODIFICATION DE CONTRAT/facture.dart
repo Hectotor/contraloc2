@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
 
 class FactureScreen extends StatefulWidget {
@@ -107,6 +108,7 @@ class _FactureScreenState extends State<FactureScreen> {
       _fraisRayuresController.text = widget.data['factureFraisRayuresDommages']?.toString() ?? "0";
       _fraisAutreController.text = widget.data['factureFraisAutre']?.toString() ?? "0";
       _coutTotalController.text = widget.data['facturePrixLocation']?.toString() ?? "0";
+      _kmSuppDisplayController.text = widget.data['factureFraisKilometrique']?.toString() ?? "0";
       _remiseController.text = widget.data['factureRemise']?.toString() ?? "0";
 
       // Charger le type de paiement s'il existe
@@ -142,6 +144,19 @@ class _FactureScreenState extends State<FactureScreen> {
   void _calculerTotal() {
     setState(() {
       double total = 0.0;
+      bool prixLocationModifie = false;
+      bool fraisKmModifies = false;
+
+      // Vérifier si l'utilisateur a modifié manuellement les valeurs
+      if (widget.data.containsKey('facturePrixLocation') && 
+          _coutTotalController.text != widget.data['facturePrixLocation']?.toString()) {
+        prixLocationModifie = true;
+      }
+
+      if (widget.data.containsKey('factureFraisKilometrique') && 
+          _kmSuppDisplayController.text != widget.data['factureFraisKilometrique']?.toString()) {
+        fraisKmModifies = true;
+      }
 
       // Calcul du prix de location basé sur la durée
       try {
@@ -153,7 +168,9 @@ class _FactureScreenState extends State<FactureScreen> {
         // Convertir le prix de location en double
         double prixLocationJournalier = double.tryParse(prixLocationStr.replaceAll(',', '.')) ?? 0.0;
         
-        if (dateDebutStr.isNotEmpty && dateFinStr.isNotEmpty && prixLocationJournalier > 0) {
+        // Ne pas recalculer si l'utilisateur a modifié manuellement ou vidé le champ
+        if (!prixLocationModifie && _coutTotalController.text.isNotEmpty && 
+            dateDebutStr.isNotEmpty && dateFinStr.isNotEmpty && prixLocationJournalier > 0) {
           // Extraire les dates en garantissant différents formats possibles
           DateTime? dateDebut;
           DateTime? dateFin;
@@ -236,22 +253,28 @@ class _FactureScreenState extends State<FactureScreen> {
       }
 
       // Calcul des frais kilométriques
-      double kmDepart = double.tryParse(widget.data['kilometrageDepart']?.toString() ?? '0') ?? 0;
-      double kmAutorise = double.tryParse(widget.data['kilometrageAutorise']?.toString() ?? '0') ?? 0;
-      double kmRetour = double.tryParse(_kmRetourController.text) ?? 0;
-      double kmSupp = double.tryParse(widget.data['kilometrageSupp']?.toString() ?? '0') ?? 0;
+      if (!fraisKmModifies && _kmSuppDisplayController.text.isNotEmpty) {
+        double kmDepart = double.tryParse(widget.data['kilometrageDepart']?.toString() ?? '0') ?? 0;
+        double kmAutorise = double.tryParse(widget.data['kilometrageAutorise']?.toString() ?? '0') ?? 0;
+        double kmRetour = double.tryParse(_kmRetourController.text) ?? 0;
+        double kmSupp = double.tryParse(widget.data['kilometrageSupp']?.toString() ?? '0') ?? 0;
 
-      // Calcul : (kmRetour - (kmDepart + kmAutorise)) * kmSupp
-      double fraisKm = (kmRetour - (kmDepart + kmAutorise)) * kmSupp;
-      
-      // Assurer que le résultat est positif
-      fraisKm = fraisKm < 0 ? 0 : fraisKm;
-      
-      _kmSuppDisplayController.text = fraisKm.toStringAsFixed(2).replaceAll('.', ',');
+        // Calcul : (kmRetour - (kmDepart + kmAutorise)) * kmSupp
+        double fraisKm = (kmRetour - (kmDepart + kmAutorise)) * kmSupp;
+        
+        // Assurer que le résultat est positif
+        fraisKm = fraisKm < 0 ? 0 : fraisKm;
+        
+        _kmSuppDisplayController.text = fraisKm.toStringAsFixed(2).replaceAll('.', ',');
+      }
 
       // Ajouter tous les frais qui ont une valeur non nulle
-      total += double.tryParse(_coutTotalController.text.replaceAll(',', '.')) ?? 0.0;
-      total += double.tryParse(_kmSuppDisplayController.text.replaceAll(',', '.')) ?? 0.0;
+      if (_coutTotalController.text.isNotEmpty) {
+        total += double.tryParse(_coutTotalController.text.replaceAll(',', '.')) ?? 0.0;
+      }
+      if (_kmSuppDisplayController.text.isNotEmpty) {
+        total += double.tryParse(_kmSuppDisplayController.text.replaceAll(',', '.')) ?? 0.0;
+      }
       total += double.tryParse(_fraisNettoyageIntController.text.replaceAll(',', '.')) ?? 0.0;
       total += double.tryParse(_fraisNettoyageExtController.text.replaceAll(',', '.')) ?? 0.0;
       total += double.tryParse(_fraisCarburantController.text.replaceAll(',', '.')) ?? 0.0;
@@ -274,13 +297,17 @@ class _FactureScreenState extends State<FactureScreen> {
     try {
       // Préparer les données à sauvegarder
       final data = {
-        'facturePrixLocation': double.tryParse(_coutTotalController.text.replaceAll(',', '.')) ?? 0,
+        // Utiliser null si les champs sont vides pour facturePrixLocation et factureFraisKilometrique
+        'facturePrixLocation': _coutTotalController.text.isEmpty ? null : 
+                          double.tryParse(_coutTotalController.text.replaceAll(',', '.')) ?? 0,
         'factureCaution': double.tryParse(_cautionController.text.replaceAll(',', '.')) ?? 0,
         'factureFraisNettoyageInterieur': double.tryParse(_fraisNettoyageIntController.text.replaceAll(',', '.')) ?? 0,
         'factureFraisNettoyageExterieur': double.tryParse(_fraisNettoyageExtController.text.replaceAll(',', '.')) ?? 0,
         'factureFraisCarburantManquant': double.tryParse(_fraisCarburantController.text.replaceAll(',', '.')) ?? 0,
         'factureFraisRayuresDommages': double.tryParse(_fraisRayuresController.text.replaceAll(',', '.')) ?? 0,
         'factureFraisAutre': double.tryParse(_fraisAutreController.text.replaceAll(',', '.')) ?? 0,
+        'factureFraisKilometrique': _kmSuppDisplayController.text.isEmpty ? null : 
+                              double.tryParse(_kmSuppDisplayController.text.replaceAll(',', '.')) ?? 0,
         'factureRemise': double.tryParse(_remiseController.text.replaceAll(',', '.')) ?? 0,
         'factureTotalFrais': _total,
         'factureTypePaiement': _typePaiement,
@@ -300,13 +327,33 @@ class _FactureScreenState extends State<FactureScreen> {
         return;
       }
       
-      // Utiliser CollaborateurUtil pour gérer les permissions
-      await CollaborateurUtil.updateDocument(
-        collection: 'locations',
-        docId: contratId,
-        data: data,
-        useAdminId: true, // Important pour les collaborateurs
-      );
+      // Utiliser la méthode set avec merge:true et la bonne structure de collection
+      // Récupérer l'ID de l'administrateur
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('Utilisateur non connecté');
+      }
+      
+      // Vérifier si l'utilisateur est un collaborateur
+      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
+      final String targetId = collaborateurStatus['isCollaborateur'] 
+          ? collaborateurStatus['adminId'] ?? user.uid 
+          : user.uid;
+      
+      print('uD83DuDCDD Début de la mise à jour du document: users/$targetId/locations/$contratId');
+      print('uD83DuDCC4 Données à mettre à jour: $data');
+      
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(targetId)
+          .collection('locations')
+          .doc(contratId)
+          .set(data, SetOptions(merge: true))
+          .then((_) => print('u2705 Facture mise à jour avec succès'))
+          .catchError((error) {
+            print('u274C Erreur lors de la mise à jour: $error');
+            throw error;
+          });
 
       // Mettre à jour les données du widget
       widget.data.addAll(data);
@@ -337,13 +384,6 @@ class _FactureScreenState extends State<FactureScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Logs pour déboguer les valeurs des champs de kilométrage
-    debugPrint('Kilométrage de départ: ${widget.data['kilometrageDepart']}');
-    debugPrint('Kilométrage autorisé: ${widget.data['kilometrageAutorise']}');
-    debugPrint('Kilométrage supplémentaire: ${widget.data['kilometrageSupp']}');
-    debugPrint('Kilométrage de retour: ${_kmRetourController.text}');
-    debugPrint('Frais kilométriques: ${_kmSuppDisplayController.text}');
-
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -440,7 +480,37 @@ class _FactureScreenState extends State<FactureScreen> {
                         ),
                       ),
                       
-                      _buildTextField("Prix de location total", _coutTotalController),
+                      // Prix de location total
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: TextFormField(
+                          controller: _coutTotalController,
+                          decoration: InputDecoration(
+                            labelText: "Prix de location total",
+                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            prefixText: '€',
+                            helperText: "Calculé automatiquement, mais modifiable",
+                            helperStyle: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
+                          ),
+                          enabled: true,
+                          readOnly: false,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\,?\d{0,2}')),
+                          ],
+                          onChanged: (value) {
+                            // Marquer explicitement que ce champ a été modifié manuellement
+                            setState(() {
+                              widget.data['facturePrixLocation'] = null; // Force la détection de modification
+                              _calculerTotal();
+                            });
+                          },
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -535,7 +605,7 @@ class _FactureScreenState extends State<FactureScreen> {
                           ),
                           keyboardType: TextInputType.number,
                           inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\,?\d{0,2}')),
                           ],
                           onChanged: (value) {
                             setState(() {
@@ -546,7 +616,36 @@ class _FactureScreenState extends State<FactureScreen> {
                       ),
                       
                       // Champ des frais kilométriques
-                      _buildTextField("Frais kilométriques", _kmSuppDisplayController),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: TextFormField(
+                          controller: _kmSuppDisplayController,
+                          decoration: InputDecoration(
+                            labelText: "Frais kilométriques",
+                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            prefixText: '€',
+                            helperText: "Calculé automatiquement, mais modifiable ou effaçable",
+                            helperStyle: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
+                          ),
+                          enabled: true,
+                          readOnly: false,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\,?\d{0,2}')),
+                          ],
+                          onChanged: (value) {
+                            // Marquer explicitement que ce champ a été modifié manuellement
+                            setState(() {
+                              widget.data['factureFraisKilometrique'] = null; // Force la détection de modification
+                              _calculerTotal();
+                            });
+                          },
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -812,7 +911,7 @@ class _FactureScreenState extends State<FactureScreen> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller) {
+  Widget _buildTextField(String label, TextEditingController controller, {bool isEditable = true}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextFormField(
@@ -825,13 +924,18 @@ class _FactureScreenState extends State<FactureScreen> {
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           prefixText: '€',
+          helperText: isEditable ? "Modifiable" : null,
+          helperStyle: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
         ),
         keyboardType: TextInputType.number,
+        readOnly: !isEditable,
         inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+          FilteringTextInputFormatter.allow(RegExp(r'^\d*\,?\d{0,2}')),
         ],
         onChanged: (value) {
-          _calculerTotal();
+          setState(() {
+            _calculerTotal();
+          });
         },
       ),
     );

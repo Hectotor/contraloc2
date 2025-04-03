@@ -9,6 +9,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart'; 
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:signature/signature.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/affichage_facture_pdf.dart';
 import '../utils/affichage_contrat_pdf.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
@@ -61,6 +62,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
   final TextEditingController _cautionController = TextEditingController();
 
   Map<String, dynamic> _fraisSupplementaires = {};
+
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
@@ -222,31 +225,53 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
       if (isCollaborateur && adminId != null) {
         try {
-          await CollaborateurUtil.updateDocument(
-            collection: 'locations',
-            docId: widget.contratId,
-            data: updateData,
-            useAdminId: true,
-          );
-          print(' Contrat mis à jour dans la collection de l\'admin: $adminId');
+          print('📝 Début de la mise à jour du document: users/$adminId/locations/${widget.contratId}');
+          print('📄 Données à mettre à jour: $updateData');
+          
+          // Utiliser la méthode set avec merge:true et la bonne structure de collection
+          await _firestore
+              .collection('users')
+              .doc(adminId)
+              .collection('locations')
+              .doc(widget.contratId)
+              .set(updateData, SetOptions(merge: true))
+              .then((_) => print('✅ Document mis à jour avec succès'))
+              .catchError((error) {
+                print('❌ Erreur lors de la mise à jour: $error');
+                throw error;
+              });
+          
+          print(' Contrat mis à jour dans la collection de l\'administrateur');
         } catch (e) {
-          print(' Erreur lors de la mise à jour du contrat: $e');
+          print('❌ Erreur mise à jour document: $e');
+          rethrow; // Relancer l'erreur pour qu'elle soit capturée par le bloc catch principal
         }
       } else {
         try {
+          final userId = FirebaseAuth.instance.currentUser?.uid;
           print(' Début de la mise à jour du contrat par l\'administrateur');
-          print(' ID Administrateur: ${FirebaseAuth.instance.currentUser?.uid}');
+          print(' ID Administrateur: $userId');
           print(' ID Contrat: ${widget.contratId}');
+          print('📝 Début de la mise à jour du document: users/$userId/locations/${widget.contratId}');
+          print('📄 Données à mettre à jour: $updateData');
           
-          await CollaborateurUtil.updateDocument(
-            collection: 'locations',
-            docId: widget.contratId,
-            data: updateData,
-            useAdminId: false,
-          );
+          // Utiliser la méthode set avec merge:true et la bonne structure de collection
+          await _firestore
+              .collection('users')
+              .doc(userId)
+              .collection('locations')
+              .doc(widget.contratId)
+              .set(updateData, SetOptions(merge: true))
+              .then((_) => print('✅ Document mis à jour avec succès'))
+              .catchError((error) {
+                print('❌ Erreur lors de la mise à jour: $error');
+                throw error;
+              });
+          
           print(' Contrat mis à jour dans la collection de l\'administrateur');
         } catch (e) {
-          print(' Erreur lors de la mise à jour du contrat: $e');
+          print('❌ Erreur mise à jour document: $e');
+          rethrow; // Relancer l'erreur pour qu'elle soit capturée par le bloc catch principal
         }
       }
 
