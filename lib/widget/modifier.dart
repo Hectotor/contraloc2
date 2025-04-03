@@ -11,6 +11,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:signature/signature.dart';
 import '../utils/pdf.dart';
+import '../utils/affichage_facture_pdf.dart';
 import '../USERS/contrat_condition.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
 import 'MODIFICATION DE CONTRAT/supp_contrat.dart';
@@ -62,32 +63,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
   final TextEditingController _cautionController = TextEditingController();
 
   Map<String, dynamic> _fraisSupplementaires = {};
-
-  void _handleFraisUpdated(Map<String, dynamic> frais) {
-    Future.microtask(() {
-      setState(() {
-        _fraisSupplementaires = frais;
-
-        if (frais['nettoyageInt'] != null && frais['nettoyageInt'].toString().isNotEmpty) {
-          _nettoyageIntController.text = frais['nettoyageInt'].toString();
-        }
-
-        if (frais['nettoyageExt'] != null && frais['nettoyageExt'].toString().isNotEmpty) {
-          _nettoyageExtController.text = frais['nettoyageExt'].toString();
-        }
-
-        if (frais['niveauEssenceRetour'] != null && frais['niveauEssenceRetour'].toString().isNotEmpty) {
-          _niveauEssenceRetourController.text = frais['niveauEssenceRetour'].toString();
-        }
-
-        if (frais['caution'] != null) {
-          _cautionController.text = frais['caution'].toString();
-        }
-
-
-      });
-    });
-  }
 
   @override
   void initState() {
@@ -249,11 +224,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
       if (isCollaborateur && adminId != null) {
         try {
-          print(' Début de la mise à jour du contrat par le collaborateur');
-          print(' ID Collaborateur: ${FirebaseAuth.instance.currentUser?.uid}');
-          print(' ID Admin: $adminId');
-          print(' ID Contrat: ${widget.contratId}');
-          
           await CollaborateurUtil.updateDocument(
             collection: 'locations',
             docId: widget.contratId,
@@ -633,7 +603,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                       data: widget.data,
                       selectDateTime: _selectDateTime,
                       dateDebut: _parseDateWithFallback(widget.data['dateDebut']),
-                      onFraisUpdated: _handleFraisUpdated,
+                      onFraisUpdated: (frais) {},
                     ),
                     const SizedBox(height: 40),
                     EtatVehiculeRetour(
@@ -720,7 +690,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                                 MaterialPageRoute(
                                   builder: (context) => FactureScreen(
                                     data: {...widget.data, 'contratId': widget.contratId},
-                                    onFraisUpdated: _handleFraisUpdated,
+                                    onFraisUpdated: (frais) {},
                                     kilometrageInitial: kilometrageInitial,
                                     kilometrageActuel: kilometrageActuel,
                                     tarifKilometrique: tarifKilometrique,
@@ -756,6 +726,29 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           child: const Text(
                             "Afficher le contrat",
                             style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                          onPressed: () => AffichageFacturePdf.genererEtAfficherFacturePdf(
+                            context: context,
+                            contratData: widget.data,
+                            contratId: widget.contratId,
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            minimumSize: const Size(double.infinity, 50),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.receipt, color: Colors.white),
+                              SizedBox(width: 10),
+                              Text(
+                                "Afficher la facture",
+                                style: TextStyle(color: Colors.white, fontSize: 18),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 10),
