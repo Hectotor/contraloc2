@@ -15,6 +15,7 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
+  // Initialisation avec la date et l'heure françaises
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
   Map<DateTime, List<Map<String, dynamic>>> _reservedContracts = {};
@@ -184,24 +185,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildCalendar() {
     return Card(
-      margin: const EdgeInsets.all(8.0),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-      ),
+      margin: EdgeInsets.all(8.0),
+      elevation: 4.0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: TableCalendar(
+          locale: 'fr_FR',  // Utilisation de la locale française
           firstDay: DateTime.utc(2020, 1, 1),
           lastDay: DateTime.utc(2030, 12, 31),
           focusedDay: _focusedDay,
           calendarFormat: _calendarFormat,
-          selectedDayPredicate: (day) {
-            return isSameDay(_selectedDay, day);
-          },
           eventLoader: (day) {
             final dateKey = DateTime(day.year, day.month, day.day);
             return _reservedContracts[dateKey] ?? [];
+          },
+          selectedDayPredicate: (day) {
+            return isSameDay(_selectedDay, day);
           },
           onDaySelected: (selectedDay, focusedDay) {
             setState(() {
@@ -232,60 +232,42 @@ class _CalendarScreenState extends State<CalendarScreen> {
               color: primaryColor.withOpacity(0.5),
               shape: BoxShape.circle,
             ),
+            weekendTextStyle: TextStyle(color: primaryColor),
           ),
           headerStyle: HeaderStyle(
-            formatButtonTextStyle: TextStyle(color: Colors.white),
+            formatButtonVisible: true,
             formatButtonDecoration: BoxDecoration(
-              color: primaryColor,
-              borderRadius: BorderRadius.circular(20.0),
+              color: Colors.orange,
+              borderRadius: BorderRadius.circular(16),
             ),
+            formatButtonTextStyle: TextStyle(color: Colors.white),
             titleCentered: true,
             titleTextStyle: TextStyle(
+              color: primaryColor,
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: primaryColor,
             ),
-            formatButtonVisible: true,
-            formatButtonShowsNext: true,
-            titleTextFormatter: (date, format) => DateFormat.yMMMM('fr_FR').format(date),
+            leftChevronIcon: Icon(Icons.chevron_left, color: Colors.orange),
+            rightChevronIcon: Icon(Icons.chevron_right, color: Colors.orange),
+            titleTextFormatter: (date, locale) => DateFormat.yMMMM(locale).format(date),
           ),
           daysOfWeekStyle: DaysOfWeekStyle(
-            weekdayStyle: TextStyle(color: primaryColor),
-            weekendStyle: TextStyle(color: primaryColor),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: Colors.grey[300]!),
-              ),
-            ),
+            weekdayStyle: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+            weekendStyle: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
           ),
           calendarBuilders: CalendarBuilders(
-            dowBuilder: (context, day) {
-              final weekday = day.weekday;
-              final dayText = DateFormat.E('fr_FR').format(day);
-              return Center(
-                child: Text(
-                  dayText,
-                  style: TextStyle(
-                    color: weekday == 6 || weekday == 7
-                        ? Colors.red
-                        : primaryColor,
-                  ),
-                ),
-              );
-            },
             markerBuilder: (context, date, events) {
-              if (events.isEmpty) {
-                return null; // Ne rien afficher s'il n'y a pas d'événements
-              }
-              
+              if (events.isEmpty) return null;
               return Positioned(
                 right: 1,
                 bottom: 1,
                 child: Container(
-                  padding: EdgeInsets.all(2),
+                  padding: EdgeInsets.all(4.0),
                   decoration: BoxDecoration(
-                    color: primaryColor,
-                    borderRadius: BorderRadius.circular(10),
+                    shape: BoxShape.rectangle,
+
+                    color: Colors.orange,
+
                   ),
                   child: Text(
                     '${events.length}',
@@ -295,9 +277,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
               );
             },
           ),
-          startingDayOfWeek: StartingDayOfWeek.monday,
+          startingDayOfWeek: StartingDayOfWeek.monday,  // Semaine commençant le lundi (format français)
           availableCalendarFormats: const {
-            CalendarFormat.month: 'Mois',
+            CalendarFormat.month: 'Mois',  // Traduction en français
           },
         ),
       ),
@@ -324,7 +306,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
+              color: Colors.orange.withOpacity(0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -332,7 +314,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
             child: Row(
               children: [
-                Icon(Icons.calendar_today, color: primaryColor, size: 24),
+                Icon(Icons.calendar_today, color: Colors.orange, size: 24),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -340,7 +322,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: primaryColor,
+                      color: Colors.orange,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -380,7 +362,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             child: Icon(
                               Icons.directions_car,
                               size: 40,
-                              color: primaryColor,
+                              color: Colors.orange,
                             ),
                           ),
                           loadingBuilder: (context, child, loadingProgress) {
@@ -400,7 +382,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           child: Icon(
                             Icons.directions_car,
                             size: 40,
-                            color: primaryColor,
+                            color: Colors.orange,
                           ),
                         ),
                   ),
@@ -440,7 +422,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
-              color: primaryColor,
+              color: Colors.orange,
             ),
           ),
         ),
