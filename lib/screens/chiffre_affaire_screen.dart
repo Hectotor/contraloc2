@@ -135,23 +135,60 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         }
         
         // Récupérer les données financières
-        // Convertir les valeurs en double (gérer les cas où les valeurs sont des strings ou des doubles)
-        double prixLocation = _convertToDouble(data['facturePrixLocation'] ?? '0');
-        double caution = _convertToDouble(data['factureCaution'] ?? '0');
-        double coutKmSupplementaires = _convertToDouble(data['factureCoutKmSupplementaires'] ?? '0');
-        double fraisNettoyageInterieur = _convertToDouble(data['factureFraisNettoyageInterieur'] ?? '0');
-        double fraisNettoyageExterieur = _convertToDouble(data['factureFraisNettoyageExterieur'] ?? '0');
-        double fraisCarburantManquant = _convertToDouble(data['factureFraisCarburantManquant'] ?? '0');
-        double fraisRayuresDommages = _convertToDouble(data['factureFraisRayuresDommages'] ?? '0');
-        double fraisAutre = _convertToDouble(data['factureFraisAutre'] ?? '0');
-        double remise = _convertToDouble(data['factureRemise'] ?? '0');
+        Map<String, dynamic> factureData = {};
+        double prixLocation = 0;
+        double caution = 0;
+        double coutKmSupplementaires = 0;
+        double fraisNettoyageInterieur = 0;
+        double fraisNettoyageExterieur = 0;
+        double fraisCarburantManquant = 0;
+        double fraisRayuresDommages = 0;
+        double fraisAutre = 0;
+        double remise = 0;
+        String typePaiement = '';
+        String tvaStatus = 'applicable';
+        bool isTTC = true;
+        
+        // Utiliser uniquement la nouvelle structure avec sous-objet facture
+        if (data['facture'] != null && data['facture'] is Map<String, dynamic>) {
+          factureData = data['facture'];
+          prixLocation = _convertToDouble(factureData['facturePrixLocation'] ?? '0');
+          caution = _convertToDouble(factureData['factureCaution'] ?? '0');
+          coutKmSupplementaires = _convertToDouble(factureData['factureCoutKmSupplementaires'] ?? '0');
+          fraisNettoyageInterieur = _convertToDouble(factureData['factureFraisNettoyageInterieur'] ?? '0');
+          fraisNettoyageExterieur = _convertToDouble(factureData['factureFraisNettoyageExterieur'] ?? '0');
+          fraisCarburantManquant = _convertToDouble(factureData['factureFraisCarburantManquant'] ?? '0');
+          fraisRayuresDommages = _convertToDouble(factureData['factureFraisRayuresDommages'] ?? '0');
+          fraisAutre = _convertToDouble(factureData['factureFraisAutre'] ?? '0');
+          remise = _convertToDouble(factureData['factureRemise'] ?? '0');
+          typePaiement = factureData['factureTypePaiement'] ?? '';
+          tvaStatus = factureData['tva'] ?? 'applicable';
+          isTTC = tvaStatus == 'applicable';
+        }
         
         // Récupérer le total des frais s'il existe, sinon le calculer
-        double montantTotal = _convertToDouble(data['factureTotalFrais'] ?? '0');
-        if (montantTotal == 0) {
-          montantTotal = prixLocation + caution + coutKmSupplementaires + 
-                       fraisNettoyageInterieur + fraisNettoyageExterieur + 
-                       fraisCarburantManquant + fraisRayuresDommages + fraisAutre - remise;
+        double montantTotal = 0;
+        
+        if (factureData['factureTotalFrais'] != null && _convertToDouble(factureData['factureTotalFrais']) > 0) {
+          montantTotal = _convertToDouble(factureData['factureTotalFrais']);
+        } else {
+          // Calculer le total selon que la TVA est applicable ou non
+          double totalBrut = _convertToDouble(factureData['facturePrixLocation'] ?? '0') + 
+                         _convertToDouble(factureData['factureCaution'] ?? '0') + 
+                         _convertToDouble(factureData['factureCoutKmSupplementaires'] ?? '0') + 
+                         _convertToDouble(factureData['factureFraisNettoyageInterieur'] ?? '0') + 
+                         _convertToDouble(factureData['factureFraisNettoyageExterieur'] ?? '0') + 
+                         _convertToDouble(factureData['factureFraisCarburantManquant'] ?? '0') + 
+                         _convertToDouble(factureData['factureFraisRayuresDommages'] ?? '0') + 
+                         _convertToDouble(factureData['factureFraisAutre'] ?? '0');
+          
+          if (isTTC) {
+            // Si TVA applicable, le montant est déjà TTC
+            montantTotal = totalBrut - _convertToDouble(factureData['factureRemise'] ?? '0');
+          } else {
+            // Si TVA non applicable, le montant est HT
+            montantTotal = totalBrut - _convertToDouble(factureData['factureRemise'] ?? '0');
+          }
         }
         
         // Récupérer la date de facture (au lieu de la date de clôture)
@@ -180,8 +217,10 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
           'factureFraisRayuresDommages': fraisRayuresDommages,
           'factureFraisAutre': fraisAutre,
           'factureRemise': remise,
-          'factureTypePaiement': data['factureTypePaiement'] ?? '',
+          'factureTypePaiement': typePaiement,
           'factureTotalFrais': montantTotal,
+          'tvaStatus': tvaStatus,
+          'isTTC': isTTC,
           'dateCloture': dateFacture, // On utilise dateFacture mais on garde le nom dateCloture pour compatibilité
         });
         
