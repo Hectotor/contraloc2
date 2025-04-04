@@ -856,13 +856,27 @@ class _FactureScreenState extends State<FactureScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            Text(
-                              '${_total.toStringAsFixed(2).replaceAll('.', ',')}€ TTC' ,
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green[700],
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '${_total.toStringAsFixed(2).replaceAll('.', ',')}€ TTC',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green[700],
+                                  ),
+                                ),
+                                if (_isTTC)
+                                  Text(
+                                    'TVA 20% incluse',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                              ],
                             ),
                           ],
                         ),
