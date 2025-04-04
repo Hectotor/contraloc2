@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:ContraLoc/widget/MES%20CONTRATS/vehicle_access_manager.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+import 'package:ContraLoc/widget/MES%20CONTRATS/vehicle_access_manager.dart';
 
 class CalendarScreen extends StatefulWidget {
   final Function(int)? onEventsCountChanged;
@@ -15,99 +15,92 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  late VehicleAccessManager _vehicleAccessManager;
-  bool _isInitialized = false;
-  String? _targetUserId;
-  Stream<QuerySnapshot>? _contractsStream;
-  Map<DateTime, List<Map<String, dynamic>>> _reservedContracts = {};
-  List<Map<String, dynamic>> _selectedDayContracts = [];
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
+  Map<DateTime, List<Map<String, dynamic>>> _reservedContracts = {};
+  List<Map<String, dynamic>> _selectedDayContracts = [];
   CalendarFormat _calendarFormat = CalendarFormat.month;
   final Map<String, String?> _photoUrlCache = {};
+  
+  // Gestionnaire d'accès aux véhicules
+  late VehicleAccessManager _vehicleAccessManager;
+  String? _targetUserId;
+
+  // Couleur principale pour ce composant (bleu foncé)
+  final Color primaryColor = Color(0xFF08004D);
 
   @override
   void initState() {
     super.initState();
-    _selectedDay = DateTime.now();
-    _focusedDay = DateTime.now();
-    _calendarFormat = CalendarFormat.month;
+    _vehicleAccessManager = VehicleAccessManager();
     _initializeAccess();
-    print('CalendarScreen initState');
+    _getContracts();
   }
 
+  // Méthode pour initialiser les gestionnaires d'accès
   Future<void> _initializeAccess() async {
-    print('Initialisation du calendrier');
+    try {
+      await _vehicleAccessManager.initialize();
+      _targetUserId = _vehicleAccessManager.getTargetUserId();
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      // Erreur silencieuse
+    }
+  }
+
+  Future<void> _getContracts() async {
     try {
       final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
       if (effectiveUserId == null) {
-        print('Aucun utilisateur connecté');
         return;
       }
       
-      _targetUserId = effectiveUserId;
-      _isInitialized = true;
-      
-      // Initialisation du stream des contrats
-      _contractsStream = FirebaseFirestore.instance
+      // Chargement initial des données
+      final snapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(effectiveUserId)
           .collection('locations')
           .where('status', isEqualTo: 'réservé')
-          .snapshots();
+          .get();
       
-      // Chargement initial des données
-      final snapshot = await _contractsStream!.first;
       _processContracts(snapshot);
       
-      print('Données initiales chargées');
+      // Mise en place d'un écouteur pour les mises à jour
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(effectiveUserId)
+          .collection('locations')
+          .where('status', isEqualTo: 'réservé')
+          .snapshots()
+          .listen((snapshot) {
+            _processContracts(snapshot);
+          });
     } catch (e) {
-      print('Erreur lors de l\'initialisation: $e');
+      // Erreur silencieuse
     }
-  }
-
-  Stream<QuerySnapshot> _getReservedContractsStream() {
-    if (!_isInitialized) {
-      print('Calendrier non initialisé, initialisation en cours...');
-      _initializeAccess();
-      return Stream.empty();
-    }
-    
-    if (_contractsStream == null) {
-      print('Stream des contrats non initialisé');
-      return Stream.empty();
-    }
-    
-    print('Stream des contrats actif');
-    return _contractsStream!;
   }
 
   void _processContracts(QuerySnapshot snapshot) {
-    print('Traitement des contrats (${snapshot.docs.length} contrats)');
     _reservedContracts.clear();
     
     for (var doc in snapshot.docs) {
       final contract = doc.data() as Map<String, dynamic>;
-      print('Contrat: ${contract['immatriculation']} - ${contract['dateDebut']}');
       
       final dateDebut = _parseDate(contract['dateDebut']);
       
       // On ne prend en compte que la date de début
       if (dateDebut != null) {
-        print('Date valide: $dateDebut');
         final dateKey = DateTime(dateDebut.year, dateDebut.month, dateDebut.day);
         if (!_reservedContracts.containsKey(dateKey)) {
           _reservedContracts[dateKey] = [];
         }
         _reservedContracts[dateKey]!.add(contract);
-        print('Ajout du contrat pour la date: ${dateDebut.day}/${dateDebut.month}/${dateDebut.year}');
-      } else {
-        print('Date invalide: ${contract['dateDebut']}');
       }
     }
     
     setState(() {
-      print('Mise à jour de l\'interface');
       // Mettre à jour les contrats pour la date sélectionnée
       _updateSelectedDayContracts();
     });
@@ -122,7 +115,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       try {
         return DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(timestamp);
       } catch (e) {
-        print('Erreur de parsing de la date: $e');
         return null;
       }
     }
@@ -130,33 +122,62 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _updateSelectedDayContracts() {
-    print('Mise à jour des contrats pour la date sélectionnée: ${_selectedDay.toString()}');
     final selectedDate = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
     setState(() {
       _selectedDayContracts = _reservedContracts[selectedDate] ?? [];
-      print('Nombre de contrats trouvés pour cette date: ${_selectedDayContracts.length}');
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF08004D).withOpacity(0.05), Colors.white],
+      body: Column(
+        children: [
+          // Calendrier
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: _buildCalendar(),
           ),
-        ),
-        child: Column(
-          children: [
-            _buildCalendar(),
-            Expanded(
-              child: _buildReservedVehiclesList(),
-            ),
-          ],
-        ),
+          
+          // Liste des véhicules réservés
+          Expanded(
+            child: _selectedDayContracts.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.event_available, size: 48, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          "Aucune réservation pour cette date",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    itemCount: _selectedDayContracts.length,
+                    itemBuilder: (context, index) {
+                      final contract = _selectedDayContracts[index];
+                      return FutureBuilder<String?>(
+                        future: _getVehiclePhotoUrl(contract['immatriculation']),
+                        builder: (context, snapshot) {
+                          final photoUrl = snapshot.data;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: _buildReservedVehicleCard(context, contract, photoUrl),
+                          );
+                        },
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -199,38 +220,38 @@ class _CalendarScreenState extends State<CalendarScreen> {
           },
           calendarStyle: CalendarStyle(
             markersMaxCount: 3,
-            markerDecoration: const BoxDecoration(
-              color: Color(0xFF08004D),
+            markerDecoration: BoxDecoration(
+              color: primaryColor,
               shape: BoxShape.circle,
             ),
-            selectedDecoration: const BoxDecoration(
-              color: Color(0xFF08004D),
+            selectedDecoration: BoxDecoration(
+              color: primaryColor,
               shape: BoxShape.circle,
             ),
             todayDecoration: BoxDecoration(
-              color: Color(0xFF08004D).withOpacity(0.5),
+              color: primaryColor.withOpacity(0.5),
               shape: BoxShape.circle,
             ),
           ),
           headerStyle: HeaderStyle(
-            formatButtonTextStyle: const TextStyle(color: Colors.white),
+            formatButtonTextStyle: TextStyle(color: Colors.white),
             formatButtonDecoration: BoxDecoration(
-              color: Color(0xFF08004D),
+              color: primaryColor,
               borderRadius: BorderRadius.circular(20.0),
             ),
             titleCentered: true,
-            titleTextStyle: const TextStyle(
+            titleTextStyle: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF08004D),
+              color: primaryColor,
             ),
             formatButtonVisible: true,
             formatButtonShowsNext: true,
             titleTextFormatter: (date, format) => DateFormat.yMMMM('fr_FR').format(date),
           ),
           daysOfWeekStyle: DaysOfWeekStyle(
-            weekdayStyle: TextStyle(color: Color(0xFF08004D)),
-            weekendStyle: TextStyle(color: Color(0xFF08004D)),
+            weekdayStyle: TextStyle(color: primaryColor),
+            weekendStyle: TextStyle(color: primaryColor),
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(color: Colors.grey[300]!),
@@ -247,7 +268,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   style: TextStyle(
                     color: weekday == 6 || weekday == 7
                         ? Colors.red
-                        : Color(0xFF08004D),
+                        : primaryColor,
                   ),
                 ),
               );
@@ -263,7 +284,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 child: Container(
                   padding: EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    color: Color(0xFF08004D),
+                    color: primaryColor,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -283,178 +304,187 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildReservedVehiclesList() {
-    if (_selectedDayContracts.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.calendar_today,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Aucun véhicule réservé pour le\n${DateFormat('dd/MM/yyyy').format(_selectedDay)}',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
+  Widget _buildReservedVehicleCard(BuildContext context, Map<String, dynamic> contract, String? photoUrl) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.20),
+            blurRadius: 4,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // En-tête de la carte
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
               ),
             ),
-          ],
-        ),
-      );
-    }
-    
-    return ListView.builder(
-      padding: const EdgeInsets.all(8.0),
-      itemCount: _selectedDayContracts.length,
-      itemBuilder: (context, index) {
-        final contract = _selectedDayContracts[index];
-        return _buildVehicleCard(contract);
-      },
-    );
-  }
-
-  Widget _buildVehicleCard(Map<String, dynamic> contract) {
-    final String immatriculation = contract['immatriculation'] ?? 'Inconnu';
-    final String marque = contract['marque'] ?? 'Inconnu';
-    final String modele = contract['modele'] ?? 'Inconnu';
-    final String nomClient = contract['nomClient'] ?? 'Inconnu';
-    final String prenomClient = contract['prenomClient'] ?? 'Inconnu';
-    
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+            child: Row(
               children: [
-                FutureBuilder<String?>(
-                  future: _getVehiclePhotoUrl(immatriculation),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return _buildPlaceholderIcon();
-                    }
-                    
-                    if (snapshot.hasData && snapshot.data != null) {
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(
-                          snapshot.data!,
-                          width: 80,
-                          height: 80,
+                Icon(Icons.calendar_today, color: primaryColor, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "${contract['nom'] ?? ''} ${contract['prenom'] ?? ''}",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Contenu de la carte
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Photo du véhicule
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey[100],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 6,
+                        spreadRadius: 1,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: (photoUrl != null && photoUrl.isNotEmpty)
+                      ? Image.network(
+                          photoUrl,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildPlaceholderIcon(),
+                          errorBuilder: (context, error, stackTrace) => Center(
+                            child: Icon(
+                              Icons.directions_car,
+                              size: 40,
+                              color: primaryColor,
+                            ),
+                          ),
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                                color: primaryColor,
+                              ),
+                            );
+                          },
+                        )
+                      : Center(
+                          child: Icon(
+                            Icons.directions_car,
+                            size: 40,
+                            color: primaryColor,
+                          ),
                         ),
-                      );
-                    }
-                    
-                    return _buildPlaceholderIcon();
-                  },
+                  ),
                 ),
                 const SizedBox(width: 16),
+                // Informations du contrat
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '$marque $modele',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF08004D),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        immatriculation,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
-                      ),
+                      _buildInfoRow("Début", _formatDate(contract['dateDebut'])),
+                      const SizedBox(height: 12),
+                      _buildInfoRow("Véhicule", contract['immatriculation'] ?? "Non spécifié"),
+                      if (contract['marque'] != null && contract['modele'] != null) ...[  
+                        const SizedBox(height: 12),
+                        _buildInfoRow("Modèle", "${contract['marque']} ${contract['modele']}"),
+                      ],
                     ],
                   ),
                 ),
               ],
             ),
-            const Divider(height: 24),
-            _buildInfoRow(Icons.person, '$prenomClient $nomClient'),
-            const SizedBox(height: 8),
-            _buildInfoRow(
-              Icons.calendar_today,
-              'Du ${_formatDate(contract['dateDebut'])} au ${_formatDate(contract['dateFin'])}',
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildPlaceholderIcon() {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(
-        Icons.directions_car,
-        size: 40,
-        color: Colors.grey[400],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String text) {
+  Widget _buildInfoRow(String label, String value) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: Colors.grey[600],
+        SizedBox(
+          width: 70,
+          child: Text(
+            "$label :",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: primaryColor,
+            ),
+          ),
         ),
-        const SizedBox(width: 8),
         Expanded(
           child: Text(
-            text,
+            value,
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey[800],
             ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
     );
   }
 
-  String _formatDate(dynamic timestamp) {
-    if (timestamp == null) return 'Date inconnue';
+  String _formatDate(dynamic date) {
+    if (date == null) return "Non spécifié";
     
-    if (timestamp is Timestamp) {
-      return DateFormat('dd/MM/yyyy').format(timestamp.toDate());
-    } else if (timestamp is String) {
-      try {
-        return DateFormat('dd/MM/yyyy').format(DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(timestamp));
-      } catch (e) {
-        try {
-          return DateFormat('dd/MM/yyyy').format(DateFormat('dd/MM/yyyy').parse(timestamp));
-        } catch (e) {
-          return timestamp;
+    try {
+      if (date is String) {
+        // Format court JJ/MM/AAAA
+        final parts = date.split(' ');
+        if (parts.length >= 3) {
+          final day = parts[1];
+          final month = _getMonthNumber(parts[2]);
+          final year = parts[3];
+          return "$day/$month/$year";
         }
+        return date;
       }
+      return "Format inconnu";
+    } catch (e) {
+      return "Erreur de format";
     }
-    return 'Date inconnue';
+  }
+
+  int _getMonthNumber(String month) {
+    const months = {
+      'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4, 'mai': 5, 'juin': 6,
+      'juillet': 7, 'août': 8, 'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
+    };
+    return months[month.toLowerCase()] ?? 0;
   }
 
   Future<String?> _getVehiclePhotoUrl(String immatriculation) async {
@@ -463,19 +493,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
       return _photoUrlCache[cacheKey];
     }
 
-    final vehiculeDoc = await _vehicleAccessManager.getVehicleByImmatriculation(immatriculation);
+    try {
+      // Utiliser le gestionnaire d'accès aux véhicules pour récupérer le véhicule par immatriculation
+      final vehiculeDoc = await _vehicleAccessManager.getVehicleByImmatriculation(immatriculation);
 
-    if (vehiculeDoc.docs.isNotEmpty) {
-      final data = vehiculeDoc.docs.first.data();
-      String? photoUrl;
-      
-      if (data != null && data is Map<String, dynamic>) {
-        photoUrl = data['photoVehiculeUrl'] as String?;
+      if (vehiculeDoc.docs.isNotEmpty) {
+        // Accéder aux données de manière sûre
+        final data = vehiculeDoc.docs.first.data();
+        String? photoUrl;
+
+        if (data != null && data is Map<String, dynamic>) {
+          if (data.containsKey('photoUrls') && data['photoUrls'] is List && (data['photoUrls'] as List).isNotEmpty) {
+            photoUrl = (data['photoUrls'] as List).first.toString();
+          } else if (data.containsKey('photoVehiculeUrl')) {
+            photoUrl = data['photoVehiculeUrl'] as String?;
+          }
+        }
+
+        _photoUrlCache[cacheKey] = photoUrl;
+        return photoUrl;
       }
-      
-      _photoUrlCache[cacheKey] = photoUrl;
-      return photoUrl;
+
+      _photoUrlCache[cacheKey] = null;
+      return null;
+    } catch (e) {
+      _photoUrlCache[cacheKey] = null;
+      return null;
     }
-    return null;
   }
 }
