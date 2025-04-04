@@ -58,7 +58,28 @@ class FacturePdfGenerator {
     final kmParcourus = _calculerKmParcourus(kmDepart, kmRetour);
     
     // Récupérer les informations de la facture
-    final numeroFacture = 'F-${data['id']?.substring(0, 8) ?? DateTime.now().millisecondsSinceEpoch.toString()}';
+    print('Contenu complet de factureData: $factureData');
+    print('FactureId dans factureData: ${factureData['factureId']}');
+    print('ID du contrat: ${data['id']}');
+    
+    // Utiliser le factureId existant ou utiliser un ID de secours uniquement si nécessaire
+    String factureId = factureData['factureId'] ?? '';
+    if (factureId.isEmpty) {
+      // Vérifier si le factureId existe au niveau du document
+      factureId = data['factureId'] ?? '';
+      if (factureId.isEmpty) {
+        // Dernier recours : générer un ID temporaire
+        factureId = 'F-${data['id']?.substring(0, 8) ?? DateTime.now().millisecondsSinceEpoch.toString()}';
+        print('Génération d\'un factureId temporaire: $factureId');
+      } else {
+        print('Utilisation du factureId du document: $factureId');
+      }
+    } else {
+      print('Utilisation du factureId des données de facture: $factureId');
+    }
+    
+    final numeroFacture = factureId;
+    print('Numéro de facture utilisé: $numeroFacture');
     final dateFacture = factureData['dateFacture'] is Timestamp 
         ? formatDate.format((factureData['dateFacture'] as Timestamp).toDate())
         : formatDate.format(DateTime.now());
@@ -126,7 +147,7 @@ class FacturePdfGenerator {
                     pw.SizedBox(height: 2),
                     pw.Text('N° $numeroFacture', style: pw.TextStyle(fontSize: 10)),
                     pw.SizedBox(height: 2),
-                    pw.Text('Date: $dateFacture', style: pw.TextStyle(fontSize: 9)),
+                    pw.Text('Date: $dateFacture', style: pw.TextStyle(fontSize: 10)),
                   ],
                 ),
               ),

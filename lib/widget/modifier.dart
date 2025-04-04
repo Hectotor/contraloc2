@@ -557,6 +557,31 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           ),
                           const SizedBox(height: 20),
                         ],
+                        if (widget.data['factureId'] != null || widget.data['factureGeneree'] == true) ...[  // Afficher uniquement si une facture existe
+                          ElevatedButton(
+                            onPressed: () => AffichageFacturePdf.genererEtAfficherFacturePdf(
+                              context: context,
+                              contratData: widget.data,
+                              contratId: widget.contratId,
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              minimumSize: const Size(double.infinity, 50),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.receipt, color: Colors.white),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Afficher la facture",
+                                  style: TextStyle(color: Colors.white, fontSize: 18),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
                         ElevatedButton(
                           onPressed: () => AffichageContratPdf.genererEtAfficherContratPdf(
                             context: context,
@@ -575,29 +600,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           child: const Text(
                             "Afficher le contrat",
                             style: TextStyle(color: Colors.white, fontSize: 18),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        ElevatedButton(
-                          onPressed: () => AffichageFacturePdf.genererEtAfficherFacturePdf(
-                            context: context,
-                            contratData: widget.data,
-                            contratId: widget.contratId,
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            minimumSize: const Size(double.infinity, 50),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.receipt, color: Colors.white),
-                              SizedBox(width: 10),
-                              Text(
-                                "Afficher la facture",
-                                style: TextStyle(color: Colors.white, fontSize: 18),
-                              ),
-                            ],
                           ),
                         ),
                         const SizedBox(height: 10),

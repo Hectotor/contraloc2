@@ -52,6 +52,9 @@ class _FactureScreenState extends State<FactureScreen> {
   String _typePaiement = 'Carte bancaire';
   final List<String> _typesPaiement = ['Carte bancaire', 'Espèces', 'Virement'];
   
+  // ID unique pour la facture
+  String _factureId = '';
+  
   // Option pour afficher les prix TTC ou HT
   bool _isTTC = true;
 
@@ -62,6 +65,16 @@ class _FactureScreenState extends State<FactureScreen> {
   void initState() {
     super.initState();
     initializeDateFormatting('fr_FR', null); // Initialisation des locales françaises
+    
+    // Vérifier si un factureId existe déjà
+    if (widget.data['factureId'] != null && widget.data['factureId'].toString().isNotEmpty) {
+      _factureId = widget.data['factureId'];
+      print('Utilisation du factureId existant: $_factureId');
+    } else {
+      // Générer un ID unique pour la facture seulement si aucun n'existe
+      _factureId = 'FAC-${DateTime.now().millisecondsSinceEpoch}-${widget.data['contratId']?.substring(0, 5) ?? ''}';
+      print('Nouveau factureId généré: $_factureId');
+    }
     
     // Initialiser les contrôleurs avec des valeurs par défaut à 0
     _fraisKilometriqueController = TextEditingController(text: "0");
@@ -381,6 +394,7 @@ class _FactureScreenState extends State<FactureScreen> {
 
       // Créer un objet avec les données de la facture
       Map<String, dynamic> factureData = {
+        'factureId': _factureId,
         'factureCaution': caution,
         'factureFraisNettoyageInterieur': fraisNettoyageInt,
         'factureFraisNettoyageExterieur': fraisNettoyageExt,
@@ -425,14 +439,18 @@ class _FactureScreenState extends State<FactureScreen> {
           .doc(contratId)
           .update({
         'facture': factureData,
+        'factureId': _factureId,
+        'factureGeneree': true,
         'kilometrageRetour': _kmRetourController.text,
         'dateFinEffectif': widget.dateFinEffective,
       });
       
-// Appeler la fonction onFraisUpdated pour mettre à jour les données locales
-widget.onFraisUpdated({
-  'facture': factureData,
-});
+      // Appeler la fonction onFraisUpdated pour mettre à jour les données locales
+      widget.onFraisUpdated({
+        'facture': factureData,
+        'factureId': _factureId,
+        'factureGeneree': true,
+      });
       // Afficher un message de succès
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Facture enregistrée avec succès')),

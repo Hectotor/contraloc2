@@ -80,7 +80,18 @@ class AffichageFacturePdf {
         if (contratDataComplete.containsKey('facture') && contratDataComplete['facture'] is Map) {
           // Utiliser directement l'objet facture
           Map<String, dynamic> factureObj = contratDataComplete['facture'] as Map<String, dynamic>;
+          print('Contenu brut de l\'objet facture: $factureObj');
+          print('FactureId dans contratDataComplete: ${contratDataComplete['factureId']}');
           factureData = factureObj;
+          
+          // S'assurer que le factureId est présent dans les données de facture
+          if (!factureData.containsKey('factureId') || factureData['factureId'] == null || factureData['factureId'].toString().isEmpty) {
+            factureData['factureId'] = contratDataComplete['factureId'] ?? '';
+            print('FactureId ajouté aux données de facture: ${factureData['factureId']}');
+          } else {
+            print('FactureId existant dans les données de facture: ${factureData['factureId']}');
+          }
+          
           print('Données de facture récupérées depuis l\'objet facture: $factureData');
         } else {
           // Préparer les données de la facture à partir des champs directs
@@ -98,6 +109,7 @@ class AffichageFacturePdf {
             'factureTotalFrais': parseDouble(contratDataComplete['factureTotalFrais']),
             'factureTypePaiement': contratDataComplete['factureTypePaiement'] ?? 'Carte bancaire',
             'dateFacture': contratDataComplete['dateFacture'] ?? Timestamp.now(),
+            'factureId': contratDataComplete['factureId'] ?? '',
           };
           print('Données de facture récupérées depuis les champs directs: $factureData');
         }
