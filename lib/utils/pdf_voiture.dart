@@ -617,39 +617,6 @@ class PdfVoitureWidget {
             ],
           ),
         ),
-        pw.SizedBox(height: 2),
-
-        // Accompte
-        pw.Container(
-          padding: const pw.EdgeInsets.all(5),
-          child: pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Expanded(
-                flex: 1,
-                child: pw.Text('Accompte: $accompte €',
-                    style: pw.TextStyle(font: ttf, fontSize: 9)),
-              ),
-              pw.Expanded(
-                flex: 1,
-                child: pw.Container(
-                  alignment: pw.Alignment.center,
-                  child: pw.Text('', 
-                      textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(font: ttf, fontSize: 9)),
-                ),
-              ),
-              pw.Expanded(
-                flex: 1,
-                child: pw.Container(
-                  alignment: pw.Alignment.centerRight,
-                  child: pw.Text('', 
-                      style: pw.TextStyle(font: ttf, fontSize: 9)),
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }

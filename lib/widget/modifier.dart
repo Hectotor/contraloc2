@@ -478,6 +478,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                                     onConfirm: _updateContrat,
                                     onCancel: () {
                                     },
+                                    data: widget.data,
                                   );
                                 },
                               );

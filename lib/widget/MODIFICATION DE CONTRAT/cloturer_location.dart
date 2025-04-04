@@ -53,7 +53,7 @@ class CloturerLocationPopup extends StatelessWidget {
               ),
               textAlign: TextAlign.center, 
             ),
-            if (data != null && data!['typeLocation'] == 'Payante') ...[  
+            if (data != null && data!['typeLocation']?.toString() == 'Payante') ...[  
               SizedBox(height: 16),
               Container(
                 padding: EdgeInsets.all(12),
@@ -68,7 +68,7 @@ class CloturerLocationPopup extends StatelessWidget {
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Pensez à facturer cette location afin de suivre votre chiffre d\'affaires.',
+                        "Après la restitution du véhicule, pensez à générer la facture pour suivre votre chiffre d'affaires.",
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.amber[900],
