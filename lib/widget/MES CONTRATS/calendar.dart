@@ -16,173 +16,128 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> {
   late VehicleAccessManager _vehicleAccessManager;
-  String? _targetUserId;
   bool _isInitialized = false;
-  final Map<String, String?> _photoUrlCache = {};
-  
-  // Calendrier
-  DateTime _focusedDay = DateTime.now();
-  DateTime _selectedDay = DateTime.now();
-  CalendarFormat _calendarFormat = CalendarFormat.month;
-  
-  // Contrats réservés
+  String? _targetUserId;
+  Stream<QuerySnapshot>? _contractsStream;
   Map<DateTime, List<Map<String, dynamic>>> _reservedContracts = {};
   List<Map<String, dynamic>> _selectedDayContracts = [];
-  
+  DateTime _selectedDay = DateTime.now();
+  DateTime _focusedDay = DateTime.now();
+  CalendarFormat _calendarFormat = CalendarFormat.month;
+  final Map<String, String?> _photoUrlCache = {};
+
   @override
   void initState() {
     super.initState();
-    _vehicleAccessManager = VehicleAccessManager();
+    _selectedDay = DateTime.now();
+    _focusedDay = DateTime.now();
+    _calendarFormat = CalendarFormat.month;
     _initializeAccess();
+    print('CalendarScreen initState');
   }
-  
+
   Future<void> _initializeAccess() async {
-    await _vehicleAccessManager.initialize();
-    _targetUserId = _vehicleAccessManager.getTargetUserId();
-    _isInitialized = true;
-    _loadReservedContracts();
-    if (mounted) {
-      setState(() {});
+    print('Initialisation du calendrier');
+    try {
+      final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
+      if (effectiveUserId == null) {
+        print('Aucun utilisateur connecté');
+        return;
+      }
+      
+      _targetUserId = effectiveUserId;
+      _isInitialized = true;
+      
+      // Initialisation du stream des contrats
+      _contractsStream = FirebaseFirestore.instance
+          .collection('users')
+          .doc(effectiveUserId)
+          .collection('locations')
+          .where('status', isEqualTo: 'réservé')
+          .snapshots();
+      
+      // Chargement initial des données
+      final snapshot = await _contractsStream!.first;
+      _processContracts(snapshot);
+      
+      print('Données initiales chargées');
+    } catch (e) {
+      print('Erreur lors de l\'initialisation: $e');
     }
   }
-  
-  void _loadReservedContracts() {
-    _getReservedContractsStream().listen((snapshot) {
-      _processContracts(snapshot);
-    });
+
+  Stream<QuerySnapshot> _getReservedContractsStream() {
+    if (!_isInitialized) {
+      print('Calendrier non initialisé, initialisation en cours...');
+      _initializeAccess();
+      return Stream.empty();
+    }
+    
+    if (_contractsStream == null) {
+      print('Stream des contrats non initialisé');
+      return Stream.empty();
+    }
+    
+    print('Stream des contrats actif');
+    return _contractsStream!;
   }
-  
+
   void _processContracts(QuerySnapshot snapshot) {
-    final contracts = <DateTime, List<Map<String, dynamic>>>{};
+    print('Traitement des contrats (${snapshot.docs.length} contrats)');
+    _reservedContracts.clear();
     
     for (var doc in snapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
+      final contract = doc.data() as Map<String, dynamic>;
+      print('Contrat: ${contract['immatriculation']} - ${contract['dateDebut']}');
       
-      // Récupérer les dates de début et fin
-      final dateDebut = _parseTimestamp(data['dateDebut']);
-      final dateFin = _parseTimestamp(data['dateFin']);
+      final dateDebut = _parseDate(contract['dateDebut']);
       
+      // On ne prend en compte que la date de début
       if (dateDebut != null) {
-        // Pour chaque jour entre dateDebut et dateFin
-        DateTime currentDate = DateTime(dateDebut.year, dateDebut.month, dateDebut.day);
-        final endDate = dateFin != null 
-            ? DateTime(dateFin.year, dateFin.month, dateFin.day)
-            : currentDate;
-            
-        while (currentDate.isBefore(endDate) || currentDate.isAtSameMomentAs(endDate)) {
-          final dateKey = DateTime(currentDate.year, currentDate.month, currentDate.day);
-          
-          if (!contracts.containsKey(dateKey)) {
-            contracts[dateKey] = [];
-          }
-          
-          contracts[dateKey]!.add({
-            'id': doc.id,
-            'immatriculation': data['immatriculation'] ?? 'Inconnu',
-            'marque': data['marque'] ?? 'Inconnu',
-            'modele': data['modele'] ?? 'Inconnu',
-            'nomClient': data['nomClient'] ?? 'Inconnu',
-            'prenomClient': data['prenomClient'] ?? 'Inconnu',
-            'dateDebut': data['dateDebut'],
-            'dateFin': data['dateFin'],
-            'status': data['status'] ?? 'réservé',
-          });
-          
-          // Passer au jour suivant
-          currentDate = currentDate.add(const Duration(days: 1));
+        print('Date valide: $dateDebut');
+        final dateKey = DateTime(dateDebut.year, dateDebut.month, dateDebut.day);
+        if (!_reservedContracts.containsKey(dateKey)) {
+          _reservedContracts[dateKey] = [];
         }
+        _reservedContracts[dateKey]!.add(contract);
+        print('Ajout du contrat pour la date: ${dateDebut.day}/${dateDebut.month}/${dateDebut.year}');
+      } else {
+        print('Date invalide: ${contract['dateDebut']}');
       }
     }
     
     setState(() {
-      _reservedContracts = contracts;
+      print('Mise à jour de l\'interface');
+      // Mettre à jour les contrats pour la date sélectionnée
       _updateSelectedDayContracts();
     });
-    
-    // Mettre à jour le compteur d'événements si nécessaire
-    int totalEvents = 0;
-    _reservedContracts.forEach((_, events) {
-      totalEvents += events.length;
-    });
-    widget.onEventsCountChanged?.call(totalEvents);
   }
-  
-  void _updateSelectedDayContracts() {
-    final selectedDate = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
-    _selectedDayContracts = _reservedContracts[selectedDate] ?? [];
-  }
-  
-  DateTime? _parseTimestamp(dynamic timestamp) {
+
+  DateTime? _parseDate(dynamic timestamp) {
     if (timestamp == null) return null;
     
     if (timestamp is Timestamp) {
       return timestamp.toDate();
     } else if (timestamp is String) {
-      // Essayer de parser une date au format français
       try {
-        final dateFormat = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR');
-        return dateFormat.parse(timestamp);
+        return DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(timestamp);
       } catch (e) {
-        try {
-          // Essayer le format court
-          final dateFormat = DateFormat('dd/MM/yyyy');
-          return dateFormat.parse(timestamp);
-        } catch (e) {
-          return null;
-        }
+        print('Erreur de parsing de la date: $e');
+        return null;
       }
     }
     return null;
   }
-  
-  Stream<QuerySnapshot> _getReservedContractsStream() {
-    if (!_isInitialized) {
-      return Stream.fromFuture(
-        Future(() async {
-          await _initializeAccess();
-          
-          final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
-          if (effectiveUserId == null) {
-            return FirebaseFirestore.instance.collection('empty').limit(0).get();
-          }
-          
-          final snapshot = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(effectiveUserId)
-              .collection('locations')
-              .where('status', isEqualTo: 'réservé')
-              .get();
-              
-          return snapshot;
-        })
-      ).asyncExpand((snapshot) {
-        final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
-        if (effectiveUserId == null) {
-          return Stream.empty();
-        }
-        
-        return FirebaseFirestore.instance
-            .collection('users')
-            .doc(effectiveUserId)
-            .collection('locations')
-            .where('status', isEqualTo: 'réservé')
-            .snapshots();
-      });
-    }
-    
-    final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
-    if (effectiveUserId == null) {
-      return Stream.empty();
-    }
-    
-    return FirebaseFirestore.instance
-        .collection('users')
-        .doc(effectiveUserId)
-        .collection('locations')
-        .where('status', isEqualTo: 'réservé')
-        .snapshots();
+
+  void _updateSelectedDayContracts() {
+    print('Mise à jour des contrats pour la date sélectionnée: ${_selectedDay.toString()}');
+    final selectedDate = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
+    setState(() {
+      _selectedDayContracts = _reservedContracts[selectedDate] ?? [];
+      print('Nombre de contrats trouvés pour cette date: ${_selectedDayContracts.length}');
+    });
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -205,7 +160,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
     );
   }
-  
+
   Widget _buildCalendar() {
     return Card(
       margin: const EdgeInsets.all(8.0),
@@ -298,6 +253,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               );
             },
             markerBuilder: (context, date, events) {
+              if (events.isEmpty) {
+                return null; // Ne rien afficher s'il n'y a pas d'événements
+              }
+              
               return Positioned(
                 right: 1,
                 bottom: 1,
@@ -323,7 +282,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
     );
   }
-  
+
   Widget _buildReservedVehiclesList() {
     if (_selectedDayContracts.isEmpty) {
       return Center(
@@ -358,7 +317,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       },
     );
   }
-  
+
   Widget _buildVehicleCard(Map<String, dynamic> contract) {
     final String immatriculation = contract['immatriculation'] ?? 'Inconnu';
     final String marque = contract['marque'] ?? 'Inconnu';
@@ -440,7 +399,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
     );
   }
-  
+
   Widget _buildPlaceholderIcon() {
     return Container(
       width: 80,
@@ -456,7 +415,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
     );
   }
-  
+
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
@@ -478,7 +437,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ],
     );
   }
-  
+
   String _formatDate(dynamic timestamp) {
     if (timestamp == null) return 'Date inconnue';
     
@@ -486,16 +445,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
       return DateFormat('dd/MM/yyyy').format(timestamp.toDate());
     } else if (timestamp is String) {
       try {
-        // Essayer de parser une date au format français
-        final dateFormat = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR');
-        final date = dateFormat.parse(timestamp);
-        return DateFormat('dd/MM/yyyy').format(date);
+        return DateFormat('dd/MM/yyyy').format(DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(timestamp));
       } catch (e) {
         try {
-          // Essayer le format court
-          final dateFormat = DateFormat('dd/MM/yyyy');
-          final date = dateFormat.parse(timestamp);
-          return DateFormat('dd/MM/yyyy').format(date);
+          return DateFormat('dd/MM/yyyy').format(DateFormat('dd/MM/yyyy').parse(timestamp));
         } catch (e) {
           return timestamp;
         }
@@ -503,7 +456,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
     return 'Date inconnue';
   }
-  
+
   Future<String?> _getVehiclePhotoUrl(String immatriculation) async {
     final cacheKey = immatriculation;
     if (_photoUrlCache.containsKey(cacheKey)) {
