@@ -170,7 +170,7 @@ class _FactureScreenState extends State<FactureScreen> {
     // Charger les données de kilométrage
     _kmDepartController.text = widget.kilometrageInitial.toString();
     _kmRetourController.text = widget.kilometrageActuel.toString();
-    _kmSuppController.text = widget.tarifKilometrique.toString();
+    _kmSuppController.text = widget.data['kilometrageSupp']?.toString() ?? '0';
     
     // Calculer le kilométrage autorisé (s'il existe dans les données)
     double kmAutorise = double.tryParse(widget.data['kilometrageAutorise']?.toString() ?? '0') ?? 0.0;
@@ -585,7 +585,7 @@ class _FactureScreenState extends State<FactureScreen> {
                             ),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             prefixText: '€',
-                            helperText: "Calculé automatiquement, mais modifiable",
+                            helperText: "Calculé automatiquement",
                             helperStyle: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
                           ),
                           enabled: true,
