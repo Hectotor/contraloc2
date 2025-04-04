@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
+import 'package:ContraLoc/widget/MODIFICATION%20DE%20CONTRAT/FACTURE/popup_succees.dart';
 
 class FactureScreen extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -459,13 +460,18 @@ class _FactureScreenState extends State<FactureScreen> {
         'factureId': _factureId,
         'factureGeneree': true,
       });
-      // Afficher un message de succès
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Facture enregistrée avec succès')),
+      
+      // Afficher le popup de succès
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return SuccessPopup(
+            title: 'Succès !',
+            message: 'Facture enregistrée avec succès',
+            onConfirm: () => Navigator.pop(context),
+          );
+        },
       );
-
-      // Fermer l'écran
-      Navigator.pop(context);
     } catch (e) {
       print('Erreur lors de la sauvegarde des frais: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -585,7 +591,7 @@ class _FactureScreenState extends State<FactureScreen> {
                             ),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             prefixText: '€',
-                            helperText: "Calculé automatiquement",
+                            helperText: "Calculé automatiquement, mais modifiable",
                             helperStyle: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
                           ),
                           enabled: true,
@@ -720,7 +726,7 @@ class _FactureScreenState extends State<FactureScreen> {
                             ),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             prefixText: '€',
-                            helperText: "Calculé automatiquement, mais modifiable ou effaçable",
+                            helperText: "Calculé automatiquement, mais modifiable",
                             helperStyle: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
                           ),
                           enabled: true,
