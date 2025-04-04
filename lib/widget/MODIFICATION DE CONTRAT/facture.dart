@@ -127,8 +127,8 @@ class _FactureScreenState extends State<FactureScreen> {
         }
         
         // Charger l'option TTC/HT si elle existe
-        if (factureData['factureTTC'] != null) {
-          _isTTC = factureData['factureTTC'];
+        if (factureData['tva'] != null) {
+          _isTTC = factureData['tva'] == 'applicable';
         }
       } else {
         // Fallback au format ancien (données directement dans widget.data)
@@ -161,8 +161,8 @@ class _FactureScreenState extends State<FactureScreen> {
         }
         
         // Charger l'option TTC/HT si elle existe
-        if (widget.data['factureTTC'] != null) {
-          _isTTC = widget.data['factureTTC'];
+        if (widget.data['tva'] != null) {
+          _isTTC = widget.data['tva'] == 'applicable';
         }
       }
     }
@@ -366,7 +366,14 @@ class _FactureScreenState extends State<FactureScreen> {
       // S'assurer que le total n'est pas négatif
       total = total < 0 ? 0 : total;
       
-      _total = total;
+      // Appliquer la TVA si applicable (20%)
+      if (_isTTC) {
+        // Si on est en mode TTC, le total est déjà TTC
+        _total = total;
+      } else {
+        // Si on est en mode HT, le total est HT
+        _total = total;
+      }
     });
   }
 
@@ -396,17 +403,18 @@ class _FactureScreenState extends State<FactureScreen> {
       Map<String, dynamic> factureData = {
         'factureId': _factureId,
         'factureCaution': caution,
+        'facturePrixLocation': prixLocation,
         'factureFraisNettoyageInterieur': fraisNettoyageInt,
         'factureFraisNettoyageExterieur': fraisNettoyageExt,
         'factureFraisCarburantManquant': fraisCarburant,
         'factureFraisRayuresDommages': fraisRayures,
         'factureFraisAutre': fraisAutre,
-        'factureRemise': remise,
         'factureFraisKilometrique': fraisKilometrique,
-        'facturePrixLocation': prixLocation,
+        'factureRemise': remise,
+        'factureTotalFrais': _total,
         'factureTypePaiement': _typePaiement,
         'dateFacture': Timestamp.now(),
-        'factureTTC': _isTTC, // Ajout du paramètre pour indiquer si le prix est TTC ou HT
+        'tva': _isTTC ? 'applicable' : 'non applicable', // Remplacer factureTTC par tva avec une chaîne
       };
 
       // Vérifier si l'utilisateur est un collaborateur
@@ -849,7 +857,7 @@ class _FactureScreenState extends State<FactureScreen> {
                               ),
                             ),
                             Text(
-                              '${_total.toStringAsFixed(2).replaceAll('.', ',')} €',
+                              '${_total.toStringAsFixed(2).replaceAll('.', ',')}€ TTC' ,
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -860,6 +868,95 @@ class _FactureScreenState extends State<FactureScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 15),
+                  Container(
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          spreadRadius: 1,
+                          blurRadius: 5,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'TVA',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF08004D),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Bouton TVA applicable
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _isTTC = true;
+                                    _calculerTotal();
+                                  });
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _isTTC ? Color(0xFF08004D) : Colors.grey.shade200,
+                                  foregroundColor: _isTTC ? Colors.white : Colors.black87,
+                                  elevation: _isTTC ? 2 : 0,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: Radius.circular(8),
+                                      bottomLeft: Radius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Applicable',
+                                  style: TextStyle(fontSize: 16, fontWeight: _isTTC ? FontWeight.bold : FontWeight.normal),
+                                ),
+                              ),
+                            ),
+                            // Bouton TVA non applicable
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _isTTC = false;
+                                    _calculerTotal();
+                                  });
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: !_isTTC ? Color(0xFF08004D) : Colors.grey.shade200,
+                                  foregroundColor: !_isTTC ? Colors.white : Colors.black87,
+                                  elevation: !_isTTC ? 2 : 0,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.only(
+                                      topRight: Radius.circular(8),
+                                      bottomRight: Radius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Non applicable',
+                                  style: TextStyle(fontSize: 16, fontWeight: !_isTTC ? FontWeight.bold : FontWeight.normal),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 24),
 
@@ -932,50 +1029,6 @@ class _FactureScreenState extends State<FactureScreen> {
               fontSize: 16,
               color: Colors.grey[600],
             ),
-          ),
-          const SizedBox(height: 16),
-          // Option pour choisir entre prix HT et TTC
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Type de prix:',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF08004D),
-                ),
-              ),
-              Row(
-                children: [
-                  Text(
-                    'HT',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: !_isTTC ? Color(0xFF08004D) : Colors.grey,
-                      fontWeight: !_isTTC ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                  Switch(
-                    value: _isTTC,
-                    onChanged: (value) {
-                      setState(() {
-                        _isTTC = value;
-                      });
-                    },
-                    activeColor: Color(0xFF08004D),
-                  ),
-                  Text(
-                    'TTC',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: _isTTC ? Color(0xFF08004D) : Colors.grey,
-                      fontWeight: _isTTC ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ),
         ],
       ),

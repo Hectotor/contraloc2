@@ -95,16 +95,32 @@ class FacturePdfGenerator {
     final remise = _parseDouble(factureData['factureRemise']);
     final caution = _parseDouble(factureData['factureCaution']);
     
-    // Calculer le total HT (sans TVA)
-    final totalHT = prixLocation + fraisNettoyageInt + fraisNettoyageExt + 
-                   fraisCarburant + fraisRayures + fraisAutre + fraisKilometrique - remise;
+    // Vérifier si la TVA est applicable
+    final String tvaStatus = factureData['tva'] ?? 'applicable';
+    final bool isTTC = tvaStatus == 'applicable';
     
-    // Calculer la TVA (20%)
-    final tauxTVA = 0.20;
-    final montantTVA = totalHT * tauxTVA;
+    // Calculer le total brut (tous les frais)
+    final totalBrut = prixLocation + fraisNettoyageInt + fraisNettoyageExt + 
+                   fraisCarburant + fraisRayures + fraisAutre + fraisKilometrique + caution;
     
-    // Calculer le total TTC
-    final totalTTC = totalHT + montantTVA;
+    // Calculer le total HT et la TVA
+    final double totalHT;
+    final double montantTVA;
+    
+    if (isTTC) {
+      // Si TVA applicable, le total HT est calculé en retirant 20% du total brut
+      totalHT = totalBrut / 1.20;
+      // Calculer la TVA (20%)
+      montantTVA = totalHT * 0.20;
+    } else {
+      // Si TVA non applicable, le total HT est égal au total brut
+      totalHT = totalBrut;
+      montantTVA = 0;
+    }
+    
+    // Appliquer la remise sur le total final
+    final totalHTApresRemise = totalHT - remise;
+    final totalTTCApresRemise = isTTC ? totalHTApresRemise + montantTVA : totalHTApresRemise;
     
     // Générer le PDF
     pdf.addPage(
@@ -238,42 +254,42 @@ class FacturePdfGenerator {
               // Lignes du tableau
               _tableRow(
                 'Location du véhicule $vehicule',
-                isTTC ? formatMonetaire.format(prixLocation + (prixLocation * tauxTVA)) : formatMonetaire.format(prixLocation),
+                isTTC ? formatMonetaire.format(prixLocation / 1.20) : formatMonetaire.format(prixLocation),
               ),
               if (fraisKilometrique > 0)
                 _tableRow(
                   'Frais kilométriques',
-                  isTTC ? formatMonetaire.format(fraisKilometrique + (fraisKilometrique * tauxTVA)) : formatMonetaire.format(fraisKilometrique),
+                  isTTC ? formatMonetaire.format(fraisKilometrique / 1.20) : formatMonetaire.format(fraisKilometrique),
                 ),
               if (fraisNettoyageInt > 0)
                 _tableRow(
                   'Nettoyage intérieur',
-                  isTTC ? formatMonetaire.format(fraisNettoyageInt + (fraisNettoyageInt * tauxTVA)) : formatMonetaire.format(fraisNettoyageInt),
+                  isTTC ? formatMonetaire.format(fraisNettoyageInt / 1.20) : formatMonetaire.format(fraisNettoyageInt),
                 ),
               if (fraisNettoyageExt > 0)
                 _tableRow(
                   'Nettoyage extérieur',
-                  isTTC ? formatMonetaire.format(fraisNettoyageExt + (fraisNettoyageExt * tauxTVA)) : formatMonetaire.format(fraisNettoyageExt),
+                  isTTC ? formatMonetaire.format(fraisNettoyageExt / 1.20) : formatMonetaire.format(fraisNettoyageExt),
                 ),
               if (fraisCarburant > 0)
                 _tableRow(
                   'Frais de carburant manquant',
-                  isTTC ? formatMonetaire.format(fraisCarburant + (fraisCarburant * tauxTVA)) : formatMonetaire.format(fraisCarburant),
+                  isTTC ? formatMonetaire.format(fraisCarburant / 1.20) : formatMonetaire.format(fraisCarburant),
                 ),
               if (fraisRayures > 0)
                 _tableRow(
                   'Frais pour rayures/dommages',
-                  isTTC ? formatMonetaire.format(fraisRayures + (fraisRayures * tauxTVA)) : formatMonetaire.format(fraisRayures),
+                  isTTC ? formatMonetaire.format(fraisRayures / 1.20) : formatMonetaire.format(fraisRayures),
                 ),
               if (fraisAutre > 0)
                 _tableRow(
                   'Autres frais',
-                  isTTC ? formatMonetaire.format(fraisAutre + (fraisAutre * tauxTVA)) : formatMonetaire.format(fraisAutre),
+                  isTTC ? formatMonetaire.format(fraisAutre / 1.20) : formatMonetaire.format(fraisAutre),
                 ),
               if (caution > 0)
                 _tableRow(
                   'Caution',
-                  isTTC ? formatMonetaire.format(caution + (caution * tauxTVA)) : formatMonetaire.format(caution),
+                  isTTC ? formatMonetaire.format(caution / 1.20) : formatMonetaire.format(caution),
                 ),
             ],
           ),
@@ -297,17 +313,28 @@ class FacturePdfGenerator {
                     child: pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
-                        pw.Text('Type de prix:', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                        pw.Text(isTTC ? 'TTC' : 'HT', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                        pw.Text('TVA:', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                        pw.Text(tvaStatus, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
                       ],
                     ),
                   ),
                   pw.SizedBox(height: 4),
-                  _summaryRow('Total HT', formatMonetaire.format(totalHT)),
-                  _summaryRow('TVA (20%)', formatMonetaire.format(montantTVA)),
-                  if (remise > 0)
-                    _summaryRow('Remise', formatMonetaire.format(remise), isPositive: true),
-                  _summaryRow('Total TTC', formatMonetaire.format(totalTTC), isTotal: true),
+                  // Affichage différent selon que la TVA est applicable ou non
+                  if (isTTC) ...[  // Si TVA applicable
+                    _summaryRow('Total HT', formatMonetaire.format(totalHTApresRemise)),
+                    _summaryRow('TVA 20%', formatMonetaire.format(montantTVA)),
+                    if (remise > 0)
+                      _summaryRow('Remise', formatMonetaire.format(remise), isPositive: true),
+                    _summaryRow('Total TTC', formatMonetaire.format(totalTTCApresRemise), isTotal: true),
+                  ] else ...[  // Si TVA non applicable
+                    _summaryRow('Total', formatMonetaire.format(totalBrut)),
+                    if (remise > 0)
+                      _summaryRow('Remise', formatMonetaire.format(remise), isPositive: true),
+                    _summaryRow('Total à payer', formatMonetaire.format(totalBrut - remise), isTotal: true),
+                    pw.SizedBox(height: 4),
+                    pw.Text('TVA non applicable, art. 293 B du CGI', 
+                      style: pw.TextStyle(fontSize: 8, fontStyle: pw.FontStyle.italic)),
+                  ]
                 ],
               ),
             ),
