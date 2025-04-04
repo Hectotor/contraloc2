@@ -11,8 +11,10 @@ class CommentaireRetourWidget extends StatelessWidget {
     return TextField(
       controller: controller,
       maxLines: 4,
+      textCapitalization: TextCapitalization.sentences,
       decoration: InputDecoration(
         hintText: "Décrivez l'état du véhicule, les problèmes constatés, etc.",
+        hintStyle: TextStyle(color: Colors.grey[350]),
         suffixIcon: Padding(
           padding: const EdgeInsets.only(bottom: 64),
           child: IconButton(
@@ -24,7 +26,7 @@ class CommentaireRetourWidget extends StatelessWidget {
           ),
         ),
         filled: true,
-        fillColor: Colors.grey[50],
+
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.orange[200]!),

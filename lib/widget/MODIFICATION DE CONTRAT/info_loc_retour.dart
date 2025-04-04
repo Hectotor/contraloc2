@@ -182,7 +182,7 @@ class _InfoLocRetourState extends State<InfoLocRetour> {
                             margin: const EdgeInsets.only(right: 10),
                             width: 100,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.1),
@@ -192,7 +192,7 @@ class _InfoLocRetourState extends State<InfoLocRetour> {
                               ],
                             ),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                               child: Image.network(
                                 photoUrl,
                                 width: 100,
