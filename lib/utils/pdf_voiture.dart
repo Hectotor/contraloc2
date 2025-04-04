@@ -333,6 +333,23 @@ class PdfVoitureWidget {
       }
     }
 
+    String _parseEssenceRetour(String? pourcentageEssenceRetour) {
+      print('Valeur pourcentageEssenceRetour reçue: "$pourcentageEssenceRetour"');
+      if (pourcentageEssenceRetour != null && pourcentageEssenceRetour.isNotEmpty) {
+        try {
+          double pourcentage = double.parse(pourcentageEssenceRetour);
+          print('Pourcentage converti en double: $pourcentage');
+          return '${pourcentage.toStringAsFixed(0)}%';
+        } catch (e) {
+          print('Erreur de conversion: $e');
+          return pourcentageEssenceRetour.endsWith('%') ? pourcentageEssenceRetour : '$pourcentageEssenceRetour%';
+        }
+      } else {
+        print('Pourcentage null ou vide');
+        return '';
+      }
+    }
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -531,7 +548,7 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.center,
-                  child: pw.Text('Niveau d\'essence retour: ${data['pourcentageEssenceRetour'] ?? ""}%', 
+                  child: pw.Text('Niveau d\'essence retour: ${_parseEssenceRetour(data['pourcentageEssenceRetour'])}', 
                       textAlign: pw.TextAlign.center,
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),

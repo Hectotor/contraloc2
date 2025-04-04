@@ -79,7 +79,9 @@ class AffichageContratPdf {
           ...data,
           'nettoyageInt': nettoyageIntController.text,
           'nettoyageExt': nettoyageExtController.text,
-          'pourcentageEssenceRetour': pourcentageEssenceRetourController.text,
+          'pourcentageEssenceRetour': pourcentageEssenceRetourController.text.isNotEmpty 
+              ? pourcentageEssenceRetourController.text 
+              : (data['pourcentageEssenceRetour'] ?? '').toString(),
           'caution': cautionController.text,
           'signatureRetour': signatureRetourBase64 != null && signatureRetourBase64.isNotEmpty ? signatureRetourBase64 : null,
           'conditions': conditions,
