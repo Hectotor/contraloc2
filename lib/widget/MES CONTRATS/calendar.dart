@@ -1,7 +1,7 @@
-import 'package:ContraLoc/widget/CREATION%20DE%20CONTRAT/client.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; 
+import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'package:ContraLoc/widget/MES%20CONTRATS/vehicle_access_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -15,11 +15,19 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  String selectedFilter = 'Tous';
-  final Map<String, String?> _photoUrlCache = {}; 
   late VehicleAccessManager _vehicleAccessManager;
   String? _targetUserId;
   bool _isInitialized = false;
+  final Map<String, String?> _photoUrlCache = {};
+  
+  // Calendrier
+  DateTime _focusedDay = DateTime.now();
+  DateTime _selectedDay = DateTime.now();
+  CalendarFormat _calendarFormat = CalendarFormat.month;
+  
+  // Contrats réservés
+  Map<DateTime, List<Map<String, dynamic>>> _reservedContracts = {};
+  List<Map<String, dynamic>> _selectedDayContracts = [];
   
   @override
   void initState() {
@@ -32,11 +40,101 @@ class _CalendarScreenState extends State<CalendarScreen> {
     await _vehicleAccessManager.initialize();
     _targetUserId = _vehicleAccessManager.getTargetUserId();
     _isInitialized = true;
+    _loadReservedContracts();
     if (mounted) {
       setState(() {});
     }
   }
-
+  
+  void _loadReservedContracts() {
+    _getReservedContractsStream().listen((snapshot) {
+      _processContracts(snapshot);
+    });
+  }
+  
+  void _processContracts(QuerySnapshot snapshot) {
+    final contracts = <DateTime, List<Map<String, dynamic>>>{};
+    
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      
+      // Récupérer les dates de début et fin
+      final dateDebut = _parseTimestamp(data['dateDebut']);
+      final dateFin = _parseTimestamp(data['dateFin']);
+      
+      if (dateDebut != null) {
+        // Pour chaque jour entre dateDebut et dateFin
+        DateTime currentDate = DateTime(dateDebut.year, dateDebut.month, dateDebut.day);
+        final endDate = dateFin != null 
+            ? DateTime(dateFin.year, dateFin.month, dateFin.day)
+            : currentDate;
+            
+        while (currentDate.isBefore(endDate) || currentDate.isAtSameMomentAs(endDate)) {
+          final dateKey = DateTime(currentDate.year, currentDate.month, currentDate.day);
+          
+          if (!contracts.containsKey(dateKey)) {
+            contracts[dateKey] = [];
+          }
+          
+          contracts[dateKey]!.add({
+            'id': doc.id,
+            'immatriculation': data['immatriculation'] ?? 'Inconnu',
+            'marque': data['marque'] ?? 'Inconnu',
+            'modele': data['modele'] ?? 'Inconnu',
+            'nomClient': data['nomClient'] ?? 'Inconnu',
+            'prenomClient': data['prenomClient'] ?? 'Inconnu',
+            'dateDebut': data['dateDebut'],
+            'dateFin': data['dateFin'],
+            'status': data['status'] ?? 'réservé',
+          });
+          
+          // Passer au jour suivant
+          currentDate = currentDate.add(const Duration(days: 1));
+        }
+      }
+    }
+    
+    setState(() {
+      _reservedContracts = contracts;
+      _updateSelectedDayContracts();
+    });
+    
+    // Mettre à jour le compteur d'événements si nécessaire
+    int totalEvents = 0;
+    _reservedContracts.forEach((_, events) {
+      totalEvents += events.length;
+    });
+    widget.onEventsCountChanged?.call(totalEvents);
+  }
+  
+  void _updateSelectedDayContracts() {
+    final selectedDate = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
+    _selectedDayContracts = _reservedContracts[selectedDate] ?? [];
+  }
+  
+  DateTime? _parseTimestamp(dynamic timestamp) {
+    if (timestamp == null) return null;
+    
+    if (timestamp is Timestamp) {
+      return timestamp.toDate();
+    } else if (timestamp is String) {
+      // Essayer de parser une date au format français
+      try {
+        final dateFormat = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR');
+        return dateFormat.parse(timestamp);
+      } catch (e) {
+        try {
+          // Essayer le format court
+          final dateFormat = DateFormat('dd/MM/yyyy');
+          return dateFormat.parse(timestamp);
+        } catch (e) {
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+  
   Stream<QuerySnapshot> _getReservedContractsStream() {
     if (!_isInitialized) {
       return Stream.fromFuture(
@@ -53,7 +151,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
               .doc(effectiveUserId)
               .collection('locations')
               .where('status', isEqualTo: 'réservé')
-              .orderBy('dateCreation', descending: true)
               .get();
               
           return snapshot;
@@ -69,7 +166,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
             .doc(effectiveUserId)
             .collection('locations')
             .where('status', isEqualTo: 'réservé')
-            .orderBy('dateCreation', descending: true)
             .snapshots();
       });
     }
@@ -84,24 +180,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
         .doc(effectiveUserId)
         .collection('locations')
         .where('status', isEqualTo: 'réservé')
-        .orderBy('dateCreation', descending: true)
         .snapshots();
   }
   
-  Future<void> _deleteReservedContract(String contratId) async {
-    final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
-    if (effectiveUserId == null) {
-      throw Exception("Utilisateur non connecté");
-    }
-    
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(effectiveUserId)
-        .collection('locations')
-        .doc(contratId)
-        .delete();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -113,322 +194,276 @@ class _CalendarScreenState extends State<CalendarScreen> {
             colors: [Color(0xFF08004D).withOpacity(0.05), Colors.white],
           ),
         ),
-        child: StreamBuilder<QuerySnapshot>(
-          stream: _getReservedContractsStream(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF08004D)),
-                ),
-              );
-            }
-
-            if (snapshot.hasError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-                    const SizedBox(height: 16),
-                    const Text(
-                      "Erreur de chargement des contrats",
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.calendar_today, size: 48, color: Colors.grey[400]),
-                    const SizedBox(height: 16),
-                    const Text(
-                      "Aucun contrat réservé",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final contrats = snapshot.data!.docs;
-            
-            contrats.sort((a, b) {
-              final dateA = (a.data() as Map<String, dynamic>)['dateReservation'] as Timestamp;
-              final dateB = (b.data() as Map<String, dynamic>)['dateReservation'] as Timestamp;
-              return dateA.compareTo(dateB); 
+        child: Column(
+          children: [
+            _buildCalendar(),
+            Expanded(
+              child: _buildReservedVehiclesList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildCalendar() {
+    return Card(
+      margin: const EdgeInsets.all(8.0),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: TableCalendar(
+          firstDay: DateTime.utc(2020, 1, 1),
+          lastDay: DateTime.utc(2030, 12, 31),
+          focusedDay: _focusedDay,
+          calendarFormat: _calendarFormat,
+          selectedDayPredicate: (day) {
+            return isSameDay(_selectedDay, day);
+          },
+          eventLoader: (day) {
+            final dateKey = DateTime(day.year, day.month, day.day);
+            return _reservedContracts[dateKey] ?? [];
+          },
+          onDaySelected: (selectedDay, focusedDay) {
+            setState(() {
+              _selectedDay = selectedDay;
+              _focusedDay = focusedDay;
+              _updateSelectedDayContracts();
             });
-
-            if (widget.onEventsCountChanged != null) {
-              widget.onEventsCountChanged!(contrats.length);
-            }
-
-            return Column(
-              children: [
-                Container(
-                  margin: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(15),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                child: Material(
-                                  color: selectedFilter == 'Tous' 
-                                      ? const Color(0xFF08004D) 
-                                      : Colors.white,
-                                  borderRadius: const BorderRadius.horizontal(
-                                    left: Radius.circular(15),
-                                  ),
-                                  child: InkWell(
-                                    onTap: () => setState(() => selectedFilter = 'Tous'),
-                                    borderRadius: const BorderRadius.horizontal(
-                                      left: Radius.circular(15),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      child: Text(
-                                        'Tous',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: selectedFilter == 'Tous' 
-                                              ? Colors.white 
-                                              : Colors.black87,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                child: Material(
-                                  color: selectedFilter == 'mois' 
-                                      ? const Color(0xFF08004D) 
-                                      : Colors.white,
-                                  borderRadius: const BorderRadius.horizontal(
-                                    right: Radius.circular(15),
-                                  ),
-                                  child: InkWell(
-                                    onTap: () => setState(() => selectedFilter = 'mois'),
-                                    borderRadius: const BorderRadius.horizontal(
-                                      right: Radius.circular(15),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      child: Text(
-                                        'Mois en cours',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: selectedFilter == 'mois' 
-                                              ? Colors.white 
-                                              : Colors.black87,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '(Appui long pour supprimer)',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[600],
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
+          },
+          onFormatChanged: (format) {
+            setState(() {
+              _calendarFormat = format;
+            });
+          },
+          onPageChanged: (focusedDay) {
+            _focusedDay = focusedDay;
+          },
+          calendarStyle: CalendarStyle(
+            markersMaxCount: 3,
+            markerDecoration: const BoxDecoration(
+              color: Color(0xFF08004D),
+              shape: BoxShape.circle,
+            ),
+            selectedDecoration: const BoxDecoration(
+              color: Color(0xFF08004D),
+              shape: BoxShape.circle,
+            ),
+            todayDecoration: BoxDecoration(
+              color: Color(0xFF08004D).withOpacity(0.5),
+              shape: BoxShape.circle,
+            ),
+          ),
+          headerStyle: HeaderStyle(
+            formatButtonTextStyle: const TextStyle(color: Colors.white),
+            formatButtonDecoration: BoxDecoration(
+              color: Color(0xFF08004D),
+              borderRadius: BorderRadius.circular(20.0),
+            ),
+            titleCentered: true,
+            titleTextStyle: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF08004D),
+            ),
+            formatButtonVisible: true,
+            formatButtonShowsNext: true,
+            titleTextFormatter: (date, format) => DateFormat.yMMMM('fr_FR').format(date),
+          ),
+          daysOfWeekStyle: DaysOfWeekStyle(
+            weekdayStyle: TextStyle(color: Color(0xFF08004D)),
+            weekendStyle: TextStyle(color: Color(0xFF08004D)),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Colors.grey[300]!),
+              ),
+            ),
+          ),
+          calendarBuilders: CalendarBuilders(
+            dowBuilder: (context, day) {
+              final weekday = day.weekday;
+              final dayText = DateFormat.E('fr_FR').format(day);
+              return Center(
+                child: Text(
+                  dayText,
+                  style: TextStyle(
+                    color: weekday == 6 || weekday == 7
+                        ? Colors.red
+                        : Color(0xFF08004D),
                   ),
                 ),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 1),
-                    itemCount: contrats.length,
-                    itemBuilder: (context, index) {
-                      final contrat = contrats[index];
-                      final data = contrat.data() as Map<String, dynamic>;
-
-                      if (selectedFilter == 'mois' && data['dateReservation'] != null) {
-                        final dateReservation = (data['dateReservation'] as Timestamp).toDate();
-                        final now = DateTime.now();
-                        if (dateReservation.month != now.month || dateReservation.year != now.year) {
-                          return Container();
-                        }
-                      }
-
-                      return FutureBuilder<String?>(
-                        future: _getVehiclePhotoUrl(data['immatriculation']),
-                        builder: (context, snapshot) {
-                          final photoUrl = snapshot.data;
-
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            child: Material(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              elevation: 2,
-                              shadowColor: Colors.black.withOpacity(0.1),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ClientPage(
-                                        marque: data['marque'],
-                                        modele: data['modele'],
-                                        immatriculation: data['immatriculation'],
-                                        contratId: contrat.id,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                onLongPress: () => _showDeleteDialog(context, contrat.id),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Row(
-                                    children: [
-                                      Hero(
-                                        tag: 'vehicle_${contrat.id}',
-                                        child: Container(
-                                          width: 100,
-                                          height: 100,
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(12),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black.withOpacity(0.1),
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
-                                          ),
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(12),
-                                            child: photoUrl != null && photoUrl.isNotEmpty
-                                                ? Image.network(
-                                                    photoUrl,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (context, error, stackTrace) =>
-                                                        _buildPlaceholderIcon(),
-                                                  )
-                                                : _buildPlaceholderIcon(),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              "${data['nom'] ?? ''} ${data['prenom'] ?? ''}",
-                                              style: const TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF08004D),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            _buildInfoRow(
-                                              Icons.calendar_today,
-                                              "Réservé pour le :\n${_formatDate(data['dateReservation'])}",
-                                            ),
-                                            const SizedBox(height: 4),
-                                            _buildInfoRow(
-                                              Icons.event_available,
-                                              "Fin : ${data['dateFinTheorique']}",
-                                            ),
-                                            const SizedBox(height: 4),
-                                            _buildInfoRow(
-                                              Icons.directions_car,
-                                              data['immatriculation'] ?? '',
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Icon(
-                                        Icons.chevron_right,
-                                        color: Colors.grey[400],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
+              );
+            },
+            markerBuilder: (context, date, events) {
+              return Positioned(
+                right: 1,
+                bottom: 1,
+                child: Container(
+                  padding: EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF08004D),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${events.length}',
+                    style: TextStyle(color: Colors.white, fontSize: 10),
                   ),
                 ),
-              ],
-            );
+              );
+            },
+          ),
+          startingDayOfWeek: StartingDayOfWeek.monday,
+          availableCalendarFormats: const {
+            CalendarFormat.month: 'Mois',
           },
         ),
       ),
     );
   }
-
-  Widget _buildPlaceholderIcon() {
-    return Container(
-      color: Colors.grey[200],
-      child: const Center(
-        child: Icon(
-          Icons.directions_car,
-          size: 40,
-          color: Colors.grey,
+  
+  Widget _buildReservedVehiclesList() {
+    if (_selectedDayContracts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.calendar_today,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Aucun véhicule réservé pour le\n${DateFormat('dd/MM/yyyy').format(_selectedDay)}',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return ListView.builder(
+      padding: const EdgeInsets.all(8.0),
+      itemCount: _selectedDayContracts.length,
+      itemBuilder: (context, index) {
+        final contract = _selectedDayContracts[index];
+        return _buildVehicleCard(contract);
+      },
+    );
+  }
+  
+  Widget _buildVehicleCard(Map<String, dynamic> contract) {
+    final String immatriculation = contract['immatriculation'] ?? 'Inconnu';
+    final String marque = contract['marque'] ?? 'Inconnu';
+    final String modele = contract['modele'] ?? 'Inconnu';
+    final String nomClient = contract['nomClient'] ?? 'Inconnu';
+    final String prenomClient = contract['prenomClient'] ?? 'Inconnu';
+    
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                FutureBuilder<String?>(
+                  future: _getVehiclePhotoUrl(immatriculation),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return _buildPlaceholderIcon();
+                    }
+                    
+                    if (snapshot.hasData && snapshot.data != null) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          snapshot.data!,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _buildPlaceholderIcon(),
+                        ),
+                      );
+                    }
+                    
+                    return _buildPlaceholderIcon();
+                  },
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$marque $modele',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF08004D),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        immatriculation,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            _buildInfoRow(Icons.person, '$prenomClient $nomClient'),
+            const SizedBox(height: 8),
+            _buildInfoRow(
+              Icons.calendar_today,
+              'Du ${_formatDate(contract['dateDebut'])} au ${_formatDate(contract['dateFin'])}',
+            ),
+          ],
         ),
       ),
     );
   }
-
+  
+  Widget _buildPlaceholderIcon() {
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(
+        Icons.directions_car,
+        size: 40,
+        color: Colors.grey[400],
+      ),
+    );
+  }
+  
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 3),
-          child: Icon(
-            icon,
-            size: 16,
-            color: Colors.grey[600],
-          ),
+        Icon(
+          icon,
+          size: 20,
+          color: Colors.grey[600],
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -436,122 +471,39 @@ class _CalendarScreenState extends State<CalendarScreen> {
             text,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[700],
-              height: 1.4,
+              color: Colors.grey[800],
             ),
           ),
         ),
       ],
     );
   }
-
+  
   String _formatDate(dynamic timestamp) {
-    if (timestamp == null) return '';
-    final date = (timestamp as Timestamp).toDate();
-    return DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(date).toLowerCase();
+    if (timestamp == null) return 'Date inconnue';
+    
+    if (timestamp is Timestamp) {
+      return DateFormat('dd/MM/yyyy').format(timestamp.toDate());
+    } else if (timestamp is String) {
+      try {
+        // Essayer de parser une date au format français
+        final dateFormat = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR');
+        final date = dateFormat.parse(timestamp);
+        return DateFormat('dd/MM/yyyy').format(date);
+      } catch (e) {
+        try {
+          // Essayer le format court
+          final dateFormat = DateFormat('dd/MM/yyyy');
+          final date = dateFormat.parse(timestamp);
+          return DateFormat('dd/MM/yyyy').format(date);
+        } catch (e) {
+          return timestamp;
+        }
+      }
+    }
+    return 'Date inconnue';
   }
-
-  void _showDeleteDialog(BuildContext context, String contratId) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.red[50],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.warning_rounded,
-                    color: Colors.red[400],
-                    size: 48,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Supprimer la réservation ?',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF08004D),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Cette action est irréversible.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: TextButton.styleFrom(
-                          backgroundColor: Colors.grey[100],
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text(
-                          'Annuler',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF08004D),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          _deleteReservedContract(contratId);
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text(
-                          'Supprimer',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
+  
   Future<String?> _getVehiclePhotoUrl(String immatriculation) async {
     final cacheKey = immatriculation;
     if (_photoUrlCache.containsKey(cacheKey)) {
