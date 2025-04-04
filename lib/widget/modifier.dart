@@ -524,7 +524,12 @@ class _ModifierScreenState extends State<ModifierScreen> {
                                 MaterialPageRoute(
                                   builder: (context) => FactureScreen(
                                     data: {...widget.data, 'contratId': widget.contratId},
-                                    onFraisUpdated: (frais) {},
+                                    onFraisUpdated: (frais) {
+                                      // Mettre à jour les données locales avec les nouvelles valeurs
+                                      setState(() {
+                                        widget.data.addAll(frais);
+                                      });
+                                    },
                                     kilometrageInitial: kilometrageInitial,
                                     kilometrageActuel: kilometrageActuel,
                                     tarifKilometrique: tarifKilometrique,

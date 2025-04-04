@@ -39,7 +39,7 @@ class _FactureScreenState extends State<FactureScreen> {
   late TextEditingController _remiseController; // Nouveau contrôleur pour la remise
 
   // Contrôleurs spécifiques pour les champs calculés automatiquement
-  late TextEditingController _kmSuppDisplayController;
+  late TextEditingController _fraisKilometriqueController;
   late TextEditingController _fraisPrixLocationController;
 
   // Contrôleurs pour les champs de kilométrage
@@ -64,7 +64,7 @@ class _FactureScreenState extends State<FactureScreen> {
     initializeDateFormatting('fr_FR', null); // Initialisation des locales françaises
     
     // Initialiser les contrôleurs avec des valeurs par défaut à 0
-    _kmSuppDisplayController = TextEditingController(text: "0");
+    _fraisKilometriqueController = TextEditingController(text: "0");
     _fraisPrixLocationController = TextEditingController(text: "0");
     _cautionController = TextEditingController(text: "0");
     _fraisNettoyageIntController = TextEditingController(text: "0");
@@ -104,19 +104,74 @@ class _FactureScreenState extends State<FactureScreen> {
 
     // Charger les valeurs existantes depuis widget.data
     if (widget.data.isNotEmpty) {
-      _cautionController.text = widget.data['factureCaution']?.toString() ?? "0";
-      _fraisNettoyageIntController.text = widget.data['factureFraisNettoyageInterieur']?.toString() ?? "0";
-      _fraisNettoyageExtController.text = widget.data['factureFraisNettoyageExterieur']?.toString() ?? "0";
-      _fraisCarburantController.text = widget.data['factureFraisCarburantManquant']?.toString() ?? "0";
-      _fraisRayuresController.text = widget.data['factureFraisRayuresDommages']?.toString() ?? "0";
-      _fraisAutreController.text = widget.data['factureFraisAutre']?.toString() ?? "0";
-      _fraisPrixLocationController.text = widget.data['facturePrixLocation']?.toString() ?? "0";
-      _kmSuppDisplayController.text = widget.data['factureFraisKilometrique']?.toString() ?? "0";
-      _remiseController.text = widget.data['factureRemise']?.toString() ?? "0";
+      // Vérifier si les données de facture existent dans un sous-objet 'facture'
+      if (widget.data['facture'] != null && widget.data['facture'] is Map<String, dynamic>) {
+        Map<String, dynamic> factureData = widget.data['facture'];
+        
+        _cautionController.text = factureData['factureCaution']?.toString() ?? "0";
+        _fraisNettoyageIntController.text = factureData['factureFraisNettoyageInterieur']?.toString() ?? "0";
+        _fraisNettoyageExtController.text = factureData['factureFraisNettoyageExterieur']?.toString() ?? "0";
+        _fraisCarburantController.text = factureData['factureFraisCarburantManquant']?.toString() ?? "0";
+        _fraisRayuresController.text = factureData['factureFraisRayuresDommages']?.toString() ?? "0";
+        _fraisAutreController.text = factureData['factureFraisAutre']?.toString() ?? "0";
+        _fraisKilometriqueController.text = factureData['factureFraisKilometrique']?.toString() ?? "0";
+        _fraisPrixLocationController.text = factureData['facturePrixLocation']?.toString() ?? "0";
+        
+        // Assurer que les frais kilométriques sont correctement chargés
+        var fraisKm = factureData['factureFraisKilometrique'];
+        if (fraisKm != null) {
+          // Convertir en chaîne et formater si nécessaire
+          String fraisKmStr = fraisKm.toString();
+          // Remplacer le point par une virgule pour l'affichage
+          fraisKmStr = fraisKmStr.replaceAll('.', ',');
+          _fraisKilometriqueController.text = fraisKmStr;
+          print('Frais kilométriques chargés: $fraisKmStr (original: $fraisKm)');
+        }
+        
+        _remiseController.text = factureData['factureRemise']?.toString() ?? "0";
 
-      // Charger le type de paiement s'il existe
-      if (widget.data['factureTypePaiement'] != null && _typesPaiement.contains(widget.data['factureTypePaiement'])) {
-        _typePaiement = widget.data['factureTypePaiement'];
+        // Charger le type de paiement s'il existe
+        if (factureData['factureTypePaiement'] != null && _typesPaiement.contains(factureData['factureTypePaiement'])) {
+          _typePaiement = factureData['factureTypePaiement'];
+        }
+        
+        // Charger l'option TTC/HT si elle existe
+        if (factureData['factureTTC'] != null) {
+          _isTTC = factureData['factureTTC'];
+        }
+      } else {
+        // Fallback: essayer de charger directement depuis widget.data (ancien format)
+        _cautionController.text = widget.data['factureCaution']?.toString() ?? "0";
+        _fraisNettoyageIntController.text = widget.data['factureFraisNettoyageInterieur']?.toString() ?? "0";
+        _fraisNettoyageExtController.text = widget.data['factureFraisNettoyageExterieur']?.toString() ?? "0";
+        _fraisCarburantController.text = widget.data['factureFraisCarburantManquant']?.toString() ?? "0";
+        _fraisRayuresController.text = widget.data['factureFraisRayuresDommages']?.toString() ?? "0";
+        _fraisAutreController.text = widget.data['factureFraisAutre']?.toString() ?? "0";
+        _fraisPrixLocationController.text = widget.data['facturePrixLocation']?.toString() ?? "0";
+        _fraisKilometriqueController.text = widget.data['factureFraisKilometrique']?.toString() ?? "0";
+        
+        // Assurer que les frais kilométriques sont correctement chargés
+        var fraisKm = widget.data['factureFraisKilometrique'];
+        if (fraisKm != null) {
+          // Convertir en chaîne et formater si nécessaire
+          String fraisKmStr = fraisKm.toString();
+          // Remplacer le point par une virgule pour l'affichage
+          fraisKmStr = fraisKmStr.replaceAll('.', ',');
+          _fraisKilometriqueController.text = fraisKmStr;
+          print('Frais kilométriques chargés: $fraisKmStr (original: $fraisKm)');
+        }
+        
+        _remiseController.text = widget.data['factureRemise']?.toString() ?? "0";
+
+        // Charger le type de paiement s'il existe
+        if (widget.data['factureTypePaiement'] != null && _typesPaiement.contains(widget.data['factureTypePaiement'])) {
+          _typePaiement = widget.data['factureTypePaiement'];
+        }
+        
+        // Charger l'option TTC/HT si elle existe
+        if (widget.data['factureTTC'] != null) {
+          _isTTC = widget.data['factureTTC'];
+        }
       }
     }
 
@@ -125,7 +180,7 @@ class _FactureScreenState extends State<FactureScreen> {
 
   @override
   void dispose() {
-    _kmSuppDisplayController.dispose();
+    _fraisKilometriqueController.dispose();
     _fraisPrixLocationController.dispose();
     _cautionController.dispose();
     _fraisNettoyageIntController.dispose();
@@ -157,7 +212,7 @@ class _FactureScreenState extends State<FactureScreen> {
       }
 
       if (widget.data.containsKey('factureFraisKilometrique') && 
-          _kmSuppDisplayController.text != widget.data['factureFraisKilometrique']?.toString()) {
+          _fraisKilometriqueController.text != widget.data['factureFraisKilometrique']?.toString()) {
         fraisKmModifies = true;
       }
 
@@ -256,7 +311,7 @@ class _FactureScreenState extends State<FactureScreen> {
       }
 
       // Calcul des frais kilométriques
-      if (!fraisKmModifies && _kmSuppDisplayController.text.isNotEmpty) {
+      if (!fraisKmModifies && _fraisKilometriqueController.text.isNotEmpty) {
         double kmDepart = double.tryParse(widget.data['kilometrageDepart']?.toString() ?? '0') ?? 0;
         double kmAutorise = double.tryParse(widget.data['kilometrageAutorise']?.toString() ?? '0') ?? 0;
         double kmRetour = double.tryParse(_kmRetourController.text) ?? 0;
@@ -268,15 +323,15 @@ class _FactureScreenState extends State<FactureScreen> {
         // Assurer que le résultat est positif
         fraisKm = fraisKm < 0 ? 0 : fraisKm;
         
-        _kmSuppDisplayController.text = fraisKm.toStringAsFixed(2).replaceAll('.', ',');
+        _fraisKilometriqueController.text = fraisKm.toStringAsFixed(2).replaceAll('.', ',');
       }
 
       // Ajouter tous les frais qui ont une valeur non nulle
       if (_fraisPrixLocationController.text.isNotEmpty) {
         total += double.tryParse(_fraisPrixLocationController.text.replaceAll(',', '.')) ?? 0.0;
       }
-      if (_kmSuppDisplayController.text.isNotEmpty) {
-        total += double.tryParse(_kmSuppDisplayController.text.replaceAll(',', '.')) ?? 0.0;
+      if (_fraisKilometriqueController.text.isNotEmpty) {
+        total += double.tryParse(_fraisKilometriqueController.text.replaceAll(',', '.')) ?? 0.0;
       }
       total += double.tryParse(_fraisNettoyageIntController.text.replaceAll(',', '.')) ?? 0.0;
       total += double.tryParse(_fraisNettoyageExtController.text.replaceAll(',', '.')) ?? 0.0;
@@ -315,7 +370,8 @@ class _FactureScreenState extends State<FactureScreen> {
       double fraisRayures = double.tryParse(_fraisRayuresController.text.replaceAll(',', '.')) ?? 0.0;
       double fraisAutre = double.tryParse(_fraisAutreController.text.replaceAll(',', '.')) ?? 0.0;
       double remise = double.tryParse(_remiseController.text.replaceAll(',', '.')) ?? 0.0;
-      String fraisKilometrique = _kmSuppDisplayController.text;
+      double fraisKilometrique = double.tryParse(_fraisKilometriqueController.text.replaceAll(',', '.')) ?? 0.0;
+      double prixLocation = double.tryParse(_fraisPrixLocationController.text.replaceAll(',', '.')) ?? 0.0;
 
       // Créer un objet avec les données de la facture
       Map<String, dynamic> factureData = {
@@ -327,7 +383,7 @@ class _FactureScreenState extends State<FactureScreen> {
         'factureFraisAutre': fraisAutre,
         'factureRemise': remise,
         'factureFraisKilometrique': fraisKilometrique,
-        'facturePrixLocation': _fraisPrixLocationController.text,
+        'facturePrixLocation': prixLocation,
         'factureTypePaiement': _typePaiement,
         'dateFacture': Timestamp.now(),
         'factureTTC': _isTTC, // Ajout du paramètre pour indiquer si le prix est TTC ou HT
@@ -366,10 +422,11 @@ class _FactureScreenState extends State<FactureScreen> {
         'kilometrageRetour': _kmRetourController.text,
         'dateFinEffectif': widget.dateFinEffective,
       });
-
-      // Appeler la fonction de callback pour mettre à jour les données dans l'écran parent
-      widget.onFraisUpdated(factureData);
-
+      
+// Appeler la fonction onFraisUpdated pour mettre à jour les données locales
+widget.onFraisUpdated({
+  'facture': factureData,
+});
       // Afficher un message de succès
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Facture enregistrée avec succès')),
@@ -622,7 +679,7 @@ class _FactureScreenState extends State<FactureScreen> {
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16.0),
                         child: TextFormField(
-                          controller: _kmSuppDisplayController,
+                          controller: _fraisKilometriqueController,
                           decoration: InputDecoration(
                             labelText: "Frais kilométriques",
                             labelStyle: const TextStyle(color: Color(0xFF08004D)),
