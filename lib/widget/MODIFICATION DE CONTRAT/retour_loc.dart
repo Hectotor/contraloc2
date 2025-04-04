@@ -5,7 +5,7 @@ import 'package:intl/intl.dart'; // Importer la bibliothèque Intl pour utiliser
 class RetourLoc extends StatefulWidget {
   final TextEditingController dateFinEffectifController;
   final TextEditingController kilometrageRetourController;
-  final TextEditingController niveauEssenceRetourController;
+  final TextEditingController pourcentageEssenceRetourController;
   final Map<String, dynamic> data;
   final Future<void> Function(TextEditingController) selectDateTime;
   final DateTime dateDebut;
@@ -15,7 +15,7 @@ class RetourLoc extends StatefulWidget {
     Key? key,
     required this.dateFinEffectifController,
     required this.kilometrageRetourController,
-    required this.niveauEssenceRetourController,
+    required this.pourcentageEssenceRetourController,
     required this.data,
     required this.selectDateTime,
     required this.dateDebut,
@@ -357,7 +357,7 @@ class _RetourLocState extends State<RetourLoc> {
 
   Widget _buildEssenceOption(String value, String label) {
     // Convertir la valeur du contrôleur en format comparable
-    String currentValue = widget.niveauEssenceRetourController.text;
+    String currentValue = widget.pourcentageEssenceRetourController.text;
     String valueAsPercentage;
     
     switch (value) {
@@ -385,7 +385,7 @@ class _RetourLocState extends State<RetourLoc> {
             default: percentage = "0";
           }
           
-          widget.niveauEssenceRetourController.text = percentage;
+          widget.pourcentageEssenceRetourController.text = percentage;
           // Mettre à jour les données
           if (widget.onFraisUpdated != null) {
             widget.onFraisUpdated!({'pourcentageEssenceRetour': percentage});

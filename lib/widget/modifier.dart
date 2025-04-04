@@ -50,6 +50,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
   );
   final TextEditingController _kilometrageRetourController =
       TextEditingController();
+  final TextEditingController _pourcentageEssenceRetourController =
+      TextEditingController();
   final List<File> _photosRetour = [];
   List<String> _photosRetourUrls = [];
   bool _isUpdatingContrat = false; 
@@ -57,8 +59,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
   String? _signatureRetourBase64;
   final TextEditingController _nettoyageIntController = TextEditingController();
   final TextEditingController _nettoyageExtController = TextEditingController();
-  final TextEditingController _niveauEssenceRetourController =
-      TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
 
   Map<String, dynamic> _fraisSupplementaires = {};
@@ -76,7 +76,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
     // Conversion des valeurs en String pour éviter les erreurs de type
     _nettoyageIntController.text = widget.data['nettoyageInt']?.toString() ?? '';
     _nettoyageExtController.text = widget.data['nettoyageExt']?.toString() ?? '';
-    _niveauEssenceRetourController.text = widget.data['niveauEssenceRetour']?.toString() ?? '';
+    _pourcentageEssenceRetourController.text = widget.data['niveauEssenceRetour']?.toString() ?? '';
     _cautionController.text = widget.data['caution']?.toString() ?? '';
 
     if (widget.data['photosRetourUrls'] != null) {
@@ -219,7 +219,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
             ? _kilometrageRetourController.text
             : null,
         'photosRetourUrls': allPhotosUrls,
-        'pourcentageEssenceRetour': _niveauEssenceRetourController.text,
+        'pourcentageEssenceRetour': _pourcentageEssenceRetourController.text,
         'signature_retour': signatureRetourBase64,
       };
 
@@ -433,7 +433,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                     RetourLoc(
                       dateFinEffectifController: _dateFinEffectifController,
                       kilometrageRetourController: _kilometrageRetourController,
-                      niveauEssenceRetourController: _niveauEssenceRetourController,
+                      pourcentageEssenceRetourController: _pourcentageEssenceRetourController,
                       data: widget.data,
                       selectDateTime: _selectDateTime,
                       dateDebut: _parseDateWithFallback(widget.data['dateDebut']),
@@ -563,7 +563,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                             contratId: widget.contratId,
                             nettoyageIntController: _nettoyageIntController,
                             nettoyageExtController: _nettoyageExtController,
-                            niveauEssenceRetourController: _niveauEssenceRetourController,
+                            pourcentageEssenceRetourController: _pourcentageEssenceRetourController,
                             cautionController: _cautionController,
                             signatureRetourBase64: _signatureRetourBase64,
                           ),

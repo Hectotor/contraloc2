@@ -14,7 +14,7 @@ class AffichageContratPdf {
     required String contratId,
     required TextEditingController nettoyageIntController,
     required TextEditingController nettoyageExtController,
-    required TextEditingController niveauEssenceRetourController,
+    required TextEditingController pourcentageEssenceRetourController,
     required TextEditingController cautionController,
     String? signatureRetourBase64,
   }) async {
@@ -79,7 +79,7 @@ class AffichageContratPdf {
           ...data,
           'nettoyageInt': nettoyageIntController.text,
           'nettoyageExt': nettoyageExtController.text,
-          'pourcentageEssenceRetour': niveauEssenceRetourController.text,
+          'pourcentageEssenceRetour': pourcentageEssenceRetourController.text,
           'caution': cautionController.text,
           'signatureRetour': signatureRetourBase64 != null && signatureRetourBase64.isNotEmpty ? signatureRetourBase64 : null,
           'conditions': conditions,

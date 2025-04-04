@@ -72,49 +72,25 @@ class _FactureScreenState extends State<FactureScreen> {
     _fraisCarburantController = TextEditingController(text: "0");
     _fraisRayuresController = TextEditingController(text: "0");
     _fraisAutreController = TextEditingController(text: "0");
-    _remiseController = TextEditingController(text: "0"); // Initialisation du contrôleur de remise
-
-    // Initialiser les contrôleurs de kilométrage
-    _kmDepartController = TextEditingController(
-      text: widget.data['kilometrageDepart'] != null && 
-          widget.data['kilometrageDepart'].toString().isNotEmpty 
-          ? widget.data['kilometrageDepart'].toString() 
-          : 'Non indiqué au départ du contrat',
-    );
+    _kmDepartController = TextEditingController(text: "0");
+    _kmAutoriseController = TextEditingController(text: "0");
+    _kmSuppController = TextEditingController(text: "0");
+    _kmRetourController = TextEditingController(text: "0");
+    _remiseController = TextEditingController(text: "0");
     
-    _kmAutoriseController = TextEditingController(
-      text: widget.data['kilometrageAutorise'] != null && 
-          widget.data['kilometrageAutorise'].toString().isNotEmpty 
-          ? widget.data['kilometrageAutorise'].toString() 
-          : 'Non indiqué au départ du contrat',
-    );
-    
-    _kmSuppController = TextEditingController(
-      text: widget.data['kilometrageSupp'] != null && 
-          widget.data['kilometrageSupp'].toString().isNotEmpty 
-          ? widget.data['kilometrageSupp'].toString() 
-          : 'Non indiqué au départ du contrat',
-    );
-
-    // Initialiser le contrôleur du kilométrage de retour
-    _kmRetourController = TextEditingController(
-      // Utiliser la valeur de kilometrageActuel passée en paramètre
-      text: widget.kilometrageActuel.toString(),
-    );
-
-    // Charger les valeurs existantes depuis widget.data
+    // Charger les données existantes si disponibles
     if (widget.data.isNotEmpty) {
-      // Vérifier si les données de facture existent dans un sous-objet 'facture'
+      // Vérifier si les données sont dans un sous-objet 'facture'
       if (widget.data['facture'] != null && widget.data['facture'] is Map<String, dynamic>) {
         Map<String, dynamic> factureData = widget.data['facture'];
         
+        // Charger les valeurs des contrôleurs depuis factureData
         _cautionController.text = factureData['factureCaution']?.toString() ?? "0";
         _fraisNettoyageIntController.text = factureData['factureFraisNettoyageInterieur']?.toString() ?? "0";
         _fraisNettoyageExtController.text = factureData['factureFraisNettoyageExterieur']?.toString() ?? "0";
         _fraisCarburantController.text = factureData['factureFraisCarburantManquant']?.toString() ?? "0";
         _fraisRayuresController.text = factureData['factureFraisRayuresDommages']?.toString() ?? "0";
         _fraisAutreController.text = factureData['factureFraisAutre']?.toString() ?? "0";
-        _fraisKilometriqueController.text = factureData['factureFraisKilometrique']?.toString() ?? "0";
         _fraisPrixLocationController.text = factureData['facturePrixLocation']?.toString() ?? "0";
         
         // Assurer que les frais kilométriques sont correctement chargés
@@ -126,6 +102,8 @@ class _FactureScreenState extends State<FactureScreen> {
           fraisKmStr = fraisKmStr.replaceAll('.', ',');
           _fraisKilometriqueController.text = fraisKmStr;
           print('Frais kilométriques chargés: $fraisKmStr (original: $fraisKm)');
+        } else {
+          _fraisKilometriqueController.text = "0";
         }
         
         _remiseController.text = factureData['factureRemise']?.toString() ?? "0";
@@ -140,7 +118,7 @@ class _FactureScreenState extends State<FactureScreen> {
           _isTTC = factureData['factureTTC'];
         }
       } else {
-        // Fallback: essayer de charger directement depuis widget.data (ancien format)
+        // Fallback au format ancien (données directement dans widget.data)
         _cautionController.text = widget.data['factureCaution']?.toString() ?? "0";
         _fraisNettoyageIntController.text = widget.data['factureFraisNettoyageInterieur']?.toString() ?? "0";
         _fraisNettoyageExtController.text = widget.data['factureFraisNettoyageExterieur']?.toString() ?? "0";
@@ -148,7 +126,6 @@ class _FactureScreenState extends State<FactureScreen> {
         _fraisRayuresController.text = widget.data['factureFraisRayuresDommages']?.toString() ?? "0";
         _fraisAutreController.text = widget.data['factureFraisAutre']?.toString() ?? "0";
         _fraisPrixLocationController.text = widget.data['facturePrixLocation']?.toString() ?? "0";
-        _fraisKilometriqueController.text = widget.data['factureFraisKilometrique']?.toString() ?? "0";
         
         // Assurer que les frais kilométriques sont correctement chargés
         var fraisKm = widget.data['factureFraisKilometrique'];
@@ -159,6 +136,8 @@ class _FactureScreenState extends State<FactureScreen> {
           fraisKmStr = fraisKmStr.replaceAll('.', ',');
           _fraisKilometriqueController.text = fraisKmStr;
           print('Frais kilométriques chargés: $fraisKmStr (original: $fraisKm)');
+        } else {
+          _fraisKilometriqueController.text = "0";
         }
         
         _remiseController.text = widget.data['factureRemise']?.toString() ?? "0";
@@ -175,7 +154,29 @@ class _FactureScreenState extends State<FactureScreen> {
       }
     }
 
-    _calculerTotal();
+    // Charger les données de kilométrage
+    _kmDepartController.text = widget.kilometrageInitial.toString();
+    _kmRetourController.text = widget.kilometrageActuel.toString();
+    _kmSuppController.text = widget.tarifKilometrique.toString();
+    
+    // Calculer le kilométrage autorisé (s'il existe dans les données)
+    double kmAutorise = double.tryParse(widget.data['kilometrageAutorise']?.toString() ?? '0') ?? 0.0;
+    _kmAutoriseController.text = kmAutorise.toString();
+    
+    // Ajouter des écouteurs pour recalculer le total lorsque les valeurs changent
+    _cautionController.addListener(_calculerTotal);
+    _fraisNettoyageIntController.addListener(_calculerTotal);
+    _fraisNettoyageExtController.addListener(_calculerTotal);
+    _fraisCarburantController.addListener(_calculerTotal);
+    _fraisRayuresController.addListener(_calculerTotal);
+    _fraisAutreController.addListener(_calculerTotal);
+    _remiseController.addListener(_calculerTotal);
+    
+    // Calculer le total initial
+    // Retarder légèrement le calcul pour s'assurer que les contrôleurs sont correctement initialisés
+    Future.delayed(Duration.zero, () {
+      _calculerTotal();
+    });
   }
 
   @override
@@ -310,20 +311,25 @@ class _FactureScreenState extends State<FactureScreen> {
         print('Erreur lors du calcul de la durée de location: $e');
       }
 
-      // Calcul des frais kilométriques
-      if (!fraisKmModifies && _fraisKilometriqueController.text.isNotEmpty) {
-        double kmDepart = double.tryParse(widget.data['kilometrageDepart']?.toString() ?? '0') ?? 0;
-        double kmAutorise = double.tryParse(widget.data['kilometrageAutorise']?.toString() ?? '0') ?? 0;
-        double kmRetour = double.tryParse(_kmRetourController.text) ?? 0;
-        double kmSupp = double.tryParse(widget.data['kilometrageSupp']?.toString() ?? '0') ?? 0;
+      // Calcul des frais kilométriques seulement si le champ n'a pas été modifié manuellement
+      // et si le kilométrage de retour a été saisi
+      if (!fraisKmModifies && _kmRetourController.text.isNotEmpty && _kmRetourController.text != "0") {
+        double kmDepart = double.tryParse(_kmDepartController.text.replaceAll(',', '.')) ?? 0;
+        double kmAutorise = double.tryParse(_kmAutoriseController.text.replaceAll(',', '.')) ?? 0;
+        double kmRetour = double.tryParse(_kmRetourController.text.replaceAll(',', '.')) ?? 0;
+        double kmSupp = double.tryParse(_kmSuppController.text.replaceAll(',', '.')) ?? 0;
 
-        // Calcul : (kmRetour - (kmDepart + kmAutorise)) * kmSupp
-        double fraisKm = (kmRetour - (kmDepart + kmAutorise)) * kmSupp;
-        
-        // Assurer que le résultat est positif
-        fraisKm = fraisKm < 0 ? 0 : fraisKm;
-        
-        _fraisKilometriqueController.text = fraisKm.toStringAsFixed(2).replaceAll('.', ',');
+        // Ne calculer que si le kilométrage de retour est supérieur au kilométrage de départ + autorisé
+        if (kmRetour > (kmDepart + kmAutorise) && kmSupp > 0) {
+          // Calcul : (kmRetour - (kmDepart + kmAutorise)) * kmSupp
+          double fraisKm = (kmRetour - (kmDepart + kmAutorise)) * kmSupp;
+          
+          // Assurer que le résultat est positif
+          fraisKm = fraisKm < 0 ? 0 : fraisKm;
+          
+          _fraisKilometriqueController.text = fraisKm.toStringAsFixed(2).replaceAll('.', ',');
+          print('Frais kilométriques calculés: ${_fraisKilometriqueController.text} (kmDepart: $kmDepart, kmAutorise: $kmAutorise, kmRetour: $kmRetour, kmSupp: $kmSupp)');
+        }
       }
 
       // Ajouter tous les frais qui ont une valeur non nulle
