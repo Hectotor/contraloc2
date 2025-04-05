@@ -404,23 +404,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
             onPressed: () => SuppContrat.showDeleteConfirmationDialog(
                 context, widget.contratId),
           ),
-          IconButton(
-            icon: const Icon(Icons.edit_document, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ClientPage(
-                    marque: widget.data['marque'] ?? '',
-                    modele: widget.data['modele'] ?? '',
-                    immatriculation: widget.data['immatriculation'] ?? '',
-                    
-                    contratId: widget.contratId,
-                  ),
-                ),
-              );
-            },
-          ),
         ],
       ),
       body: Stack(
@@ -597,6 +580,39 @@ class _ModifierScreenState extends State<ModifierScreen> {
                                 SizedBox(width: 10),
                                 Text(
                                   "Afficher la facture",
+                                  style: TextStyle(color: Colors.white, fontSize: 18),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                        if (widget.data['status'] == 'réservé') ...[  
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ClientPage(
+                                    marque: widget.data['marque'],
+                                    modele: widget.data['modele'],
+                                    immatriculation: widget.data['immatriculation'],
+                                    contratId: widget.contratId,
+                                  ),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: const Size(double.infinity, 50),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.edit, color: Colors.white),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Modifier le contrat",
                                   style: TextStyle(color: Colors.white, fontSize: 18),
                                 ),
                               ],
