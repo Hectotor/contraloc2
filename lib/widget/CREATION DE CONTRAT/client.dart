@@ -14,9 +14,20 @@ class UpperCaseTextFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
       TextEditingValue oldValue, TextEditingValue newValue) {
+    // Convertir le texte en majuscules
+    final String upperCaseText = newValue.text.toUpperCase();
+    
+    // Si le texte n'a pas changé après conversion, retourner la valeur telle quelle
+    if (upperCaseText == newValue.text) {
+      return newValue;
+    }
+    
+    // Calculer le décalage de la sélection si nécessaire
+    final int selectionOffset = newValue.selection.baseOffset;
+    
     return TextEditingValue(
-      text: newValue.text.toUpperCase(),
-      selection: newValue.selection,
+      text: upperCaseText,
+      selection: TextSelection.collapsed(offset: selectionOffset),
     );
   }
 }

@@ -20,6 +20,7 @@ import 'CREATION DE CONTRAT/voiture_selectionne.dart';
 import 'CREATION DE CONTRAT/create_contrat.dart'; 
 import 'CREATION DE CONTRAT/popup_felicitation.dart'; 
 import 'popup_signature.dart'; 
+import '../models/contrat_model.dart';
 
 class LocationPage extends StatefulWidget {
   final String marque;
@@ -111,26 +112,7 @@ class _LocationPageState extends State<LocationPage> {
         if (contractData != null) {
           setState(() {
             // Mise à jour des contrôleurs avec les données du contrat
-            _dateDebutController.text = contractData['dateDebut'] ?? _dateDebutController.text;
-            _dateFinTheoriqueController.text = contractData['dateFinTheorique'] ?? '';
-            _kilometrageDepartController.text = contractData['kilometrageDepart']?.toString() ?? '';
-            _commentaireController.text = contractData['commentaire'] ?? '';
-            _pourcentageEssence = contractData['pourcentageEssence'] ?? 50;
-            
-            // Frais supplémentaires
-            _prixLocationController.text = contractData['prixLocation']?.toString() ?? _prixLocationController.text;
-            _accompteController.text = contractData['accompte']?.toString() ?? '';
-            _nettoyageIntController.text = contractData['nettoyageInt']?.toString() ?? _nettoyageIntController.text;
-            _nettoyageExtController.text = contractData['nettoyageExt']?.toString() ?? _nettoyageExtController.text;
-            _carburantManquantController.text = contractData['carburantManquant']?.toString() ?? _carburantManquantController.text;
-            _kilometrageAutoriseController.text = contractData['kilometrageAutorise']?.toString() ?? '';
-            _kilometrageSuppController.text = contractData['kilometrageSupp']?.toString() ?? _kilometrageSuppController.text;
-            
-            // Type de location
-            _typeLocationController.text = contractData['typeLocation'] ?? "Gratuite";
-            
-            // Autres informations
-            _cautionController.text = contractData['caution']?.toString() ?? _cautionController.text;
+            _updateControllersFromModel(contractData);
           });
         }
       });
@@ -183,60 +165,77 @@ class _LocationPageState extends State<LocationPage> {
     }
   }
 
-  Future<void> _selectDateTime(TextEditingController controller) async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      locale: const Locale('fr', 'FR'), 
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF08004D), 
-              onPrimary: Colors.white, 
-              surface: Colors.white, 
-              onSurface: Color(0xFF08004D), 
-            ),
-            dialogBackgroundColor: Colors.white,
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (pickedDate != null) {
-      final pickedTime = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.now(),
-        builder: (context, child) {
-          return Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: const ColorScheme.light(
-                primary: Color(0xFF08004D), 
-                onPrimary: Colors.white, 
-                surface: Colors.white, 
-                onSurface: Color(0xFF08004D), 
-              ),
-              dialogBackgroundColor: Colors.white,
-            ),
-            child: child!,
-          );
-        },
-      );
-      if (pickedTime != null) {
-        final dateTime = DateTime(
-          pickedDate.year,
-          pickedDate.month,
-          pickedDate.day,
-          pickedTime.hour,
-          pickedTime.minute,
-        );
-        final formattedDateTime = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(dateTime);
-        setState(() {
-          controller.text = formattedDateTime;
-        });
+  Future<ContratModel?> _loadContractData(String contratId) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        String adminId = user.uid; 
+      
+        // Vérifier si l'utilisateur est un collaborateur
+        final userDoc = await _firestore.collection('users').doc(user.uid).get();
+        final userData = userDoc.data();
+      
+        if (userData != null && userData['role'] == 'collaborateur' && userData['adminId'] != null) {
+          adminId = userData['adminId'];
+        }
+      
+        // Récupérer les données du contrat
+        final contratDoc = await _firestore
+            .collection('users')
+            .doc(adminId)
+            .collection('locations')
+            .doc(contratId)
+            .get();
+      
+        if (contratDoc.exists && contratDoc.data() != null) {
+          // Créer un modèle de contrat à partir des données Firestore
+          final contractData = contratDoc.data()!;
+          final contratModel = ContratModel.fromFirestore(contractData, id: contratId);
+      
+          // Charger la signature si elle existe
+          if (contractData['signature_aller'] != null) {
+            setState(() {
+              _signatureBase64 = contractData['signature_aller'];
+              if (_signatureBase64.isNotEmpty) {
+                _acceptedConditions = true; // Si une signature existe, les conditions ont été acceptées
+              }
+            });
+          }
+      
+          // Charger les photos si elles existent
+          if (contractData['photos'] != null && contractData['photos'] is List) {
+            List<dynamic> photoUrls = contractData['photos'];
+            print('Photos trouvées: ${photoUrls.length}');
+            
+            // Télécharger les photos depuis les URLs et les ajouter à la liste _photos
+            for (String photoUrl in photoUrls) {
+              try {
+                print('Téléchargement de la photo: $photoUrl');
+                final photoFile = await _downloadImageFromUrl(photoUrl);
+                if (photoFile != null) {
+                  setState(() {
+                    _photos.add(photoFile);
+                  });
+                }
+              } catch (e) {
+                print('Erreur lors du traitement de la photo: $e');
+              }
+            }
+          }
+      
+          // Mettre à jour les contrôleurs avec les données du contrat
+          _updateControllersFromModel(contratModel);
+          
+          return contratModel;
+        } else {
+          print('Aucun contrat trouvé avec l\'ID: $contratId');
+          return null;
+        }
       }
+      return null;
+    } catch (e) {
+      print('Erreur lors du chargement des données du contrat: $e');
+      return null;
     }
   }
 
@@ -285,18 +284,20 @@ class _LocationPageState extends State<LocationPage> {
           ? collaborateurStatus['adminId'] ?? user.uid 
           : user.uid;
 
-      print(' Création contrat - userId: $userId, targetId: $targetId');
+      print('Création contrat - userId: $userId, targetId: $targetId');
 
-      String? permisRectoUrl;
-      String? permisVersoUrl;
-      List<String> vehiculeUrls = [];
-
+      // Gestion de l'ID du contrat
       final contratId = widget.contratId ?? _firestore
           .collection('users')
           .doc(userId)
           .collection('locations')
           .doc()
           .id;
+
+      // Upload des photos
+      String? permisRectoUrl;
+      String? permisVersoUrl;
+      List<String> vehiculeUrls = [];
 
       if (widget.permisRecto != null) {
         permisRectoUrl = await _compressAndUploadPhoto(
@@ -312,49 +313,10 @@ class _LocationPageState extends State<LocationPage> {
         vehiculeUrls.add(url);
       }
 
-      String conditions = '';  
-      try {
-        // Vérifier d'abord si le document existe avant d'essayer de le récupérer
-        final userDocRef = _firestore.collection('users').doc(targetId);
-        final contratDocRef = userDocRef.collection('contrats').doc('userId');
-        
-        // Vérifier si le document existe sans déclencher d'erreur en cas d'absence
-        final docExists = await _firestore.runTransaction<bool>((transaction) async {
-          try {
-            final docSnapshot = await transaction.get(contratDocRef);
-            return docSnapshot.exists;
-          } catch (e) {
-            // En cas d'erreur de connectivité, supposer que le document n'existe pas
-            print('Vérification de l\'existence du document impossible: $e');
-            return false;
-          }
-        }).timeout(const Duration(seconds: 5), onTimeout: () => false);
-        
-        if (docExists) {
-          // Le document existe, on peut le récupérer
-          final conditionsDoc = await CollaborateurUtil.getDocument(
-            collection: 'users',
-            docId: targetId,
-            subCollection: 'contrats',
-            subDocId: 'userId',
-            useAdminId: true,
-          );
+      // Récupération des conditions
+      String conditions = await _loadConditions(targetId);
 
-          if (conditionsDoc.exists) {
-            final data = conditionsDoc.data() as Map<String, dynamic>?;
-            conditions = data?['texte'] ?? '';
-          }
-        } else {
-          // Le document n'existe pas, essayer d'autres sources
-          print('Document de conditions personnalisées non trouvé, utilisation des conditions par défaut');
-          final defaultConditionsDoc = await _firestore.collection('contrats').doc('default').get();
-          conditions = (defaultConditionsDoc.data())?['texte'] ?? ContratModifier.defaultContract;
-        }
-      } catch (e) {
-        print('Erreur lors de la récupération des conditions: $e');
-        conditions = ContratModifier.defaultContract;
-      }
-
+      // Récupération des données utilisateur
       final userData = await CollaborateurUtil.getAuthData();
       
       final nomEntreprise = userData['nomEntreprise'] ?? '';
@@ -363,262 +325,286 @@ class _LocationPageState extends State<LocationPage> {
       final siretEntreprise = userData['siret'] ?? '';
       final logoUrl = userData['logoUrl'] ?? '';
 
-      // Récupérer les informations du collaborateur qui crée le contrat
+      // Récupération des informations du collaborateur
       String nomCollaborateur = '';
       String prenomCollaborateur = '';
       
       if (collaborateurStatus['isCollaborateur'] ?? false) {
-        // Si c'est un collaborateur, récupérer son nom et prénom
-        final collaborateurDoc = await _firestore.collection('users').doc(userId).get();
-        final collaborateurData = collaborateurDoc.data();
-        if (collaborateurData != null) {
-          nomCollaborateur = collaborateurData['nom'] ?? '';
-          prenomCollaborateur = collaborateurData['prenom'] ?? '';
-        }
+        final collaborateurData = await _getCollaborateurData(userId);
+        nomCollaborateur = collaborateurData['nom'] ?? '';
+        prenomCollaborateur = collaborateurData['prenom'] ?? '';
       }
 
+      // Création du modèle de contrat
+      final contratModel = ContratModel(
+        contratId: contratId,
+        userId: userId,
+        adminId: targetId,
+        createdBy: userId,
+        isCollaborateur: collaborateurStatus['isCollaborateur'] ?? false,
+        nom: widget.nom,
+        prenom: widget.prenom,
+        adresse: widget.adresse,
+        telephone: widget.telephone,
+        email: widget.email,
+        numeroPermis: widget.numeroPermis,
+        immatriculationVehiculeClient: widget.immatriculationVehiculeClient,
+        kilometrageVehiculeClient: widget.kilometrageVehiculeClient,
+        permisRectoUrl: permisRectoUrl,
+        permisVersoUrl: permisVersoUrl,
+        permisRectoFile: widget.permisRecto,
+        permisVersoFile: widget.permisVerso,
+        marque: widget.marque,
+        modele: widget.modele,
+        immatriculation: widget.immatriculation,
+        photoVehiculeUrl: _vehiclePhotoUrl,
+        vin: _vinController.text.isNotEmpty ? _vinController.text : null,
+        typeCarburant: _typeCarburantController.text.isNotEmpty ? _typeCarburantController.text : null,
+        boiteVitesses: _boiteVitessesController.text.isNotEmpty ? _boiteVitessesController.text : null,
+        dateDebut: _dateDebutController.text.isNotEmpty ? _dateDebutController.text : null,
+        dateFinTheorique: _dateFinTheoriqueController.text.isNotEmpty ? _dateFinTheoriqueController.text : null,
+        kilometrageDepart: _kilometrageDepartController.text.isNotEmpty ? _kilometrageDepartController.text : null,
+        typeLocation: _typeLocationController.text.isNotEmpty ? _typeLocationController.text : "Gratuite",
+        pourcentageEssence: _pourcentageEssence,
+        commentaire: _commentaireController.text.isNotEmpty ? _commentaireController.text : null,
+        photosUrls: vehiculeUrls,
+        photosFiles: _photos,
+        status: _determineContractStatus(),
+        dateReservation: _calculateReservationDate(),
+        dateCreation: Timestamp.now(),
+        signatureAller: _signatureBase64,
+        assuranceNom: _assuranceNomController.text.isNotEmpty ? _assuranceNomController.text : null,
+        assuranceNumero: _assuranceNumeroController.text.isNotEmpty ? _assuranceNumeroController.text : null,
+        franchise: _franchiseController.text.isNotEmpty ? _franchiseController.text : null,
+        prixLocation: _prixLocationController.text.isNotEmpty ? _prixLocationController.text : null,
+        accompte: _accompteController.text.isNotEmpty ? _accompteController.text : null,
+        caution: _cautionController.text.isNotEmpty ? _cautionController.text : null,
+        nettoyageInt: _nettoyageIntController.text.isNotEmpty ? _nettoyageIntController.text : null,
+        nettoyageExt: _nettoyageExtController.text.isNotEmpty ? _nettoyageExtController.text : null,
+        carburantManquant: _carburantManquantController.text.isNotEmpty ? _carburantManquantController.text : null,
+        kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : null,
+        kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : null,
+        prixRayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : null,
+        logoUrl: logoUrl,
+        nomEntreprise: nomEntreprise,
+        adresseEntreprise: adresseEntreprise,
+        telephoneEntreprise: telephoneEntreprise,
+        siretEntreprise: siretEntreprise,
+        nomCollaborateur: nomCollaborateur,
+        prenomCollaborateur: prenomCollaborateur,
+        conditions: conditions,
+      );
+
+      // Sauvegarde dans Firestore
       await _firestore
           .collection('users')
-          .doc(targetId) 
+          .doc(targetId)
           .collection('locations')
           .doc(contratId)
-          .set({
-        'userId': userId, 
-        'adminId': targetId, 
-        'createdBy': userId, 
-        'isCollaborateur': collaborateurStatus['isCollaborateur'] ?? false, 
-        'nom': widget.nom ?? '',
-        'prenom': widget.prenom ?? '',
-        'adresse': widget.adresse ?? '',
-        'telephone': widget.telephone ?? '',
-        'email': widget.email ?? '',
-        'permisRecto': permisRectoUrl,
-        'permisVerso': permisVersoUrl,
-        'marque': widget.marque,
-        'modele': widget.modele,
-        'immatriculation': widget.immatriculation,
-        'photoVehiculeUrl': _vehiclePhotoUrl,
-        
-        'dateDebut': _dateDebutController.text,
-        'dateFinTheorique': _dateFinTheoriqueController.text,
-        'kilometrageDepart': _kilometrageDepartController.text,
-        'typeLocation': _typeLocationController.text,
-        'pourcentageEssence': _pourcentageEssence,
-        'commentaire': _commentaireController.text,
-        'photos': vehiculeUrls,
-        'status': (() {
-          String status = 'en_cours';
-          if (_dateDebutController.text.isNotEmpty) {
-            try {
-              final now = DateTime.now();
-              final parsedDate = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(_dateDebutController.text);
-              
-              final dateWithCurrentYear = DateTime(
-                now.year,
-                parsedDate.month,
-                parsedDate.day,
-                parsedDate.hour,
-                parsedDate.minute,
-              );
-              
-              final dateToCompare = dateWithCurrentYear.isBefore(now) && 
-                                   parsedDate.month < now.month ? 
-                                   DateTime(now.year + 1, parsedDate.month, parsedDate.day, 
-                                           parsedDate.hour, parsedDate.minute) : 
-                                   dateWithCurrentYear;
-              
-              if (dateToCompare.isAfter(now) && 
-                  !(dateToCompare.year == now.year && 
-                    dateToCompare.month == now.month && 
-                    dateToCompare.day == now.day)) {
-                status = 'réservé';
-              }
-            } catch (e) {
-              print('Erreur parsing: $e');
-            }
-          }
-          
-          return status;
-        })(),
-        'dateReservation': (() {
-          if (_dateDebutController.text.isNotEmpty) {
-            try {
-              final now = DateTime.now();
-              final parsedDate = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(_dateDebutController.text);
-              
-              final dateWithCurrentYear = DateTime(
-                now.year,
-                parsedDate.month,
-                parsedDate.day,
-                parsedDate.hour,
-                parsedDate.minute,
-              );
-              
-              final dateToCompare = dateWithCurrentYear.isBefore(now) && 
-                                   parsedDate.month < now.month ? 
-                                   DateTime(now.year + 1, parsedDate.month, parsedDate.day, 
-                                           parsedDate.hour, parsedDate.minute) : 
-                                   dateWithCurrentYear;
-              
-              if (dateToCompare.isAfter(now) && 
-                  !(dateToCompare.year == now.year && 
-                    dateToCompare.month == now.month && 
-                    dateToCompare.day == now.day)) {
-                return Timestamp.fromDate(dateToCompare);
-              }
-            } catch (e) {
-              print('Erreur parsing dateReservation: $e');
-            }
-          }
-          return null;
-        })(),
-        'dateCreation':
-            FieldValue.serverTimestamp(), 
-        'numeroPermis': widget.numeroPermis ??
-            '', 
-        'immatriculationVehiculeClient': widget.immatriculationVehiculeClient ??
-            '', 
-        'kilometrageVehiculeClient': widget.kilometrageVehiculeClient ??
-            '', 
-        'nettoyageInt': _nettoyageIntController.text,
-        'nettoyageExt': _nettoyageExtController.text,
-        'carburantManquant': _carburantManquantController.text,
-        'kilometrageAutorise': _kilometrageAutoriseController.text,
-        'caution': _cautionController.text,
-        'signature_aller': _signatureBase64, 
-        'kilometrageSupp': _kilometrageSuppController.text,
-        'typeCarburant':  _typeCarburantController.text,
-        'boiteVitesses':  _boiteVitessesController.text,
-        'vin': _vinController.text,
-        'assuranceNom': _assuranceNomController.text,
-        'assuranceNumero': _assuranceNumeroController.text,
-        'franchise': _franchiseController.text,
-        'prixRayures': _rayuresController.text,  
-        'prixLocation': _prixLocationController.text,
-        'accompte': _accompteController.text,
-        'logoUrl': logoUrl,
-        'nomEntreprise': nomEntreprise,
-        'adresseEntreprise': adresseEntreprise,
-        'telephoneEntreprise': telephoneEntreprise,
-        'siretEntreprise': siretEntreprise,
-        'conditions': conditions, 
-        'nomCollaborateur': nomCollaborateur,
-        'prenomCollaborateur': prenomCollaborateur,
-        'contratId': contratId,
-      });
+          .set(contratModel.toFirestore(), SetOptions(merge: true));
 
+      // Génération et envoi du PDF si un email est fourni
       if (widget.email != null && widget.email!.isNotEmpty) {
-        final pdfParams = {  
-          'nom': widget.nom,  
-          'prenom': widget.prenom,  
-          'adresse': widget.adresse,  
-          'telephone': widget.telephone,  
-          'email': widget.email,  
-          'numeroPermis': widget.numeroPermis,  
-          'immatriculationVehiculeClient': widget.immatriculationVehiculeClient,
-          'kilometrageVehiculeClient': widget.kilometrageVehiculeClient,  
-          'marque': widget.marque,  
-          'modele': widget.modele,  
-          'immatriculation': widget.immatriculation,  
-          'commentaire': _commentaireController.text,  
-          'photos': vehiculeUrls,  
-          'signatureBase64': _signatureBase64,  
-          'nettoyageInt': _nettoyageIntController.text,  
-          'nettoyageExt': _nettoyageExtController.text,  
-          'carburantManquant': _carburantManquantController.text,  
-          'caution': _cautionController.text,  
-          'typeCarburant': _typeCarburantController.text,  
-          'boiteVitesses': _boiteVitessesController.text,  
-          'vin': _vinController.text,  
-          'assuranceNom': _assuranceNomController.text,  
-          'assuranceNumero': _assuranceNumeroController.text,  
-          'franchise': _franchiseController.text,  
-          'prixRayures': _rayuresController.text,  
-          'kilometrageSupp': _kilometrageSuppController.text,  
-          'kilometrageAutorise': _kilometrageAutoriseController.text,
-          'typeLocation': _typeLocationController.text,
-          'prixLocation': _prixLocationController.text,
-          'accompte': _accompteController.text,
-          'kilometrageDepart': _kilometrageDepartController.text,  
-          'pourcentageEssence': _pourcentageEssence.toString(),  
-          'condition': conditions, 
-          'nomCollaborateur': nomCollaborateur, 
-          'prenomCollaborateur': prenomCollaborateur, 
-          'contratId': contratId,
-
-        };  
-
-        final pdfPath = await generatePdf(  
-          pdfParams,  
-          '', 
-          '', 
-          '', 
-          [], 
-          nomEntreprise,  
-          logoUrl,  
-          adresseEntreprise,  
-          telephoneEntreprise,  
-          siretEntreprise,  
-          '', 
-          _typeCarburantController.text,  
-          _boiteVitessesController.text,  
-          _vinController.text,  
-          _assuranceNomController.text,  
-          _assuranceNumeroController.text,  
-          _franchiseController.text,  
-          _kilometrageSuppController.text,  
-          _rayuresController.text,  
-          _dateDebutController.text,  
-          _dateFinTheoriqueController.text,  
-          '', 
-          _kilometrageDepartController.text,  
-          _kilometrageAutoriseController.text,  
-          _pourcentageEssence.toString(),  
-          _typeLocationController.text,  
-          _prixLocationController.text,  
-          _accompteController.text,
-          condition: conditions,  
-          nomCollaborateur: nomCollaborateur.isNotEmpty && prenomCollaborateur.isNotEmpty 
-              ? '$prenomCollaborateur $nomCollaborateur' 
-              : null,
-        );
-
-        await EmailService.sendEmailWithPdf(
-          pdfPath: pdfPath,
-          email: widget.email!,
-          marque: widget.marque,
-          modele: widget.modele,
-          immatriculation: widget.immatriculation,
-          context: context,
-          prenom: widget.prenom,
-          nom: widget.nom,
-          nomEntreprise: nomEntreprise,
-          nomCollaborateur: nomCollaborateur,
-          prenomCollaborateur: prenomCollaborateur,
-        );
+        await _generateAndSendPdf(contratModel, nomEntreprise, logoUrl, adresseEntreprise, 
+                                  telephoneEntreprise, siretEntreprise, nomCollaborateur, prenomCollaborateur);
       }
 
+      // Affichage du succès et navigation
       if (context.mounted) {
         Popup.showSuccess(context).then((_) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  const NavigationPage(fromPage: 'fromLocation'),
+              builder: (context) => const NavigationPage(fromPage: 'fromLocation'),
             ),
           );
         });
       }
     } catch (e) {
+      // Gestion des erreurs
       print('Erreur lors de la validation du contrat : $e');
       if (context.mounted) {
         setState(() {
-          _isLoading = false; 
+          _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erreur : ${e.toString()}')),
         );
       }
+    }
+  }
+
+  // Méthode pour déterminer le statut du contrat
+  String _determineContractStatus() {
+    String status = 'en_cours';
+    if (_dateDebutController.text.isNotEmpty) {
+      try {
+        final now = DateTime.now();
+        final parsedDate = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(_dateDebutController.text);
+        
+        final dateWithCurrentYear = DateTime(
+          now.year,
+          parsedDate.month,
+          parsedDate.day,
+          parsedDate.hour,
+          parsedDate.minute,
+        );
+        
+        final dateToCompare = dateWithCurrentYear.isBefore(now) && 
+                             parsedDate.month < now.month ? 
+                             DateTime(now.year + 1, parsedDate.month, parsedDate.day, 
+                                     parsedDate.hour, parsedDate.minute) : 
+                             dateWithCurrentYear;
+        
+        if (dateToCompare.isAfter(now) && 
+            !(dateToCompare.year == now.year && 
+              dateToCompare.month == now.month && 
+              dateToCompare.day == now.day)) {
+          status = 'réservé';
+        }
+      } catch (e) {
+        print('Erreur parsing: $e');
+      }
+    }
+    
+    return status;
+  }
+
+  // Méthode pour calculer la date de réservation
+  Timestamp? _calculateReservationDate() {
+    if (_dateDebutController.text.isNotEmpty) {
+      try {
+        final now = DateTime.now();
+        final parsedDate = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(_dateDebutController.text);
+        
+        final dateWithCurrentYear = DateTime(
+          now.year,
+          parsedDate.month,
+          parsedDate.day,
+          parsedDate.hour,
+          parsedDate.minute,
+        );
+        
+        final dateToCompare = dateWithCurrentYear.isBefore(now) && 
+                             parsedDate.month < now.month ? 
+                             DateTime(now.year + 1, parsedDate.month, parsedDate.day, 
+                                     parsedDate.hour, parsedDate.minute) : 
+                             dateWithCurrentYear;
+        
+        if (dateToCompare.isAfter(now) && 
+            !(dateToCompare.year == now.year && 
+              dateToCompare.month == now.month && 
+              dateToCompare.day == now.day)) {
+          return Timestamp.fromDate(dateToCompare);
+        }
+      } catch (e) {
+        print('Erreur parsing dateReservation: $e');
+      }
+    }
+    return null;
+  }
+
+  // Méthode pour charger les conditions
+  Future<String> _loadConditions(String targetId) async {
+    try {
+      // Vérifier d'abord si le document existe avant d'essayer de le récupérer
+      final userDocRef = _firestore.collection('users').doc(targetId);
+      final contratDocRef = userDocRef.collection('contrats').doc('userId');
+      
+      // Vérifier si le document existe sans déclencher d'erreur en cas d'absence
+      final docExists = await _firestore.runTransaction<bool>((transaction) async {
+        try {
+          final docSnapshot = await transaction.get(contratDocRef);
+          return docSnapshot.exists;
+        } catch (e) {
+          // En cas d'erreur de connectivité, supposer que le document n'existe pas
+          print('Vérification de l\'existence du document impossible: $e');
+          return false;
+        }
+      }).timeout(const Duration(seconds: 5), onTimeout: () => false);
+      
+      if (docExists) {
+        // Le document existe, on peut le récupérer
+        final conditionsDoc = await CollaborateurUtil.getDocument(
+          collection: 'users',
+          docId: targetId,
+          subCollection: 'contrats',
+          subDocId: 'userId',
+          useAdminId: true,
+        );
+
+        if (conditionsDoc.exists) {
+          final data = conditionsDoc.data() as Map<String, dynamic>?;
+          return data?['texte'] ?? '';
+        }
+      } else {
+        // Le document n'existe pas, essayer d'autres sources
+        print('Document de conditions personnalisées non trouvé, utilisation des conditions par défaut');
+        final defaultConditionsDoc = await _firestore.collection('contrats').doc('default').get();
+        return (defaultConditionsDoc.data())?['texte'] ?? ContratModifier.defaultContract;
+      }
+    } catch (e) {
+      print('Erreur lors de la récupération des conditions: $e');
+    }
+    return ContratModifier.defaultContract;
+  }
+
+  // Méthode pour récupérer les données du collaborateur
+  Future<Map<String, dynamic>> _getCollaborateurData(String userId) async {
+    try {
+      final collaborateurDoc = await _firestore.collection('users').doc(userId).get();
+      return collaborateurDoc.data() ?? {};
+    } catch (e) {
+      print('Erreur lors de la récupération des données du collaborateur: $e');
+      return {};
+    }
+  }
+
+  // Méthode pour générer et envoyer le PDF
+  Future<void> _generateAndSendPdf(ContratModel contratModel, String nomEntreprise, String logoUrl, 
+                                  String adresseEntreprise, String telephoneEntreprise, 
+                                  String siretEntreprise, String nomCollaborateur, 
+                                  String prenomCollaborateur) async {
+    try {
+      // Utilisation de la méthode toPdfParams() pour obtenir les paramètres du PDF
+      final pdfParams = contratModel.toPdfParams();
+      
+      final pdfPath = await generatePdf(
+        pdfParams,
+        '', '', '', [],
+        nomEntreprise, logoUrl, adresseEntreprise, telephoneEntreprise, siretEntreprise,
+        '', contratModel.typeCarburant ?? '', contratModel.boiteVitesses ?? '',
+        contratModel.vin ?? '', contratModel.assuranceNom ?? '',
+        contratModel.assuranceNumero ?? '', contratModel.franchise ?? '',
+        contratModel.kilometrageSupp ?? '', contratModel.prixRayures ?? '',
+        contratModel.dateDebut ?? '', contratModel.dateFinTheorique ?? '',
+        '', contratModel.kilometrageDepart ?? '', contratModel.kilometrageAutorise ?? '',
+        contratModel.pourcentageEssence.toString(), contratModel.typeLocation ?? '',
+        contratModel.prixLocation ?? '', contratModel.accompte ?? '',
+        condition: contratModel.conditions ?? '',
+        nomCollaborateur: nomCollaborateur.isNotEmpty && prenomCollaborateur.isNotEmpty 
+            ? '$prenomCollaborateur $nomCollaborateur' 
+            : null,
+      );
+
+      if (contratModel.email != null && contratModel.email!.isNotEmpty) {
+        await EmailService.sendEmailWithPdf(
+          pdfPath: pdfPath,
+          email: contratModel.email!,
+          marque: contratModel.marque ?? '',
+          modele: contratModel.modele ?? '',
+          immatriculation: contratModel.immatriculation ?? '',
+          context: context,
+          prenom: contratModel.prenom ?? '',
+          nom: contratModel.nom ?? '',
+          nomEntreprise: nomEntreprise,
+          nomCollaborateur: nomCollaborateur,
+          prenomCollaborateur: prenomCollaborateur,
+        );
+      }
+    } catch (e) {
+      print('Erreur lors de la génération ou de l\'envoi du PDF: $e');
+      throw e; // Propager l'erreur pour la gestion globale
     }
   }
 
@@ -712,75 +698,6 @@ class _LocationPageState extends State<LocationPage> {
     }
   }
 
-  Future<Map<String, dynamic>?> _loadContractData(String contratId) async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        String adminId = user.uid; 
-      
-        // Vérifier si l'utilisateur est un collaborateur
-        final userDoc = await _firestore.collection('users').doc(user.uid).get();
-        final userData = userDoc.data();
-      
-        if (userData != null && userData['role'] == 'collaborateur' && userData['adminId'] != null) {
-          adminId = userData['adminId'];
-        }
-      
-        // Récupérer les données du contrat
-        final contratDoc = await _firestore
-            .collection('users')
-            .doc(adminId)
-            .collection('locations')
-            .doc(contratId)
-            .get();
-      
-        if (contratDoc.exists) {
-          final contractData = contratDoc.data();
-      
-          // Charger la signature si elle existe
-          if (contractData != null && contractData['signature'] != null) {
-            setState(() {
-              _signatureBase64 = contractData['signature'];
-              if (_signatureBase64.isNotEmpty) {
-                _acceptedConditions = true; // Si une signature existe, les conditions ont été acceptées
-              }
-            });
-          }
-      
-          // Charger les photos si elles existent
-          if (contractData != null && contractData['photos'] != null && contractData['photos'] is List) {
-            List<dynamic> photoUrls = contractData['photos'];
-            print('Photos trouvées: ${photoUrls.length}');
-            
-            // Télécharger les photos depuis les URLs et les ajouter à la liste _photos
-            for (String photoUrl in photoUrls) {
-              try {
-                print('Téléchargement de la photo: $photoUrl');
-                final photoFile = await _downloadImageFromUrl(photoUrl);
-                if (photoFile != null) {
-                  setState(() {
-                    _photos.add(photoFile);
-                  });
-                }
-              } catch (e) {
-                print('Erreur lors du traitement de la photo: $e');
-              }
-            }
-          }
-      
-          return contractData;
-        } else {
-          print('Aucun contrat trouvé avec l\'ID: $contratId');
-          return null;
-        }
-      }
-      return null;
-    } catch (e) {
-      print('Erreur lors du chargement des données du contrat: $e');
-      return null;
-    }
-  }
-
   void _addPhoto(File photo) {
     setState(() {
       _photos.add(photo);
@@ -798,6 +715,99 @@ class _LocationPageState extends State<LocationPage> {
     _prixLocationController.dispose();
     _accompteController.dispose();
     super.dispose();
+  }
+
+  void _updateControllersFromModel(ContratModel model) {
+    // Mise à jour des contrôleurs avec les données du modèle
+    if (model.dateDebut != null) _dateDebutController.text = model.dateDebut!;
+    if (model.dateFinTheorique != null) _dateFinTheoriqueController.text = model.dateFinTheorique!;
+    if (model.kilometrageDepart != null) _kilometrageDepartController.text = model.kilometrageDepart!;
+    if (model.typeLocation != null) _typeLocationController.text = model.typeLocation!;
+    if (model.commentaire != null) _commentaireController.text = model.commentaire!;
+    setState(() => _pourcentageEssence = model.pourcentageEssence);
+    
+    // Informations financières
+    if (model.prixLocation != null) _prixLocationController.text = model.prixLocation!;
+    if (model.accompte != null) _accompteController.text = model.accompte!;
+    if (model.caution != null) _cautionController.text = model.caution!;
+    if (model.nettoyageInt != null) _nettoyageIntController.text = model.nettoyageInt!;
+    if (model.nettoyageExt != null) _nettoyageExtController.text = model.nettoyageExt!;
+    if (model.carburantManquant != null) _carburantManquantController.text = model.carburantManquant!;
+    if (model.kilometrageAutorise != null) _kilometrageAutoriseController.text = model.kilometrageAutorise!;
+    if (model.kilometrageSupp != null) _kilometrageSuppController.text = model.kilometrageSupp!;
+    if (model.prixRayures != null) _rayuresController.text = model.prixRayures!;
+    
+    // Informations véhicule
+    if (model.typeCarburant != null) _typeCarburantController.text = model.typeCarburant!;
+    if (model.boiteVitesses != null) _boiteVitessesController.text = model.boiteVitesses!;
+    if (model.vin != null) _vinController.text = model.vin!;
+    
+    // Informations assurance
+    if (model.assuranceNom != null) _assuranceNomController.text = model.assuranceNom!;
+    if (model.assuranceNumero != null) _assuranceNumeroController.text = model.assuranceNumero!;
+    if (model.franchise != null) _franchiseController.text = model.franchise!;
+    
+    // Mise à jour des variables d'état
+    setState(() {
+      _vehiclePhotoUrl = model.photoVehiculeUrl;
+    });
+  }
+
+  Future<void> _selectDateTime(TextEditingController controller) async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      locale: const Locale('fr', 'FR'), 
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF08004D), 
+              onPrimary: Colors.white, 
+              surface: Colors.white, 
+              onSurface: Color(0xFF08004D), 
+            ),
+            dialogBackgroundColor: Colors.white,
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (pickedDate != null) {
+      final pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+        builder: (context, child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: Color(0xFF08004D), 
+                onPrimary: Colors.white, 
+                surface: Colors.white, 
+                onSurface: Color(0xFF08004D), 
+              ),
+              dialogBackgroundColor: Colors.white,
+            ),
+            child: child!,
+          );
+        },
+      );
+      if (pickedTime != null) {
+        final dateTime = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+        final formattedDateTime = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(dateTime);
+        setState(() {
+          controller.text = formattedDateTime;
+        });
+      }
+    }
   }
 
   @override
