@@ -3,6 +3,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 import 'package:ContraLoc/widget/MES CONTRATS/vehicle_access_manager.dart';
 import 'package:ContraLoc/widget/modifier.dart';
 
@@ -27,6 +28,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // Gestionnaire d'accès aux véhicules
   late VehicleAccessManager _vehicleAccessManager;
   String? _targetUserId;
+
+  // Écouteur pour les mises à jour Firestore
+  StreamSubscription<QuerySnapshot>? _contractsSubscription;
 
   // Couleur principale pour ce composant (bleu foncé)
   final Color primaryColor = Color(0xFF08004D);
@@ -70,7 +74,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _processContracts(snapshot);
       
       // Mise en place d'un écouteur pour les mises à jour
-      FirebaseFirestore.instance
+      _contractsSubscription = FirebaseFirestore.instance
           .collection('users')
           .doc(effectiveUserId)
           .collection('locations')
@@ -104,10 +108,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
       }
     }
     
-    setState(() {
-      // Mettre à jour les contrats pour la date sélectionnée
-      _updateSelectedDayContracts();
-    });
+    // Vérifier si le widget est toujours monté avant d'appeler setState()
+    if (mounted) {
+      setState(() {
+        // Mettre à jour les contrats pour la date sélectionnée
+        _updateSelectedDayContracts();
+      });
+    }
   }
 
   DateTime? _parseDate(dynamic timestamp) {
@@ -127,9 +134,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   void _updateSelectedDayContracts() {
     final selectedDate = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
-    setState(() {
-      _selectedDayContracts = _reservedContracts[selectedDate] ?? [];
-    });
+    if (mounted) {
+      setState(() {
+        _selectedDayContracts = _reservedContracts[selectedDate] ?? [];
+      });
+    }
   }
 
   void _showReservationsBottomSheet(BuildContext context, DateTime day) {
@@ -549,5 +558,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _photoUrlCache[cacheKey] = null;
       return null;
     }
+  }
+
+  @override
+  void dispose() {
+    // Annuler l'écouteur Firestore pour éviter les appels à setState() après dispose()
+    _contractsSubscription?.cancel();
+    super.dispose();
   }
 }

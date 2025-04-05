@@ -26,16 +26,6 @@ class ClientPage extends StatefulWidget {
   final String modele;
   final String immatriculation;
   final String? contratId;
-  final String? nom;
-  final String? prenom;
-  final String? adresse;
-  final String? telephone;
-  final String? email;
-  final String? numeroPermis;
-  final String? permisRectoUrl;
-  final String? permisVersoUrl;
-  final String? immatriculationVehiculeClient;
-  final String? kilometrageVehiculeClient;
 
   const ClientPage({
     Key? key,
@@ -43,16 +33,6 @@ class ClientPage extends StatefulWidget {
     required this.modele,
     required this.immatriculation,
     this.contratId,
-    this.nom,
-    this.prenom,
-    this.adresse,
-    this.telephone,
-    this.email,
-    this.numeroPermis,
-    this.permisRectoUrl,
-    this.permisVersoUrl,
-    this.immatriculationVehiculeClient,
-    this.kilometrageVehiculeClient,
   }) : super(key: key);
 
   @override
@@ -69,8 +49,8 @@ class _ClientPageState extends State<ClientPage> {
   final TextEditingController _immatriculationVehiculeClientController = TextEditingController();
   final TextEditingController _kilometrageVehiculeClientController = TextEditingController();
 
-  String? _permisRectoUrl;
-  String? _permisVersoUrl;
+  File? _permisRecto;
+  File? _permisVerso;
   bool _showPermisFields = false;
   bool isPremiumUser = false; // Nouvelle propriété
 
@@ -78,53 +58,7 @@ class _ClientPageState extends State<ClientPage> {
   void initState() {
     super.initState();
     _initializeSubscription(); // Initialiser et vérifier le statut d'abonnement
-    
-    // Pré-remplir les champs avec les données passées en paramètres
-    bool hasPrefilledData = false;
-    
-    if (widget.nom != null && widget.nom!.isNotEmpty) {
-      _nomController.text = widget.nom!;
-      hasPrefilledData = true;
-    }
-    if (widget.prenom != null && widget.prenom!.isNotEmpty) {
-      _prenomController.text = widget.prenom!;
-      hasPrefilledData = true;
-    }
-    if (widget.adresse != null && widget.adresse!.isNotEmpty) {
-      _adresseController.text = widget.adresse!;
-      hasPrefilledData = true;
-    }
-    if (widget.telephone != null && widget.telephone!.isNotEmpty) {
-      _telephoneController.text = widget.telephone!;
-      hasPrefilledData = true;
-    }
-    if (widget.email != null && widget.email!.isNotEmpty) {
-      _emailController.text = widget.email!;
-      hasPrefilledData = true;
-    }
-    if (widget.numeroPermis != null && widget.numeroPermis!.isNotEmpty) {
-      _numeroPermisController.text = widget.numeroPermis!;
-      hasPrefilledData = true;
-    }
-    if (widget.immatriculationVehiculeClient != null && widget.immatriculationVehiculeClient!.isNotEmpty) {
-      _immatriculationVehiculeClientController.text = widget.immatriculationVehiculeClient!;
-      hasPrefilledData = true;
-    }
-    if (widget.kilometrageVehiculeClient != null && widget.kilometrageVehiculeClient!.isNotEmpty) {
-      _kilometrageVehiculeClientController.text = widget.kilometrageVehiculeClient!;
-      hasPrefilledData = true;
-    }
-    if (widget.permisRectoUrl != null && widget.permisRectoUrl!.isNotEmpty) {
-      _permisRectoUrl = widget.permisRectoUrl;
-      hasPrefilledData = true;
-    }
-    if (widget.permisVersoUrl != null && widget.permisVersoUrl!.isNotEmpty) {
-      _permisVersoUrl = widget.permisVersoUrl;
-      hasPrefilledData = true;
-    }
-    
-    // Charger les données depuis Firestore uniquement si nécessaire
-    if (widget.contratId != null && !hasPrefilledData) {
+    if (widget.contratId != null) {
       _loadClientData();
     }
   }
@@ -163,8 +97,6 @@ class _ClientPageState extends State<ClientPage> {
             _numeroPermisController.text = data['numeroPermis'] ?? '';
             _immatriculationVehiculeClientController.text = data['immatriculationClient'] ?? '';
             _kilometrageVehiculeClientController.text = data['kilometrageClient'] ?? '';
-            _permisRectoUrl = data['permisRecto'];
-            _permisVersoUrl = data['permisVerso'];
           });
         }
       }
@@ -229,30 +161,31 @@ class _ClientPageState extends State<ClientPage> {
   Future<void> _selectImage(ImageSource source, bool isRecto) async {
     try {
       final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: source);
-
+      final pickedFile = await picker.pickImage(
+        source: source,
+        imageQuality: 70,
+      );
       if (pickedFile != null) {
-        // Compression de l'image
-        final File originalFile = File(pickedFile.path);
-        final Uint8List? compressedImage = await FlutterImageCompress.compressWithFile(
-          originalFile.path,
-          minWidth: 1000,
-          minHeight: 1000,
-          quality: 70,
+        final compressedImage = await FlutterImageCompress.compressWithFile(
+          pickedFile.path,
+          minWidth: 800,
+          minHeight: 800,
+          quality: 85,
         );
-
         if (compressedImage != null) {
           setState(() {
             if (isRecto) {
-              _permisRectoUrl = originalFile.path;
+              _permisRecto = File(pickedFile.path);
             } else {
-              _permisVersoUrl = originalFile.path;
+              _permisVerso = File(pickedFile.path);
             }
           });
         }
+      } else {
+        print('Aucune image sélectionnée'); // Log d'erreur
       }
     } catch (e) {
-      print('Erreur lors de la sélection de l\'image: $e');
+      print('Erreur lors de la sélection de l\'image : $e');
     }
   }
 
@@ -328,8 +261,8 @@ class _ClientPageState extends State<ClientPage> {
               adresse: _adresseController.text,
               telephone: _telephoneController.text,
               email: _emailController.text,
-              permisRectoUrl: _permisRectoUrl,
-              permisVersoUrl: _permisVersoUrl,
+              permisRecto: _permisRecto,
+              permisVerso: _permisVerso,
               numeroPermis:_numeroPermisController.text,
               immatriculationVehiculeClient: _immatriculationVehiculeClientController.text, // Ajout de numeroPermis
               kilometrageVehiculeClient: _kilometrageVehiculeClientController.text, // Ajout de kilometrage
@@ -479,9 +412,9 @@ class _ClientPageState extends State<ClientPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         _buildImageUploader(
-                            "Permis Recto", _permisRectoUrl, () => _pickImage(true)),
+                            "Permis Recto", _permisRecto, () => _pickImage(true)),
                         _buildImageUploader(
-                            "Permis Verso", _permisVersoUrl, () => _pickImage(false)),
+                            "Permis Verso", _permisVerso, () => _pickImage(false)),
                       ],
                     ),
                   ],
@@ -582,7 +515,7 @@ class _ClientPageState extends State<ClientPage> {
   }
 
   Widget _buildImageUploader(
-      String label, String? imageUrl, VoidCallback onTap) {
+      String label, File? imageFile, VoidCallback onTap) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = (constraints.maxWidth - 32) / 2;
@@ -601,11 +534,11 @@ class _ClientPageState extends State<ClientPage> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey),
                 ),
-                child: imageUrl != null
+                child: imageFile != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Image.file(
-                          File(imageUrl),
+                          imageFile,
                           fit: BoxFit.cover,
                         ),
                       )
@@ -629,7 +562,7 @@ class _ClientPageState extends State<ClientPage> {
                         ],
                       ),
               ),
-              if (imageUrl != null)
+              if (imageFile != null)
                 Positioned(
                   top: 5,
                   right: 5,
@@ -637,9 +570,9 @@ class _ClientPageState extends State<ClientPage> {
                     onTap: () {
                       setState(() {
                         if (label == "Permis Recto") {
-                          _permisRectoUrl = null;
+                          _permisRecto = null;
                         } else {
-                          _permisVersoUrl = null;
+                          _permisVerso = null;
                         }
                       });
                     },

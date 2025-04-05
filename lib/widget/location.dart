@@ -30,8 +30,8 @@ class LocationPage extends StatefulWidget {
   final String? adresse;
   final String? telephone;
   final String? email;
-  final String? permisRectoUrl;
-  final String? permisVersoUrl;
+  final File? permisRecto;
+  final File? permisVerso;
   final String? numeroPermis;
   final String? immatriculationVehiculeClient;
   final String? kilometrageVehiculeClient;
@@ -47,8 +47,8 @@ class LocationPage extends StatefulWidget {
     this.adresse,
     this.telephone,
     this.email,
-    this.permisRectoUrl,
-    this.permisVersoUrl,
+    this.permisRecto,
+    this.permisVerso,
     this.numeroPermis,
     this.immatriculationVehiculeClient,
     this.kilometrageVehiculeClient,
@@ -270,11 +270,13 @@ class _LocationPageState extends State<LocationPage> {
           .doc()
           .id;
 
-      if (widget.permisRectoUrl != null) {
-        permisRectoUrl = widget.permisRectoUrl;
+      if (widget.permisRecto != null) {
+        permisRectoUrl = await _compressAndUploadPhoto(
+            widget.permisRecto!, 'permis_recto', contratId);
       }
-      if (widget.permisVersoUrl != null) {
-        permisVersoUrl = widget.permisVersoUrl;
+      if (widget.permisVerso != null) {
+        permisVersoUrl = await _compressAndUploadPhoto(
+            widget.permisVerso!, 'permis_verso', contratId);
       }
 
       for (var photo in _photos) {

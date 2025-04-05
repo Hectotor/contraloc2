@@ -25,7 +25,6 @@ import 'MODIFICATION DE CONTRAT/signature_retour.dart';
 import 'MODIFICATION DE CONTRAT/cloturer_location.dart';
 import 'MODIFICATION DE CONTRAT/facture.dart';
 import 'navigation.dart';
-import 'CREATION DE CONTRAT/client.dart';
 
 class ModifierScreen extends StatefulWidget {
   final String contratId;
@@ -617,46 +616,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           child: const Text(
                             "Vider le cache des PDF",
                             style: TextStyle(color: Colors.white, fontSize: 18),
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ClientPage(
-                                  marque: widget.data['marque'] ?? '',
-                                  modele: widget.data['modele'] ?? '',
-                                  immatriculation: widget.data['immatriculation'] ?? '',
-                                  nom: widget.data['nom'] ?? '',
-                                  prenom: widget.data['prenom'] ?? '',
-                                  adresse: widget.data['adresse'] ?? '',
-                                  telephone: widget.data['telephone'] ?? '',
-                                  email: widget.data['email'] ?? '',
-                                  numeroPermis: widget.data['numeroPermis'] ?? '',
-                                  permisRectoUrl: widget.data['permisRecto'] ?? '',
-                                  permisVersoUrl: widget.data['permisVerso'] ?? '',
-                                  immatriculationVehiculeClient: widget.data['immatriculationVehiculeClient'] ?? '',
-                                  kilometrageVehiculeClient: widget.data['kilometrageVehiculeClient'] ?? '',
-                                  contratId: widget.contratId,
-                                ),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            minimumSize: const Size(double.infinity, 50),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.edit_document, color: Colors.white),
-                              SizedBox(width: 10),
-                              Text(
-                                "Modifier le contrat",
-                                style: TextStyle(color: Colors.white, fontSize: 18),
-                              ),
-                            ],
                           ),
                         ),
                       ],
