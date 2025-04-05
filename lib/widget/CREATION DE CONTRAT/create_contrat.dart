@@ -29,15 +29,13 @@ class CreateContrat {
 
   static Widget buildTextField(String label, TextEditingController controller,
       {TextInputType keyboardType = TextInputType.text,
-      List<TextInputFormatter>? inputFormatters,
-      Function(String)? onChanged}) {
+      List<TextInputFormatter>? inputFormatters}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
-        onChanged: onChanged,
         decoration: InputDecoration(
           labelText: label,
           border: OutlineInputBorder(
@@ -54,99 +52,39 @@ class CreateContrat {
     );
   }
 
-  static Widget buildTypeLocationToggle(String typeLocation, Function onChanged) {
-    print('DEBUG TOGGLE - Valeur initiale: $typeLocation');
-    
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8.0, left: 4.0),
-            child: Text(
-              "Type de location",
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.black87,
-              ),
-            ),
+  static Widget buildDropdown(String typeLocation, Function onChanged) {
+    final items = const [
+      "Gratuite",
+      "Payante",
+    ];
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: DropdownButtonFormField<String>(
+        value: typeLocation,
+        items: items.map<DropdownMenuItem<String>>((String value) {
+          return DropdownMenuItem<String>(
+            value: value,
+            child: Text(value, style: TextStyle(color: Colors.black)),
+          );
+        }).toList(),
+        onChanged: (String? newValue) {
+          print('DEBUG DROPDOWN - Nouvelle valeur sélectionnée: $newValue');
+          onChanged(newValue);
+        },
+        dropdownColor:
+            Colors.white, // Ajout de cette ligne pour le fond du menu
+        decoration: InputDecoration(
+          labelText: "Type de location",
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Row(
-              children: [
-                // Bouton "Gratuite"
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      print('Type de location changé à: Gratuite');
-                      onChanged("Gratuite");
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: typeLocation == "Gratuite"
-                            ? const Color(0xFF08004D)
-                            : Colors.white,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(11),
-                          bottomLeft: Radius.circular(11),
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          "Gratuite",
-                          style: TextStyle(
-                            color: typeLocation == "Gratuite"
-                                ? Colors.white
-                                : Colors.black,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                // Bouton "Payante"
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      print('Type de location changé à: Payante');
-                      onChanged("Payante");
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: typeLocation == "Payante"
-                            ? const Color(0xFF08004D)
-                            : Colors.white,
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(11),
-                          bottomRight: Radius.circular(11),
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          "Payante",
-                          style: TextStyle(
-                            color: typeLocation == "Payante"
-                                ? Colors.white
-                                : Colors.black,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          filled: true,
+          fillColor: Colors.white,
+        ),
       ),
     );
   }
