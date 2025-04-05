@@ -688,20 +688,44 @@ class _LocationPageState extends State<LocationPage> {
     }
   }
 
+  // Méthode pour télécharger une image depuis une URL et la convertir en fichier local
+  Future<File?> _downloadImageFromUrl(String imageUrl) async {
+    try {
+      // Récupérer le répertoire temporaire
+      final tempDir = await getTemporaryDirectory();
+      final fileName = 'photo_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final file = File('${tempDir.path}/$fileName');
+      
+      // Télécharger l'image depuis l'URL
+      final ref = FirebaseStorage.instance.refFromURL(imageUrl);
+      final bytes = await ref.getData();
+      
+      if (bytes != null) {
+        // Écrire les données dans le fichier
+        await file.writeAsBytes(bytes);
+        return file;
+      }
+      return null;
+    } catch (e) {
+      print('Erreur lors du téléchargement de l\'image: $e');
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> _loadContractData(String contratId) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        String adminId = user.uid;
-        
+        String adminId = user.uid; 
+      
         // Vérifier si l'utilisateur est un collaborateur
         final userDoc = await _firestore.collection('users').doc(user.uid).get();
         final userData = userDoc.data();
-        
+      
         if (userData != null && userData['role'] == 'collaborateur' && userData['adminId'] != null) {
           adminId = userData['adminId'];
         }
-        
+      
         // Récupérer les données du contrat
         final contratDoc = await _firestore
             .collection('users')
@@ -709,9 +733,42 @@ class _LocationPageState extends State<LocationPage> {
             .collection('locations')
             .doc(contratId)
             .get();
-        
+      
         if (contratDoc.exists) {
-          return contratDoc.data();
+          final contractData = contratDoc.data();
+      
+          // Charger la signature si elle existe
+          if (contractData != null && contractData['signature'] != null) {
+            setState(() {
+              _signatureBase64 = contractData['signature'];
+              if (_signatureBase64.isNotEmpty) {
+                _acceptedConditions = true; // Si une signature existe, les conditions ont été acceptées
+              }
+            });
+          }
+      
+          // Charger les photos si elles existent
+          if (contractData != null && contractData['photos'] != null && contractData['photos'] is List) {
+            List<dynamic> photoUrls = contractData['photos'];
+            print('Photos trouvées: ${photoUrls.length}');
+            
+            // Télécharger les photos depuis les URLs et les ajouter à la liste _photos
+            for (String photoUrl in photoUrls) {
+              try {
+                print('Téléchargement de la photo: $photoUrl');
+                final photoFile = await _downloadImageFromUrl(photoUrl);
+                if (photoFile != null) {
+                  setState(() {
+                    _photos.add(photoFile);
+                  });
+                }
+              } catch (e) {
+                print('Erreur lors du traitement de la photo: $e');
+              }
+            }
+          }
+      
+          return contractData;
         } else {
           print('Aucun contrat trouvé avec l\'ID: $contratId');
           return null;
