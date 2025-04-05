@@ -104,6 +104,37 @@ class _LocationPageState extends State<LocationPage> {
     _typeLocationController.text = "Gratuite";
 
     _fetchVehicleData();
+    
+    // Charger les données du contrat si un ID est fourni
+    if (widget.contratId != null && widget.contratId!.isNotEmpty) {
+      _loadContractData(widget.contratId!).then((contractData) {
+        if (contractData != null) {
+          setState(() {
+            // Mise à jour des contrôleurs avec les données du contrat
+            _dateDebutController.text = contractData['dateDebut'] ?? _dateDebutController.text;
+            _dateFinTheoriqueController.text = contractData['dateFinTheorique'] ?? '';
+            _kilometrageDepartController.text = contractData['kilometrageDepart']?.toString() ?? '';
+            _commentaireController.text = contractData['commentaire'] ?? '';
+            _pourcentageEssence = contractData['pourcentageEssence'] ?? 50;
+            
+            // Frais supplémentaires
+            _prixLocationController.text = contractData['prixLocation']?.toString() ?? _prixLocationController.text;
+            _accompteController.text = contractData['accompte']?.toString() ?? '';
+            _nettoyageIntController.text = contractData['nettoyageInt']?.toString() ?? _nettoyageIntController.text;
+            _nettoyageExtController.text = contractData['nettoyageExt']?.toString() ?? _nettoyageExtController.text;
+            _carburantManquantController.text = contractData['carburantManquant']?.toString() ?? _carburantManquantController.text;
+            _kilometrageAutoriseController.text = contractData['kilometrageAutorise']?.toString() ?? '';
+            _kilometrageSuppController.text = contractData['kilometrageSupp']?.toString() ?? _kilometrageSuppController.text;
+            
+            // Type de location
+            _typeLocationController.text = contractData['typeLocation'] ?? "Gratuite";
+            
+            // Autres informations
+            _cautionController.text = contractData['caution']?.toString() ?? _cautionController.text;
+          });
+        }
+      });
+    }
   }
 
   Future<void> _fetchVehicleData() async {
@@ -131,12 +162,10 @@ class _LocationPageState extends State<LocationPage> {
         setState(() {
           // Récupérer l'URL de la photo du véhicule
           _vehiclePhotoUrl = vehicleData['photoVehiculeUrl'];
-          
           _prixLocationController.text = vehicleData['prixLocation'] ?? '';
           _nettoyageIntController.text = vehicleData['nettoyageInt'] ?? '';
           _nettoyageExtController.text = vehicleData['nettoyageExt'] ?? '';
           _carburantManquantController.text = vehicleData['carburantManquant'] ?? '';
-
           _kilometrageSuppController.text = vehicleData['kilometrageSupp'] ?? '';
           _vinController.text = vehicleData['vin'] ?? '';
           _assuranceNomController.text = vehicleData['assuranceNom'] ?? '';
@@ -656,6 +685,42 @@ class _LocationPageState extends State<LocationPage> {
         print(' Problème d\'autorisation: Vérifiez les règles de sécurité Firebase Storage');
       }
       rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _loadContractData(String contratId) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        String adminId = user.uid;
+        
+        // Vérifier si l'utilisateur est un collaborateur
+        final userDoc = await _firestore.collection('users').doc(user.uid).get();
+        final userData = userDoc.data();
+        
+        if (userData != null && userData['role'] == 'collaborateur' && userData['adminId'] != null) {
+          adminId = userData['adminId'];
+        }
+        
+        // Récupérer les données du contrat
+        final contratDoc = await _firestore
+            .collection('users')
+            .doc(adminId)
+            .collection('locations')
+            .doc(contratId)
+            .get();
+        
+        if (contratDoc.exists) {
+          return contratDoc.data();
+        } else {
+          print('Aucun contrat trouvé avec l\'ID: $contratId');
+          return null;
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Erreur lors du chargement des données du contrat: $e');
+      return null;
     }
   }
 

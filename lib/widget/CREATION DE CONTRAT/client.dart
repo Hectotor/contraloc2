@@ -85,9 +85,20 @@ class _ClientPageState extends State<ClientPage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null && widget.contratId != null) {
+        String adminId = user.uid;
+        
+        // Vérifier si l'utilisateur est un collaborateur
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        final userData = userDoc.data();
+        
+        if (userData != null && userData['role'] == 'collaborateur' && userData['adminId'] != null) {
+          adminId = userData['adminId'];
+          print('Utilisateur collaborateur détecté, utilisation de l\'adminId: $adminId');
+        }
+        
         final docRef = FirebaseFirestore.instance
             .collection('users')
-            .doc(user.uid)
+            .doc(adminId)
             .collection('locations')
             .doc(widget.contratId);
 
