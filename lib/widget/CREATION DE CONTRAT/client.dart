@@ -51,6 +51,8 @@ class _ClientPageState extends State<ClientPage> {
 
   File? _permisRecto;
   File? _permisVerso;
+  String? _permisRectoUrl;
+  String? _permisVersoUrl;
   bool _showPermisFields = false;
   bool isPremiumUser = false; // Nouvelle propriété
 
@@ -58,8 +60,12 @@ class _ClientPageState extends State<ClientPage> {
   void initState() {
     super.initState();
     _initializeSubscription(); // Initialiser et vérifier le statut d'abonnement
+    
+    // Si nous avons un contratId, c'est une modification de contrat existant
     if (widget.contratId != null) {
       _loadClientData();
+      // Activer l'affichage des champs du permis en mode modification
+      _showPermisFields = true;
     }
   }
 
@@ -79,15 +85,17 @@ class _ClientPageState extends State<ClientPage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null && widget.contratId != null) {
-        final contratDoc = await FirebaseFirestore.instance
+        final docRef = FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .collection('locations')
-            .doc(widget.contratId)
-            .get();
+            .doc(widget.contratId);
 
-        if (contratDoc.exists) {
-          final data = contratDoc.data()!;
+        final docSnapshot = await docRef.get();
+        if (docSnapshot.exists) {
+          final data = docSnapshot.data() as Map<String, dynamic>;
+          print('Données récupérées: $data');
+          
           setState(() {
             _nomController.text = data['nom'] ?? '';
             _prenomController.text = data['prenom'] ?? '';
@@ -95,8 +103,16 @@ class _ClientPageState extends State<ClientPage> {
             _telephoneController.text = data['telephone'] ?? '';
             _emailController.text = data['email'] ?? '';
             _numeroPermisController.text = data['numeroPermis'] ?? '';
-            _immatriculationVehiculeClientController.text = data['immatriculationClient'] ?? '';
-            _kilometrageVehiculeClientController.text = data['kilometrageClient'] ?? '';
+            _immatriculationVehiculeClientController.text = data['immatriculationVehiculeClient'] ?? '';
+            _kilometrageVehiculeClientController.text = data['kilometrageVehiculeClient'] ?? '';
+            
+            // Récupérer les URLs des images du permis
+            _permisRectoUrl = data['permisRecto'];
+            _permisVersoUrl = data['permisVerso'];
+            
+            // Afficher les URLs dans la console
+            print('URL permis recto: $_permisRectoUrl');
+            print('URL permis verso: $_permisVersoUrl');
           });
         }
       }
@@ -246,9 +262,63 @@ class _ClientPageState extends State<ClientPage> {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 
-  void _saveClientInfo() async {
+  Future<void> _saveClientData({
+    required String nom,
+    required String prenom,
+    required String adresse,
+    required String telephone,
+    required String email,
+    File? permisRecto,
+    File? permisVerso,
+    required String numeroPermis,
+    required String immatriculationVehiculeClient,
+    required String kilometrageVehiculeClient,
+  }) async {
     try {
-      if (mounted) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Vérifier le statut collaborateur
+      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
+      final String targetId = collaborateurStatus['isCollaborateur'] 
+          ? collaborateurStatus['adminId'] ?? user.uid 
+          : user.uid;
+
+      // Préparer les données à sauvegarder
+      Map<String, dynamic> clientData = {
+        'nom': nom,
+        'prenom': prenom,
+        'adresse': adresse,
+        'telephone': telephone,
+        'email': email,
+        'numeroPermis': numeroPermis,
+        'immatriculationVehiculeClient': immatriculationVehiculeClient,
+        'kilometrageVehiculeClient': kilometrageVehiculeClient,
+      };
+
+      // Si nous avons un contratId, c'est une mise à jour d'un contrat existant
+      if (widget.contratId != null) {
+        // Conserver les URLs des images si elles n'ont pas été modifiées
+        if (permisRecto == null && _permisRectoUrl != null) {
+          clientData['permisRecto'] = _permisRectoUrl;
+        }
+        if (permisVerso == null && _permisVersoUrl != null) {
+          clientData['permisVerso'] = _permisVersoUrl;
+        }
+
+        // Mettre à jour le document dans Firestore en utilisant la structure correcte
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(targetId)
+            .collection('locations')
+            .doc(widget.contratId)
+            .set(clientData, SetOptions(merge: true));
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Informations client mises à jour avec succès')),
+        );
+      } else {
+        // Pour un nouveau contrat, naviguer vers la page de location
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -256,51 +326,26 @@ class _ClientPageState extends State<ClientPage> {
               marque: widget.marque,
               modele: widget.modele,
               immatriculation: widget.immatriculation,
-              nom: _nomController.text,
-              prenom: _prenomController.text,
-              adresse: _adresseController.text,
-              telephone: _telephoneController.text,
-              email: _emailController.text,
-              permisRecto: _permisRecto,
-              permisVerso: _permisVerso,
-              numeroPermis:_numeroPermisController.text,
-              immatriculationVehiculeClient: _immatriculationVehiculeClientController.text, // Ajout de numeroPermis
-              kilometrageVehiculeClient: _kilometrageVehiculeClientController.text, // Ajout de kilometrage
-              contratId: widget.contratId, // Ajout de contratId
+              nom: nom,
+              prenom: prenom,
+              adresse: adresse,
+              telephone: telephone,
+              email: email,
+              permisRecto: permisRecto,
+              permisVerso: permisVerso,
+              numeroPermis: numeroPermis,
+              immatriculationVehiculeClient: immatriculationVehiculeClient,
+              kilometrageVehiculeClient: kilometrageVehiculeClient,
             ),
           ),
         );
       }
     } catch (e) {
+      print('Erreur lors de la sauvegarde des données client: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erreur lors de l'enregistrement : $e")),
+        SnackBar(content: Text('Erreur: $e')),
       );
     }
-  }
-
-  ElevatedButton buildPhotoButton() {
-    return ElevatedButton.icon(
-      onPressed: isPremiumUser
-          ? () {
-              setState(() {
-                _showPermisFields = !_showPermisFields;
-              });
-            }
-          : _showPremiumDialog,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.green, // Remis en vert pour tous les cas
-        minimumSize: const Size(double.infinity, 50),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      icon: Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock,
-          color: Colors.white),
-      label: Text(
-        isPremiumUser ? "Ajouter photo permis" : "Ajouter photo permis",
-        style: const TextStyle(color: Colors.white, fontSize: 18),
-      ),
-    );
   }
 
   void _showVehicleDialog() {
@@ -421,7 +466,20 @@ class _ClientPageState extends State<ClientPage> {
                   
                   const SizedBox(height: 40),
                   ElevatedButton(
-                    onPressed: _saveClientInfo,
+                    onPressed: () {
+                      _saveClientData(
+                        nom: _nomController.text,
+                        prenom: _prenomController.text,
+                        adresse: _adresseController.text,
+                        telephone: _telephoneController.text,
+                        email: _emailController.text,
+                        permisRecto: _permisRecto,
+                        permisVerso: _permisVerso,
+                        numeroPermis: _numeroPermisController.text,
+                        immatriculationVehiculeClient: _immatriculationVehiculeClientController.text,
+                        kilometrageVehiculeClient: _kilometrageVehiculeClientController.text,
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF08004D),
                       minimumSize: const Size(double.infinity, 56),
@@ -516,13 +574,21 @@ class _ClientPageState extends State<ClientPage> {
 
   Widget _buildImageUploader(
       String label, File? imageFile, VoidCallback onTap) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final availableWidth = (constraints.maxWidth - 32) / 2;
-        final containerWidth = availableWidth.clamp(120.0, 170.0);
-        final containerHeight = containerWidth * 1.3;
-
-        return GestureDetector(
+    // Déterminer quelle URL utiliser en fonction du label
+    String? imageUrl = label == "Permis Recto" ? _permisRectoUrl : _permisVersoUrl;
+    
+    // Utiliser des dimensions fixes au lieu du LayoutBuilder
+    final double containerWidth = 150.0; // Largeur fixe
+    final double containerHeight = 120.0; // Hauteur fixe
+    
+    return Column(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
           onTap: onTap,
           child: Stack(
             children: [
@@ -530,7 +596,7 @@ class _ClientPageState extends State<ClientPage> {
                 width: containerWidth,
                 height: containerHeight,
                 decoration: BoxDecoration(
-                  color: Colors.blueGrey[50],
+                  color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey),
                 ),
@@ -542,27 +608,40 @@ class _ClientPageState extends State<ClientPage> {
                           fit: BoxFit.cover,
                         ),
                       )
-                    : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.add_photo_alternate,
-                            size: 40,
-                            color: Color(0xFF08004D),
-                          ),
-                          const SizedBox(height: 8),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              label,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.grey),
+                    : imageUrl != null && imageUrl.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                print("Erreur de chargement d'image: $error");
+                                return Center(
+                                  child: Icon(Icons.error, color: Colors.red),
+                                );
+                              },
+                            ),
+                          )
+                        : const Center(
+                            child: Icon(
+                              Icons.add_a_photo,
+                              size: 40,
+                              color: Colors.grey,
                             ),
                           ),
-                        ],
-                      ),
               ),
-              if (imageFile != null)
+              if (imageFile != null || (imageUrl != null && imageUrl.isNotEmpty))
                 Positioned(
                   top: 5,
                   right: 5,
@@ -571,29 +650,56 @@ class _ClientPageState extends State<ClientPage> {
                       setState(() {
                         if (label == "Permis Recto") {
                           _permisRecto = null;
+                          _permisRectoUrl = null;
                         } else {
                           _permisVerso = null;
+                          _permisVersoUrl = null;
                         }
                       });
                     },
                     child: Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.8),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.close,
-                        color: Colors.red,
                         size: 16,
+                        color: Colors.white,
                       ),
                     ),
                   ),
                 ),
             ],
           ),
-        );
-      },
+        ),
+      ],
+    );
+  }
+
+  ElevatedButton buildPhotoButton() {
+    return ElevatedButton.icon(
+      onPressed: isPremiumUser
+          ? () {
+              setState(() {
+                _showPermisFields = !_showPermisFields;
+              });
+            }
+          : _showPremiumDialog,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green, // Remis en vert pour tous les cas
+        minimumSize: const Size(double.infinity, 50),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      icon: Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock,
+          color: Colors.white),
+      label: Text(
+        isPremiumUser ? "Ajouter photo permis" : "Ajouter photo permis",
+        style: const TextStyle(color: Colors.white, fontSize: 18),
+      ),
     );
   }
 }

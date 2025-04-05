@@ -25,6 +25,7 @@ import 'MODIFICATION DE CONTRAT/signature_retour.dart';
 import 'MODIFICATION DE CONTRAT/cloturer_location.dart';
 import 'MODIFICATION DE CONTRAT/facture.dart';
 import 'navigation.dart';
+import 'CREATION DE CONTRAT/client.dart';
 
 class ModifierScreen extends StatefulWidget {
   final String contratId;
@@ -402,6 +403,23 @@ class _ModifierScreenState extends State<ModifierScreen> {
             icon: const Icon(Icons.delete, color: Colors.white),
             onPressed: () => SuppContrat.showDeleteConfirmationDialog(
                 context, widget.contratId),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit_document, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ClientPage(
+                    marque: widget.data['marque'] ?? '',
+                    modele: widget.data['modele'] ?? '',
+                    immatriculation: widget.data['immatriculation'] ?? '',
+                    
+                    contratId: widget.contratId,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
