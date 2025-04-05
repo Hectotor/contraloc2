@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/collaborateur_util.dart';
+import 'package:intl/intl.dart'; // Importer la bibliothèque Intl pour la mise en forme des dates
 
 class SuppContrat {
   static Future<void> deleteContract(
@@ -68,6 +69,32 @@ class SuppContrat {
       // Déterminer l'ID à utiliser (admin pour les collaborateurs)
       final targetId = isCollaborateur ? adminId : userId;
 
+      // Récupérer les informations de l'utilisateur qui effectue la suppression
+      String supprimePar = "Utilisateur inconnu";
+      try {
+        // Récupérer le document de l'utilisateur actuel
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
+            
+        if (userDoc.exists && userDoc.data() != null) {
+          final userData = userDoc.data()!;
+          // Construire le nom complet de l'utilisateur
+          String? prenom = userData['prenom'] as String?;
+          String? nom = userData['nom'] as String?;
+          
+          if (prenom != null && nom != null) {
+            supprimePar = "$prenom $nom";
+          } else if (userData['email'] != null) {
+            supprimePar = userData['email'] as String;
+          }
+        }
+      } catch (e) {
+        print('Erreur lors de la récupération des informations utilisateur: $e');
+        // Continuer avec la valeur par défaut si une erreur se produit
+      }
+
       // Récupérer les données du contrat
       final contratDoc = await CollaborateurUtil.getDocument(
         collection: 'users',
@@ -79,6 +106,10 @@ class SuppContrat {
 
       // Au lieu de supprimer le contrat, marquer comme "supprimé"
       if (contratDoc.exists) {
+        // Date actuelle pour l'horodatage
+        final DateTime maintenant = DateTime.now();
+        final String dateSuppressionStr = DateFormat('dd/MM/yyyy', 'fr_FR').format(maintenant);
+        
         // Mettre à jour le document avec le statut "supprimé"
         await FirebaseFirestore.instance
             .collection('users')
@@ -87,9 +118,11 @@ class SuppContrat {
             .doc(contratId)
             .update({
               'statussupprime': 'supprimé',
-              'dateSuppression': DateTime.now().toIso8601String(),
+              'dateSuppression': dateSuppressionStr,
+              'supprimePar': supprimePar,
               // Calculer la date de suppression définitive (90 jours plus tard)
-              'dateSuppressionDefinitive': DateTime.now().add(const Duration(days: 90)).toIso8601String(),
+              'dateSuppressionDefinitive': DateFormat('dd/MM/yyyy', 'fr_FR')
+                  .format(maintenant.add(const Duration(days: 90))),
             });
 
         // Fermer le dialogue de chargement
@@ -103,10 +136,10 @@ class SuppContrat {
           
           // Afficher un message de confirmation
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Le contrat a été marqué pour suppression et sera définitivement supprimé dans 90 jours.'),
+            SnackBar(
+              content: Text('Le contrat a été marqué pour suppression par $supprimePar et sera définitivement supprimé dans 90 jours.'),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
+              duration: const Duration(seconds: 5),
             ),
           );
         }

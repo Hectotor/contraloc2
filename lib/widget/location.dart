@@ -461,9 +461,6 @@ class _LocationPageState extends State<LocationPage> {
               dateToCompare.month == now.month && 
               dateToCompare.day == now.day)) {
           status = 'réservé';
-          print('Contrat défini comme réservé pour la date: ${_dateDebutController.text}');
-        } else {
-          print('Contrat défini comme en_cours pour la date: ${_dateDebutController.text}');
         }
       } catch (e) {
         print('Erreur parsing: $e');

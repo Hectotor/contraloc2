@@ -161,6 +161,95 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
     }
   }
 
+  // Méthode pour parser une date au format français (ex: "vendredi 4 juillet 2025 à 18:44")
+  // ou au format court (ex: "05/04/2025")
+  DateTime? _parseFrenchDate(String dateStr) {
+    try {
+      // Vérifier si c'est le format court (dd/MM/yyyy)
+      if (dateStr.contains('/')) {
+        List<String> parts = dateStr.split('/');
+        if (parts.length == 3) {
+          int jour = int.parse(parts[0]);
+          int mois = int.parse(parts[1]);
+          int annee = int.parse(parts[2]);
+          return DateTime(annee, mois, jour);
+        }
+      }
+      
+      // Format long français
+      List<String> parts = dateStr.split(' ');
+      if (parts.length >= 5) { // Format typique: "vendredi 4 juillet 2025 à 18:44"
+        int jour = int.parse(parts[1]);
+
+        // Conversion du mois en numéro
+        String moisTexte = parts[2].toLowerCase();
+        Map<String, int> moisMap = {
+          'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
+          'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8,
+          'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
+        };
+        int mois = moisMap[moisTexte] ?? 1;
+        
+        int annee = int.parse(parts[3]);
+        
+        // Extraire l'heure et les minutes
+        String heureMinute = parts[5]; // Format: "18:44"
+        List<String> heureMinuteParts = heureMinute.split(':');
+        int heure = int.parse(heureMinuteParts[0]);
+        int minute = int.parse(heureMinuteParts[1]);
+        
+        return DateTime(annee, mois, jour, heure, minute);
+      }
+    } catch (e) {
+      print('Erreur lors du parsing de la date: $e');
+    }
+    return null;
+  }
+
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return "Non spécifié";
+    
+    // Si c'est déjà au format JJ/MM/AAAA
+    if (timestamp is String) {
+      if (timestamp.contains('/') && timestamp.split('/').length == 3) {
+        return timestamp; // Déjà au bon format
+      }
+      
+      try {
+        // Découper la chaîne pour en extraire les composants
+        List<String> parts = timestamp.split(' ');
+        if (parts.length >= 4) { // Format typique: "mercredi 2 avril 2025 à 20:39"
+          String jour = parts[1].padLeft(2, '0'); // Le jour
+
+          // Conversion du mois en numéro
+          String moisTexte = parts[2].toLowerCase();
+          Map<String, String> moisMap = {
+            'janvier': '01', 'février': '02', 'mars': '03', 'avril': '04',
+            'mai': '05', 'juin': '06', 'juillet': '07', 'août': '08',
+            'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12'
+          };
+          String mois = moisMap[moisTexte] ?? '01';
+          
+          String annee = parts[3]; // L'année
+        
+          return "$jour/$mois/$annee";
+        }
+      } catch (e) {
+        return timestamp; // En cas d'erreur, retourner la chaîne originale
+      }
+      return timestamp;
+    }
+    
+    if (timestamp is Timestamp) {
+      DateTime dateTime = timestamp.toDate();
+      
+      // Format JJ/MM/AAAA pour toutes les dates
+      return "${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}";
+    }
+    
+    return "Format inconnu";
+  }
+
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
@@ -276,7 +365,7 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
                         dateSuppressionA = (a['dateSuppressionDefinitive'] as Timestamp).toDate();
                       } else if (a['dateSuppressionDefinitive'] is String) {
                         // Si c'est une String, essayer de la parser
-                        dateSuppressionA = DateTime.parse(a['dateSuppressionDefinitive'] as String);
+                        dateSuppressionA = _parseFrenchDate(a['dateSuppressionDefinitive'] as String) ?? DateTime.now().add(Duration(days: 90));
                       } else {
                         // Valeur par défaut
                         dateSuppressionA = DateTime.now().add(Duration(days: 90));
@@ -286,7 +375,7 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
                       if (a['datesuppression'] is Timestamp) {
                         dateSuppressionA = (a['datesuppression'] as Timestamp).toDate();
                       } else if (a['datesuppression'] is String) {
-                        dateSuppressionA = DateTime.parse(a['datesuppression']);
+                        dateSuppressionA = _parseFrenchDate(a['datesuppression'] as String) ?? DateTime.now().add(Duration(days: 90));
                       } else {
                         dateSuppressionA = DateTime.now().add(Duration(days: 90));
                       }
@@ -300,7 +389,7 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
                       if (b['dateSuppressionDefinitive'] is Timestamp) {
                         dateSuppressionB = (b['dateSuppressionDefinitive'] as Timestamp).toDate();
                       } else if (b['dateSuppressionDefinitive'] is String) {
-                        dateSuppressionB = DateTime.parse(b['dateSuppressionDefinitive']);
+                        dateSuppressionB = _parseFrenchDate(b['dateSuppressionDefinitive'] as String) ?? DateTime.now().add(Duration(days: 90));
                       } else {
                         dateSuppressionB = DateTime.now().add(Duration(days: 90));
                       }
@@ -308,7 +397,7 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
                       if (b['datesuppression'] is Timestamp) {
                         dateSuppressionB = (b['datesuppression'] as Timestamp).toDate();
                       } else if (b['datesuppression'] is String) {
-                        dateSuppressionB = DateTime.parse(b['datesuppression']);
+                        dateSuppressionB = _parseFrenchDate(b['datesuppression'] as String) ?? DateTime.now().add(Duration(days: 90));
                       } else {
                         dateSuppressionB = DateTime.now().add(Duration(days: 90));
                       }
@@ -367,16 +456,33 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
     DateTime dateSuppressionDefinitive;
     
     try {
-      if (data['dateSuppressionDefinitive'] is Timestamp) {
-        dateSuppressionDefinitive = (data['dateSuppressionDefinitive'] as Timestamp).toDate();
-      } else if (data['dateSuppressionDefinitive'] is String) {
-        dateSuppressionDefinitive = DateTime.parse(data['dateSuppressionDefinitive'] as String);
+      if (data['dateSuppressionDefinitive'] != null) {
+        // Vérifier si c'est un Timestamp ou une String
+        if (data['dateSuppressionDefinitive'] is Timestamp) {
+          dateSuppressionDefinitive = (data['dateSuppressionDefinitive'] as Timestamp).toDate();
+        } else if (data['dateSuppressionDefinitive'] is String) {
+          // Si c'est une String, essayer de la parser
+          dateSuppressionDefinitive = _parseFrenchDate(data['dateSuppressionDefinitive'] as String) ?? DateTime.now().add(Duration(days: 90));
+        } else {
+          // Valeur par défaut
+          dateSuppressionDefinitive = DateTime.now().add(Duration(days: 90));
+        }
+      } else if (data['datesuppression'] != null) {
+        // Essayer avec le champ 'datesuppression'
+        if (data['datesuppression'] is Timestamp) {
+          dateSuppressionDefinitive = (data['datesuppression'] as Timestamp).toDate();
+        } else if (data['datesuppression'] is String) {
+          dateSuppressionDefinitive = _parseFrenchDate(data['datesuppression'] as String) ?? DateTime.now().add(Duration(days: 90));
+        } else {
+          dateSuppressionDefinitive = DateTime.now().add(Duration(days: 90));
+        }
       } else {
-        dateSuppressionDefinitive = now.add(Duration(days: 90));
+        // Si aucun champ n'est disponible
+        dateSuppressionDefinitive = DateTime.now().add(Duration(days: 90));
       }
     } catch (e) {
       print('Erreur de parsing de la date: $e');
-      dateSuppressionDefinitive = now.add(Duration(days: 90));
+      dateSuppressionDefinitive = DateTime.now().add(Duration(days: 90));
     }
     
     final difference = dateSuppressionDefinitive.difference(now);
@@ -610,7 +716,11 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildInfoRow("Supprimé", _formatTimestamp(data['dateSuppression'])),
+                          _buildInfoRow("Supprimé", data['dateSuppression']),
+                          if (data['supprimePar'] != null) ...[  
+                            const SizedBox(height: 12),
+                            _buildInfoRow("Par", data['supprimePar']),
+                          ],
                           const SizedBox(height: 12),
                           _buildInfoRow("Début", _formatTimestamp(data['dateDebut'])),
                           const SizedBox(height: 12),
@@ -637,7 +747,7 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 70,
+          width: 90,
           child: Text(
             "$label :",
             style: TextStyle(
@@ -654,50 +764,12 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
               fontSize: 14,
               color: Colors.grey[800],
             ),
-            overflow: TextOverflow.ellipsis,
+            softWrap: true,
+            maxLines: 3,
+            overflow: TextOverflow.visible,
           ),
         ),
       ],
     );
-  }
-
-  String _formatTimestamp(dynamic timestamp) {
-    if (timestamp == null) return "Non spécifié";
-    
-    // Format spécifique pour les dates de début qui sont au format "mercredi 2 avril 2025 à 20:39"
-    if (timestamp is String) {
-      try {
-        // Découper la chaîne pour en extraire les composants
-        List<String> parts = timestamp.split(' ');
-        if (parts.length >= 4) { // Format typique: "mercredi 2 avril 2025 à 20:39"
-          String jour = parts[1].padLeft(2, '0'); // Le jour
-
-          // Conversion du mois en numéro
-          String moisTexte = parts[2].toLowerCase();
-          Map<String, String> moisMap = {
-            'janvier': '01', 'février': '02', 'mars': '03', 'avril': '04',
-            'mai': '05', 'juin': '06', 'juillet': '07', 'août': '08',
-            'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12'
-          };
-          String mois = moisMap[moisTexte] ?? '01';
-          
-          String annee = parts[3]; // L'année
-        
-          return "$jour/$mois/$annee";
-        }
-      } catch (e) {
-        return timestamp; // En cas d'erreur, retourner la chaîne originale
-      }
-      return timestamp;
-    }
-    
-    if (timestamp is Timestamp) {
-      DateTime dateTime = timestamp.toDate();
-      
-      // Format JJ/MM/AAAA pour toutes les dates
-      return "${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}";
-    }
-    
-    return "Format inconnu";
   }
 }
