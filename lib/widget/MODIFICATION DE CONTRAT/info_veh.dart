@@ -35,8 +35,17 @@ class _InfoVehiculeState extends State<InfoVehicule> {
       });
 
       if (hasReadPermission) {
-        // Charger la photo du véhicule si l'utilisateur a les permissions
-        await _loadVehiclePhoto();
+        // Utiliser directement l'URL de la photo du véhicule si disponible dans les données du contrat
+        if (widget.data.containsKey('photoVehiculeUrl') && widget.data['photoVehiculeUrl'] != null) {
+          setState(() {
+            _vehiclePhotoUrl = widget.data['photoVehiculeUrl'];
+            _isLoading = false;
+            _errorMessage = '';
+          });
+        } else {
+          // Sinon, charger la photo du véhicule depuis Firestore
+          await _loadVehiclePhoto();
+        }
       }
 
       if (mounted) {
@@ -82,6 +91,16 @@ class _InfoVehiculeState extends State<InfoVehicule> {
 
   Future<void> _loadVehiclePhoto() async {
     try {
+      // Vérifier d'abord si les informations sont déjà dans les données du contrat
+      if (widget.data.containsKey('photoVehiculeUrl') && widget.data['photoVehiculeUrl'] != null) {
+        if (mounted) {
+          setState(() {
+            _vehiclePhotoUrl = widget.data['photoVehiculeUrl'];
+          });
+        }
+        return; // Sortir de la fonction si les données sont déjà disponibles
+      }
+      
       final status = await CollaborateurUtil.checkCollaborateurStatus();
       final userId = status['isCollaborateur'] ? status['adminId'] : status['userId'];
       

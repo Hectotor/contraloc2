@@ -255,7 +255,7 @@ class EmailService {
                 ⚠️ L'utilisateur est totalement responsable des contraventions, amendes et procès-verbaux établis en violation du code de la route.
               </p>
 
-              <p>Si vous pensez avoir reçu cet email par erreur merci de bien vouloir nous contacter au plus à l'adresse suivante : contact@contraloc.fr.</p>
+              <p>Si vous pensez avoir reçu cet email par erreur merci de bien vouloir nous contacter au plus vite à l'adresse suivante : contact@contraloc.fr.</p>
 
               <p>À bientôt,</p>
 

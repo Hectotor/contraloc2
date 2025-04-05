@@ -75,6 +75,7 @@ class _LocationPageState extends State<LocationPage> {
   bool _acceptedConditions = false; 
   String _signatureBase64 = ''; 
   bool _isSigning = false;
+  String? _vehiclePhotoUrl; 
 
   final TextEditingController _prixLocationController = TextEditingController();
   final TextEditingController _accompteController = TextEditingController();
@@ -128,6 +129,9 @@ class _LocationPageState extends State<LocationPage> {
       if (vehiculeDoc.docs.isNotEmpty) {
         final vehicleData = vehiculeDoc.docs.first.data();
         setState(() {
+          // Récupérer l'URL de la photo du véhicule
+          _vehiclePhotoUrl = vehicleData['photoVehiculeUrl'];
+          
           _prixLocationController.text = vehicleData['prixLocation'] ?? '';
           _nettoyageIntController.text = vehicleData['nettoyageInt'] ?? '';
           _nettoyageExtController.text = vehicleData['nettoyageExt'] ?? '';
@@ -365,6 +369,8 @@ class _LocationPageState extends State<LocationPage> {
         'marque': widget.marque,
         'modele': widget.modele,
         'immatriculation': widget.immatriculation,
+        'photoVehiculeUrl': _vehiclePhotoUrl,
+        
         'dateDebut': _dateDebutController.text,
         'dateFinTheorique': _dateFinTheoriqueController.text,
         'kilometrageDepart': _kilometrageDepartController.text,
