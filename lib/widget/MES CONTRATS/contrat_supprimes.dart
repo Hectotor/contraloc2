@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../modifier.dart';
 import 'package:ContraLoc/widget/MES%20CONTRATS/vehicle_access_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'search_filtre.dart';

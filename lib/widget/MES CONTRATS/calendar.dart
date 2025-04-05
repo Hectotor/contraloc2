@@ -3,7 +3,8 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:ContraLoc/widget/MES%20CONTRATS/vehicle_access_manager.dart';
+import 'package:ContraLoc/widget/MES CONTRATS/vehicle_access_manager.dart';
+import 'package:ContraLoc/widget/modifier.dart';
 
 class CalendarScreen extends StatefulWidget {
   final Function(int)? onEventsCountChanged;
@@ -88,6 +89,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     
     for (var doc in snapshot.docs) {
       final contract = doc.data() as Map<String, dynamic>;
+      // Ajouter l'ID du document aux données du contrat
+      contract['id'] = doc.id;
       
       final dateDebut = _parseDate(contract['dateDebut']);
       
@@ -129,6 +132,204 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
   }
 
+  void _showReservationsBottomSheet(BuildContext context, DateTime day) {
+    final dateKey = DateTime(day.year, day.month, day.day);
+    final reservations = _reservedContracts[dateKey] ?? [];
+
+    if (reservations.isEmpty) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.6, // Hauteur fixe
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Barre de poignée
+              Center(
+                child: Container(
+                  margin: EdgeInsets.only(top: 10),
+                  width: 40,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              // Titre
+              Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Réservations du ${_formatDate(dateKey)}',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: Colors.grey[600]),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(),
+              // Liste des réservations
+              Expanded(
+                child: ListView.builder(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: reservations.length,
+                  itemBuilder: (context, index) {
+                    final reservation = reservations[index];
+                    final immatriculation = reservation['immatriculation'] ?? '';
+                    
+                    return FutureBuilder<String?>(
+                      future: _getVehiclePhotoUrl(immatriculation),
+                      builder: (context, snapshot) {
+                        final photoUrl = snapshot.data;
+                        
+                        return Card(
+                          elevation: 2,
+                          margin: EdgeInsets.symmetric(vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ModifierScreen(
+                                    contratId: reservation['id'] as String,
+                                    data: reservation,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: EdgeInsets.all(12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // Image du véhicule
+                                  Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      color: Colors.grey[200],
+                                    ),
+                                    child: photoUrl != null
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Image.network(
+                                              photoUrl,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) => 
+                                                Icon(Icons.directions_car, size: 40, color: Colors.grey[400]),
+                                            ),
+                                          )
+                                        : Icon(Icons.directions_car, size: 40, color: Colors.grey[400]),
+                                  ),
+                                  SizedBox(width: 16),
+                                  // Informations du véhicule et du client
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Nom du client
+                                        Text(
+                                          '${reservation['nom'] ?? ''} ${reservation['prenom'] ?? ''}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: primaryColor,
+                                          ),
+                                        ),
+                                        SizedBox(height: 4),
+                                        // Informations du véhicule
+                                        Row(
+                                          children: [
+                                            Icon(Icons.directions_car, size: 14, color: Colors.grey[600]),
+                                            SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                '${reservation['marque'] ?? ''} ${reservation['modele'] ?? ''}',
+                                                style: TextStyle(fontSize: 14),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: 2),
+                                        // Immatriculation
+                                        Row(
+                                          children: [
+                                            Icon(Icons.pin, size: 14, color: Colors.grey[600]),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              '${reservation['immatriculation'] ?? 'Non spécifié'}',
+                                              style: TextStyle(fontSize: 14),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: 2),
+                                        // Date
+                                        Row(
+                                          children: [
+                                            Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              '${_formatDate(reservation['dateDebut'])}',
+                                              style: TextStyle(fontSize: 14),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Icône pour indiquer qu'on peut cliquer
+                                  Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -164,17 +365,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                     itemCount: _selectedDayContracts.length,
                     itemBuilder: (context, index) {
-                      final contract = _selectedDayContracts[index];
-                      return FutureBuilder<String?>(
-                        future: _getVehiclePhotoUrl(contract['immatriculation']),
-                        builder: (context, snapshot) {
-                          final photoUrl = snapshot.data;
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: _buildReservedVehicleCard(context, contract, photoUrl),
-                          );
-                        },
-                      );
+
+                      return Container();
                     },
                   ),
           ),
@@ -209,6 +401,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               _focusedDay = focusedDay;
               _updateSelectedDayContracts();
             });
+            // Afficher le BottomSheet lorsque l'utilisateur clique sur un jour avec des réservations
+            if (_reservedContracts[DateTime(selectedDay.year, selectedDay.month, selectedDay.day)] != null) {
+              _showReservationsBottomSheet(context, selectedDay);
+            }
           },
           onFormatChanged: (format) {
             setState(() {
@@ -286,162 +482,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildReservedVehicleCard(BuildContext context, Map<String, dynamic> contract, String? photoUrl) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.20),
-            blurRadius: 4,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // En-tête de la carte
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_today, color: Colors.orange, size: 24),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    "${contract['nom'] ?? ''} ${contract['prenom'] ?? ''}",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Contenu de la carte
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Photo du véhicule
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey[100],
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 6,
-                        spreadRadius: 1,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: (photoUrl != null && photoUrl.isNotEmpty)
-                      ? Image.network(
-                          photoUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Center(
-                            child: Icon(
-                              Icons.directions_car,
-                              size: 40,
-                              color: Colors.orange,
-                            ),
-                          ),
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Center(
-                              child: CircularProgressIndicator(
-                                value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
-                                color: primaryColor,
-                              ),
-                            );
-                          },
-                        )
-                      : Center(
-                          child: Icon(
-                            Icons.directions_car,
-                            size: 40,
-                            color: Colors.orange,
-                          ),
-                        ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Informations du contrat
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildInfoRow("Début", _formatDate(contract['dateDebut'])),
-                      const SizedBox(height: 12),
-                      _buildInfoRow("Véhicule", contract['immatriculation'] ?? "Non spécifié"),
-                      if (contract['marque'] != null && contract['modele'] != null) ...[  
-                        const SizedBox(height: 12),
-                        _buildInfoRow("Modèle", "${contract['marque']} ${contract['modele']}"),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 70,
-          child: Text(
-            "$label :",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: Colors.orange,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[800],
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
   String _formatDate(dynamic date) {
-    if (date == null) return "Non spécifié";
+    if (date == null) return "Date non disponible";
+    
+    // Si c'est un DateTime, le convertir en format JJ/MM/AAAA
+    if (date is DateTime) {
+      return "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
+    }
     
     try {
       if (date is String) {
