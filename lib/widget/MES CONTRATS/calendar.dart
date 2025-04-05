@@ -40,7 +40,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.initState();
     _vehicleAccessManager = VehicleAccessManager();
     _initializeAccess();
-    _getContracts();
   }
 
   // Méthode pour initialiser les gestionnaires d'accès
@@ -51,8 +50,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (mounted) {
         setState(() {});
       }
+      print('🔑 Calendrier: Accès initialisé avec targetUserId: $_targetUserId');
+      // Une fois l'accès initialisé, récupérer les contrats
+      _getContracts();
     } catch (e) {
-      // Erreur silencieuse
+      print('❌ Erreur initialisation accès calendrier: $e');
     }
   }
 
@@ -60,8 +62,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     try {
       final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
       if (effectiveUserId == null) {
+        print('🚫 Calendrier: Impossible de récupérer les contrats - aucun utilisateur connecté');
         return;
       }
+      
+      print('📅 Calendrier: Récupération des contrats réservés pour l\'utilisateur: $effectiveUserId');
       
       // Chargement initial des données
       final snapshot = await FirebaseFirestore.instance
@@ -71,9 +76,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
           .where('status', isEqualTo: 'réservé')
           .get();
       
+      print('📅 Calendrier: ${snapshot.docs.length} contrats réservés trouvés');
       _processContracts(snapshot);
       
       // Mise en place d'un écouteur pour les mises à jour
+      if (_contractsSubscription != null) {
+        await _contractsSubscription!.cancel();
+      }
+      
       _contractsSubscription = FirebaseFirestore.instance
           .collection('users')
           .doc(effectiveUserId)
@@ -81,10 +91,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
           .where('status', isEqualTo: 'réservé')
           .snapshots()
           .listen((snapshot) {
+            print('📅 Calendrier: Mise à jour des contrats réservés - ${snapshot.docs.length} trouvés');
             _processContracts(snapshot);
           });
     } catch (e) {
-      // Erreur silencieuse
+      print('🚫 Erreur récupération contrats: $e');
     }
   }
 
