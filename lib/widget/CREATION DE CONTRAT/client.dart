@@ -312,10 +312,28 @@ class _ClientPageState extends State<ClientPage> {
             .doc(targetId)
             .collection('locations')
             .doc(widget.contratId)
-            .set(clientData, SetOptions(merge: true));
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Informations client mises à jour avec succès')),
+            .set(clientData, SetOptions(merge: true));        
+        // Naviguer vers location.dart même pour les contrats existants
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LocationPage(
+              marque: widget.marque,
+              modele: widget.modele,
+              immatriculation: widget.immatriculation,
+              nom: nom,
+              prenom: prenom,
+              adresse: adresse,
+              telephone: telephone,
+              email: email,
+              permisRecto: permisRecto,
+              permisVerso: permisVerso,
+              numeroPermis: numeroPermis,
+              immatriculationVehiculeClient: immatriculationVehiculeClient,
+              kilometrageVehiculeClient: kilometrageVehiculeClient,
+              contratId: widget.contratId, // Passer le contratId pour la modification
+            ),
+          ),
         );
       } else {
         // Pour un nouveau contrat, naviguer vers la page de location

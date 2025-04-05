@@ -71,7 +71,7 @@ class _LocationPageState extends State<LocationPage> {
 
   final List<File> _photos = [];
   int _pourcentageEssence = 50; 
-  bool _isLoading = false; 
+  bool _isLoading = true; 
   bool _acceptedConditions = false; 
   String _signatureBase64 = ''; 
   bool _isSigning = false;
@@ -94,16 +94,26 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _boiteVitessesController = TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
   final TextEditingController _typeLocationController = TextEditingController();
-
+  
   @override
   void initState() {
     super.initState();
-
-    _dateDebutController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
     
-    _typeLocationController.text = "Gratuite";
+    // Déterminer si nous sommes en mode édition
+    final bool _isEditMode = widget.contratId != null;
+    
+    // Ne définir la date de début et le type de location par défaut que si nous ne sommes pas en mode modification
+    if (!_isEditMode) {
+      _dateDebutController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
+      _typeLocationController.text = "Gratuite";
+    }
 
     _fetchVehicleData();
+    
+    // Si nous avons un contratId, c'est une modification de contrat existant
+    if (_isEditMode) {
+      _loadContractData();
+    }
   }
 
   Future<void> _fetchVehicleData() async {
@@ -136,7 +146,6 @@ class _LocationPageState extends State<LocationPage> {
           _nettoyageIntController.text = vehicleData['nettoyageInt'] ?? '';
           _nettoyageExtController.text = vehicleData['nettoyageExt'] ?? '';
           _carburantManquantController.text = vehicleData['carburantManquant'] ?? '';
-          _kilometrageAutoriseController.text = vehicleData['kilometrageAutorise'] ?? '';
           _kilometrageSuppController.text = vehicleData['kilometrageSupp'] ?? '';
           _vinController.text = vehicleData['vin'] ?? '';
           _assuranceNomController.text = vehicleData['assuranceNom'] ?? '';
@@ -146,12 +155,87 @@ class _LocationPageState extends State<LocationPage> {
           _typeCarburantController.text = vehicleData['typeCarburant'] ?? '';
           _boiteVitessesController.text = vehicleData['boiteVitesses'] ?? '';
           _cautionController.text = vehicleData['caution'] ?? '';
-          String fetchedTypeLocation = vehicleData['typeLocation'] ?? 'Gratuite';
-          _typeLocationController.text = fetchedTypeLocation;
         });
       } else {
         print('Aucun véhicule trouvé avec l\'immatriculation: ${widget.immatriculation}');
       }
+    }
+  }
+
+  // Méthode pour charger les données existantes du contrat
+  Future<void> _loadContractData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Vous devez être connecté pour créer un contrat")),
+        );
+        return;
+      }
+
+      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
+      final String userId = collaborateurStatus['userId'] ?? user.uid;
+      final String targetId = collaborateurStatus['isCollaborateur'] 
+          ? collaborateurStatus['adminId'] ?? user.uid 
+          : user.uid;
+
+      print(' Création contrat - userId: $userId, targetId: $targetId');
+
+      final docRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(targetId)
+          .collection('locations')
+          .doc(widget.contratId);
+
+      final docSnapshot = await docRef.get();
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data() as Map<String, dynamic>;
+        print('Données de location récupérées: $data');
+        
+        setState(() {
+          // Récupérer les données de location
+          _dateDebutController.text = data['dateDebut'] ?? DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
+          _dateFinTheoriqueController.text = data['dateFinTheorique'] ?? '';
+          _kilometrageDepartController.text = data['kilometrageDepart']?.toString() ?? '';
+          _commentaireController.text = data['commentaire'] ?? '';
+          _prixLocationController.text = data['prixLocation']?.toString() ?? '';
+          _accompteController.text = data['accompte']?.toString() ?? '';
+          _nettoyageIntController.text = data['nettoyageInt']?.toString() ?? '';
+          _nettoyageExtController.text = data['nettoyageExt']?.toString() ?? '';
+          _carburantManquantController.text = data['carburantManquant']?.toString() ?? '';
+          _kilometrageAutoriseController.text = data['kilometrageAutorise']?.toString() ?? '';
+          _kilometrageSuppController.text = data['kilometrageSupp']?.toString() ?? '';
+          _vinController.text = data['vin'] ?? '';
+          _assuranceNomController.text = data['assuranceNom'] ?? '';
+          _assuranceNumeroController.text = data['assuranceNumero'] ?? '';
+          _franchiseController.text = data['franchise']?.toString() ?? '';
+          _rayuresController.text = data['rayures'] ?? '';
+          _typeCarburantController.text = data['typeCarburant'] ?? '';
+          _boiteVitessesController.text = data['boiteVitesses'] ?? '';
+          _cautionController.text = data['caution']?.toString() ?? '';
+          _typeLocationController.text = data['typeLocation'] ?? 'Gratuite';
+            
+          // Récupérer le pourcentage d'essence
+          if (data['pourcentageEssence'] != null) {
+            _pourcentageEssence = data['pourcentageEssence'];
+          }
+            
+          // Récupérer l'URL de la photo du véhicule
+          _vehiclePhotoUrl = data['vehiclePhotoUrl'];
+            
+        });
+      }
+    } catch (e) {
+      print('Erreur lors du chargement des données de location: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -697,261 +781,269 @@ class _LocationPageState extends State<LocationPage> {
           },
         ),
       ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            physics: _isSigning ? const NeverScrollableScrollPhysics() : null,
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Stack(
               children: [
-                VoitureSelectionne(
-                  marque: widget.marque,
-                  modele: widget.modele,
-                  immatriculation: widget.immatriculation,
-                  firestore: _firestore,
-                ),
-                const SizedBox(height: 30),
-                Center(
-                  child: (() {
-                    String dateText = _dateDebutController.text;
-                    if (dateText.isEmpty) {
-                      return SizedBox.shrink(); 
-                    }
-
-                    try {
-                      final now = DateTime.now();
-                      final parsedDate = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(dateText);
-                      
-                      final dateWithCurrentYear = DateTime(
-                        now.year,
-                        parsedDate.month,
-                        parsedDate.day,
-                        parsedDate.hour,
-                        parsedDate.minute,
-                      );
-                      
-                      final dateToCompare = dateWithCurrentYear.isBefore(now) && 
-                                           parsedDate.month < now.month ? 
-                                           DateTime(now.year + 1, parsedDate.month, parsedDate.day, 
-                                                   parsedDate.hour, parsedDate.minute) : 
-                                           dateWithCurrentYear;
-                      
-                      if (dateToCompare.isAfter(now) && 
-                          !(dateToCompare.year == now.year && 
-                            dateToCompare.month == now.month && 
-                            dateToCompare.day == now.day)) {
-                        return Text(
-                          textAlign: TextAlign.center,
-                          'Véhicule réservé pour le:\n$dateText',
-                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900),
-                        );
-                      } else {
-                        return SizedBox.shrink(); 
-                      }
-                    } catch (e) {
-                      return SizedBox.shrink(); 
-                    }
-                  }()),
-                ),
-                const SizedBox(height: 30),
-                CreateContrat.buildDateField("Date de début",
-                    _dateDebutController, true, context, _selectDateTime),
-                CreateContrat.buildDateField(
-                    "Date de fin théorique",
-                    _dateFinTheoriqueController,
-                    false,
-                    context,
-                    _selectDateTime),
-                CreateContrat.buildTextField(
-                    "Kilométrage de départ", _kilometrageDepartController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ]),
-                CreateContrat.buildTextField(
-                  "Kilométrage Autorisé (km)",
-                  _kilometrageAutoriseController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                ),
-                CreateContrat.buildDropdown(_typeLocationController.text, (value) {
-                  setState(() {
-                    _typeLocationController.text = value!;
-                  });
-                }),
-                if (_typeLocationController.text == "Payante" &&
-                    _prixLocationController.text.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      "Veuillez configurer le prix de la location dans sa fiche afin qu'il soit affiché correctement.",
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                if (_typeLocationController.text == "Payante" &&
-                    _prixLocationController.text.isNotEmpty) ...[
-                  const SizedBox(height: 35),
-                  CreateContrat.buildPrixLocationField(_prixLocationController),
-                  CreateContrat.buildAccompteField(_accompteController),
-                  const SizedBox(height: 20),
-                ],
-                const SizedBox(height: 20),
-                CreateContrat.buildFuelSlider(_pourcentageEssence, (value) {
-                  setState(() {
-                    _pourcentageEssence = value.toInt();
-                  });
-                }),
-                const SizedBox(height: 20),
-                EtatVehicule(
-                  photos: _photos,
-                  onAddPhoto: _addPhoto,
-                  onRemovePhoto: _removePhoto,
-                ),
-                const SizedBox(height: 20),
-                CommentaireWidget(
-                    controller:
-                        _commentaireController), 
-                const SizedBox(height: 20),
-                
-                // Afficher le conteneur de signature si au moins le nom OU le prénom est présent
-                if ((widget.nom != null && widget.nom!.isNotEmpty) || 
-                    (widget.prenom != null && widget.prenom!.isNotEmpty)) 
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
+                SingleChildScrollView(
+                  physics: _isSigning ? const NeverScrollableScrollPhysics() : null,
+                  padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Signature de Location',
-                        style: TextStyle(
-                          fontSize: 16, 
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF08004D),
-                        ),
+                      VoitureSelectionne(
+                        marque: widget.marque,
+                        modele: widget.modele,
+                        immatriculation: widget.immatriculation,
+                        firestore: _firestore,
                       ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: _acceptedConditions,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                _acceptedConditions = value ?? false;
-                              });
-                            },
-                            activeColor: const Color(0xFF08004D),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              "Je reconnais avoir pris connaissance des termes et conditions de location.",
-                              style: TextStyle(
-                                color: _acceptedConditions ? Colors.black87 : Colors.grey,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (_acceptedConditions) ...[
-                        const SizedBox(height: 15),
-                        if (_signatureBase64.isNotEmpty) ...[
-                          Container(
-                            width: double.infinity,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            child: Image.memory(
-                              Uri.parse('data:image/png;base64,$_signatureBase64').data!.contentAsBytes(),
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-                        Center(
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              final signature = await PopupSignature.showSignatureDialog(
-                                context,
-                                title: 'Signature du contrat',
-                                checkboxText: 'J\'accepte les conditions de location',
-                                nom: widget.nom,
-                                prenom: widget.prenom,
-                                existingSignature: _signatureBase64,
+                      const SizedBox(height: 30),
+                      Center(
+                        child: (() {
+                          String dateText = _dateDebutController.text;
+                          if (dateText.isEmpty) {
+                            return SizedBox.shrink(); 
+                          }
+
+                          try {
+                            final now = DateTime.now();
+                            final parsedDate = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(dateText);
+                            
+                            final dateWithCurrentYear = DateTime(
+                              now.year,
+                              parsedDate.month,
+                              parsedDate.day,
+                              parsedDate.hour,
+                              parsedDate.minute,
+                            );
+                            
+                            final dateToCompare = dateWithCurrentYear.isBefore(now) && 
+                                                 parsedDate.month < now.month ? 
+                                                 DateTime(now.year + 1, parsedDate.month, parsedDate.day, 
+                                                         parsedDate.hour, parsedDate.minute) : 
+                                                 dateWithCurrentYear;
+                            
+                            if (dateToCompare.isAfter(now) && 
+                                !(dateToCompare.year == now.year && 
+                                  dateToCompare.month == now.month && 
+                                  dateToCompare.day == now.day)) {
+                              return Text(
+                                textAlign: TextAlign.center,
+                                'Véhicule réservé pour le:\n$dateText',
+                                style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900),
                               );
-                              
-                              if (signature != null) {
-                                setState(() {
-                                  _signatureBase64 = signature;
-                                });
-                              }
-                            },
-                            icon: const Icon(Icons.edit),
-                            label: Text(_signatureBase64.isEmpty ? 'Signer le contrat' : 'Modifier la signature'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF08004D),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            } else {
+                              return SizedBox.shrink(); 
+                            }
+                          } catch (e) {
+                            return SizedBox.shrink(); 
+                          }
+                        }()),
+                      ),
+                      const SizedBox(height: 30),
+                      CreateContrat.buildDateField("Date de début",
+                          _dateDebutController, true, context, _selectDateTime),
+                      CreateContrat.buildDateField(
+                          "Date de fin théorique",
+                          _dateFinTheoriqueController,
+                          false,
+                          context,
+                          _selectDateTime),
+                      CreateContrat.buildTextField(
+                          "Kilométrage de départ", _kilometrageDepartController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ]),
+                      CreateContrat.buildTextField(
+                          "Kilométrage Autorisé (km)",
+                          _kilometrageAutoriseController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ]),
+                      CreateContrat.buildTypeLocationToggle(
+                        _typeLocationController.text, 
+                        (value) {
+                          // Utiliser setState uniquement pour le type de location car cela affecte l'affichage conditionnel
+                          setState(() {
+                            _typeLocationController.text = value;
+                            print('Valeur du type de location mise à jour: $value');
+                          });
+                        }
+                      ),
+                      if (_typeLocationController.text == "Payante" &&
+                          _prixLocationController.text.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            "Veuillez configurer le prix de la location dans sa fiche afin qu'il soit affiché correctement.",
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
                             ),
                           ),
                         ),
+                      if (_typeLocationController.text == "Payante" &&
+                          _prixLocationController.text.isNotEmpty) ...[
+                        const SizedBox(height: 35),
+                        CreateContrat.buildPrixLocationField(_prixLocationController),
+                        CreateContrat.buildAccompteField(_accompteController),
+                        const SizedBox(height: 20),
                       ],
+                      const SizedBox(height: 20),
+                      CreateContrat.buildFuelSlider(_pourcentageEssence, (value) {
+                        setState(() {
+                          _pourcentageEssence = value.toInt();
+                        });
+                      }),
+                      const SizedBox(height: 20),
+                      EtatVehicule(
+                        photos: _photos,
+                        onAddPhoto: _addPhoto,
+                        onRemovePhoto: _removePhoto,
+                      ),
+                      const SizedBox(height: 20),
+                      CommentaireWidget(
+                          controller:
+                              _commentaireController), 
+                      const SizedBox(height: 20),
+                      
+                      // Afficher le conteneur de signature si au moins le nom OU le prénom est présent
+                      if ((widget.nom != null && widget.nom!.isNotEmpty) || 
+                          (widget.prenom != null && widget.prenom!.isNotEmpty)) 
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Signature de Location',
+                              style: TextStyle(
+                                fontSize: 16, 
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF08004D),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Checkbox(
+                                  value: _acceptedConditions,
+                                  onChanged: (bool? value) {
+                                    setState(() {
+                                      _acceptedConditions = value ?? false;
+                                    });
+                                  },
+                                  activeColor: const Color(0xFF08004D),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    "Je reconnais avoir pris connaissance des termes et conditions de location.",
+                                    style: TextStyle(
+                                      color: _acceptedConditions ? Colors.black87 : Colors.grey,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (_acceptedConditions) ...[
+                              const SizedBox(height: 15),
+                              if (_signatureBase64.isNotEmpty) ...[
+                                Container(
+                                  width: double.infinity,
+                                  height: 100,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: Image.memory(
+                                    Uri.parse('data:image/png;base64,$_signatureBase64').data!.contentAsBytes(),
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                              ],
+                              Center(
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    final signature = await PopupSignature.showSignatureDialog(
+                                      context,
+                                      title: 'Signature du contrat',
+                                      checkboxText: 'J\'accepte les conditions de location',
+                                      nom: widget.nom,
+                                      prenom: widget.prenom,
+                                      existingSignature: _signatureBase64,
+                                    );
+                                    
+                                    if (signature != null) {
+                                      setState(() {
+                                        _signatureBase64 = signature;
+                                      });
+                                    }
+                                  },
+                                  icon: const Icon(Icons.edit),
+                                  label: Text(_signatureBase64.isEmpty ? 'Signer le contrat' : 'Modifier la signature'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF08004D),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 50),
+                      Padding(
+                        padding: const EdgeInsets.only(
+                            bottom: 40.0), 
+                        child: ElevatedButton(
+                          onPressed: (widget.nom == null ||
+                                  widget.nom!.isEmpty ||
+                                  widget.prenom == null ||
+                                  widget.prenom!.isEmpty ||
+                                  _acceptedConditions)
+                              ? _validerContrat
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF08004D), 
+                            minimumSize: const Size(double.infinity, 50),
+                          ),
+                          child: Text(
+                            widget.email != null && widget.email!.isNotEmpty
+                                ? "Valider et envoyer le contrat"
+                                : "Sauvegarder le contrat",
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight
+                                    .normal), 
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                
-                const SizedBox(height: 50),
-                Padding(
-                  padding: const EdgeInsets.only(
-                      bottom: 40.0), 
-                  child: ElevatedButton(
-                    onPressed: (widget.nom == null ||
-                            widget.nom!.isEmpty ||
-                            widget.prenom == null ||
-                            widget.prenom!.isEmpty ||
-                            _acceptedConditions)
-                        ? _validerContrat
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF08004D), 
-                      minimumSize: const Size(double.infinity, 50),
-                    ),
-                    child: Text(
-                      widget.email != null && widget.email!.isNotEmpty
-                          ? "Valider et envoyer le contrat"
-                          : "Sauvegarder le contrat",
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight
-                              .normal), 
-                    ),
-                  ),
-                ),
+                if (_isLoading) Chargement(), 
               ],
             ),
-          ),
-          if (_isLoading) Chargement(), 
-        ],
-      ),
-    );
+          );
   }
 }
