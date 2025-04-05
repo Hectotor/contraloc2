@@ -385,7 +385,11 @@ class _ModifierScreenState extends State<ModifierScreen> {
        
       appBar: AppBar(
         title: Text(
-          widget.data['status'] == 'restitue' ? "Restitués" : "En cours",
+          widget.data['status'] == 'restitue' 
+              ? "Restitués" 
+              : widget.data['status'] == 'réservé' 
+                  ? "Réservés" 
+                  : "En cours",
           style:
               const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
