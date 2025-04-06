@@ -37,7 +37,9 @@ class ContratModel {
   // Informations contrat
   final String? dateDebut;
   final String? dateFinTheorique;
+  final String? dateFinReelle;
   final String? kilometrageDepart;
+  final String? kilometrageArrivee;
   final String? typeLocation;
   final int pourcentageEssence;
   final String? commentaire;
@@ -47,6 +49,7 @@ class ContratModel {
   final Timestamp? dateReservation;
   final Timestamp? dateCreation;
   final String? signatureAller;
+  final String? signatureRetour;
   
   // Informations assurance
   final String? assuranceNom;
@@ -82,7 +85,6 @@ class ContratModel {
   final String? dateRetour;
   final String? kilometrageRetour;
   final int? pourcentageEssenceRetour;
-  final String? signatureRetour;
   
   // Informations facture
   final bool? factureGeneree;
@@ -90,7 +92,7 @@ class ContratModel {
   final Timestamp? dateFacture;
   final String? factureTotalFrais;
   
-  ContratModel({
+  const ContratModel({
     this.contratId,
     this.userId,
     this.adminId,
@@ -117,16 +119,19 @@ class ContratModel {
     this.boiteVitesses,
     this.dateDebut,
     this.dateFinTheorique,
+    this.dateFinReelle,
     this.kilometrageDepart,
+    this.kilometrageArrivee,
     this.typeLocation,
     this.pourcentageEssence = 50,
     this.commentaire,
     this.photosUrls,
     this.photosFiles,
-    this.status,
+    this.status = 'réservé',
     this.dateReservation,
     this.dateCreation,
     this.signatureAller,
+    this.signatureRetour,
     this.assuranceNom,
     this.assuranceNumero,
     this.franchise,
@@ -150,7 +155,6 @@ class ContratModel {
     this.dateRetour,
     this.kilometrageRetour,
     this.pourcentageEssenceRetour,
-    this.signatureRetour,
     this.factureGeneree,
     this.factureId,
     this.dateFacture,
@@ -184,7 +188,9 @@ class ContratModel {
       boiteVitesses: data['boiteVitesses'],
       dateDebut: data['dateDebut'],
       dateFinTheorique: data['dateFinTheorique'],
+      dateFinReelle: data['dateFinReelle'],
       kilometrageDepart: data['kilometrageDepart'],
+      kilometrageArrivee: data['kilometrageArrivee'],
       typeLocation: data['typeLocation'],
       pourcentageEssence: data['pourcentageEssence'] ?? 50,
       commentaire: data['commentaire'],
@@ -192,7 +198,8 @@ class ContratModel {
       status: data['status'],
       dateReservation: data['dateReservation'],
       dateCreation: data['dateCreation'],
-      signatureAller: data['signature_aller'],
+      signatureAller: data['signatureAller'],
+      signatureRetour: data['signatureRetour'],
       assuranceNom: data['assuranceNom'],
       assuranceNumero: data['assuranceNumero'],
       franchise: data['franchise'],
@@ -207,17 +214,16 @@ class ContratModel {
       prixRayures: data['prixRayures'],
       logoUrl: data['logoUrl'],
       nomEntreprise: data['nomEntreprise'],
-      adresseEntreprise: data['adresseEntreprise'],
-      telephoneEntreprise: data['telephoneEntreprise'],
-      siretEntreprise: data['siretEntreprise'],
+      adresseEntreprise: data['adresse'],
+      telephoneEntreprise: data['telephone'],
+      siretEntreprise: data['siret'],
       nomCollaborateur: data['nomCollaborateur'],
       prenomCollaborateur: data['prenomCollaborateur'],
       conditions: data['conditions'],
       dateRetour: data['dateRetour'],
       kilometrageRetour: data['kilometrageRetour'],
       pourcentageEssenceRetour: data['pourcentageEssenceRetour'],
-      signatureRetour: data['signature_retour'],
-      factureGeneree: data['factureGeneree'],
+      factureGeneree: data['factureGeneree'] ?? false,
       factureId: data['factureId'],
       dateFacture: data['dateFacture'],
       factureTotalFrais: data['factureTotalFrais'],
@@ -250,12 +256,15 @@ class ContratModel {
       'boiteVitesses': boiteVitesses ?? '',
       'dateDebut': dateDebut ?? '',
       'dateFinTheorique': dateFinTheorique ?? '',
+      'dateFinReelle': dateFinReelle ?? '',
       'kilometrageDepart': kilometrageDepart ?? '',
+      'kilometrageArrivee': kilometrageArrivee ?? '',
       'typeLocation': typeLocation ?? 'Gratuite',
       'pourcentageEssence': pourcentageEssence,
       'commentaire': commentaire ?? '',
       'photos': photosUrls,
-      'signature_aller': signatureAller,
+      'signatureAller': signatureAller,
+      'signatureRetour': signatureRetour,
       'assuranceNom': assuranceNom ?? '',
       'assuranceNumero': assuranceNumero ?? '',
       'franchise': franchise ?? '',
@@ -267,7 +276,7 @@ class ContratModel {
       'carburantManquant': carburantManquant ?? '',
       'kilometrageAutorise': kilometrageAutorise ?? '',
       'kilometrageSupp': kilometrageSupp ?? '',
-      'prixRayures': prixRayures ?? '',
+      'prixRayures': prixRayures,
       'logoUrl': logoUrl,
       'nomEntreprise': nomEntreprise,
       'adresseEntreprise': adresseEntreprise,
@@ -294,6 +303,62 @@ class ContratModel {
     if (factureTotalFrais != null) data['factureTotalFrais'] = factureTotalFrais;
     
     return data;
+  }
+  
+  // Convertir l'instance en Map pour la génération de PDF
+  Map<String, dynamic> toPdfParams() {
+    return {
+      'contratId': contratId ?? '',
+      'logoUrl': logoUrl ?? '',
+      'nomEntreprise': nomEntreprise ?? '',
+      'adresse': adresseEntreprise ?? '',
+      'telephone': telephoneEntreprise ?? '',
+      'siret': siretEntreprise ?? '',
+      'nomCollaborateur': nomCollaborateur ?? '',
+      'prenomCollaborateur': prenomCollaborateur ?? '',
+      'dateCreation': dateCreation?.toDate().toString() ?? '',
+      'dateReservation': dateReservation?.toDate().toString() ?? '',
+      'nom': nom,
+      'prenom': prenom,
+      'email': email,
+      'numeroPermis': numeroPermis,
+      'immatriculationVehiculeClient': immatriculationVehiculeClient,
+      'kilometrageVehiculeClient': kilometrageVehiculeClient,
+      'permisRecto': permisRectoUrl,
+      'permisVerso': permisVersoUrl,
+      'modele': modele,
+      'immatriculation': immatriculation,
+      'dateDebut': dateDebut,
+      'dateFinTheorique': dateFinTheorique,
+      'vin': vin,
+      'typeCarburant': typeCarburant,
+      'boiteVitesses': boiteVitesses,
+      'prixLocation': prixLocation,
+      'accompte': accompte,
+      'caution': caution,
+      'nettoyageInt': nettoyageInt,
+      'nettoyageExt': nettoyageExt,
+      'carburantManquant': carburantManquant,
+      'kilometrageDepart': kilometrageDepart,
+      'pourcentageEssence': pourcentageEssence.toString(),
+      'condition': conditions,
+    };
+  }
+
+  // Conversion en Map pour l'export
+  Map<String, String> toMapExport() {
+    return {
+      'contratId': contratId ?? '',
+      'logoUrl': logoUrl ?? '',
+      'nomEntreprise': nomEntreprise ?? '',
+      'adresse': adresseEntreprise ?? '',
+      'telephone': telephoneEntreprise ?? '',
+      'siret': siretEntreprise ?? '',
+      'nomCollaborateur': nomCollaborateur ?? '',
+      'prenomCollaborateur': prenomCollaborateur ?? '',
+      'dateCreation': dateCreation?.toDate().toString() ?? '',
+      'dateReservation': dateReservation?.toDate().toString() ?? '',
+    };
   }
   
   // Créer une copie de l'instance avec des modifications
@@ -324,7 +389,9 @@ class ContratModel {
     String? boiteVitesses,
     String? dateDebut,
     String? dateFinTheorique,
+    String? dateFinReelle,
     String? kilometrageDepart,
+    String? kilometrageArrivee,
     String? typeLocation,
     int? pourcentageEssence,
     String? commentaire,
@@ -334,6 +401,7 @@ class ContratModel {
     Timestamp? dateReservation,
     Timestamp? dateCreation,
     String? signatureAller,
+    String? signatureRetour,
     String? assuranceNom,
     String? assuranceNumero,
     String? franchise,
@@ -357,7 +425,6 @@ class ContratModel {
     String? dateRetour,
     String? kilometrageRetour,
     int? pourcentageEssenceRetour,
-    String? signatureRetour,
     bool? factureGeneree,
     String? factureId,
     Timestamp? dateFacture,
@@ -390,7 +457,9 @@ class ContratModel {
       boiteVitesses: boiteVitesses ?? this.boiteVitesses,
       dateDebut: dateDebut ?? this.dateDebut,
       dateFinTheorique: dateFinTheorique ?? this.dateFinTheorique,
+      dateFinReelle: dateFinReelle ?? this.dateFinReelle,
       kilometrageDepart: kilometrageDepart ?? this.kilometrageDepart,
+      kilometrageArrivee: kilometrageArrivee ?? this.kilometrageArrivee,
       typeLocation: typeLocation ?? this.typeLocation,
       pourcentageEssence: pourcentageEssence ?? this.pourcentageEssence,
       commentaire: commentaire ?? this.commentaire,
@@ -400,6 +469,7 @@ class ContratModel {
       dateReservation: dateReservation ?? this.dateReservation,
       dateCreation: dateCreation ?? this.dateCreation,
       signatureAller: signatureAller ?? this.signatureAller,
+      signatureRetour: signatureRetour ?? this.signatureRetour,
       assuranceNom: assuranceNom ?? this.assuranceNom,
       assuranceNumero: assuranceNumero ?? this.assuranceNumero,
       franchise: franchise ?? this.franchise,
@@ -423,53 +493,10 @@ class ContratModel {
       dateRetour: dateRetour ?? this.dateRetour,
       kilometrageRetour: kilometrageRetour ?? this.kilometrageRetour,
       pourcentageEssenceRetour: pourcentageEssenceRetour ?? this.pourcentageEssenceRetour,
-      signatureRetour: signatureRetour ?? this.signatureRetour,
       factureGeneree: factureGeneree ?? this.factureGeneree,
       factureId: factureId ?? this.factureId,
       dateFacture: dateFacture ?? this.dateFacture,
       factureTotalFrais: factureTotalFrais ?? this.factureTotalFrais,
     );
-  }
-  
-  // Convertir l'instance en Map pour la génération de PDF
-  Map<String, dynamic> toPdfParams() {
-    return {
-      'nom': nom,
-      'prenom': prenom,
-      'adresse': adresse,
-      'telephone': telephone,
-      'email': email,
-      'numeroPermis': numeroPermis,
-      'immatriculationVehiculeClient': immatriculationVehiculeClient,
-      'kilometrageVehiculeClient': kilometrageVehiculeClient,
-      'marque': marque,
-      'modele': modele,
-      'immatriculation': immatriculation,
-      'commentaire': commentaire,
-      'photos': photosUrls,
-      'signatureBase64': signatureAller,
-      'nettoyageInt': nettoyageInt,
-      'nettoyageExt': nettoyageExt,
-      'carburantManquant': carburantManquant,
-      'caution': caution,
-      'typeCarburant': typeCarburant,
-      'boiteVitesses': boiteVitesses,
-      'vin': vin,
-      'assuranceNom': assuranceNom,
-      'assuranceNumero': assuranceNumero,
-      'franchise': franchise,
-      'prixRayures': prixRayures,
-      'kilometrageSupp': kilometrageSupp,
-      'kilometrageAutorise': kilometrageAutorise,
-      'typeLocation': typeLocation,
-      'prixLocation': prixLocation,
-      'accompte': accompte,
-      'kilometrageDepart': kilometrageDepart,
-      'pourcentageEssence': pourcentageEssence.toString(),
-      'condition': conditions,
-      'nomCollaborateur': nomCollaborateur,
-      'prenomCollaborateur': prenomCollaborateur,
-      'contratId': contratId,
-    };
   }
 }

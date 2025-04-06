@@ -94,6 +94,12 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _boiteVitessesController = TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
   final TextEditingController _typeLocationController = TextEditingController();
+  final TextEditingController _telephoneController = TextEditingController();
+  final TextEditingController _nomEntrepriseController = TextEditingController();
+  final TextEditingController _adresseController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  String? _logoUrl;
+  final TextEditingController _siretController = TextEditingController();
 
   @override
   void initState() {
@@ -316,13 +322,25 @@ class _LocationPageState extends State<LocationPage> {
       String conditions = await _loadConditions(targetId);
 
       // Récupération des données utilisateur
-      final userData = await CollaborateurUtil.getAuthData();
-      
-      final nomEntreprise = userData['nomEntreprise'] ?? '';
-      final adresseEntreprise = userData['adresse'] ?? '';
-      final telephoneEntreprise = userData['telephone'] ?? '';
-      final siretEntreprise = userData['siret'] ?? '';
-      final logoUrl = userData['logoUrl'] ?? '';
+      final adminId = targetId; // Utiliser le targetId comme ID admin
+      final adminDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(adminId)
+          .collection('authentification')
+          .doc(adminId)
+          .get();
+
+      final data = adminDoc.data();
+      if (data != null) {
+        setState(() {
+          _nomEntrepriseController.text = data['nomEntreprise'] ?? '';
+          _logoUrl = data['logoUrl'] as String?;
+          _siretController.text = data['siret'] ?? '';
+          _telephoneController.text = data['telephone'] ?? '';
+          _adresseController.text = data['adresse'] ?? '';
+          _emailController.text = data['email'] ?? '';
+        });
+      }
 
       // Récupération des informations du collaborateur
       String nomCollaborateur = '';
@@ -384,11 +402,11 @@ class _LocationPageState extends State<LocationPage> {
         kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : null,
         kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : null,
         prixRayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : null,
-        logoUrl: logoUrl,
-        nomEntreprise: nomEntreprise,
-        adresseEntreprise: adresseEntreprise,
-        telephoneEntreprise: telephoneEntreprise,
-        siretEntreprise: siretEntreprise,
+        logoUrl: _logoUrl,
+        nomEntreprise: _nomEntrepriseController.text,
+        adresseEntreprise: _adresseController.text,
+        telephoneEntreprise: _telephoneController.text,
+        siretEntreprise: _siretController.text,
         nomCollaborateur: nomCollaborateur,
         prenomCollaborateur: prenomCollaborateur,
         conditions: conditions,
@@ -404,8 +422,8 @@ class _LocationPageState extends State<LocationPage> {
 
       // Génération et envoi du PDF si un email est fourni
       if (widget.email != null && widget.email!.isNotEmpty) {
-        await _generateAndSendPdf(contratModel, nomEntreprise, logoUrl, adresseEntreprise, 
-                                  telephoneEntreprise, siretEntreprise, nomCollaborateur, prenomCollaborateur);
+        await _generateAndSendPdf(contratModel, _nomEntrepriseController.text, _logoUrl ?? '', _adresseController.text, 
+                                  _telephoneController.text, _siretController.text, nomCollaborateur, prenomCollaborateur);
       }
 
       // Affichage du succès et navigation
