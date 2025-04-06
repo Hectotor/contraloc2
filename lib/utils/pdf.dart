@@ -7,6 +7,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter/services.dart' show NetworkAssetBundle, rootBundle;
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import '../models/contrat_model.dart';
 import 'pdf_signa_cachet.dart';
 import 'pdf_voiture.dart';
 import 'pdf_info_contact.dart';
@@ -43,44 +44,15 @@ Future<pw.MemoryImage?> _loadImageFromFirebaseStorage(String logoUrl) async {
 }
 
 Future<String> generatePdf(
-  Map<String, dynamic> data,
-  String dateFinEffectif,
-  String kilometrageRetour,
-  String commentaireRetour,
-  List<File> photosRetour,
-  String nomEntreprise,
-  String logoUrl,
-  String adresse,
-  String telephone,
-  String siret,
-  String commentaireRetourData,
-  String typeCarburant,
-  String boiteVitesses,
-  String vin,
-  String assuranceNom,
-  String assuranceNumero,
-  String franchise,
-  String kilometrageSupp,
-  String rayures,
-  String dateDebut,
-  String dateFinTheorique,
-  String dateFinEffectifData,
-  String kilometrageDepart,
-  String kilometrageAutorise,
-  String pourcentageEssence,
-  String typeLocation,
-  String prixLocation,
-  String accompte, {
-  required String condition,
-  String? signatureBase64, // Signature aller
-  String? signatureRetourBase64, // Signature retour
-  String? signatureAllerBase64, // Nouvelle signature aller
+  ContratModel contratModel, {
   String? nomCollaborateur,
-  String? prenomCollaborateur, // Nom du collaborateur qui a créé le contrat
 }) async {
+  // Obtenir les paramètres du PDF à partir du modèle de contrat
+  final data = contratModel.toPdfParams();
+  
   final pdf = pw.Document();
 
-  // Chargez les données des polices
+  // Charger les données des polices
   final font = await rootBundle.load("assets/fonts/OpenSans-Regular.ttf");
   final boldData = await rootBundle.load("assets/fonts/OpenSans-Bold.ttf");
   final italicData = await rootBundle.load("assets/fonts/OpenSans-Italic.ttf");
@@ -94,6 +66,7 @@ Future<String> generatePdf(
 
   // Charger le logo
   pw.MemoryImage? logoImage;
+  String logoUrl = contratModel.logoUrl ?? '';
   if (logoUrl.isNotEmpty) {
     try {
       // Vérifier si c'est une URL Firebase Storage
@@ -123,103 +96,73 @@ Future<String> generatePdf(
     }
   }
 
-  // Fonctions utilitaires pour décoder les signatures
-  pw.MemoryImage? _decodeBase64Signature(String? base64String) {
+  // Fonction pour décoder une signature en base64
+  Uint8List? _decodeBase64Signature(String? base64String) {
     if (base64String == null || base64String.isEmpty) {
       return null;
     }
     
     try {
-      // Supprimer les en-têtes de données base64 si présents
-      final base64Clean = base64String.contains(',') 
-          ? base64String.split(',').last 
-          : base64String;
+      // Vérifier si la chaîne commence par 'data:image'
+      String cleanBase64 = base64String;
+      if (base64String.startsWith('data:image')) {
+        cleanBase64 = base64String.split(',')[1];
+      }
       
       // Décoder la chaîne base64
-      final Uint8List bytes = base64Decode(base64Clean);
-      
-      // Créer et retourner un MemoryImage
-      return pw.MemoryImage(bytes);
+      return base64Decode(cleanBase64);
     } catch (e) {
-      print('Erreur de conversion base64 en image : $e');
+      print("Erreur lors du décodage de la signature: $e");
       return null;
     }
   }
 
-  // Convertir la signature base64 en image si disponible
+  // Décodage des signatures
   pw.MemoryImage? signatureImage;
   pw.MemoryImage? signatureRetourImage;
-
-  // Nouvelle vérification pour data['signature_aller']
-  if (data.containsKey('signature_aller') && 
-      data['signature_aller'] is String && 
-      data['signature_aller'].isNotEmpty) {
-    signatureImage = _decodeBase64Signature(data['signature_aller']);
-    signatureBase64 = data['signature_aller'];
+  
+  // Utiliser signatureAllerBase64 en priorité, puis signatureBase64 si disponible
+  final signatureAller = contratModel.signatureAller;
+  if (signatureAller != null && signatureAller.isNotEmpty) {
+    try {
+      final signatureBytes = _decodeBase64Signature(signatureAller);
+      if (signatureBytes != null) {
+        signatureImage = pw.MemoryImage(signatureBytes);
+      }
+    } catch (e) {
+      print("Erreur lors du décodage de la signature aller: $e");
+    }
   }
-
-  // Vérification pour la signature de retour
-  if (data.containsKey('signatureRetour') && 
-      data['signatureRetour'] is String && 
-      data['signatureRetour'].isNotEmpty) {
-    signatureRetourImage = _decodeBase64Signature(data['signatureRetour']);
-    signatureRetourBase64 = data['signatureRetour'];
-  }
-
-  // Vérification originale pour 'signature'
-  if (data.containsKey('signature') && 
-      data['signature'] is Map && 
-      data['signature'].containsKey('base64') &&
-      data['signature']['base64'] is String &&
-      data['signature']['base64'].isNotEmpty) {
-    signatureImage = _decodeBase64Signature(data['signature']['base64']);
-    signatureBase64 = data['signature']['base64'];
-  }
-
-  // Vérification originale
-  if (signatureBase64 != null && signatureBase64.isNotEmpty) {
-    signatureImage = _decodeBase64Signature(signatureBase64);
-  } else if (data.containsKey('signatureBase64') && 
-             data['signatureBase64'] is String && 
-             data['signatureBase64'].isNotEmpty) {
-    signatureImage = _decodeBase64Signature(data['signatureBase64']);
-  }
-
-  // Vérification pour la signature aller
-  if (data.containsKey('signatureAller') && 
-      data['signatureAller'] is String && 
-      data['signatureAller'].isNotEmpty) {
-    signatureImage = _decodeBase64Signature(data['signatureAller']);
-    signatureBase64 = data['signatureAller'];
-  }
-
-  // Nouvelle vérification pour signatureAllerBase64
-  if (signatureAllerBase64 != null && signatureAllerBase64.isNotEmpty) {
-    signatureImage = _decodeBase64Signature(signatureAllerBase64);
-    signatureBase64 = signatureAllerBase64;
-  }
-
-  // Vérification pour la signature de retour
-  if (data.containsKey('signatureRetourBase64') && 
-      data['signatureRetourBase64'] is String && 
-      data['signatureRetourBase64'].isNotEmpty) {
-    signatureRetourImage = _decodeBase64Signature(data['signatureRetourBase64']);
+  
+  // Décodage de la signature retour
+  final signatureRetour = contratModel.signatureRetour;
+  if (signatureRetour != null && signatureRetour.isNotEmpty) {
+    try {
+      final signatureRetourBytes = _decodeBase64Signature(signatureRetour);
+      if (signatureRetourBytes != null) {
+        signatureRetourImage = pw.MemoryImage(signatureRetourBytes);
+      }
+    } catch (e) {
+      print("Erreur lors du décodage de la signature retour: $e");
+    }
   }
 
   // Convertir les photos de retour en bytes
   List<Uint8List> photosRetourBytes = [];
-  for (var photoFile in photosRetour) {
-    try {
-      photosRetourBytes.add(await photoFile.readAsBytes());
-    } catch (e) {
-      print("Erreur de chargement d'une photo : $e");
-    }
-  }
+  // Note: nous n'avons pas de champ photosRetour dans ContratModel, 
+  // donc nous utilisons une liste vide pour l'instant
+  // for (var photoFile in contratModel.photosRetour ?? []) {
+  //   try {
+  //     photosRetourBytes.add(await photoFile.readAsBytes());
+  //   } catch (e) {
+  //     print("Erreur lors de la lecture de la photo de retour: $e");
+  //   }
+  // }
 
   // Convertir les dates en DateTime
-  DateTime? dateDebutParsed = tryParseDate(dateDebut);
-  DateTime? dateFinTheoriqueParsed = tryParseDate(dateFinTheorique);
-  DateTime? dateFinEffectifParsed = tryParseDate(dateFinEffectifData);
+  DateTime? dateDebutParsed = tryParseDate(contratModel.dateDebut ?? '');
+  DateTime? dateFinTheoriqueParsed = tryParseDate(contratModel.dateFinTheorique ?? '');
+  DateTime? dateFinEffectifParsed = tryParseDate(contratModel.dateRetour);
 
   // Calculer les durées en jours avec valeurs par défaut
   final dureeTheorique =
@@ -228,7 +171,7 @@ Future<String> generatePdf(
       calculateDurationInDays(dateDebutParsed, dateFinEffectifParsed) ?? 0;
 
   // Calculer le coût total théorique avec validation
-  final prixLocationDouble = double.tryParse(prixLocation) ?? 0.0;
+  final prixLocationDouble = double.tryParse(contratModel.prixLocation ?? '0') ?? 0.0;
   final coutTotalTheorique = dureeTheorique > 0 && !prixLocationDouble.isNaN
       ? calculateTotalCost(dureeTheorique, prixLocationDouble)
       : null;
@@ -239,9 +182,7 @@ Future<String> generatePdf(
       : null;
 
   // S'assurer que typeLocation est correctement défini
-  final String typeLocationValue = data.containsKey('typeLocation') && data['typeLocation'] != null 
-      ? data['typeLocation'].toString() 
-      : typeLocation;
+  final String typeLocationValue = contratModel.typeLocation ?? '';
 
   // S'assurer que la caution est correctement définie dans data
   if (!data.containsKey('caution') || data['caution'] == null) {
@@ -258,25 +199,31 @@ Future<String> generatePdf(
   }
   // Charger les photos du véhicule à l'aller si disponibles
   List<Uint8List> photosAllerBytes = [];
-  if (data['photos'] != null) {
-    for (var photoUrl in data['photos']) {
-      final photoBytes =
-          (await NetworkAssetBundle(Uri.parse(photoUrl)).load(photoUrl))
-              .buffer
-              .asUint8List();
-      // Compresser les photos
-      final compressedPhoto = await FlutterImageCompress.compressWithList(
-        photoBytes,
-        minWidth: 800,
-        minHeight: 800,
-        quality: 75,
-      );
-      photosAllerBytes.add(compressedPhoto);
+  if (contratModel.photosUrls != null) {
+    for (var photoUrl in contratModel.photosUrls!) {
+      try {
+        final photoBytes =
+            (await NetworkAssetBundle(Uri.parse(photoUrl)).load(photoUrl))
+                .buffer
+                .asUint8List();
+        
+        // Compresser l'image si nécessaire
+        final compressedBytes = await FlutterImageCompress.compressWithList(
+          photoBytes,
+          minHeight: 1024,
+          minWidth: 1024,
+          quality: 80,
+        );
+        
+        photosAllerBytes.add(compressedBytes);
+      } catch (e) {
+        print("Erreur lors du chargement de la photo: $e");
+      }
     }
   }
 
   // Utiliser l'ID du document comme contratId
-  final contratId = data['contratId'] ?? '';
+  final contratId = contratModel.contratId ?? '';
 
   pdf.addPage(
     pw.MultiPage(
@@ -324,7 +271,7 @@ Future<String> generatePdf(
                             color: PdfColors.black,
                           ),
                           textAlign: pw.TextAlign.center),
-                      pw.Text(nomEntreprise,
+                      pw.Text(contratModel.nomEntreprise ?? '',
                           style: pw.TextStyle(
                             fontSize: 12,
                             font: boldFont,
@@ -360,10 +307,10 @@ Future<String> generatePdf(
             ),
             pw.SizedBox(height: 15),
             PdfInfoContactWidget.build(
-              nomEntreprise: nomEntreprise,
-              adresse: adresse,
-              telephone: telephone,
-              siret: siret,
+              nomEntreprise: contratModel.nomEntreprise ?? '',
+              adresse: contratModel.adresseEntreprise ?? '',
+              telephone: contratModel.telephoneEntreprise ?? '',
+              siret: contratModel.siretEntreprise ?? '',
               clientData: data,
               boldFont: boldFont,
               ttf: ttf,
@@ -373,26 +320,26 @@ Future<String> generatePdf(
             pw.SizedBox(height: 20),
             PdfVoitureWidget.build(
               data: data,
-              typeCarburant: typeCarburant,
-              boiteVitesses: boiteVitesses,
-              assuranceNom: assuranceNom,
-              assuranceNumero: assuranceNumero,
-              franchise: franchise,
-              dateDebut: dateDebut,
-              dateFinTheorique: dateFinTheorique,
-              dateFinEffectifData: dateFinEffectifData,
-              kilometrageDepart: kilometrageDepart,
-              kilometrageAutorise: kilometrageAutorise,
-              kilometrageRetour: kilometrageRetour,
-              kilometrageSupp: kilometrageSupp,
+              typeCarburant: contratModel.typeCarburant ?? '',
+              boiteVitesses: contratModel.boiteVitesses ?? '',
+              assuranceNom: contratModel.assuranceNom ?? '',
+              assuranceNumero: contratModel.assuranceNumero ?? '',
+              franchise: contratModel.franchise ?? '',
+              dateDebut: contratModel.dateDebut ?? '',
+              dateFinTheorique: contratModel.dateFinTheorique ?? '',
+              dateFinEffectifData: contratModel.dateRetour ?? '',
+              kilometrageDepart: contratModel.kilometrageDepart ?? '',
+              kilometrageAutorise: contratModel.kilometrageAutorise ?? '',
+              kilometrageRetour: contratModel.kilometrageRetour ?? '',
+              kilometrageSupp: contratModel.kilometrageSupp ?? '',
               typeLocation: typeLocationValue,
-              pourcentageEssence: pourcentageEssence,
+              pourcentageEssence: contratModel.pourcentageEssence.toString(),
               dureeTheorique: dureeTheorique,
               dureeEffectif: dureeEffectif,
-              prixLocation: prixLocation,
+              prixLocation: contratModel.prixLocation ?? '',
               coutTotalTheorique: coutTotalTheorique,
               coutTotal: coutTotal,
-              accompte: accompte, // Ajout du paramètre accompte
+              accompte: contratModel.accompte ?? '', // Ajout du paramètre accompte
               boldFont: boldFont,
               ttf: ttf,
             ),
@@ -444,7 +391,7 @@ Future<String> generatePdf(
                                     fontSize: 12,
                                     font: boldFont,
                                     color: PdfColors.black)),
-                            pw.Text(commentaireRetour,
+                            pw.Text(contratModel.commentaire ?? '',
                                 style: pw.TextStyle(font: ttf)),
                           ],
                         ),
@@ -484,30 +431,27 @@ Future<String> generatePdf(
               ),
             ),
             // Conditions générales
-            ...condition.split('\n').map((paragraph) {
+            ...contratModel.conditions?.split('\n').map((paragraph) {
               if (paragraph.trim().isEmpty) return pw.SizedBox(height: 10);
               return pw.Padding(
                 padding: const pw.EdgeInsets.only(bottom: 5),
-                child: pw.Text(
-                  paragraph.trim(),
-                  style: pw.TextStyle(font: ttf, fontSize: 9),
-                  textAlign: pw.TextAlign.justify,
-                ),
+                child: pw.Text(paragraph.trim(),
+                    style: pw.TextStyle(fontSize: 10, font: ttf)),
               );
-            }).toList(),
+            }).toList() ?? [],
             pw.SizedBox(height: 20), // Augmenté de 40 à 80
             SignaCachetWidget.build(
               logoImage: logoImage,
-              nomEntreprise: nomEntreprise,
-              adresse: adresse,
-              telephone: telephone,
-              siret: siret,
+              nomEntreprise: contratModel.nomEntreprise ?? '',
+              adresse: contratModel.adresseEntreprise ?? '',
+              telephone: contratModel.telephoneEntreprise ?? '',
+              siret: contratModel.siretEntreprise ?? '',
               nom: data['nom'],
               prenom: data['prenom'],
               boldFont: boldFont,
               italicFont: italicFont,
               scriptFont: scriptFont,
-              dateFinEffectif: dateFinEffectifData, // Ajout du paramètre
+              dateFinEffectif: contratModel.dateRetour, // Ajout du paramètre
               signatureImage: signatureImage, // Passer la signature
               signatureRetourImage: signatureRetourImage, // Passer la signature de retour
             ),
@@ -563,11 +507,11 @@ Future<String> generatePdf(
 }
 
 // Méthodes de calcul intégrées
-DateTime? tryParseDate(String date) {
+DateTime? tryParseDate(String? date) {
+  if (date == null || date.isEmpty) return null;
+  
   print('Tentative de parsing de la date: "$date"');
   try {
-    if (date.isEmpty) return null;
-
     // Format: "jour de la semaine jour mois à heure:minute"
     // Ex: "samedi 8 mars à 21:18"
     final regex = RegExp(r'.*?(\d+)\s+([\wé]+)\s+à\s+(\d+):(\d+)');

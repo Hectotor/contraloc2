@@ -3,10 +3,10 @@ import 'package:ContraLoc/widget/chargement.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:ContraLoc/utils/affichage_contrat_pdf.dart';
+import '../../utils/pdf.dart';
 import '../CREATION DE CONTRAT/mail.dart';
 import '../../services/collaborateur_util.dart'; // Importer CollaborateurUtil
-import 'package:path_provider/path_provider.dart';
+import '../../models/contrat_model.dart'; // Importer ContratModel
 
 class RetourEnvoiePdf {
   static Future<void> genererEtEnvoyerPdfCloture({
@@ -102,47 +102,42 @@ class RetourEnvoiePdf {
       print('📝 Signature aller récupérée : ${signatureAllerBase64 != null ? 'Présente (${signatureAllerBase64.length} caractères)' : 'Absente'}');
       print('📝 Signature retour récupérée : ${signatureRetourBase64 != null ? 'Présente (${signatureRetourBase64.length} caractères)' : 'Absente'}');
 
-      // Générer et afficher le PDF de clôture
-      await AffichageContratPdf.genererEtAfficherContratPdf(
-        context: context,
-        data: {
-          'nom': (contratData['nom'] ?? '').toString(),
-          'prenom': (contratData['prenom'] ?? '').toString(),
-          'adresse': (contratData['adresse'] ?? '').toString(),
-          'telephone': (contratData['telephone'] ?? '').toString(),
-          'email': (contratData['email'] ?? '').toString(),
-          'numeroPermis': (contratData['numeroPermis'] ?? '').toString(),
-          'immatriculationVehiculeClient': (contratData['immatriculationVehiculeClient'] ?? '').toString(),
-          'kilometrageVehiculeClient': (contratData['kilometrageVehiculeClient'] ?? '').toString(),
-          'marque': (contratData['marque'] ?? '').toString(),
-          'modele': (contratData['modele'] ?? '').toString(),
-          'immatriculation': (contratData['immatriculation'] ?? '').toString(),
-          'commentaire': (contratData['commentaire'] ?? '').toString(),
-          'photos': contratData['photos'] ?? [],
-          'signatureAller': signatureAllerBase64 ?? '',
-          'signatureBase64': signatureBase64 ?? '',
-          'signatureRetour': signatureRetourBase64 ?? '',
-          'contratId': (contratData['contratId'] ?? '').toString(),
-          'nettoyageInt': '',
-          'nettoyageExt': '',
-          'pourcentageEssenceRetour': '',
-          'caution': '',
-          'conditions': '',
-          'dateFinEffectif': dateFinEffectif,
-          'kilometrageRetour': kilometrageRetour,
-          'commentaireRetour': commentaireRetour,
-          'nomEntreprise': nomEntreprise,
-          'logoUrl': logoUrl,
-          'adresseEntreprise': adresse,
-          'telephoneEntreprise': telephone,
-          'siretEntreprise': siret,
-        },
-        contratId: (contratData['contratId'] ?? '').toString(),
-        nettoyageIntController: TextEditingController(),
-        nettoyageExtController: TextEditingController(),
-        pourcentageEssenceRetourController: TextEditingController(),
-        cautionController: TextEditingController(),
-        signatureRetourBase64: signatureRetourBase64,
+      // Récupérer les données du véhicule
+      final vehicleDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('vehicules')
+          .where('immatriculation', isEqualTo: contratData['immatriculation'])
+          .get();
+
+      final vehicleData = vehicleDoc.docs.isNotEmpty 
+          ? vehicleDoc.docs.first.data() 
+          : {};
+
+      // Créer un objet ContratModel à partir des données Firestore
+      final contrat = ContratModel.fromFirestore(contratData, id: contratData['contratId']);
+      
+      // Mettre à jour les valeurs spécifiques au retour du véhicule
+      final contratMisAJour = contrat.copyWith(
+        dateRetour: dateFinEffectif,
+        kilometrageRetour: kilometrageRetour,
+        commentaire: commentaireRetour,
+        signatureRetour: signatureRetourBase64,
+        nomEntreprise: nomEntreprise,
+        logoUrl: logoUrl,
+        adresseEntreprise: adresse,
+        telephoneEntreprise: telephone,
+        siretEntreprise: siret,
+        // Utiliser les données du véhicule si disponibles
+        prixLocation: (vehicleData['prixLocation'] ?? contratData['prixLocation'] ?? '').toString(),
+      );
+
+      // Générer le PDF de clôture en utilisant l'objet ContratModel
+      final pdfPath = await generatePdf(
+        contratMisAJour,
+        nomCollaborateur: contratData['nomCollaborateur'] != null && contratData['prenomCollaborateur'] != null
+            ? '${contratData['prenomCollaborateur']} ${contratData['nomCollaborateur']}'
+            : null,
       );
 
       // Fermer le dialogue de chargement
@@ -152,30 +147,29 @@ class RetourEnvoiePdf {
 
       // Envoyer le PDF par email si un email est disponible
       if ((contratData['email'] ?? '').toString().isNotEmpty) {
-        // Le chemin du PDF est maintenant dans le cache local
-        final appDir = await getApplicationDocumentsDirectory();
-        final pdfPath = '${appDir.path}/contrat_${contratData['contratId']}.pdf';
-
         await EmailService.sendClotureEmailWithPdf(
           pdfPath: pdfPath,
           email: (contratData['email'] ?? '').toString(),
           marque: (contratData['marque'] ?? '').toString(),
           modele: (contratData['modele'] ?? '').toString(),
           immatriculation: (contratData['immatriculation'] ?? '').toString(),
-          kilometrageRetour: kilometrageRetour,
-          dateFinEffectif: dateFinEffectif,
-          commentaireRetour: commentaireRetour,
           context: context,
-          prenom: contratData['prenom'],
-          nom: contratData['nom'],
+          prenom: (contratData['prenom'] ?? '').toString(),
+          nom: (contratData['nom'] ?? '').toString(),
           nomEntreprise: nomEntreprise,
           adresse: adresse,
           telephone: telephone,
           logoUrl: logoUrl,
+          kilometrageRetour: kilometrageRetour,
+          dateFinEffectif: dateFinEffectif,
+          commentaireRetour: commentaireRetour,
           nomCollaborateur: contratData['nomCollaborateur'],
           prenomCollaborateur: contratData['prenomCollaborateur'],
         );
+      } else {
+        print("Aucun email client n'a été trouvé. Pas d'envoi de PDF.");
       }
+
       // Récupérer les informations du statut du collaborateur
       final status = await CollaborateurUtil.checkCollaborateurStatus();
       final userId = status['userId'];

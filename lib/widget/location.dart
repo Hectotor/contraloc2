@@ -422,8 +422,16 @@ class _LocationPageState extends State<LocationPage> {
 
       // Génération et envoi du PDF si un email est fourni
       if (widget.email != null && widget.email!.isNotEmpty) {
-        await _generateAndSendPdf(contratModel, _nomEntrepriseController.text, _logoUrl ?? '', _adresseController.text, 
-                                  _telephoneController.text, _siretController.text, nomCollaborateur, prenomCollaborateur);
+        await _generateAndSendPdf(
+          contratModel, 
+          _nomEntrepriseController.text, 
+          _logoUrl ?? '', 
+          _adresseController.text, 
+          _telephoneController.text, 
+          _siretController.text, 
+          nomCollaborateur, 
+          prenomCollaborateur
+        );
       }
 
       // Affichage du succès et navigation
@@ -602,27 +610,23 @@ class _LocationPageState extends State<LocationPage> {
                                   String siretEntreprise, String nomCollaborateur, 
                                   String prenomCollaborateur) async {
     try {
-      // Utilisation de la méthode toPdfParams() pour obtenir les paramètres du PDF
-      final pdfParams = contratModel.toPdfParams();
+      // Mettre à jour les informations de l'entreprise dans le modèle de contrat
+      contratModel = contratModel.copyWith(
+        nomEntreprise: nomEntreprise,
+        logoUrl: logoUrl,
+        adresseEntreprise: adresseEntreprise,
+        telephoneEntreprise: telephoneEntreprise,
+        siretEntreprise: siretEntreprise
+      );
       
+      // Appel à la nouvelle fonction generatePdf avec ContratModel
       final pdfPath = await generatePdf(
-        pdfParams,
-        '', '', '', [],
-        nomEntreprise, logoUrl, adresseEntreprise, telephoneEntreprise, siretEntreprise,
-        '', contratModel.typeCarburant ?? '', contratModel.boiteVitesses ?? '',
-        contratModel.vin ?? '', contratModel.assuranceNom ?? '',
-        contratModel.assuranceNumero ?? '', contratModel.franchise ?? '',
-        contratModel.kilometrageSupp ?? '', contratModel.prixRayures ?? '',
-        contratModel.dateDebut ?? '', contratModel.dateFinTheorique ?? '',
-        '', contratModel.kilometrageDepart ?? '', contratModel.kilometrageAutorise ?? '',
-        contratModel.pourcentageEssence.toString(), contratModel.typeLocation ?? '',
-        contratModel.prixLocation ?? '', contratModel.accompte ?? '',
-        condition: contratModel.conditions ?? '',
+        contratModel,
         nomCollaborateur: nomCollaborateur.isNotEmpty && prenomCollaborateur.isNotEmpty 
             ? '$prenomCollaborateur $nomCollaborateur' 
             : null,
       );
-
+      
       if (contratModel.email != null && contratModel.email!.isNotEmpty) {
         await EmailService.sendEmailWithPdf(
           pdfPath: pdfPath,
@@ -631,11 +635,6 @@ class _LocationPageState extends State<LocationPage> {
           modele: contratModel.modele ?? '',
           immatriculation: contratModel.immatriculation ?? '',
           context: context,
-          prenom: contratModel.prenom ?? '',
-          nom: contratModel.nom ?? '',
-          nomEntreprise: nomEntreprise,
-          nomCollaborateur: nomCollaborateur,
-          prenomCollaborateur: prenomCollaborateur,
         );
       }
     } catch (e) {

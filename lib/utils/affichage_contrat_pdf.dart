@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import '../USERS/contrat_condition.dart';
 import '../services/collaborateur_util.dart';
+import '../models/contrat_model.dart'; 
 import 'pdf.dart';
 
 class AffichageContratPdf {
@@ -74,49 +75,31 @@ class AffichageContratPdf {
 
       final userData = await CollaborateurUtil.getAuthData();
 
+      // Créer un objet ContratModel à partir des données Firestore
+      final contratModel = ContratModel.fromFirestore(data, id: contratId);
+      
+      // Mettre à jour les valeurs spécifiques au retour du véhicule si nécessaire
+      final contratMisAJour = contratModel.copyWith(
+        dateRetour: data['dateFinEffectif'],
+        kilometrageRetour: data['kilometrageRetour'],
+        commentaire: data['commentaireRetour'],
+        signatureRetour: signatureRetourBase64,
+        pourcentageEssenceRetour: int.tryParse(pourcentageEssenceRetourController.text.isNotEmpty 
+            ? pourcentageEssenceRetourController.text 
+            : (data['pourcentageEssenceRetour'] ?? '').toString()),
+        nettoyageInt: nettoyageIntController.text,
+        nettoyageExt: nettoyageExtController.text,
+        caution: cautionController.text,
+        nomEntreprise: data['nomEntreprise'] ?? userData['nomEntreprise'] ?? '',
+        logoUrl: data['logoUrl'] ?? userData['logoUrl'] ?? '',
+        adresseEntreprise: data['adresseEntreprise'] ?? userData['adresse'] ?? '',
+        telephoneEntreprise: data['telephoneEntreprise'] ?? userData['telephone'] ?? '',
+        siretEntreprise: data['siretEntreprise'] ?? userData['siret'] ?? '',
+      );
+
+      // Générer le PDF en utilisant l'objet ContratModel
       final pdfPath = await generatePdf(
-        {
-          ...data,
-          'nettoyageInt': nettoyageIntController.text,
-          'nettoyageExt': nettoyageExtController.text,
-          'pourcentageEssenceRetour': pourcentageEssenceRetourController.text.isNotEmpty 
-              ? pourcentageEssenceRetourController.text 
-              : (data['pourcentageEssenceRetour'] ?? '').toString(),
-          'caution': cautionController.text,
-          'signatureRetour': signatureRetourBase64 != null && signatureRetourBase64.isNotEmpty ? signatureRetourBase64 : null,
-          'conditions': conditions,
-          'contratId': contratId,
-        },
-        data['dateFinEffectif'] ?? '',
-        data['kilometrageRetour'] ?? '',
-        data['commentaireRetour'] ?? '',
-        [],  // photosRetour
-        data['nomEntreprise'] ?? userData['nomEntreprise'] ?? '',
-        data['logoUrl'] ?? userData['logoUrl'] ?? '',
-        data['adresseEntreprise'] ?? userData['adresse'] ?? '',
-        data['telephoneEntreprise'] ?? userData['telephone'] ?? '',
-        data['siretEntreprise'] ?? userData['siret'] ?? '',
-        data['commentaireRetour'] ?? '',
-        data['typeCarburant'] ?? '',
-        data['boiteVitesses'] ?? '',
-        data['vin'] ?? '',
-        data['assuranceNom'] ?? '',
-        data['assuranceNumero'] ?? '',
-        data['franchise'] ?? '',
-        data['kilometrageSupp'] ?? '',
-        data['rayures'] ?? '',
-        data['dateDebut'] ?? '',
-        data['dateFinTheorique'] ?? '',
-        data['dateFinEffectif'] ?? '',
-        data['kilometrageDepart'] ?? '',
-        data['kilometrageAutorise'] ?? '',
-        (data['pourcentageEssence'] ?? '').toString(),
-        data['typeLocation'] ?? '',
-        data['prixLocation'] ?? '',
-        data['accompte'] ?? '',
-        condition: conditions,
-        signatureBase64: '',
-        signatureRetourBase64: signatureRetourBase64 != null && signatureRetourBase64.isNotEmpty ? signatureRetourBase64 : null,
+        contratMisAJour,
         nomCollaborateur: data['nomCollaborateur'] != null && data['prenomCollaborateur'] != null
             ? '${data['prenomCollaborateur']} ${data['nomCollaborateur']}'
             : null,

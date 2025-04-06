@@ -327,6 +327,7 @@ class ContratModel {
       'permisRecto': permisRectoUrl,
       'permisVerso': permisVersoUrl,
       'modele': modele,
+      'marque': marque,
       'immatriculation': immatriculation,
       'dateDebut': dateDebut,
       'dateFinTheorique': dateFinTheorique,
@@ -342,6 +343,14 @@ class ContratModel {
       'kilometrageDepart': kilometrageDepart,
       'pourcentageEssence': pourcentageEssence.toString(),
       'condition': conditions,
+      'signatureAller': signatureAller,
+      'signatureRetour': signatureRetour,
+      'signatureBase64': signatureAller,
+      'kilometrageSupp': kilometrageSupp,
+      'prixRayures': prixRayures,
+      'kilometrageAutorise': kilometrageAutorise,
+      'typeLocation': typeLocation,
+      'commentaire': commentaire,
     };
   }
 
