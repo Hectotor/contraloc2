@@ -997,6 +997,9 @@ class _LocationPageState extends State<LocationPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF08004D), 
                       minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: Text(
                       widget.email != null && widget.email!.isNotEmpty
@@ -1010,6 +1013,7 @@ class _LocationPageState extends State<LocationPage> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 50),
               ],
             ),
           ),

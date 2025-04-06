@@ -13,6 +13,9 @@ import 'package:ContraLoc/USERS/Subscription/subscription_service.dart'; // Impo
 // Clé de navigateur globale pour la navigation sans contexte
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+// Couleur principale de l'application
+const Color primaryColor = Color(0xFF08004D);
+
 Future<Map<String, String>> fetchRevenueCatKeys() async {
   try {
     final snapshot = await FirebaseFirestore.instance
@@ -114,7 +117,7 @@ class MyApp extends StatelessWidget {
                   surface: Colors.white,
                 ),
                 appBarTheme: const AppBarTheme(
-                  backgroundColor: Color(0xFF08004D),
+                  backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
                 ),
                 splashColor: Colors.transparent,

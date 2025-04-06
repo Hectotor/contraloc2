@@ -188,8 +188,21 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                       controller: widget.numeroPermisController,
                       decoration: InputDecoration(
                         labelText: "Numéro de permis",
+                        labelStyle: const TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF08004D),
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF08004D)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF08004D), width: 1),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF08004D), width: 2),
                         ),
                       ),
                     ),
