@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:ContraLoc/widget/MES%20CONTRATS/vehicle_access_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:ContraLoc/widget/MES%20CONTRATS/vehicle_access_manager.dart';
 import 'search_filtre.dart';
 
 class ContratSupprimes extends StatefulWidget {
@@ -30,6 +31,11 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
     _vehicleAccessManager = VehicleAccessManager();
     _initializeAccess();
     _searchController.text = widget.searchText;
+    
+    // Vérifier et supprimer les contrats expirés au chargement
+    Future.delayed(Duration.zero, () {
+      _checkAndDeleteExpiredContracts();
+    });
   }
   
   // Méthode pour initialiser les gestionnaires d'accès
@@ -162,9 +168,19 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
   }
 
   // Méthode pour parser une date au format français (ex: "vendredi 4 juillet 2025 à 18:44")
-  // ou au format court (ex: "05/04/2025")
+  // ou au format court (ex: "05/04/2025") ou au format ISO 8601
   DateTime? _parseFrenchDate(String dateStr) {
     try {
+      // Vérifier si c'est un format ISO 8601 (yyyy-MM-ddTHH:mm:ss)
+      if (dateStr.contains('T') && dateStr.contains('-')) {
+        try {
+          DateTime date = DateTime.parse(dateStr);
+          return date;
+        } catch (e) {
+          print('Erreur lors du parsing de la date ISO 8601: $e');
+        }
+      }
+      
       // Vérifier si c'est le format court (dd/MM/yyyy)
       if (dateStr.contains('/')) {
         List<String> parts = dateStr.split('/');
@@ -206,6 +222,11 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
     return null;
   }
 
+  // Méthode pour formater une date au format JJ/MM/AAAA
+  String _formatDateToFrench(DateTime date) {
+    return "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
+  }
+
   String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return "Non spécifié";
     
@@ -213,6 +234,16 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
     if (timestamp is String) {
       if (timestamp.contains('/') && timestamp.split('/').length == 3) {
         return timestamp; // Déjà au bon format
+      }
+      
+      // Si c'est un format ISO 8601
+      if (timestamp.contains('T') && timestamp.contains('-')) {
+        try {
+          DateTime date = DateTime.parse(timestamp);
+          return _formatDateToFrench(date);
+        } catch (e) {
+          print('Erreur lors du parsing de la date ISO: $e');
+        }
       }
       
       try {
@@ -242,12 +273,240 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
     
     if (timestamp is Timestamp) {
       DateTime dateTime = timestamp.toDate();
-      
-      // Format JJ/MM/AAAA pour toutes les dates
-      return "${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}";
+      return _formatDateToFrench(dateTime);
     }
     
     return "Format inconnu";
+  }
+
+  // Méthode pour vérifier et supprimer définitivement les contrats dont la date de suppression définitive est dépassée
+  Future<void> _checkAndDeleteExpiredContracts() async {
+    try {
+      final effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
+      if (effectiveUserId == null) return;
+
+      // Récupérer tous les contrats marqués comme supprimés
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(effectiveUserId)
+          .collection('locations')
+          .where('statussupprime', isEqualTo: 'supprimé')
+          .get();
+
+      final DateTime now = DateTime.now();
+      int deletedCount = 0;
+
+      for (final doc in snapshot.docs) {
+        try {
+          final data = doc.data();
+          DateTime? dateSuppressionDefinitive;
+
+          // Essayer de parser la date de suppression définitive
+          if (data['dateSuppressionDefinitive'] != null) {
+            if (data['dateSuppressionDefinitive'] is String) {
+              // Si c'est un format ISO 8601
+              if (data['dateSuppressionDefinitive'].toString().contains('T') && 
+                  data['dateSuppressionDefinitive'].toString().contains('-')) {
+                try {
+                  dateSuppressionDefinitive = DateTime.parse(data['dateSuppressionDefinitive']);
+                  print('Date ISO 8601 parsée: $dateSuppressionDefinitive');
+                } catch (e) {
+                  print('Erreur lors du parsing de la date ISO: $e');
+                }
+              }
+              // Si c'est au format court (dd/MM/yyyy)
+              else if (data['dateSuppressionDefinitive'].toString().contains('/')) {
+                final parts = data['dateSuppressionDefinitive'].toString().split('/');
+                if (parts.length == 3) {
+                  final jour = int.parse(parts[0]);
+                  final mois = int.parse(parts[1]);
+                  final annee = int.parse(parts[2]);
+                  dateSuppressionDefinitive = DateTime(annee, mois, jour);
+                }
+              } else {
+                // Essayer avec le format long français
+                dateSuppressionDefinitive = _parseFrenchDate(data['dateSuppressionDefinitive'] as String);
+              }
+            } else if (data['dateSuppressionDefinitive'] is Timestamp) {
+              dateSuppressionDefinitive = (data['dateSuppressionDefinitive'] as Timestamp).toDate();
+            }
+          }
+
+          // Si la date est valide et dépassée, supprimer définitivement le contrat
+          if (dateSuppressionDefinitive != null && dateSuppressionDefinitive.isBefore(now)) {
+            // D'abord supprimer les fichiers associés au contrat
+            await _deleteContractFiles(effectiveUserId, doc.id, data);
+            
+            // Ensuite supprimer le document du contrat
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(effectiveUserId)
+                .collection('locations')
+                .doc(doc.id)
+                .delete();
+            
+            deletedCount++;
+            print('Contrat ${doc.id} supprimé définitivement (date limite dépassée)');
+          }
+        } catch (e) {
+          print('Erreur lors de la vérification du contrat ${doc.id}: $e');
+        }
+      }
+
+      if (deletedCount > 0) {
+        print('$deletedCount contrats ont été supprimés définitivement');
+        // Rafraîchir la liste des contrats si des suppressions ont été effectuées
+        setState(() {});
+      }
+    } catch (e) {
+      print('Erreur lors de la vérification des contrats expirés: $e');
+    }
+  }
+
+  // Méthode pour supprimer les fichiers de stockage associés à un contrat
+  Future<void> _deleteContractFiles(String userId, String contractId, Map<String, dynamic> data) async {
+    try {
+      final storage = FirebaseStorage.instance;
+      final List<String> fieldsToCheck = [
+        'photoVehiculeUrl',
+        'permisRectoUrl',
+        'permisVersoUrl',
+        'signatureAller',
+        'signatureRetour',
+        'pdfUrl',
+        'logoUrl',
+        'photos',
+        'photosUrls'
+      ];
+
+      // Vérifier et supprimer chaque fichier potentiel
+      for (final field in fieldsToCheck) {
+        if (data[field] != null && data[field].toString().isNotEmpty) {
+          try {
+            // Si c'est une URL complète, extraire le chemin
+            String path = data[field];
+            if (path.startsWith('https://firebasestorage.googleapis.com')) {
+              // Extraire le chemin du stockage de l'URL
+              final uri = Uri.parse(path);
+              final pathSegments = Uri.decodeFull(uri.path).split('/o/')[1];
+              path = pathSegments.replaceAll(new RegExp(r'%2F'), '/'); 
+              if (path.contains('?')) {
+                path = path.split('?')[0];
+              }
+              
+              // Supprimer le fichier
+              await storage.ref(path).delete();
+              print('Fichier supprimé: $path');
+            } else {
+              // Si c'est un chemin direct
+              await storage.ref(path).delete();
+              print('Fichier supprimé: $path');
+            }
+          } catch (e) {
+            print('Erreur lors de la suppression du fichier ${data[field]}: $e');
+          }
+        }
+      }
+
+      // Vérifier s'il y a des photos dans la liste photosUrls
+      if (data['photosUrls'] != null && data['photosUrls'] is List) {
+        List<dynamic> photosUrls = data['photosUrls'];
+        for (var photoUrl in photosUrls) {
+          if (photoUrl != null && photoUrl.toString().isNotEmpty) {
+            try {
+              String path = photoUrl.toString();
+              if (path.startsWith('https://firebasestorage.googleapis.com')) {
+                final uri = Uri.parse(path);
+                final pathSegments = Uri.decodeFull(uri.path).split('/o/')[1];
+                path = pathSegments.replaceAll(new RegExp(r'%2F'), '/'); 
+                if (path.contains('?')) {
+                  path = path.split('?')[0];
+                }
+                
+                await storage.ref(path).delete();
+                print('Photo supprimée: $path');
+              } else {
+                await storage.ref(path).delete();
+                print('Photo supprimée: $path');
+              }
+            } catch (e) {
+              print('Erreur lors de la suppression de la photo $photoUrl: $e');
+            }
+          }
+        }
+      }
+      
+      // Vérifier également le champ 'photos' qui peut être utilisé dans certains cas
+      if (data['photos'] != null && data['photos'] is List) {
+        List<dynamic> photos = data['photos'];
+        for (var photoUrl in photos) {
+          if (photoUrl != null && photoUrl.toString().isNotEmpty) {
+            try {
+              String path = photoUrl.toString();
+              if (path.startsWith('https://firebasestorage.googleapis.com')) {
+                final uri = Uri.parse(path);
+                final pathSegments = Uri.decodeFull(uri.path).split('/o/')[1];
+                path = pathSegments.replaceAll(new RegExp(r'%2F'), '/'); 
+                if (path.contains('?')) {
+                  path = path.split('?')[0];
+                }
+                
+                await storage.ref(path).delete();
+                print('Photo supprimée (champ photos): $path');
+              } else {
+                await storage.ref(path).delete();
+                print('Photo supprimée (champ photos): $path');
+              }
+            } catch (e) {
+              print('Erreur lors de la suppression de la photo $photoUrl: $e');
+            }
+          }
+        }
+      }
+
+      // Vérifier s'il y a un dossier spécifique pour ce contrat et le supprimer
+      try {
+        final contractFolder = 'users/$userId/locations/$contractId';
+        final result = await storage.ref(contractFolder).listAll();
+        
+        // Supprimer tous les fichiers dans le dossier
+        for (var item in result.items) {
+          await item.delete();
+          print('Fichier supprimé du dossier: ${item.fullPath}');
+        }
+        
+        // Supprimer les sous-dossiers récursivement
+        for (var prefix in result.prefixes) {
+          await _deleteFolder(prefix);
+        }
+      } catch (e) {
+        // Ignorer les erreurs si le dossier n'existe pas
+        print('Note: Aucun dossier spécifique trouvé ou erreur: $e');
+      }
+    } catch (e) {
+      print('Erreur lors de la suppression des fichiers: $e');
+    }
+  }
+
+  // Méthode pour supprimer récursivement un dossier dans Firebase Storage
+  Future<void> _deleteFolder(Reference folderRef) async {
+    try {
+      // Lister tous les éléments dans le dossier
+      final result = await folderRef.listAll();
+      
+      // Supprimer tous les fichiers
+      for (var item in result.items) {
+        await item.delete();
+        print('Fichier supprimé: ${item.fullPath}');
+      }
+      
+      // Supprimer récursivement les sous-dossiers
+      for (var prefix in result.prefixes) {
+        await _deleteFolder(prefix);
+      }
+    } catch (e) {
+      print('Erreur lors de la suppression du dossier ${folderRef.fullPath}: $e');
+    }
   }
 
   Widget build(BuildContext context) {
@@ -716,7 +975,7 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildInfoRow("Supprimé", data['dateSuppression']),
+                          _buildInfoRow("Supprimé", _formatTimestamp(data['dateSuppression'])),
                           if (data['supprimePar'] != null) ...[  
                             const SizedBox(height: 12),
                             _buildInfoRow("Par", data['supprimePar']),

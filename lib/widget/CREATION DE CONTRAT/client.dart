@@ -4,7 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import '../location.dart'; // Import de la page location
 import 'package:flutter/services.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
-import 'package:ContraLoc/USERS/Subscription/abonnement_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart'; // Import de l'utilitaire collaborateur
@@ -51,21 +50,23 @@ class ClientPage extends StatefulWidget {
 }
 
 class _ClientPageState extends State<ClientPage> {
-  final TextEditingController _prenomController = TextEditingController();
-  final TextEditingController _nomController = TextEditingController();
-  final TextEditingController _adresseController = TextEditingController();
-  final TextEditingController _telephoneController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _numeroPermisController = TextEditingController();
-  final TextEditingController _immatriculationVehiculeClientController = TextEditingController();
-  final TextEditingController _kilometrageVehiculeClientController = TextEditingController();
-
+  // Variables d'état
+  final _formKey = GlobalKey<FormState>();
+  final _nomController = TextEditingController();
+  final _prenomController = TextEditingController();
+  final _adresseController = TextEditingController();
+  final _telephoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _numeroPermisController = TextEditingController();
+  final _immatriculationVehiculeClientController = TextEditingController();
+  final _kilometrageVehiculeClientController = TextEditingController();
   File? _permisRecto;
   File? _permisVerso;
   String? _permisRectoUrl;
   String? _permisVersoUrl;
-  bool _showPermisFields = false;
-  bool isPremiumUser = false; // Nouvelle propriété
+  bool isPremiumUser = true;
+  bool _showPermisFieldsVisible = false; // Variable pour contrôler l'affichage des champs de permis
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -75,8 +76,6 @@ class _ClientPageState extends State<ClientPage> {
     // Si nous avons un contratId, c'est une modification de contrat existant
     if (widget.contratId != null) {
       _loadClientData();
-      // Activer l'affichage des champs du permis en mode modification
-      _showPermisFields = true;
     }
   }
 
@@ -90,6 +89,28 @@ class _ClientPageState extends State<ClientPage> {
         isPremiumUser = isPremium;
       });
     }
+  }
+
+  // Afficher la boîte de dialogue premium
+  void _showPremiumDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Fonctionnalité Premium"),
+          content: const Text(
+              "Cette fonctionnalité est réservée aux utilisateurs premium. Veuillez mettre à niveau votre abonnement pour y accéder."),
+          actions: [
+            TextButton(
+              child: const Text("OK"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _loadClientData() async {
@@ -143,59 +164,6 @@ class _ClientPageState extends State<ClientPage> {
     }
   }
 
-  void _showPremiumDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white, // Ajout du fond blanc
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: const Text(
-            "Fonctionnalité Premium",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF08004D),
-            ),
-          ),
-          content: const Text(
-            "La prise de photos du permis est disponible uniquement avec l'abonnement Premium. Souhaitez-vous découvrir nos offres ?",
-            style: TextStyle(fontSize: 16),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                "Plus tard",
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AbonnementScreen(),
-                  ),
-                );
-              },
-              child: const Text(
-                "Voir les offres",
-                style: TextStyle(
-                  color: Color(0xFF08004D),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<void> _selectImage(ImageSource source, bool isRecto) async {
     try {
       final picker = ImagePicker();
@@ -230,161 +198,143 @@ class _ClientPageState extends State<ClientPage> {
   Future<void> _showImagePickerDialog(bool isRecto) async {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Choisir une option",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF08004D),
-                ),
-              ),
-              const SizedBox(height: 20),
-                ListTile(
-                  leading: const Icon(Icons.photo_camera, color: Color(0xFF08004D)),
-                  title: const Text('Prendre une photo'),
-                  onTap: () async {
-                    await _selectImage(ImageSource.camera, isRecto);
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(isRecto ? "Photo Permis Recto" : "Photo Permis Verso"),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: [
+                GestureDetector(
+                  child: const Text("Prendre une photo"),
+                  onTap: () {
                     Navigator.of(context).pop();
+                    _selectImage(ImageSource.camera, isRecto);
                   },
                 ),
-                ListTile(
-                  leading: const Icon(Icons.photo_library, color: Color(0xFF08004D)),
-                  title: const Text('Choisir depuis la galerie'),
-                  onTap: () async {
-                    await _selectImage(ImageSource.gallery, isRecto);
+                const Padding(padding: EdgeInsets.all(8.0)),
+                GestureDetector(
+                  child: const Text("Choisir depuis la galerie"),
+                  onTap: () {
                     Navigator.of(context).pop();
+                    _selectImage(ImageSource.gallery, isRecto);
                   },
                 ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Future<void> _pickImage(bool isRecto) async {
-    try {
-      await _showImagePickerDialog(isRecto);
-    } catch (e) {
-      print('Erreur lors de la sélection de l\'image : $e');
-    }
+  // Afficher/masquer les champs de permis
+  void _showPermisFields() {
+    setState(() {
+      _showPermisFieldsVisible = !_showPermisFieldsVisible;
+    });
   }
 
   bool _isValidEmail(String email) {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 
-  Future<void> _saveClientData({
-    required String nom,
-    required String prenom,
-    required String adresse,
-    required String telephone,
-    required String email,
-    File? permisRecto,
-    File? permisVerso,
-    required String numeroPermis,
-    required String immatriculationVehiculeClient,
-    required String kilometrageVehiculeClient,
-  }) async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+  Future<void> _saveClientData() async {
+    // Tous les champs sont optionnels, pas besoin de validation
+    if (_formKey.currentState != null) {
+      _formKey.currentState!.save();
+      
+      setState(() {
+        _isLoading = true;
+      });
 
-      // Vérifier le statut collaborateur
-      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
-      final String targetId = collaborateurStatus['isCollaborateur'] 
-          ? collaborateurStatus['adminId'] ?? user.uid 
-          : user.uid;
+      try {
+        // Préparer les données du client
+        Map<String, dynamic> clientData = {
+          'nom': _nomController.text,
+          'prenom': _prenomController.text,
+          'adresse': _adresseController.text,
+          'telephone': _telephoneController.text,
+          'email': _emailController.text,
+          'numeroPermis': _numeroPermisController.text,
+          'marque': widget.marque,
+          'modele': widget.modele,
+          'immatriculation': _immatriculationVehiculeClientController.text,
+          'kilometrage': _kilometrageVehiculeClientController.text,
+          'dateCreation': DateTime.now(),
+          'dateModification': DateTime.now(),
+        };
 
-      // Préparer les données à sauvegarder
-      Map<String, dynamic> clientData = {
-        'nom': nom,
-        'prenom': prenom,
-        'adresse': adresse,
-        'telephone': telephone,
-        'email': email,
-        'numeroPermis': numeroPermis,
-        'immatriculationVehiculeClient': immatriculationVehiculeClient,
-        'kilometrageVehiculeClient': kilometrageVehiculeClient,
-      };
-
-      // Si nous avons un contratId, c'est une mise à jour d'un contrat existant
-      if (widget.contratId != null) {
-        // Conserver les URLs des images si elles n'ont pas été modifiées
-        if (permisRecto == null && _permisRectoUrl != null) {
-          clientData['permisRecto'] = _permisRectoUrl;
+        // Ajouter les URLs des photos si disponibles
+        if (_permisRectoUrl != null && _permisRectoUrl!.isNotEmpty) {
+          clientData['permisRectoUrl'] = _permisRectoUrl;
         }
-        if (permisVerso == null && _permisVersoUrl != null) {
-          clientData['permisVerso'] = _permisVersoUrl;
+        if (_permisVersoUrl != null && _permisVersoUrl!.isNotEmpty) {
+          clientData['permisVersoUrl'] = _permisVersoUrl;
         }
 
-        // Mettre à jour le document dans Firestore en utilisant la structure correcte
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(targetId)
-            .collection('locations')
-            .doc(widget.contratId)
-            .set(clientData, SetOptions(merge: true));        
-        // Naviguer vers location.dart même pour les contrats existants
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => LocationPage(
-              marque: widget.marque,
-              modele: widget.modele,
-              immatriculation: widget.immatriculation,
-              nom: nom,
-              prenom: prenom,
-              adresse: adresse,
-              telephone: telephone,
-              email: email,
-              permisRecto: permisRecto,
-              permisVerso: permisVerso,
-              numeroPermis: numeroPermis,
-              immatriculationVehiculeClient: immatriculationVehiculeClient,
-              kilometrageVehiculeClient: kilometrageVehiculeClient,
-              contratId: widget.contratId, // Passer le contratId pour la modification
+        // Déterminer si c'est un nouveau contrat ou une mise à jour
+        if (widget.contratId != null && widget.contratId!.isNotEmpty) {
+          // Mise à jour d'un contrat existant
+          final adminId = await _getAdminId();
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('locations')
+              .doc(widget.contratId)
+              .set(clientData, SetOptions(merge: true));
+              
+          // Pour les contrats existants, naviguer vers la page de location
+          if (!mounted) return;
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => LocationPage(
+                contratId: widget.contratId!,
+                marque: widget.marque,
+                modele: widget.modele,
+                immatriculation: _immatriculationVehiculeClientController.text,
+              ),
             ),
-          ),
-        );
-      } else {
-        // Pour un nouveau contrat, naviguer vers la page de location
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => LocationPage(
-              marque: widget.marque,
-              modele: widget.modele,
-              immatriculation: widget.immatriculation,
-              nom: nom,
-              prenom: prenom,
-              adresse: adresse,
-              telephone: telephone,
-              email: email,
-              permisRecto: permisRecto,
-              permisVerso: permisVerso,
-              numeroPermis: numeroPermis,
-              immatriculationVehiculeClient: immatriculationVehiculeClient,
-              kilometrageVehiculeClient: kilometrageVehiculeClient,
+          );
+        } else {
+          // Nouveau contrat - ne pas enregistrer dans Firestore, juste passer à la page suivante
+          if (!mounted) return;
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => LocationPage(
+                // Pas de contratId car c'est une présauvegarde
+                marque: widget.marque,
+                modele: widget.modele,
+                immatriculation: widget.immatriculation, // Immatriculation du véhicule de location
+                // Passer les données client à la page suivante
+                nom: _nomController.text,
+                prenom: _prenomController.text,
+                adresse: _adresseController.text,
+                telephone: _telephoneController.text,
+                email: _emailController.text,
+                numeroPermis: _numeroPermisController.text,
+                immatriculationVehiculeClient: _immatriculationVehiculeClientController.text, // Immatriculation du véhicule du client
+                kilometrageVehiculeClient: _kilometrageVehiculeClientController.text,
+                // Passer les fichiers d'images
+                permisRecto: _permisRecto,
+                permisVerso: _permisVerso,
+              ),
             ),
-          ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors de la sauvegarde: ${e.toString()}')),
         );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
-    } catch (e) {
-      print('Erreur lors de la sauvegarde des données client: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: $e')),
-      );
     }
   }
 
@@ -402,142 +352,76 @@ class _ClientPageState extends State<ClientPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF08004D),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        title: const Text("Client"),
-        actions: [
-          IconButton(
-            icon: Stack(
-              children: [
-                const Icon(Icons.directions_car, color: Colors.white),
-                if (_immatriculationVehiculeClientController.text.isNotEmpty || 
-                    _kilometrageVehiculeClientController.text.isNotEmpty)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        size: 10,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            onPressed: _showVehicleDialog,
-            tooltip: 'Véhicule client',
+  Widget _buildPersonalInfo(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.20),
+            blurRadius: 4,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Form section
+            // En-tête de la carte
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Color(0xFF08004D).withOpacity(0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.person, color: Color(0xFF08004D), size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Informations personnelles",
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF08004D),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Contenu de la carte
             Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Informations personnelles",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF08004D),
-                    ),
+                  _buildFormField(label: "Prénom", controller: _prenomController),
+                  const SizedBox(height: 12),
+                  _buildFormField(label: "Nom", controller: _nomController),
+                  const SizedBox(height: 12),
+                  _buildFormField(label: "Adresse", controller: _adresseController),
+                  const SizedBox(height: 12),
+                  _buildFormField(
+                    label: "Téléphone", 
+                    controller: _telephoneController,
+                    keyboardType: TextInputType.phone
                   ),
-                  const SizedBox(height: 16),
-                  _buildTextField("Prénom", _prenomController),
-                  _buildTextField("Nom", _nomController),
-                  _buildGooglePlacesInput(),
-                  _buildTextField("Téléphone", _telephoneController,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(15),
-                      ]),
-                  _buildTextField("Email", _emailController,
-                      keyboardType: TextInputType.emailAddress),
-                  
-
-                  const Text(
-                    "Informations du permis",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF08004D),
-                    ),
+                  const SizedBox(height: 12),
+                  _buildFormField(
+                    label: "Email", 
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress
                   ),
-                  const SizedBox(height: 16),
-                  _buildTextField("N° Permis", _numeroPermisController),
-                  buildPhotoButton(),
-                  
-                  if (_showPermisFields && isPremiumUser) ...[  
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildImageUploader(
-                            "Permis Recto", _permisRecto, () => _pickImage(true)),
-                        _buildImageUploader(
-                            "Permis Verso", _permisVerso, () => _pickImage(false)),
-                      ],
-                    ),
-                  ],
-                  
-                  const SizedBox(height: 40),
-                  ElevatedButton(
-                    onPressed: () {
-                      _saveClientData(
-                        nom: _nomController.text,
-                        prenom: _prenomController.text,
-                        adresse: _adresseController.text,
-                        telephone: _telephoneController.text,
-                        email: _emailController.text,
-                        permisRecto: _permisRecto,
-                        permisVerso: _permisVerso,
-                        numeroPermis: _numeroPermisController.text,
-                        immatriculationVehiculeClient: _immatriculationVehiculeClientController.text,
-                        kilometrageVehiculeClient: _kilometrageVehiculeClientController.text,
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF08004D),
-                      minimumSize: const Size(double.infinity, 56),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 2,
-                    ),
-                    child: const Text(
-                      "Suivant",
-                      style: TextStyle(
-                        color: Colors.white, 
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
                 ],
               ),
             ),
@@ -547,198 +431,423 @@ class _ClientPageState extends State<ClientPage> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller,
-      {TextInputType keyboardType = TextInputType.text,
-      List<TextInputFormatter>? inputFormatters}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        inputFormatters: [
-          if (label == "N° Permis") UpperCaseTextFormatter(),
-          ...?inputFormatters,
+  Widget _buildLicenseInfo(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.20),
+            blurRadius: 4,
+            offset: const Offset(0, 4),
+          ),
         ],
-        textCapitalization:
-            (label == "Prénom" || label == "Nom" || label == "Adresse")
-                ? TextCapitalization.words
-                : TextCapitalization.none, // Ajout de la capitalisation
-        onChanged: (value) {
-          if (label == "Email") {
-            setState(
-                () {}); // Déclenche la reconstruction du widget pour mettre à jour l'erreur
-          }
-        },
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF08004D),
-        ),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          errorText: label == "Email" &&
-                  controller.text.isNotEmpty &&
-                  !_isValidEmail(controller.text)
-              ? "Email non valide"
-              : null,
-          errorStyle: const TextStyle(color: Colors.red),
-        ),
       ),
-    );
-  }
-
-  Widget _buildGooglePlacesInput() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: TextField(
-        controller: _adresseController,
-        textCapitalization:
-            TextCapitalization.words, // Ajout de la capitalisation
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF08004D),
-        ),
-        decoration: InputDecoration(
-          labelText: "Adresse",
-          labelStyle: const TextStyle(color: Colors.grey),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildImageUploader(
-      String label, File? imageFile, VoidCallback onTap) {
-    // Déterminer quelle URL utiliser en fonction du label
-    String? imageUrl = label == "Permis Recto" ? _permisRectoUrl : _permisVersoUrl;
-    
-    // Utiliser des dimensions fixes au lieu du LayoutBuilder
-    final double containerWidth = 150.0; // Largeur fixe
-    final double containerHeight = 120.0; // Hauteur fixe
-    
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: onTap,
-          child: Stack(
-            children: [
-              Container(
-                width: containerWidth,
-                height: containerHeight,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // En-tête de la carte
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Color(0xFF08004D).withOpacity(0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
                 ),
-                child: imageFile != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          imageFile,
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    : imageUrl != null && imageUrl.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value: loadingProgress.expectedTotalBytes != null
-                                        ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                        : null,
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                print("Erreur de chargement d'image: $error");
-                                return Center(
-                                  child: Icon(Icons.error, color: Colors.red),
-                                );
-                              },
-                            ),
-                          )
-                        : const Center(
-                            child: Icon(
-                              Icons.add_a_photo,
-                              size: 40,
-                              color: Colors.grey,
-                            ),
-                          ),
               ),
-              if (imageFile != null || (imageUrl != null && imageUrl.isNotEmpty))
-                Positioned(
-                  top: 5,
-                  right: 5,
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        if (label == "Permis Recto") {
-                          _permisRecto = null;
-                          _permisRectoUrl = null;
-                        } else {
-                          _permisVerso = null;
-                          _permisVersoUrl = null;
-                        }
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.8),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        size: 16,
-                        color: Colors.white,
+              child: Row(
+                children: [
+                  Icon(Icons.credit_card, color: Color(0xFF08004D), size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Informations permis",
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF08004D),
                       ),
                     ),
                   ),
-                ),
+                ],
+              ),
+            ),
+            // Contenu de la carte
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      SizedBox(width: 100, child: Text("N° Permis :", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF08004D)))),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _numeroPermisController,
+                          inputFormatters: [UpperCaseTextFormatter()],
+                          validator: (value) {
+                            return null; // Champ optionnel
+                          },
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF08004D)),
+                          decoration: InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                            isDense: true,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            errorStyle: const TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Bouton pour ajouter des photos de permis
+                  Center(
+                    child: ElevatedButton.icon(
+                      onPressed: isPremiumUser ? _showPermisFields : _showPremiumDialog,
+                      icon: Icon(Icons.add_a_photo, color: Colors.white),
+                      label: Text("Ajouter photo permis", style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF08004D),
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _showPermisFieldsVisible ? 
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // Permis Recto
+                      Column(
+                        children: [
+                          Text(
+                            "Permis Recto",
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF08004D)),
+                          ),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: () => _showImagePickerDialog(true),
+                            child: Stack(
+                              children: [
+                                Container(
+                                  width: 130,
+                                  height: 100,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey),
+                                  ),
+                                  child: _permisRecto != null
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Image.file(
+                                            _permisRecto!,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        )
+                                      : _permisRectoUrl != null && _permisRectoUrl!.isNotEmpty
+                                          ? ClipRRect(
+                                              borderRadius: BorderRadius.circular(12),
+                                              child: Image.network(
+                                                _permisRectoUrl!,
+                                                fit: BoxFit.cover,
+                                                loadingBuilder: (context, child, loadingProgress) {
+                                                  if (loadingProgress == null) return child;
+                                                  return Center(
+                                                    child: CircularProgressIndicator(
+                                                      value: loadingProgress.expectedTotalBytes != null
+                                                          ? loadingProgress.cumulativeBytesLoaded /
+                                                              loadingProgress.expectedTotalBytes!
+                                                          : null,
+                                                    ),
+                                                  );
+                                                },
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  return Center(
+                                                    child: Icon(Icons.error, color: Colors.red),
+                                                  );
+                                                },
+                                              ),
+                                            )
+                                          : const Center(
+                                              child: Icon(
+                                                Icons.add_a_photo,
+                                                size: 40,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                ),
+                                if (_permisRecto != null || (_permisRectoUrl != null && _permisRectoUrl!.isNotEmpty))
+                                  Positioned(
+                                    top: 5,
+                                    right: 5,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _permisRecto = null;
+                                          _permisRectoUrl = null;
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.withOpacity(0.8),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.close,
+                                          size: 16,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      // Permis Verso
+                      Column(
+                        children: [
+                          Text(
+                            "Permis Verso",
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF08004D)),
+                          ),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: () => _showImagePickerDialog(false),
+                            child: Stack(
+                              children: [
+                                Container(
+                                  width: 130,
+                                  height: 100,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey),
+                                  ),
+                                  child: _permisVerso != null
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Image.file(
+                                            _permisVerso!,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        )
+                                      : _permisVersoUrl != null && _permisVersoUrl!.isNotEmpty
+                                          ? ClipRRect(
+                                              borderRadius: BorderRadius.circular(12),
+                                              child: Image.network(
+                                                _permisVersoUrl!,
+                                                fit: BoxFit.cover,
+                                                loadingBuilder: (context, child, loadingProgress) {
+                                                  if (loadingProgress == null) return child;
+                                                  return Center(
+                                                    child: CircularProgressIndicator(
+                                                      value: loadingProgress.expectedTotalBytes != null
+                                                          ? loadingProgress.cumulativeBytesLoaded /
+                                                              loadingProgress.expectedTotalBytes!
+                                                          : null,
+                                                    ),
+                                                  );
+                                                },
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  return Center(
+                                                    child: Icon(Icons.error, color: Colors.red),
+                                                  );
+                                                },
+                                              ),
+                                            )
+                                          : const Center(
+                                              child: Icon(
+                                                Icons.add_a_photo,
+                                                size: 40,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                ),
+                                if (_permisVerso != null || (_permisVersoUrl != null && _permisVersoUrl!.isNotEmpty))
+                                  Positioned(
+                                    top: 5,
+                                    right: 5,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _permisVerso = null;
+                                          _permisVersoUrl = null;
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.withOpacity(0.8),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.close,
+                                          size: 16,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ) : const SizedBox(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormField({
+    required String label,
+    required TextEditingController controller,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(
+            "$label :",
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: Color(0xFF08004D),
+            ),
+          ),
+        ),
+        Expanded(
+          child: TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            inputFormatters: [
+              if (label == "N° Permis") UpperCaseTextFormatter(),
+              ...?inputFormatters,
             ],
+            textCapitalization:
+                (label == "Prénom" || label == "Nom" || label == "Adresse")
+                    ? TextCapitalization.words
+                    : TextCapitalization.none,
+            validator: (value) {
+              // Validation de l'email si le champ n'est pas vide
+              if (label == "Email" && value != null && value.isNotEmpty && !_isValidEmail(value)) {
+                return 'Email non valide';
+              }
+              return null; // Tous les champs sont optionnels
+            },
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF08004D),
+            ),
+            decoration: InputDecoration(
+              contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              isDense: true,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              errorStyle: const TextStyle(color: Colors.red),
+            ),
           ),
         ),
       ],
     );
   }
 
-  ElevatedButton buildPhotoButton() {
-    return ElevatedButton.icon(
-      onPressed: isPremiumUser
-          ? () {
-              setState(() {
-                _showPermisFields = !_showPermisFields;
-              });
-            }
-          : _showPremiumDialog,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.green, // Remis en vert pour tous les cas
-        minimumSize: const Size(double.infinity, 50),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+  // Récupérer l'ID de l'administrateur (utilisateur actuel ou admin si collaborateur)
+  Future<String> _getAdminId() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return '';
+    
+    // Vérifier le statut collaborateur
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+    
+    if (userDoc.exists && userDoc.data() is Map<String, dynamic>) {
+      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+      if (userData['isCollaborateur'] == true && userData['adminId'] != null) {
+        return userData['adminId'] as String;
+      }
+    }
+    
+    return user.uid;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF08004D),
+        title: const Text(
+          'Client',
+          style: TextStyle(color: Colors.white),
         ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.directions_car, color: Colors.white),
+            onPressed: () => _showVehicleDialog(),
+            tooltip: 'Véhicule client',
+          ),
+        ],
       ),
-      icon: Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock,
-          color: Colors.white),
-      label: Text(
-        isPremiumUser ? "Ajouter photo permis" : "Ajouter photo permis",
-        style: const TextStyle(color: Colors.white, fontSize: 18),
+      body: Form(
+        key: _formKey,
+        child: _isLoading 
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF08004D)))
+          : SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildPersonalInfo(context),
+                    const SizedBox(height: 16),
+                    _buildLicenseInfo(context),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          _saveClientData();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF08004D),
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Suivant',
+                        style: TextStyle(color: Colors.white, fontSize: 18),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
       ),
     );
   }
