@@ -2,17 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ContraLoc/widget/CREATION DE CONTRAT/create_contrat.dart';
 
-class KilometrageContainer extends StatelessWidget {
+class KilometrageContainer extends StatefulWidget {
   final TextEditingController kilometrageDepartController;
   final TextEditingController kilometrageAutoriseController;
-  final BuildContext context;
 
   const KilometrageContainer({
     super.key,
     required this.kilometrageDepartController,
     required this.kilometrageAutoriseController,
-    required this.context,
   });
+
+  @override
+  State<KilometrageContainer> createState() => _KilometrageContainerState();
+}
+
+class _KilometrageContainerState extends State<KilometrageContainer> {
+  bool _showContent = false;
 
   @override
   Widget build(BuildContext context) {
@@ -35,59 +40,71 @@ class KilometrageContainer extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // En-tête de la carte
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF08004D).withOpacity(0.1),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
+            // En-tête de la carte avec flèche
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showContent = !_showContent;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF08004D).withOpacity(0.1),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.speed, color: const Color(0xFF08004D), size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Kilométrage",
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF08004D),
+                child: Row(
+                  children: [
+                    Icon(Icons.speed, color: const Color(0xFF08004D), size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "Kilométrage",
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF08004D),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    Icon(
+                      _showContent ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                      color: const Color(0xFF08004D),
+                    ),
+                  ],
+                ),
               ),
             ),
             // Contenu de la carte
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CreateContrat.buildTextField(
-                    "Kilométrage de départ",
-                    kilometrageDepartController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                  ),
-                  const SizedBox(height: 15),
-                  CreateContrat.buildTextField(
-                    "Kilométrage autorisé",
-                    kilometrageAutoriseController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                  ),
-                ],
+            if (_showContent)
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CreateContrat.buildTextField(
+                      "Kilométrage de départ",
+                      widget.kilometrageDepartController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                    ),
+                    const SizedBox(height: 15),
+                    CreateContrat.buildTextField(
+                      "Kilométrage autorisé",
+                      widget.kilometrageAutoriseController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),

@@ -27,7 +27,6 @@ class _EtatCommentaireContainerState extends State<EtatCommentaireContainer> {
   bool isPremiumUser = false;
   bool isLoading = true;
   bool _showContent = false;
-  bool _showPermisFieldsVisible = false;
   late final PageController _pageController;
 
   @override

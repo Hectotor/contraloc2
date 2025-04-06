@@ -15,6 +15,8 @@ class EssenceContainer extends StatefulWidget {
 }
 
 class _EssenceContainerState extends State<EssenceContainer> {
+  bool _showContent = false;
+
   String _getCurrentValue(int percentage) {
     if (percentage <= 0) return "0";
     if (percentage <= 25) return "1/4";
@@ -57,60 +59,72 @@ class _EssenceContainerState extends State<EssenceContainer> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // En-tête de la carte
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF08004D).withOpacity(0.1),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
+            // En-tête de la carte avec flèche
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showContent = !_showContent;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF08004D).withOpacity(0.1),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.local_gas_station, color: const Color(0xFF08004D), size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Niveau d'essence",
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF08004D),
+                child: Row(
+                  children: [
+                    Icon(Icons.local_gas_station, color: const Color(0xFF08004D), size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "Niveau d'essence",
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF08004D),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    Icon(
+                      _showContent ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                      color: const Color(0xFF08004D),
+                    ),
+                  ],
+                ),
               ),
             ),
             // Contenu de la carte
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Niveau d'essence au départ :",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+            if (_showContent)
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Niveau d'essence au départ :",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildEssenceButton("0", currentValue),
-                      _buildEssenceButton("1/4", currentValue),
-                      _buildEssenceButton("1/2", currentValue),
-                      _buildEssenceButton("3/4", currentValue),
-                      _buildEssenceButton("1", currentValue),
-                    ],
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildEssenceButton("0", currentValue),
+                        _buildEssenceButton("1/4", currentValue),
+                        _buildEssenceButton("1/2", currentValue),
+                        _buildEssenceButton("3/4", currentValue),
+                        _buildEssenceButton("1", currentValue),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),

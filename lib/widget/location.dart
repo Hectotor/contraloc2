@@ -842,62 +842,6 @@ class _LocationPageState extends State<LocationPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: (() {
-                    String dateText = _dateDebutController.text;
-                    if (dateText.isEmpty) {
-                      return SizedBox.shrink(); 
-                    }
-
-                    try {
-                      final now = DateTime.now();
-                      final parsedDate = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(dateText);
-                      
-                      final dateWithCurrentYear = DateTime(
-                        now.year,
-                        parsedDate.month,
-                        parsedDate.day,
-                        parsedDate.hour,
-                        parsedDate.minute,
-                      );
-                      
-                      final dateToCompare = dateWithCurrentYear.isBefore(now) && 
-                                           parsedDate.month < now.month ? 
-                                           DateTime(now.year + 1, parsedDate.month, parsedDate.day, 
-                                                   parsedDate.hour, parsedDate.minute) : 
-                                           dateWithCurrentYear;
-                      
-                      if (dateToCompare.isAfter(now) && 
-                          !(dateToCompare.year == now.year && 
-                            dateToCompare.month == now.month && 
-                            dateToCompare.day == now.day)) {
-                        return Text(
-                          textAlign: TextAlign.center,
-                          'Véhicule réservé pour le:\n$dateText',
-                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900),
-                        );
-                      } else {
-                        return SizedBox.shrink(); 
-                      }
-                    } catch (e) {
-                      return SizedBox.shrink(); 
-                    }
-                  }()),
-                ),
-                const SizedBox(height: 15),
-                DateContainer(
-                  dateDebutController: _dateDebutController,
-                  dateFinTheoriqueController: _dateFinTheoriqueController,
-                  context: context,
-                  selectDateTime: (controller) => _selectDateTime(controller),
-                ),
-                const SizedBox(height: 15),
-                KilometrageContainer(
-                  kilometrageDepartController: _kilometrageDepartController,
-                  kilometrageAutoriseController: _kilometrageAutoriseController,
-                  context: context,
-                ),
-                const SizedBox(height: 15),
                 TypeLocationContainer(
                   typeLocation: _typeLocationController.text,
                   onTypeChanged: (value) {
@@ -909,9 +853,16 @@ class _LocationPageState extends State<LocationPage> {
                   accompteController: _accompteController,
                 ),
                 const SizedBox(height: 15),
-                if (_typeLocationController.text == "Payante" &&
-                    _prixLocationController.text.isNotEmpty) ...[
-                ],
+                DateContainer(
+                  dateDebutController: _dateDebutController,
+                  dateFinTheoriqueController: _dateFinTheoriqueController,
+                  selectDateTime: (controller) => _selectDateTime(controller),
+                ),
+                const SizedBox(height: 15),
+                KilometrageContainer(
+                  kilometrageDepartController: _kilometrageDepartController,
+                  kilometrageAutoriseController: _kilometrageAutoriseController,
+                ),
                 const SizedBox(height: 15),
                 EssenceContainer(
                   pourcentageEssence: _pourcentageEssence,
