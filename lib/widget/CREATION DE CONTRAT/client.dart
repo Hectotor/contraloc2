@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'package:image_picker/image_picker.dart';
 import '../location.dart'; // Import de la page location
 import 'package:flutter/services.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart'; // Import de l'utilitaire collaborateur
 import 'popup_vehicule_client.dart';
+import 'permis_info_container.dart'; // Import du nouveau composant
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
@@ -65,7 +64,6 @@ class _ClientPageState extends State<ClientPage> {
   String? _permisRectoUrl;
   String? _permisVersoUrl;
   bool isPremiumUser = true;
-  bool _showPermisFieldsVisible = false; // Variable pour contrôler l'affichage des champs de permis
   bool _isLoading = false;
 
   @override
@@ -89,28 +87,6 @@ class _ClientPageState extends State<ClientPage> {
         isPremiumUser = isPremium;
       });
     }
-  }
-
-  // Afficher la boîte de dialogue premium
-  void _showPremiumDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Fonctionnalité Premium"),
-          content: const Text(
-              "Cette fonctionnalité est réservée aux utilisateurs premium. Veuillez mettre à niveau votre abonnement pour y accéder."),
-          actions: [
-            TextButton(
-              child: const Text("OK"),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _loadClientData() async {
@@ -162,80 +138,6 @@ class _ClientPageState extends State<ClientPage> {
     } catch (e) {
       print('Erreur lors du chargement des données client: $e');
     }
-  }
-
-  Future<void> _selectImage(ImageSource source, bool isRecto) async {
-    try {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(
-        source: source,
-        imageQuality: 70,
-      );
-      if (pickedFile != null) {
-        final compressedImage = await FlutterImageCompress.compressWithFile(
-          pickedFile.path,
-          minWidth: 800,
-          minHeight: 800,
-          quality: 85,
-        );
-        if (compressedImage != null) {
-          setState(() {
-            if (isRecto) {
-              _permisRecto = File(pickedFile.path);
-            } else {
-              _permisVerso = File(pickedFile.path);
-            }
-          });
-        }
-      } else {
-        print('Aucune image sélectionnée'); // Log d'erreur
-      }
-    } catch (e) {
-      print('Erreur lors de la sélection de l\'image : $e');
-    }
-  }
-
-  Future<void> _showImagePickerDialog(bool isRecto) async {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(isRecto ? "Photo Permis Recto" : "Photo Permis Verso"),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: [
-                GestureDetector(
-                  child: const Text("Prendre une photo"),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _selectImage(ImageSource.camera, isRecto);
-                  },
-                ),
-                const Padding(padding: EdgeInsets.all(8.0)),
-                GestureDetector(
-                  child: const Text("Choisir depuis la galerie"),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _selectImage(ImageSource.gallery, isRecto);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // Afficher/masquer les champs de permis
-  void _showPermisFields() {
-    setState(() {
-      _showPermisFieldsVisible = !_showPermisFieldsVisible;
-    });
-  }
-
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 
   Future<void> _saveClientData() async {
@@ -432,287 +334,23 @@ class _ClientPageState extends State<ClientPage> {
   }
 
   Widget _buildLicenseInfo(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.20),
-            blurRadius: 4,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // En-tête de la carte
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Color(0xFF08004D).withOpacity(0.1),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.credit_card, color: Color(0xFF08004D), size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Informations permis",
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF08004D),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Contenu de la carte
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      SizedBox(width: 100, child: Text("N° Permis :", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF08004D)))),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _numeroPermisController,
-                          inputFormatters: [UpperCaseTextFormatter()],
-                          validator: (value) {
-                            return null; // Champ optionnel
-                          },
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF08004D)),
-                          decoration: InputDecoration(
-                            contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                            isDense: true,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            errorStyle: const TextStyle(color: Colors.red),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  // Bouton pour ajouter des photos de permis
-                  Center(
-                    child: ElevatedButton.icon(
-                      onPressed: isPremiumUser ? _showPermisFields : _showPremiumDialog,
-                      icon: Icon(Icons.add_a_photo, color: Colors.white),
-                      label: Text("Ajouter photo permis", style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF08004D),
-                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _showPermisFieldsVisible ? 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      // Permis Recto
-                      Column(
-                        children: [
-                          Text(
-                            "Permis Recto",
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF08004D)),
-                          ),
-                          const SizedBox(height: 8),
-                          GestureDetector(
-                            onTap: () => _showImagePickerDialog(true),
-                            child: Stack(
-                              children: [
-                                Container(
-                                  width: 130,
-                                  height: 100,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[200],
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.grey),
-                                  ),
-                                  child: _permisRecto != null
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: Image.file(
-                                            _permisRecto!,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        )
-                                      : _permisRectoUrl != null && _permisRectoUrl!.isNotEmpty
-                                          ? ClipRRect(
-                                              borderRadius: BorderRadius.circular(12),
-                                              child: Image.network(
-                                                _permisRectoUrl!,
-                                                fit: BoxFit.cover,
-                                                loadingBuilder: (context, child, loadingProgress) {
-                                                  if (loadingProgress == null) return child;
-                                                  return Center(
-                                                    child: CircularProgressIndicator(
-                                                      value: loadingProgress.expectedTotalBytes != null
-                                                          ? loadingProgress.cumulativeBytesLoaded /
-                                                              loadingProgress.expectedTotalBytes!
-                                                          : null,
-                                                    ),
-                                                  );
-                                                },
-                                                errorBuilder: (context, error, stackTrace) {
-                                                  return Center(
-                                                    child: Icon(Icons.error, color: Colors.red),
-                                                  );
-                                                },
-                                              ),
-                                            )
-                                          : const Center(
-                                              child: Icon(
-                                                Icons.add_a_photo,
-                                                size: 40,
-                                                color: Colors.grey,
-                                              ),
-                                            ),
-                                ),
-                                if (_permisRecto != null || (_permisRectoUrl != null && _permisRectoUrl!.isNotEmpty))
-                                  Positioned(
-                                    top: 5,
-                                    right: 5,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _permisRecto = null;
-                                          _permisRectoUrl = null;
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.red.withOpacity(0.8),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.close,
-                                          size: 16,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      
-                      // Permis Verso
-                      Column(
-                        children: [
-                          Text(
-                            "Permis Verso",
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF08004D)),
-                          ),
-                          const SizedBox(height: 8),
-                          GestureDetector(
-                            onTap: () => _showImagePickerDialog(false),
-                            child: Stack(
-                              children: [
-                                Container(
-                                  width: 130,
-                                  height: 100,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[200],
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.grey),
-                                  ),
-                                  child: _permisVerso != null
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: Image.file(
-                                            _permisVerso!,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        )
-                                      : _permisVersoUrl != null && _permisVersoUrl!.isNotEmpty
-                                          ? ClipRRect(
-                                              borderRadius: BorderRadius.circular(12),
-                                              child: Image.network(
-                                                _permisVersoUrl!,
-                                                fit: BoxFit.cover,
-                                                loadingBuilder: (context, child, loadingProgress) {
-                                                  if (loadingProgress == null) return child;
-                                                  return Center(
-                                                    child: CircularProgressIndicator(
-                                                      value: loadingProgress.expectedTotalBytes != null
-                                                          ? loadingProgress.cumulativeBytesLoaded /
-                                                              loadingProgress.expectedTotalBytes!
-                                                          : null,
-                                                    ),
-                                                  );
-                                                },
-                                                errorBuilder: (context, error, stackTrace) {
-                                                  return Center(
-                                                    child: Icon(Icons.error, color: Colors.red),
-                                                  );
-                                                },
-                                              ),
-                                            )
-                                          : const Center(
-                                              child: Icon(
-                                                Icons.add_a_photo,
-                                                size: 40,
-                                                color: Colors.grey,
-                                              ),
-                                            ),
-                                ),
-                                if (_permisVerso != null || (_permisVersoUrl != null && _permisVersoUrl!.isNotEmpty))
-                                  Positioned(
-                                    top: 5,
-                                    right: 5,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _permisVerso = null;
-                                          _permisVersoUrl = null;
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.red.withOpacity(0.8),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.close,
-                                          size: 16,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ) : const SizedBox(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    return PermisInfoContainer(
+      numeroPermisController: _numeroPermisController,
+      onRectoImageSelected: (File? image) {
+        setState(() {
+          _permisRecto = image;
+        });
+      },
+      onVersoImageSelected: (File? image) {
+        setState(() {
+          _permisVerso = image;
+        });
+      },
+      permisRecto: _permisRecto,
+      permisVerso: _permisVerso,
+      permisRectoUrl: _permisRectoUrl,
+      permisVersoUrl: _permisVersoUrl,
+      isPremiumUser: isPremiumUser,
     );
   }
 
@@ -795,6 +433,10 @@ class _ClientPageState extends State<ClientPage> {
     return user.uid;
   }
 
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -844,6 +486,7 @@ class _ClientPageState extends State<ClientPage> {
                         'Suivant',
                         style: TextStyle(color: Colors.white, fontSize: 18),
                       ),
+                      
                     ),
                   ],
                 ),

@@ -44,6 +44,12 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   bool _isLoading = false;
+  bool _showTechnicalInfo = false;
+  bool _showLocationInfo = false;
+  bool _showSupplementaryFees = false;
+  bool _showInsuranceMaintenance = false;
+  bool _showGeneralInfo = true;
+  bool _showDocuments = false;
 
   // Contrôleurs pour les champs de texte
   final TextEditingController _marqueController = TextEditingController();
@@ -75,6 +81,12 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   @override
   void initState() {
     super.initState();
+    _showTechnicalInfo = false;
+    _showLocationInfo = false;
+    _showSupplementaryFees = false;
+    _showInsuranceMaintenance = false;
+    _showDocuments = false;
+    _showGeneralInfo = true;
     if (widget.vehicleData != null) {
       _loadVehicleData();
     }
@@ -442,10 +454,16 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                       title: "Informations générales",
                       icon: Icons.info_outline,
                       color: const Color(0xFF1A237E),
+                      isGeneralInfo: true,
                       children: [
                         _buildTextField("Marque", _marqueController, isRequired: true),
                         _buildTextField("Modèle", _modeleController, isRequired: true),
                         _buildTextField("Immatriculation", _immatriculationController, isRequired: true),
+                        _buildDropdown(
+                          "Type de boîte de vitesses",
+                          ["Manuelle", "Automatique", "Semi-automatique"],
+                          _boiteVitesses,
+                          (value) => setState(() => _boiteVitesses = value!)),
                         _buildDropdown(
                           "Type de carburant",
                           ["Essence", "Diesel", "Hybride", "Électrique"],
@@ -460,13 +478,9 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                       title: "Informations techniques",
                       icon: Icons.build_outlined,
                       color: Colors.orange[700]!,
+                      isTechnicalInfo: true,
                       children: [
                         _buildTextField("Numéro de série (VIN)", _vinController),
-                        _buildDropdown(
-                          "Type de boîte de vitesses",
-                          ["Manuelle", "Automatique", "Semi-automatique"],
-                          _boiteVitesses,
-                          (value) => setState(() => _boiteVitesses = value!)),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -476,6 +490,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                       title: "Informations de location",
                       icon: Icons.euro_outlined,
                       color: Colors.green[700]!,
+                      isLocationInfo: true,
                       children: [
                         _buildTextField(
                           "Prix de location par jour (€)",
@@ -519,6 +534,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                       title: "Frais supplémentaires",
                       icon: Icons.attach_money_outlined,
                       color: Colors.red[700]!,
+                      isSupplementaryFees: true,
                       children: [
                         _buildTextField(
                           "Carburant manquant (€)",
@@ -564,6 +580,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                       title: "Assurance et maintenance",
                       icon: Icons.security_outlined,
                       color: Colors.blue[700]!,
+                      isInsuranceMaintenance: true,
                       children: [
                         _buildTextField("Nom de l'assurance", _assuranceNomController),
                         _buildTextField("N° téléphone l'assurance", _assuranceNumeroController),
@@ -579,6 +596,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                       title: "Documents et photos",
                       icon: Icons.photo_camera_outlined,
                       color: Colors.purple[700]!,
+                      isDocuments: true,
                       children: [
                         _buildImagePicker("Photo de la voiture", _carPhoto, () => _pickImage('car')),
                         _buildImagePicker("Carte grise", _carteGrisePhoto, () => _pickImage('carteGrise')),
@@ -675,6 +693,12 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     required IconData icon,
     required Color color,
     required List<Widget> children,
+    bool isTechnicalInfo = false,
+    bool isLocationInfo = false,
+    bool isSupplementaryFees = false,
+    bool isInsuranceMaintenance = false,
+    bool isDocuments = false,
+    bool isGeneralInfo = false,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -682,46 +706,81 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // En-tête de section
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                if (isTechnicalInfo) {
+                  _showTechnicalInfo = !_showTechnicalInfo;
+                } else if (isLocationInfo) {
+                  _showLocationInfo = !_showLocationInfo;
+                } else if (isSupplementaryFees) {
+                  _showSupplementaryFees = !_showSupplementaryFees;
+                } else if (isInsuranceMaintenance) {
+                  _showInsuranceMaintenance = !_showInsuranceMaintenance;
+                } else if (isDocuments) {
+                  _showDocuments = !_showDocuments;
+                } else if (isGeneralInfo) {
+                  _showGeneralInfo = !_showGeneralInfo;
+                }
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                Icon(icon, color: color, size: 24),
-                const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+              child: Row(
+                children: [
+                  Icon(icon, color: color, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    isTechnicalInfo ? (_showTechnicalInfo ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down) :
+                    isLocationInfo ? (_showLocationInfo ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down) :
+                    isSupplementaryFees ? (_showSupplementaryFees ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down) :
+                    isInsuranceMaintenance ? (_showInsuranceMaintenance ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down) :
+                    isDocuments ? (_showDocuments ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down) :
+                    (_showGeneralInfo ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
                     color: color,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-          // Contenu de la section
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(children: children),
-          ),
+          if (isTechnicalInfo && _showTechnicalInfo ||
+              isLocationInfo && _showLocationInfo ||
+              isSupplementaryFees && _showSupplementaryFees ||
+              isInsuranceMaintenance && _showInsuranceMaintenance ||
+              isDocuments && _showDocuments ||
+              isGeneralInfo && _showGeneralInfo)
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: children,
+              ),
+            ),
         ],
       ),
     );
