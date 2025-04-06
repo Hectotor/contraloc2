@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:ContraLoc/USERS/Subscription/abonnement_screen.dart';
-import 'package:ContraLoc/widget/CREATION DE CONTRAT/create_contrat.dart';
+
 
 class PermisInfoContainer extends StatefulWidget {
   final TextEditingController numeroPermisController;
@@ -81,12 +81,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
     );
   }
 
-  // Afficher les champs de permis
-  void _showPermisFields() {
-    setState(() {
-      _showPermisFieldsVisible = true;
-    });
-  }
+
 
   // Sélectionner une image
   Future<void> _selectImage(ImageSource source, bool isRecto) async {
@@ -202,14 +197,14 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: const Color(0xFF08004D).withOpacity(0.1),
-                  borderRadius: BorderRadius.only(
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
                   ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.credit_card, color: const Color(0xFF08004D), size: 24),
+                    Icon(Icons.perm_identity, color: const Color(0xFF08004D), size: 24),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -237,59 +232,43 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Champ numéro de permis
-                    CreateContrat.buildTextField(
-                      "N° Permis",
-                      widget.numeroPermisController,
-                      inputFormatters: [UpperCaseTextFormatter()],
-                    ),
-                    // Bouton pour ajouter des photos de permis
-                    Center(
-                      child: ElevatedButton.icon(
-                        onPressed: widget.isPremiumUser ? _showPermisFields : _showPremiumDialog,
-                        icon: const Icon(Icons.add_a_photo, color: Color(0xFF08004D)),
-                        label: const Text(
-                          "Ajouter photo permis",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF08004D),
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF08004D),
-                          side: const BorderSide(color: Color(0xFF08004D), width: 2),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          minimumSize: const Size(double.infinity, 40),
+                    TextField(
+                      controller: widget.numeroPermisController,
+                      decoration: InputDecoration(
+                        labelText: "Numéro de permis",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
+                    
+                    // Champs permis recto/verso
                     if (_showPermisFieldsVisible)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          // Permis Recto
-                          Column(
-                            children: [
-                              Text(
-                                "Permis Recto",
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF08004D)),
-                              ),
-                              const SizedBox(height: 8),
-                              GestureDetector(
-                                onTap: () => _showImagePickerDialog(true),
-                                child: Container(
-                                  width: 130,
-                                  height: 100,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[200],
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.grey),
+                          // Permis recto
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                if (!widget.isPremiumUser) {
+                                  _showPremiumDialog();
+                                  return;
+                                }
+                                _showImagePickerDialog(true);
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 8),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Colors.grey[300]!,
+                                    width: 1,
                                   ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: AspectRatio(
+                                  aspectRatio: 1, // Format carré
                                   child: Stack(
                                     children: [
                                       if (widget.permisRecto != null)
@@ -308,6 +287,8 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                           child: Image.network(
                                             widget.permisRectoUrl!,
                                             fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            height: double.infinity,
                                             loadingBuilder: (context, child, loadingProgress) {
                                               if (loadingProgress == null) return child;
                                               return Center(
@@ -321,11 +302,24 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                           ),
                                         )
                                       else
-                                        const Center(
-                                          child: Icon(
-                                            Icons.add_a_photo,
-                                            size: 40,
-                                            color: Colors.grey,
+                                        Center(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(
+                                                Icons.add_a_photo,
+                                                size: 40,
+                                                color: Colors.grey,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                "Recto",
+                                                style: TextStyle(
+                                                  color: Colors.grey[600],
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       if (widget.permisRecto != null || widget.permisRectoUrl != null)
@@ -352,26 +346,29 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                   ),
                                 ),
                               ),
-                            ],
+                            ),
                           ),
-                          // Permis Verso
-                          Column(
-                            children: [
-                              Text(
-                                "Permis Verso",
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF08004D)),
-                              ),
-                              const SizedBox(height: 8),
-                              GestureDetector(
-                                onTap: () => _showImagePickerDialog(false),
-                                child: Container(
-                                  width: 130,
-                                  height: 100,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[200],
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.grey),
+                          // Permis verso
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                if (!widget.isPremiumUser) {
+                                  _showPremiumDialog();
+                                  return;
+                                }
+                                _showImagePickerDialog(false);
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 8),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Colors.grey[300]!,
+                                    width: 1,
                                   ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: AspectRatio(
+                                  aspectRatio: 1, // Format carré
                                   child: Stack(
                                     children: [
                                       if (widget.permisVerso != null)
@@ -390,6 +387,8 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                           child: Image.network(
                                             widget.permisVersoUrl!,
                                             fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            height: double.infinity,
                                             loadingBuilder: (context, child, loadingProgress) {
                                               if (loadingProgress == null) return child;
                                               return Center(
@@ -403,11 +402,24 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                           ),
                                         )
                                       else
-                                        const Center(
-                                          child: Icon(
-                                            Icons.add_a_photo,
-                                            size: 40,
-                                            color: Colors.grey,
+                                        Center(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(
+                                                Icons.add_a_photo,
+                                                size: 40,
+                                                color: Colors.grey,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                "Verso",
+                                                style: TextStyle(
+                                                  color: Colors.grey[600],
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       if (widget.permisVerso != null || widget.permisVersoUrl != null)
@@ -434,7 +446,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                   ),
                                 ),
                               ),
-                            ],
+                            ),
                           ),
                         ],
                       ),
