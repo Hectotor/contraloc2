@@ -26,6 +26,7 @@ import 'MODIFICATION DE CONTRAT/cloturer_location.dart';
 import 'MODIFICATION DE CONTRAT/facture.dart';
 import 'navigation.dart';
 import 'CREATION DE CONTRAT/client.dart';
+import 'package:uuid/uuid.dart';
 
 class ModifierScreen extends StatefulWidget {
   final String contratId;
@@ -212,6 +213,29 @@ class _ModifierScreenState extends State<ModifierScreen> {
       
       print(' Sauvegarde des frais définitifs: $fraisFinaux');
 
+      // Récupérer les données de facture existantes
+      Map<String, dynamic> factureData = {
+        'facturePrixLocation': widget.data['facture']?['facturePrixLocation'] ?? 0.0,
+        'factureCaution': widget.data['facture']?['factureCaution'] ?? 0.0,
+        'factureFraisNettoyageInterieur': widget.data['facture']?['factureFraisNettoyageInterieur'] ?? 0.0,
+        'factureFraisNettoyageExterieur': widget.data['facture']?['factureFraisNettoyageExterieur'] ?? 0.0,
+        'factureFraisCarburantManquant': widget.data['facture']?['factureFraisCarburantManquant'] ?? 0.0,
+        'factureFraisRayuresDommages': widget.data['facture']?['factureFraisRayuresDommages'] ?? 0.0,
+        'factureFraisAutre': widget.data['facture']?['factureFraisAutre'] ?? 0.0,
+        'factureFraisKilometrique': widget.data['facture']?['factureFraisKilometrique'] ?? 0.0,
+        'factureRemise': widget.data['facture']?['factureRemise'] ?? 0.0,
+        'factureTotalFrais': widget.data['facture']?['factureTotalFrais'] ?? 0.0,
+        'factureTypePaiement': widget.data['facture']?['factureTypePaiement'] ?? 'Carte bancaire',
+        'dateFacture': widget.data['facture']?['dateFacture'],
+        'factureId': widget.data['facture']?['factureId'] ?? '',
+        'factureGeneree': widget.data['facture']?['factureGeneree'] ?? true,
+      };
+
+      // Si on n'a pas de factureId, générer un nouvel ID unique
+      if (factureData['factureId'].isEmpty) {
+        factureData['factureId'] = const Uuid().v4();
+      }
+
       final updateData = {
         'status': 'restitue',
         'dateFinEffectif': _dateFinEffectifController.text,
@@ -222,6 +246,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'photosRetourUrls': allPhotosUrls,
         'pourcentageEssenceRetour': _pourcentageEssenceRetourController.text,
         'signature_retour': signatureRetourBase64,
+        'facture': factureData, // Inclure les données de facture
+        'factureGeneree': true, // Mettre à jour le flag de génération
+        'factureId': factureData['factureId'], // Mettre à jour l'ID de la facture
       };
 
       if (isCollaborateur && adminId != null) {
@@ -562,16 +589,16 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           ),
                           const SizedBox(height: 20),
                         ],
-                        if (widget.data['factureId'] != null || widget.data['factureGeneree'] == true) ...[  // Afficher uniquement si une facture existe
+                        if (widget.data['factureGeneree'] == true) ...[
                           ElevatedButton(
                             onPressed: () => AffichageFacturePdf.genererEtAfficherFacturePdf(
                               context: context,
-                              contratData: widget.data,
                               contratId: widget.contratId,
+                              contratData: widget.data,
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              minimumSize: const Size(double.infinity, 50),
+                              backgroundColor: Colors.green,
+                              padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 30),
                             ),
                             child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,

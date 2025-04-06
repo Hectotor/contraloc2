@@ -4,8 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:ContraLoc/services/collaborateur_util.dart';
-import 'package:ContraLoc/widget/MODIFICATION%20DE%20CONTRAT/FACTURE/popup_succees.dart';
 
 class FactureScreen extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -402,7 +400,6 @@ class _FactureScreenState extends State<FactureScreen> {
 
       // Créer un objet avec les données de la facture
       Map<String, dynamic> factureData = {
-        'factureId': _factureId,
         'factureCaution': caution,
         'facturePrixLocation': prixLocation,
         'factureFraisNettoyageInterieur': fraisNettoyageInt,
@@ -415,63 +412,68 @@ class _FactureScreenState extends State<FactureScreen> {
         'factureTotalFrais': _total,
         'factureTypePaiement': _typePaiement,
         'dateFacture': Timestamp.now(),
-        'tva': _isTTC ? 'applicable' : 'non applicable', // Remplacer factureTTC par tva avec une chaîne
+        'tva': _isTTC ? 'applicable' : 'non applicable',
+        'factureGeneree': true,
       };
 
-      // Vérifier si l'utilisateur est un collaborateur
-      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
-      final String targetId = collaborateurStatus['isCollaborateur'] 
-          ? collaborateurStatus['adminId'] ?? user.uid 
-          : user.uid;
-
-      // Mettre à jour les données dans Firestore
-      // Utiliser la structure correcte: users/[userId]/locations/[contratId]
-      // Vérifier et afficher l'ID du contrat pour le débogage
-      String? contratId = widget.data['id'];
-      print('ID du contrat: $contratId');
+      // Logs pour déboguer
       print('Données du widget: ${widget.data}');
-      
-      if (contratId == null || contratId.isEmpty) {
-        // Essayer d'utiliser contratId s'il existe
-        contratId = widget.data['contratId'];
-        print('Tentative avec contratId alternatif: $contratId');
+      print('ID utilisateur: ${widget.data['userId']}');
+      print('ID contrat: ${widget.data['contratId']}');
+
+      try {
+        // Vérifier si l'utilisateur est un collaborateur
+        final userId = widget.data['isCollaborateur'] == true 
+            ? widget.data['adminId'] 
+            : widget.data['userId'];
+
+        print('Utilisateur final: $userId');
+
+        // Mettre à jour le document du contrat avec les données de facture
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('locations')
+            .doc(widget.data['contratId'])
+            .update(factureData);
+
+        // Appeler la fonction onFraisUpdated pour mettre à jour les données locales
+        widget.onFraisUpdated({
+          'facture': factureData,
+          'factureGeneree': true,
+        });
+
+        // Afficher le popup de succès
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Succès'),
+            content: const Text('Facture enregistrée avec succès'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      } catch (e) {
+        print('Erreur lors de la sauvegarde des frais: $e');
+        // Afficher le popup d'erreur
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Erreur'),
+            content: Text('Erreur lors de la sauvegarde des frais: ${e.toString()}'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
       }
-      
-      if (contratId == null || contratId.isEmpty) {
-        throw Exception('ID du contrat non trouvé dans les données');
-      }
-      
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(targetId)
-          .collection('locations')
-          .doc(contratId)
-          .update({
-        'facture': factureData,
-        'factureId': _factureId,
-        'factureGeneree': true,
-        'kilometrageRetour': _kmRetourController.text,
-        'dateFinEffectif': widget.dateFinEffective,
-      });
-      
-      // Appeler la fonction onFraisUpdated pour mettre à jour les données locales
-      widget.onFraisUpdated({
-        'facture': factureData,
-        'factureId': _factureId,
-        'factureGeneree': true,
-      });
-      
-      // Afficher le popup de succès
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return SuccessPopup(
-            title: 'Succès !',
-            message: 'Facture enregistrée avec succès',
-            onConfirm: () => Navigator.pop(context),
-          );
-        },
-      );
     } catch (e) {
       print('Erreur lors de la sauvegarde des frais: $e');
       ScaffoldMessenger.of(context).showSnackBar(
