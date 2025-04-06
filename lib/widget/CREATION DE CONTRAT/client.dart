@@ -337,21 +337,20 @@ class _ClientPageState extends State<ClientPage> {
   Widget _buildLicenseInfo(BuildContext context) {
     return PermisInfoContainer(
       numeroPermisController: _numeroPermisController,
-      onRectoImageSelected: (File? image) {
+      onRectoImageSelected: (file) {
         setState(() {
-          _permisRecto = image;
+          _permisRecto = file;
         });
       },
-      onVersoImageSelected: (File? image) {
+      onVersoImageSelected: (file) {
         setState(() {
-          _permisVerso = image;
+          _permisVerso = file;
         });
       },
       permisRecto: _permisRecto,
       permisVerso: _permisVerso,
       permisRectoUrl: _permisRectoUrl,
       permisVersoUrl: _permisVersoUrl,
-      isPremiumUser: isPremiumUser,
     );
   }
 

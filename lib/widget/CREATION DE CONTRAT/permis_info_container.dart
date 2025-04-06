@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:ContraLoc/USERS/Subscription/abonnement_screen.dart';
-
+import 'package:ContraLoc/services/collaborateur_util.dart';
 
 class PermisInfoContainer extends StatefulWidget {
   final TextEditingController numeroPermisController;
@@ -13,7 +13,6 @@ class PermisInfoContainer extends StatefulWidget {
   final File? permisVerso;
   final String? permisRectoUrl;
   final String? permisVersoUrl;
-  final bool isPremiumUser;
 
   const PermisInfoContainer({
     Key? key,
@@ -24,7 +23,6 @@ class PermisInfoContainer extends StatefulWidget {
     this.permisVerso,
     this.permisRectoUrl,
     this.permisVersoUrl,
-    required this.isPremiumUser,
   }) : super(key: key);
 
   @override
@@ -32,59 +30,149 @@ class PermisInfoContainer extends StatefulWidget {
 }
 
 class _PermisInfoContainerState extends State<PermisInfoContainer> {
-  bool _showPermisFieldsVisible = false;
-  bool _showContent = true;
+  bool _showContent = false;
   final ImagePicker _picker = ImagePicker();
+  bool _isPremiumUser = false;
 
   @override
   void initState() {
     super.initState();
     _showContent = false;
-    // Si des images de permis sont déjà définies, afficher les champs
-    if (widget.permisRecto != null || widget.permisVerso != null ||
-        widget.permisRectoUrl != null || widget.permisVersoUrl != null) {
-      _showPermisFieldsVisible = true;
+    _initializeSubscription();
+  }
+
+  // Méthode pour initialiser et vérifier le statut d'abonnement
+  Future<void> _initializeSubscription() async {
+    // Vérifier le statut premium via CollaborateurUtil
+    print("Début de la vérification du statut premium");
+    final isPremium = await CollaborateurUtil.isPremiumUser();
+    print("Statut premium: $isPremium");
+    
+    if (mounted) {
+      setState(() {
+        // Temporairement forcer à false pour tester le popup
+        _isPremiumUser = false;
+        print("_isPremiumUser défini à: $_isPremiumUser");
+      });
     }
   }
 
-  // Afficher la boîte de dialogue premium
-  void _showPremiumDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Fonctionnalité Premium"),
-          content: const Text(
-              "Cette fonctionnalité est réservée aux utilisateurs premium. Veuillez mettre à niveau votre abonnement pour y accéder."),
-          actions: [
-            TextButton(
-              child: const Text("OK"),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text("S'abonner"),
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AbonnementScreen(),
-                  ),
-                );
-              },
-            ),
-          ],
-        );
-      },
-    );
+  void _handleHeaderTap() {
+    setState(() {
+      _showContent = !_showContent;
+    });
   }
 
-
+  void _showPremiumDialog() {
+    print("_showPremiumDialog appelé");
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        print("Builder du dialogue appelé");
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.lock_outline, size: 48, color: Color(0xFF08004D)),
+                const SizedBox(height: 16),
+                const Text(
+                  "Accès Premium",
+                  style: TextStyle(
+                    color: Color(0xFF08004D),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  "Cette fonctionnalité est disponible uniquement pour les utilisateurs premium. Passez à l’abonnement supérieur pour en profiter pleinement.",
+                  style: TextStyle(
+                    color: Colors.black87,
+                    fontSize: 15,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF08004D),
+                          side: const BorderSide(color: Color(0xFF08004D), width: 1.2),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        onPressed: () {
+                          print("Bouton 'Plus tard' cliqué");
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text(
+                          "Plus tard",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF08004D),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        onPressed: () {
+                          print("Bouton 'S'abonner' cliqué");
+                          Navigator.of(context).pop();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AbonnementScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "S'abonner",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ).then((_) {
+      print("Dialogue premium fermé");
+    });
+  }
 
   // Sélectionner une image
   Future<void> _selectImage(ImageSource source, bool isRecto) async {
+    print("Vérification du statut premium dans _selectImage: $_isPremiumUser");
+    if (!_isPremiumUser) {
+      print("Utilisateur non premium, affichage du dialogue premium");
+      _showPremiumDialog();
+      return;
+    }
+    
     try {
       final XFile? image = await _picker.pickImage(
         source: source,
@@ -105,18 +193,15 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
     }
   }
 
-  // Supprimer une image
-  void _removeImage(bool isRecto) {
-    if (isRecto) {
-      widget.onRectoImageSelected(null); // Utiliser null au lieu d'un fichier vide
-    } else {
-      widget.onVersoImageSelected(null); // Utiliser null au lieu d'un fichier vide
-    }
-    setState(() {}); // Forcer la mise à jour de l'UI après la suppression
-  }
-
   // Afficher la boîte de dialogue pour choisir la source de l'image
   void _showImagePickerDialog(bool isRecto) {
+    print("Vérification du statut premium dans _showImagePickerDialog: $_isPremiumUser");
+    if (!_isPremiumUser) {
+      print("Utilisateur non premium, affichage du dialogue premium");
+      _showPremiumDialog();
+      return;
+    }
+    
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -146,7 +231,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                 leading: const Icon(Icons.photo_camera, color: Color(0xFF08004D)),
                 title: const Text('Prendre une photo'),
                 onTap: () async {
-                  Navigator.of(context).pop(); // Fermer le dialog avant de sélectionner l'image
+                  Navigator.of(context).pop();
                   await _selectImage(ImageSource.camera, isRecto);
                 },
               ),
@@ -154,7 +239,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                 leading: const Icon(Icons.photo_library, color: Color(0xFF08004D)),
                 title: const Text('Choisir depuis la galerie'),
                 onTap: () async {
-                  Navigator.of(context).pop(); // Fermer le dialog avant de sélectionner l'image
+                  Navigator.of(context).pop();
                   await _selectImage(ImageSource.gallery, isRecto);
                 },
               ),
@@ -188,11 +273,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
           children: [
             // En-tête de la carte avec flèche
             GestureDetector(
-              onTap: () {
-                setState(() {
-                  _showContent = !_showContent;
-                });
-              },
+              onTap: _handleHeaderTap,
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -240,216 +321,212 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
+                      enabled: _isPremiumUser,
                     ),
                     const SizedBox(height: 16),
                     
                     // Champs permis recto/verso
-                    if (_showPermisFieldsVisible)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          // Permis recto
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                if (!widget.isPremiumUser) {
-                                  _showPremiumDialog();
-                                  return;
-                                }
-                                _showImagePickerDialog(true);
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 8),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Colors.grey[300]!,
-                                    width: 1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        // Permis recto
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              if (!_isPremiumUser) {
+                                _showPremiumDialog();
+                                return;
+                              }
+                              _showImagePickerDialog(true);
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 8),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Colors.grey[300]!,
+                                  width: 1,
                                 ),
-                                child: AspectRatio(
-                                  aspectRatio: 1, // Format carré
-                                  child: Stack(
-                                    children: [
-                                      if (widget.permisRecto != null)
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: Image.file(
-                                            widget.permisRecto!,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                          ),
-                                        )
-                                      else if (widget.permisRectoUrl != null)
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: Image.network(
-                                            widget.permisRectoUrl!,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                            loadingBuilder: (context, child, loadingProgress) {
-                                              if (loadingProgress == null) return child;
-                                              return Center(
-                                                child: CircularProgressIndicator(
-                                                  value: loadingProgress.expectedTotalBytes != null
-                                                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                                      : null,
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        )
-                                      else
-                                        Center(
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              const Icon(
-                                                Icons.add_a_photo,
-                                                size: 40,
-                                                color: Colors.grey,
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                "Recto",
-                                                style: TextStyle(
-                                                  color: Colors.grey[600],
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      if (widget.permisRecto != null || widget.permisRectoUrl != null)
-                                        Positioned(
-                                          right: 0,
-                                          top: 0,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: Colors.red,
-                                              borderRadius: BorderRadius.circular(100),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              height: 150,
+                              child: Stack(
+                                children: [
+                                  if (widget.permisRecto != null)
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.file(
+                                        widget.permisRecto!,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                      ),
+                                    )
+                                  else if (widget.permisRectoUrl != null)
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.network(
+                                        widget.permisRectoUrl!,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null) return child;
+                                          return Center(
+                                            child: CircularProgressIndicator(
+                                              value: loadingProgress.expectedTotalBytes != null
+                                                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                                  : null,
                                             ),
-                                            padding: const EdgeInsets.all(4),
-                                            child: InkWell(
-                                              onTap: () => _removeImage(true),
-                                              child: const Icon(
-                                                Icons.close,
-                                                size: 18,
-                                                color: Colors.white,
-                                              ),
+                                          );
+                                        },
+                                      ),
+                                    )
+                                  else
+                                    Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(
+                                            Icons.add_a_photo,
+                                            size: 40,
+                                            color: Colors.grey,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            "Recto",
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontWeight: FontWeight.bold,
                                             ),
                                           ),
+                                        ],
+                                      ),
+                                    ),
+                                  if (_isPremiumUser && (widget.permisRecto != null || widget.permisRectoUrl != null))
+                                    Positioned(
+                                      right: 0,
+                                      bottom: 0,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.6),
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(12),
+                                            bottomRight: Radius.circular(12),
+                                          ),
                                         ),
-                                    ],
-                                  ),
-                                ),
+                                        padding: const EdgeInsets.all(8),
+                                        child: const Icon(
+                                          Icons.edit,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
                           ),
-                          // Permis verso
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                if (!widget.isPremiumUser) {
-                                  _showPremiumDialog();
-                                  return;
-                                }
-                                _showImagePickerDialog(false);
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 8),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Colors.grey[300]!,
-                                    width: 1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
+                        ),
+                        // Permis verso
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              if (!_isPremiumUser) {
+                                _showPremiumDialog();
+                                return;
+                              }
+                              _showImagePickerDialog(false);
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 8),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Colors.grey[300]!,
+                                  width: 1,
                                 ),
-                                child: AspectRatio(
-                                  aspectRatio: 1, // Format carré
-                                  child: Stack(
-                                    children: [
-                                      if (widget.permisVerso != null)
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: Image.file(
-                                            widget.permisVerso!,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                          ),
-                                        )
-                                      else if (widget.permisVersoUrl != null)
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: Image.network(
-                                            widget.permisVersoUrl!,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                            loadingBuilder: (context, child, loadingProgress) {
-                                              if (loadingProgress == null) return child;
-                                              return Center(
-                                                child: CircularProgressIndicator(
-                                                  value: loadingProgress.expectedTotalBytes != null
-                                                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                                      : null,
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        )
-                                      else
-                                        Center(
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              const Icon(
-                                                Icons.add_a_photo,
-                                                size: 40,
-                                                color: Colors.grey,
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                "Verso",
-                                                style: TextStyle(
-                                                  color: Colors.grey[600],
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      if (widget.permisVerso != null || widget.permisVersoUrl != null)
-                                        Positioned(
-                                          right: 0,
-                                          top: 0,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: Colors.red,
-                                              borderRadius: BorderRadius.circular(100),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              height: 150,
+                              child: Stack(
+                                children: [
+                                  if (widget.permisVerso != null)
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.file(
+                                        widget.permisVerso!,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                      ),
+                                    )
+                                  else if (widget.permisVersoUrl != null)
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.network(
+                                        widget.permisVersoUrl!,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null) return child;
+                                          return Center(
+                                            child: CircularProgressIndicator(
+                                              value: loadingProgress.expectedTotalBytes != null
+                                                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                                  : null,
                                             ),
-                                            padding: const EdgeInsets.all(4),
-                                            child: InkWell(
-                                              onTap: () => _removeImage(false),
-                                              child: const Icon(
-                                                Icons.close,
-                                                size: 18,
-                                                color: Colors.white,
-                                              ),
+                                          );
+                                        },
+                                      ),
+                                    )
+                                  else
+                                    Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(
+                                            Icons.add_a_photo,
+                                            size: 40,
+                                            color: Colors.grey,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            "Verso",
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontWeight: FontWeight.bold,
                                             ),
                                           ),
+                                        ],
+                                      ),
+                                    ),
+                                  if (_isPremiumUser && (widget.permisVerso != null || widget.permisVersoUrl != null))
+                                    Positioned(
+                                      right: 0,
+                                      bottom: 0,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.6),
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(12),
+                                            bottomRight: Radius.circular(12),
+                                          ),
                                         ),
-                                    ],
-                                  ),
-                                ),
+                                        padding: const EdgeInsets.all(8),
+                                        child: const Icon(
+                                          Icons.edit,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
