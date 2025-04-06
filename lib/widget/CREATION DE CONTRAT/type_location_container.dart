@@ -67,6 +67,16 @@ class _TypeLocationContainerState extends State<TypeLocationContainer> {
   }
 
   @override
+  void didUpdateWidget(TypeLocationContainer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.typeLocation != widget.typeLocation) {
+      setState(() {
+        _selectedType = widget.typeLocation;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),

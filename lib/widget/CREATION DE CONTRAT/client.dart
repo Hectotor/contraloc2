@@ -160,8 +160,9 @@ class _ClientPageState extends State<ClientPage> {
           'numeroPermis': _numeroPermisController.text,
           'marque': widget.marque,
           'modele': widget.modele,
-          'immatriculation': _immatriculationVehiculeClientController.text,
-          'kilometrage': _kilometrageVehiculeClientController.text,
+          'immatriculation': widget.immatriculation,
+          'immatriculationVehiculeClient': _immatriculationVehiculeClientController.text,
+          'kilometrageVehiculeClient': _kilometrageVehiculeClientController.text,
           'dateCreation': DateTime.now(),
           'dateModification': DateTime.now(),
         };
@@ -194,7 +195,7 @@ class _ClientPageState extends State<ClientPage> {
                 contratId: widget.contratId!,
                 marque: widget.marque,
                 modele: widget.modele,
-                immatriculation: _immatriculationVehiculeClientController.text,
+                immatriculation: widget.immatriculation,
               ),
             ),
           );
