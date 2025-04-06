@@ -301,15 +301,28 @@ class _ClientPageState extends State<ClientPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF08004D),
-        title: const Text(
-          'Client',
-          style: TextStyle(color: Colors.white),
+        title: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Text(
+            "${widget.modele} - ${widget.immatriculation}",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: const Color(0xFF08004D),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
         actions: [
           IconButton(
-            icon: Icon(Icons.directions_car, color: Colors.white),
+            icon: const Icon(Icons.directions_car, color: Colors.white),
             onPressed: () => _showVehicleDialog(),
             tooltip: 'Véhicule client',
           ),
