@@ -5,22 +5,21 @@ import 'package:ContraLoc/services/collaborateur_util.dart';
 import '../widget/navigation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:firebase_storage/firebase_storage.dart'; 
-// ignore: depend_on_referenced_packages
 import 'package:intl/intl.dart'; 
-import 'CREATION DE CONTRAT/etat_vehicule.dart';
-import 'CREATION DE CONTRAT/commentaire.dart'; 
 import 'chargement.dart'; 
 import '../widget/CREATION DE CONTRAT/MAIL.DART';
 import 'package:flutter_image_compress/flutter_image_compress.dart'; 
-import 'CREATION DE CONTRAT/voiture_selectionne.dart'; 
-import 'CREATION DE CONTRAT/create_contrat.dart'; 
-import 'CREATION DE CONTRAT/popup_felicitation.dart'; 
-import 'popup_signature.dart'; 
+import 'CREATION DE CONTRAT/popup_felicitation.dart';
+import 'popup_signature.dart';
 import '../models/contrat_model.dart';
+import 'CREATION DE CONTRAT/date_container.dart';
+import 'CREATION DE CONTRAT/kilometrage_container.dart';
+import 'CREATION DE CONTRAT/type_location_container.dart';
+import 'CREATION DE CONTRAT/essence_container.dart';
+import 'CREATION DE CONTRAT/etat_commentaire_container.dart';
 
 class LocationPage extends StatefulWidget {
   final String marque;
@@ -704,9 +703,9 @@ class _LocationPageState extends State<LocationPage> {
     });
   }
 
-  void _removePhoto(int index) {
+  void _removePhoto(File photo) {
     setState(() {
-      _photos.removeAt(index);
+      _photos.remove(photo);
     });
   }
 
@@ -815,14 +814,21 @@ class _LocationPageState extends State<LocationPage> {
     return Scaffold(
       backgroundColor: Colors.white, 
       appBar: AppBar(
-        title: const Text(
-          "Détails de la Location",
-          style: TextStyle(color: Colors.white),
+        title: Padding(
+          padding: const EdgeInsets.only(left: 16), 
+          child: Text(
+            "${widget.modele} - ${widget.immatriculation}",
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
         backgroundColor: const Color(0xFF08004D), 
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
           onPressed: () {
             Navigator.pop(context); 
           },
@@ -832,17 +838,10 @@ class _LocationPageState extends State<LocationPage> {
         children: [
           SingleChildScrollView(
             physics: _isSigning ? const NeverScrollableScrollPhysics() : null,
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                VoitureSelectionne(
-                  marque: widget.marque,
-                  modele: widget.modele,
-                  immatriculation: widget.immatriculation,
-                  firestore: _firestore,
-                ),
-                const SizedBox(height: 30),
                 Center(
                   child: (() {
                     String dateText = _dateDebutController.text;
@@ -885,68 +884,51 @@ class _LocationPageState extends State<LocationPage> {
                     }
                   }()),
                 ),
-                const SizedBox(height: 30),
-                CreateContrat.buildDateField("Date de début",
-                    _dateDebutController, true, context, _selectDateTime),
-                CreateContrat.buildDateField(
-                    "Date de fin théorique",
-                    _dateFinTheoriqueController,
-                    false,
-                    context,
-                    _selectDateTime),
-                CreateContrat.buildTextField(
-                    "Kilométrage de départ", _kilometrageDepartController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ]),
-                CreateContrat.buildTextField(
-                  "Kilométrage Autorisé (km)",
-                  _kilometrageAutoriseController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                const SizedBox(height: 15),
+                DateContainer(
+                  dateDebutController: _dateDebutController,
+                  dateFinTheoriqueController: _dateFinTheoriqueController,
+                  context: context,
+                  selectDateTime: (controller) => _selectDateTime(controller),
                 ),
-                CreateContrat.buildDropdown(_typeLocationController.text, (value) {
-                  setState(() {
-                    _typeLocationController.text = value!;
-                  });
-                }),
-                if (_typeLocationController.text == "Payante" &&
-                    _prixLocationController.text.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      "Veuillez configurer le prix de la location dans sa fiche afin qu'il soit affiché correctement.",
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
+                const SizedBox(height: 15),
+                KilometrageContainer(
+                  kilometrageDepartController: _kilometrageDepartController,
+                  kilometrageAutoriseController: _kilometrageAutoriseController,
+                  context: context,
+                ),
+                const SizedBox(height: 15),
+                TypeLocationContainer(
+                  typeLocation: _typeLocationController.text,
+                  onTypeChanged: (value) {
+                    setState(() {
+                      _typeLocationController.text = value;
+                    });
+                  },
+                  prixLocationController: _prixLocationController,
+                  accompteController: _accompteController,
+                ),
+                const SizedBox(height: 15),
                 if (_typeLocationController.text == "Payante" &&
                     _prixLocationController.text.isNotEmpty) ...[
-                  const SizedBox(height: 35),
-                  CreateContrat.buildPrixLocationField(_prixLocationController),
-                  CreateContrat.buildAccompteField(_accompteController),
-                  const SizedBox(height: 20),
                 ],
-                const SizedBox(height: 20),
-                CreateContrat.buildFuelSlider(_pourcentageEssence, (value) {
-                  setState(() {
-                    _pourcentageEssence = value.toInt();
-                  });
-                }),
-                const SizedBox(height: 20),
-                EtatVehicule(
+                const SizedBox(height: 15),
+                EssenceContainer(
+                  pourcentageEssence: _pourcentageEssence,
+                  onPourcentageChanged: (value) {
+                    setState(() {
+                      _pourcentageEssence = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 15),
+                EtatCommentaireContainer(
                   photos: _photos,
                   onAddPhoto: _addPhoto,
                   onRemovePhoto: _removePhoto,
+                  commentaireController: _commentaireController,
                 ),
-                const SizedBox(height: 20),
-                CommentaireWidget(
-                    controller:
-                        _commentaireController), 
-                const SizedBox(height: 20),
+                const SizedBox(height: 15),
                 
                 // Afficher le conteneur de signature si au moins le nom OU le prénom est présent
                 if ((widget.nom != null && widget.nom!.isNotEmpty) || 

@@ -414,7 +414,7 @@ class _ClientPageState extends State<ClientPage> {
                   _buildFormField(
                     label: "Téléphone", 
                     controller: _telephoneController,
-                    keyboardType: TextInputType.phone
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: false)
                   ),
                   const SizedBox(height: 12),
                   _buildFormField(
@@ -740,6 +740,7 @@ class _ClientPageState extends State<ClientPage> {
           child: TextFormField(
             controller: controller,
             keyboardType: keyboardType,
+            maxLines: null, // Permet un nombre illimité de lignes
             inputFormatters: [
               if (label == "N° Permis") UpperCaseTextFormatter(),
               ...?inputFormatters,
@@ -760,7 +761,7 @@ class _ClientPageState extends State<ClientPage> {
               color: Color(0xFF08004D),
             ),
             decoration: InputDecoration(
-              contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
               isDense: true,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
