@@ -170,17 +170,21 @@ class PlanDisplayState extends State<PlanDisplay> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
+        print('🔄 Forçage de la récupération des données depuis Firestore');
+        
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .collection('authentification')
             .doc(user.uid)
-            .get();
+            .get(GetOptions(source: Source.server));
 
         if (userDoc.exists && mounted) {
           String? cbSubscription = userDoc.data()?['cb_subscription'];
           String? subscriptionId = userDoc.data()?['subscriptionId'];
           String? stripePlanType = userDoc.data()?['stripePlanType'];
+          
+          print('✅ Données authentification récupérées depuis Firestore');
           print(' Firebase cbSubscription: $cbSubscription');
           print(' Firebase subscriptionId: $subscriptionId');
           print(' Firebase stripePlanType: $stripePlanType');

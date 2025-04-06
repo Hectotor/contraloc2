@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:ContraLoc/USERS/Subscription/abonnement_screen.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
 import 'package:flutter/services.dart';
+import 'premium_dialog.dart';
 
 class EtatCommentaireContainer extends StatefulWidget {
   final List<File> photos;
@@ -79,56 +79,7 @@ class _EtatCommentaireContainerState extends State<EtatCommentaireContainer> {
   }
 
   void _showPremiumDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: const Text(
-            "Fonctionnalité Premium",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF08004D),
-            ),
-          ),
-          content: const Text(
-            "La prise de photos de l'état du véhicule est disponible uniquement avec l'abonnement Premium. Souhaitez-vous découvrir nos offres ?",
-            style: TextStyle(fontSize: 16),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                "Plus tard",
-                style: TextStyle(color: Colors.black),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AbonnementScreen(),
-                  ),
-                );
-              },
-              child: const Text(
-                "Voir les offres",
-                style: TextStyle(
-                  color: Color(0xFF08004D),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+    PremiumDialog.show(context);
   }
 
   Future<void> _pickImage() async {
@@ -317,7 +268,6 @@ class _EtatCommentaireContainerState extends State<EtatCommentaireContainer> {
                                     width: 200, // Largeur fixe
                                     margin: const EdgeInsets.symmetric(horizontal: 8),
                                     child: Stack(
-                                      alignment: Alignment.topRight,
                                       children: [
                                         Container(
                                           decoration: BoxDecoration(
@@ -340,18 +290,27 @@ class _EtatCommentaireContainerState extends State<EtatCommentaireContainer> {
                                             ),
                                           ),
                                         ),
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.red,
-                                            borderRadius: BorderRadius.circular(100),
-                                          ),
-                                          padding: const EdgeInsets.all(4),
-                                          child: InkWell(
-                                            onTap: () => widget.onRemovePhoto(widget.photos[index]),
-                                            child: const Icon(
-                                              Icons.close,
-                                              size: 18,
-                                              color: Colors.white,
+                                        Positioned(
+                                          right: 0,
+                                          bottom: 0,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withOpacity(0.6),
+                                              borderRadius: const BorderRadius.only(
+                                                topLeft: Radius.circular(12),
+                                                bottomRight: Radius.circular(12),
+                                              ),
+                                            ),
+                                            padding: const EdgeInsets.all(8),
+                                            child: IconButton(
+                                              icon: const Icon(
+                                                Icons.delete,
+                                                color: Colors.white,
+                                                size: 20,
+                                              ),
+                                              onPressed: () {
+                                                widget.onRemovePhoto(widget.photos[index]);
+                                              },
                                             ),
                                           ),
                                         ),

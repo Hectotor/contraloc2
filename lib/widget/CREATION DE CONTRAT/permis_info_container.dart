@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
-import 'package:ContraLoc/USERS/Subscription/abonnement_screen.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
+import 'image_picker_dialog.dart';
+import 'premium_dialog.dart';
 
 class PermisInfoContainer extends StatefulWidget {
   final TextEditingController numeroPermisController;
@@ -31,8 +32,9 @@ class PermisInfoContainer extends StatefulWidget {
 
 class _PermisInfoContainerState extends State<PermisInfoContainer> {
   bool _showContent = false;
-  final ImagePicker _picker = ImagePicker();
   bool _isPremiumUser = false;
+  File? _rectoImage;
+  File? _versoImage;
 
   @override
   void initState() {
@@ -50,10 +52,20 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
     
     if (mounted) {
       setState(() {
-        // Temporairement forcer à false pour tester le popup
-        _isPremiumUser = false;
+        _isPremiumUser = isPremium;
         print("_isPremiumUser défini à: $_isPremiumUser");
       });
+    }
+  }
+
+  Future<bool> _checkPremiumStatus() async {
+    try {
+      final isPremium = await CollaborateurUtil.isPremiumUser();
+      print("Vérification du statut premium: $isPremium");
+      return isPremium;
+    } catch (e) {
+      print("Erreur lors de la vérification du statut premium: $e");
+      return false;
     }
   }
 
@@ -64,189 +76,51 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
   }
 
   void _showPremiumDialog() {
-    print("_showPremiumDialog appelé");
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        print("Builder du dialogue appelé");
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.lock_outline, size: 48, color: Color(0xFF08004D)),
-                const SizedBox(height: 16),
-                const Text(
-                  "Accès Premium",
-                  style: TextStyle(
-                    color: Color(0xFF08004D),
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  "Cette fonctionnalité est disponible uniquement pour les utilisateurs premium. Passez à l’abonnement supérieur pour en profiter pleinement.",
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 15,
-                    height: 1.4,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF08004D),
-                          side: const BorderSide(color: Color(0xFF08004D), width: 1.2),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        onPressed: () {
-                          print("Bouton 'Plus tard' cliqué");
-                          Navigator.of(context).pop();
-                        },
-                        child: const Text(
-                          "Plus tard",
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF08004D),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        onPressed: () {
-                          print("Bouton 'S'abonner' cliqué");
-                          Navigator.of(context).pop();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const AbonnementScreen(),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          "S'abonner",
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    ).then((_) {
-      print("Dialogue premium fermé");
-    });
+    PremiumDialog.show(context);
   }
 
   // Sélectionner une image
-  Future<void> _selectImage(ImageSource source, bool isRecto) async {
-    print("Vérification du statut premium dans _selectImage: $_isPremiumUser");
-    if (!_isPremiumUser) {
-      print("Utilisateur non premium, affichage du dialogue premium");
-      _showPremiumDialog();
-      return;
-    }
-    
+  Future<void> _selectImage(XFile image, bool isRecto) async {
     try {
-      final XFile? image = await _picker.pickImage(
-        source: source,
-        imageQuality: 70,
-      );
-      
-      if (image != null) {
-        final File imageFile = File(image.path);
+      setState(() {
         if (isRecto) {
-          widget.onRectoImageSelected(imageFile);
+          _rectoImage = File(image.path);
+          widget.onRectoImageSelected(_rectoImage);
         } else {
-          widget.onVersoImageSelected(imageFile);
+          _versoImage = File(image.path);
+          widget.onVersoImageSelected(_versoImage);
         }
-        setState(() {});
-      }
+      });
     } catch (e) {
       print("Erreur lors de la sélection de l'image: $e");
     }
   }
 
+  // Supprimer une image
+  void _removeImage(bool isRecto) {
+    setState(() {
+      if (isRecto) {
+        _rectoImage = null;
+        widget.onRectoImageSelected(null);
+      } else {
+        _versoImage = null;
+        widget.onVersoImageSelected(null);
+      }
+    });
+  }
+
   // Afficher la boîte de dialogue pour choisir la source de l'image
-  void _showImagePickerDialog(bool isRecto) {
-    print("Vérification du statut premium dans _showImagePickerDialog: $_isPremiumUser");
-    if (!_isPremiumUser) {
-      print("Utilisateur non premium, affichage du dialogue premium");
+  Future<void> _showImagePickerDialog(bool isRecto) async {
+    final isPremium = await _checkPremiumStatus();
+    if (!isPremium) {
       _showPremiumDialog();
       return;
     }
     
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        backgroundColor: Colors.white, 
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "Choisir une option",
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF08004D),
-                ),
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                leading: const Icon(Icons.photo_camera, color: Color(0xFF08004D)),
-                title: const Text('Prendre une photo'),
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  await _selectImage(ImageSource.camera, isRecto);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library, color: Color(0xFF08004D)),
-                title: const Text('Choisir depuis la galerie'),
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  await _selectImage(ImageSource.gallery, isRecto);
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
+    ImagePickerDialog.show(
+      context,
+      isRecto,
+      (image) => _selectImage(image, isRecto),
     );
   }
 
@@ -333,10 +207,6 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                         Expanded(
                           child: GestureDetector(
                             onTap: () {
-                              if (!_isPremiumUser) {
-                                _showPremiumDialog();
-                                return;
-                              }
                               _showImagePickerDialog(true);
                             },
                             child: Container(
@@ -351,11 +221,11 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                               height: 150,
                               child: Stack(
                                 children: [
-                                  if (widget.permisRecto != null)
+                                  if (_rectoImage != null)
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(12),
                                       child: Image.file(
-                                        widget.permisRecto!,
+                                        _rectoImage!,
                                         fit: BoxFit.cover,
                                         width: double.infinity,
                                         height: double.infinity,
@@ -402,7 +272,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                         ],
                                       ),
                                     ),
-                                  if (_isPremiumUser && (widget.permisRecto != null || widget.permisRectoUrl != null))
+                                  if (_isPremiumUser && (_rectoImage != null || widget.permisRectoUrl != null))
                                     Positioned(
                                       right: 0,
                                       bottom: 0,
@@ -415,10 +285,15 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                           ),
                                         ),
                                         padding: const EdgeInsets.all(8),
-                                        child: const Icon(
-                                          Icons.edit,
-                                          color: Colors.white,
-                                          size: 20,
+                                        child: IconButton(
+                                          icon: const Icon(
+                                            Icons.delete,
+                                            color: Colors.white,
+                                            size: 20,
+                                          ),
+                                          onPressed: () {
+                                            _removeImage(true);
+                                          },
                                         ),
                                       ),
                                     ),
@@ -431,10 +306,6 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                         Expanded(
                           child: GestureDetector(
                             onTap: () {
-                              if (!_isPremiumUser) {
-                                _showPremiumDialog();
-                                return;
-                              }
                               _showImagePickerDialog(false);
                             },
                             child: Container(
@@ -449,11 +320,11 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                               height: 150,
                               child: Stack(
                                 children: [
-                                  if (widget.permisVerso != null)
+                                  if (_versoImage != null)
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(12),
                                       child: Image.file(
-                                        widget.permisVerso!,
+                                        _versoImage!,
                                         fit: BoxFit.cover,
                                         width: double.infinity,
                                         height: double.infinity,
@@ -500,7 +371,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                         ],
                                       ),
                                     ),
-                                  if (_isPremiumUser && (widget.permisVerso != null || widget.permisVersoUrl != null))
+                                  if (_isPremiumUser && (_versoImage != null || widget.permisVersoUrl != null))
                                     Positioned(
                                       right: 0,
                                       bottom: 0,
@@ -513,10 +384,15 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                           ),
                                         ),
                                         padding: const EdgeInsets.all(8),
-                                        child: const Icon(
-                                          Icons.edit,
-                                          color: Colors.white,
-                                          size: 20,
+                                        child: IconButton(
+                                          icon: const Icon(
+                                            Icons.delete,
+                                            color: Colors.white,
+                                            size: 20,
+                                          ),
+                                          onPressed: () {
+                                            _removeImage(false);
+                                          },
                                         ),
                                       ),
                                     ),

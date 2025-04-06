@@ -466,9 +466,9 @@ class _ClientPageState extends State<ClientPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildPersonalInfo(context),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 15),
                     _buildLicenseInfo(context),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 15),
                     ElevatedButton(
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {

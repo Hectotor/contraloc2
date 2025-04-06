@@ -24,35 +24,8 @@ class CollaborateurUtil {
     }
 
     try {
-      // Utiliser une approche plus rapide pour la récupération des données
-      final userDoc = await _executeWithRetry(
-        operation: () async {
-          try {
-            // Essayer d'abord depuis le cache avec un timeout court
-            try {
-              final docCache = await _firestore.collection('users').doc(user.uid)
-                  .get(GetOptions(source: Source.cache))
-                  .timeout(const Duration(milliseconds: 300));
-              
-              if (docCache.exists) {
-                print('📋 Statut collaborateur récupéré depuis le cache');
-                return docCache;
-              }
-            } catch (cacheError) {
-              // Ignorer les erreurs de cache et passer directement au serveur
-              print('⚠️ Cache non disponible, passage direct au serveur');
-            }
-            
-            // Si pas dans le cache ou erreur de cache, essayer directement depuis le serveur
-            print('🔄 Récupération du statut collaborateur depuis le serveur...');
-            return await _firestore.collection('users').doc(user.uid).get();
-          } catch (e) {
-            print('❌ Erreur lors de la récupération du statut: $e');
-            rethrow;
-          }
-        },
-        maxRetries: 2, // Moins de tentatives pour cette vérification initiale
-      );
+      // Récupérer l'ID de l'utilisateur actuel
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
       
       if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
         final adminId = userDoc.data()?['adminId'];
@@ -79,145 +52,33 @@ class CollaborateurUtil {
   /// Récupère les données d'authentification de l'utilisateur (admin ou collaborateur)
   /// Pour un collaborateur, récupère les données de son administrateur
   static Future<Map<String, dynamic>> getAuthData() async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      return {};
-    }
-    
     try {
-      print('👤 Chargement des données utilisateur...');
+      print('🔄 Forçage de la récupération des données depuis Firestore');
       
-      // Note: La vérification RevenueCat est gérée dans info_user.dart
-
-      // Vérifier si l'utilisateur est un collaborateur
-      final status = await checkCollaborateurStatus();
-      final userId = status['userId'];
-      final isCollaborateur = status['isCollaborateur'] == true;
-      final adminId = status['adminId'];
-      
-      if (isCollaborateur && adminId != null) {
-        // C'est un collaborateur, récupérer les données de l'admin
-        print('👥 Utilisateur collaborateur détecté');
-        print('👥 Administrateur associé: $adminId');
-        
-        // Utiliser _executeWithRetry pour gérer les erreurs de connectivité
-        try {
-          return await _executeWithRetry(
-            operation: () async {
-              try {
-                // Essayer d'abord depuis le cache
-                final docCache = await _firestore
-                    .collection('users')
-                    .doc(adminId)
-                    .collection('authentification')
-                    .doc(adminId)
-                    .get(GetOptions(source: Source.cache));
-                
-                if (docCache.exists) {
-                  print('📋 Données authentification admin récupérées depuis le cache');
-                  return docCache.data() as Map<String, dynamic>;
-                }
-                
-                // Si pas dans le cache, essayer depuis le serveur
-                final docServer = await _firestore
-                    .collection('users')
-                    .doc(adminId)
-                    .collection('authentification')
-                    .doc(adminId)
-                    .get();
-                    
-                if (docServer.exists) {
-                  print('🔄 Données authentification admin récupérées depuis le serveur');
-                  return docServer.data() as Map<String, dynamic>;
-                }
-                
-                throw Exception('Données d\'authentification de l\'admin non trouvées');
-              } catch (e) {
-                // Si c'est une erreur de cache, essayer directement depuis le serveur
-                if (e.toString().contains('Failed to get document from cache')) {
-                  print('⚠️ Cache non disponible, tentative depuis le serveur');
-                  final docServer = await _firestore
-                      .collection('users')
-                      .doc(adminId)
-                      .collection('authentification')
-                      .doc(adminId)
-                      .get();
-                      
-                  if (docServer.exists) {
-                    return docServer.data() as Map<String, dynamic>;
-                  }
-                }
-                rethrow;
-              }
-            }
-          );
-        } catch (e) {
-          print('❌ Erreur récupération données admin: $e');
-          // Si on n'a pas pu récupérer les données de l'admin, utiliser les données du collaborateur
-          final userDoc = await _executeWithRetry(
-            operation: () => _firestore.collection('users').doc(userId).get()
-          );
-          return userDoc.data() as Map<String, dynamic>;
-        }
-      } else {
-        // C'est un administrateur, continuer normalement
-        try {
-          return await _executeWithRetry(
-            operation: () async {
-              try {
-                // Essayer d'abord depuis le cache
-                final docCache = await _firestore
-                    .collection('users')
-                    .doc(user.uid)
-                    .collection('authentification')
-                    .doc(user.uid)
-                    .get(GetOptions(source: Source.cache));
-                
-                if (docCache.exists) {
-                  print('📋 Données authentification admin récupérées depuis le cache');
-                  return docCache.data() as Map<String, dynamic>;
-                }
-                
-                // Si pas dans le cache, essayer depuis le serveur
-                final docServer = await _firestore
-                    .collection('users')
-                    .doc(user.uid)
-                    .collection('authentification')
-                    .doc(user.uid)
-                    .get();
-                    
-                if (docServer.exists) {
-                  print('📋 Données authentification admin récupérées');
-                  return docServer.data() as Map<String, dynamic>;
-                }
-                
-                return {};
-              } catch (e) {
-                // Si c'est une erreur de cache, essayer directement depuis le serveur
-                if (e.toString().contains('Failed to get document from cache')) {
-                  print('⚠️ Cache non disponible, tentative depuis le serveur');
-                  final docServer = await _firestore
-                      .collection('users')
-                      .doc(user.uid)
-                      .collection('authentification')
-                      .doc(user.uid)
-                      .get();
-                      
-                  if (docServer.exists) {
-                    return docServer.data() as Map<String, dynamic>;
-                  }
-                }
-                rethrow;
-              }
-            }
-          );
-        } catch (e) {
-          print('❌ Erreur récupération données authentification: $e');
-          return {};
-        }
+      // Récupérer l'ID de l'utilisateur actuel
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('❌ Aucun utilisateur connecté');
+        return {};
       }
+
+      // Récupérer les données depuis la sous-collection authentification
+      final authDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('authentification')
+          .doc(user.uid)
+          .get(GetOptions(source: Source.server));
+
+      if (!authDoc.exists) {
+        print('❌ Document authentification non trouvé');
+        return {};
+      }
+
+      print('✅ Données authentification récupérées depuis Firestore');
+      return authDoc.data() ?? {};
     } catch (e) {
-      print('❌ Erreur générale récupération données: $e');
+      print('❌ Erreur lors de la récupération des données: $e');
       return {};
     }
   }
@@ -256,34 +117,16 @@ class CollaborateurUtil {
         docRef = docRef.collection(subCollection).doc(subDocId ?? docId);
       }
       
-      // Essayer d'abord depuis le cache sans retry
-      try {
-        final docCache = await docRef.get(GetOptions(source: Source.cache));
-        
-        if (docCache.exists) {
-          print('📋 Document récupéré depuis le cache: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
-          return docCache;
-        }
-      } catch (cacheError) {
-        // Ignorer les erreurs de cache et passer directement au serveur
-        print('⚠️ Cache non disponible, passage au serveur');
+      // Récupérer directement depuis Firestore
+      final docServer = await docRef.get(GetOptions(source: Source.server));
+      
+      if (docServer.exists) {
+        print('✅ Document récupéré depuis Firestore: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
+      } else {
+        print('❌ Document non trouvé: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
       }
       
-      // Si on arrive ici, le document n'est pas dans le cache ou il y a eu une erreur
-      // Utiliser _executeWithRetry pour la récupération depuis le serveur
-      return await _executeWithRetry(
-        operation: () async {
-          final docServer = await docRef.get();
-          
-          if (docServer.exists) {
-            print('🔄 Document récupéré depuis le serveur: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
-          } else {
-            print('⚠️ Document non trouvé: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
-          }
-          
-          return docServer;
-        },
-      );
+      return docServer;
     } catch (e) {
       print('❌ Erreur récupération document: $e');
       throw e;
@@ -327,61 +170,144 @@ class CollaborateurUtil {
         query = queryBuilder(query);
       }
       
-      // Utiliser _executeWithRetry pour gérer les erreurs de connectivité
-      return await _executeWithRetry(
-        operation: () async {
-          try {
-            // Essayer d'abord depuis le cache
-            final queryCache = await query.get(GetOptions(source: Source.cache));
-            
-            if (!queryCache.docs.isEmpty) {
-              print('📋 Collection récupérée depuis le cache: $collection/$docId/$subCollection');
-              return queryCache;
-            }
-            
-            // Si pas dans le cache, essayer depuis le serveur
-            final queryServer = await query.get();
-            
-            print('🔄 Collection récupérée depuis le serveur: $collection/$docId/$subCollection (${queryServer.docs.length} documents)');
-            return queryServer;
-          } catch (e) {
-            // Si c'est une erreur de cache, essayer directement depuis le serveur
-            if (e.toString().contains('Failed to get documents from cache')) {
-              print('⚠️ Cache non disponible, tentative depuis le serveur');
-              final queryServer = await query.get();
-              return queryServer;
-            }
-            rethrow;
-          }
-        },
-      );
+      // Récupérer directement depuis Firestore
+      final queryServer = await query.get(GetOptions(source: Source.server));
+      
+      if (!queryServer.docs.isEmpty) {
+        print('✅ Collection récupérée depuis Firestore: $collection/$docId/$subCollection');
+      } else {
+        print('❌ Collection vide dans Firestore: $collection/$docId/$subCollection');
+      }
+      
+      return queryServer;
     } catch (e) {
-      print('❌ Erreur récupération collection: $e');
+      print('❌ Erreur lors de la récupération de la collection: $e');
       throw e;
     }
   }
 
-  /// Vérifie si l'utilisateur (ou son administrateur) a un abonnement premium
-  /// Cette méthode remplace SubscriptionManager.isPremiumUser()
-  static Future<bool> isPremiumUser() async {
-    final userData = await getAuthData();
-    
-    if (userData.isEmpty) {
-      // Vérifier si c'est un collaborateur sans accès aux données d'authentification
-      final status = await checkCollaborateurStatus();
-      if (status['isCollaborateur'] == true) {
-        print('👥 Collaborateur détecté, accès premium accordé par défaut');
-        return true; // Accorder l'accès premium aux collaborateurs par défaut
+  /// Récupère les données d'abonnement depuis Firestore
+  static Future<Map<String, dynamic>> getSubscriptionData(String userId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('authentification')
+          .doc(userId)
+          .get(GetOptions(source: Source.server));
+
+      if (doc.exists) {
+        final data = doc.data();
+        print('📊 Auth data: $data');
+        return {
+          'subscriptionId': data?['subscriptionId'] ?? 'free',
+          'cb_subscription': data?['cb_subscription'] ?? 'free',
+          'stripePlanType': data?['stripePlanType'] ?? 'free',
+        };
       }
+      return {
+        'subscriptionId': 'free',
+        'cb_subscription': 'free',
+        'stripePlanType': 'free',
+      };
+    } catch (e) {
+      print('⚠️ Error: $e');
+      return {
+        'subscriptionId': 'free',
+        'cb_subscription': 'free',
+        'stripePlanType': 'free',
+      };
+    }
+  }
+
+  /// Vérifie si l'utilisateur (ou son administrateur) a un abonnement premium
+  static Future<bool> isPremiumUser() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    
+    // Récupérer les données de l'utilisateur
+    final userData = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get(GetOptions(source: Source.server));
+
+    if (!userData.exists) {
       return false;
     }
+
+    final userDataMap = userData.data();
     
-    final subscriptionId = userData['subscriptionId'] ?? 'free';
-    final cbSubscription = userData['cb_subscription'] ?? 'free';
-    final stripePlanType = userData['stripePlanType'] ?? 'free';
+    // Vérifier si c'est un collaborateur
+    final isCollaborateur = userDataMap?['role'] == 'collaborateur';
     
-    // Vérifier si l'un des abonnements contient "monthly_access" ou "yearly_access"
-    return subscriptionId.toString().contains('monthly_access') || 
+    if (isCollaborateur) {
+      final adminId = userDataMap?['adminId'];
+      if (adminId != null) {
+        print('👥 Collaborateur trouvé, vérification admin: $adminId');
+        
+        // Récupérer les données de l'admin
+        final adminData = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(adminId)
+            .get(GetOptions(source: Source.server));
+
+        if (!adminData.exists) {
+          return false;
+        }
+        
+        // Vérifier si l'admin a un abonnement premium
+        final adminAuthDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(adminId)
+            .collection('authentification')
+            .doc(adminId)
+            .get(GetOptions(source: Source.server));
+
+        if (!adminAuthDoc.exists) {
+          print('❌ Admin auth document not found');
+          return false;
+        }
+
+        final adminAuthData = adminAuthDoc.data();
+
+        
+        // Vérifier tous les champs possibles
+        final subscriptionId = adminAuthData?['subscriptionId'] ?? 'free';
+        final cbSubscription = adminAuthData?['cb_subscription'] ?? 'free';
+        final stripePlanType = adminAuthData?['stripePlanType'] ?? 'free';
+        
+        return subscriptionId.toString().contains('monthly_access') ||
+               subscriptionId.toString().contains('yearly_access') ||
+               cbSubscription.toString().contains('monthly_access') ||
+               cbSubscription.toString().contains('yearly_access') ||
+               stripePlanType.toString().contains('monthly_access') ||
+               stripePlanType.toString().contains('yearly_access');
+      }
+    }
+
+    // Si ce n'est pas un collaborateur, vérifier sa propre souscription
+    print('👤 Utilisateur standard, vérification de sa propre souscription');
+    final authDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('authentification')
+        .doc(user.uid)
+        .get(GetOptions(source: Source.server));
+
+    if (!authDoc.exists) {
+      print('❌ Auth document not found');
+      return false;
+    }
+
+    final authData = authDoc.data();
+    //print('📊 Auth data: $authData');
+    
+    // Vérifier tous les champs possibles
+    final subscriptionId = authData?['subscriptionId'] ?? 'free';
+    final cbSubscription = authData?['cb_subscription'] ?? 'free';
+    final stripePlanType = authData?['stripePlanType'] ?? 'free';
+    
+    return subscriptionId.toString().contains('monthly_access') ||
            subscriptionId.toString().contains('yearly_access') ||
            cbSubscription.toString().contains('monthly_access') ||
            cbSubscription.toString().contains('yearly_access') ||
@@ -391,44 +317,73 @@ class CollaborateurUtil {
 
   /// Vérifie si l'utilisateur (ou son administrateur) a un abonnement platinum
   static Future<bool> isPlatinumUser() async {
-    final userData = await getAuthData();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
     
-    if (userData.isEmpty) {
-      // Vérifier si c'est un collaborateur sans accès aux données d'authentification
-      final status = await checkCollaborateurStatus();
-      if (status['isCollaborateur'] == true) {
-        // Pour les collaborateurs, on vérifie si l'administrateur a un compte platinum
-        final adminId = status['adminId'];
-        if (adminId != null) {
-          final adminData = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(adminId)
-              .collection('authentification')
-              .doc(adminId)
-              .get();
-          
-          if (adminData.exists && adminData.data() != null) {
-            final adminSubscriptionId = adminData.data()!['subscriptionId'] ?? 'free';
-            final adminCbSubscription = adminData.data()!['cb_subscription'] ?? 'free';
-            final adminStripePlanType = adminData.data()!['stripePlanType'] ?? 'free';
-            
-            return adminSubscriptionId.toString().contains('platinum') || 
-                   adminCbSubscription.toString().contains('platinum') || 
-                   adminStripePlanType.toString().contains('platinum');
-          }
-        }
-        return false;
-      }
+    // Récupérer les données de l'utilisateur
+    final userData = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get(GetOptions(source: Source.server));
+
+    if (!userData.exists) {
       return false;
     }
+
+    final userDataMap = userData.data();
     
-    final subscriptionId = userData['subscriptionId'] ?? 'free';
-    final cbSubscription = userData['cb_subscription'] ?? 'free';
-    final stripePlanType = userData['stripePlanType'] ?? 'free';
+    // Vérifier si c'est un collaborateur
+    final isCollaborateur = userDataMap?['role'] == 'collaborateur';
     
-    // Vérifier si l'un des abonnements contient "platinum"
-    return subscriptionId.toString().contains('platinum') || 
-           cbSubscription.toString().contains('platinum') || 
+    if (isCollaborateur) {
+      final adminId = userDataMap?['adminId'];
+      if (adminId != null) {
+        // Récupérer les données de l'admin
+        final adminAuthDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(adminId)
+            .collection('authentification')
+            .doc(adminId)
+            .get(GetOptions(source: Source.server));
+
+        if (!adminAuthDoc.exists) {
+          return false;
+        }
+
+        final adminAuthData = adminAuthDoc.data();
+        
+        // Vérifier tous les champs possibles pour platinum
+        final subscriptionId = adminAuthData?['subscriptionId'] ?? 'free';
+        final cbSubscription = adminAuthData?['cb_subscription'] ?? 'free';
+        final stripePlanType = adminAuthData?['stripePlanType'] ?? 'free';
+        
+        return subscriptionId.toString().contains('platinum') ||
+               cbSubscription.toString().contains('platinum') ||
+               stripePlanType.toString().contains('platinum');
+      }
+    }
+
+    // Si ce n'est pas un collaborateur, vérifier sa propre souscription
+    final authDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('authentification')
+        .doc(user.uid)
+        .get(GetOptions(source: Source.server));
+
+    if (!authDoc.exists) {
+      return false;
+    }
+
+    final authData = authDoc.data();
+    
+    // Vérifier tous les champs possibles pour platinum
+    final subscriptionId = authData?['subscriptionId'] ?? 'free';
+    final cbSubscription = authData?['cb_subscription'] ?? 'free';
+    final stripePlanType = authData?['stripePlanType'] ?? 'free';
+    
+    return subscriptionId.toString().contains('platinum') ||
+           cbSubscription.toString().contains('platinum') ||
            stripePlanType.toString().contains('platinum');
   }
 
