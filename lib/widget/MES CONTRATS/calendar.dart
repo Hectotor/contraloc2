@@ -101,6 +101,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   void _processContracts(QuerySnapshot snapshot) {
     _reservedContracts.clear();
+    int totalEvents = 0;
     
     for (var doc in snapshot.docs) {
       final contract = doc.data() as Map<String, dynamic>;
@@ -116,9 +117,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
           _reservedContracts[dateKey] = [];
         }
         _reservedContracts[dateKey]!.add(contract);
+        totalEvents++;
       }
     }
-    
+
+    // Mettre à jour le compteur d'événements dans le composant parent
+    if (widget.onEventsCountChanged != null) {
+      widget.onEventsCountChanged!(totalEvents);
+    }
+
     // Vérifier si le widget est toujours monté avant d'appeler setState()
     if (mounted) {
       setState(() {

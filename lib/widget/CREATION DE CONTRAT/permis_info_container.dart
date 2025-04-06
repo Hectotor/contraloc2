@@ -186,6 +186,10 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                     // Champ numéro de permis
                     TextField(
                       controller: widget.numeroPermisController,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                       decoration: InputDecoration(
                         labelText: "Numéro de permis",
                         labelStyle: const TextStyle(
@@ -205,6 +209,15 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                           borderSide: const BorderSide(color: Color(0xFF08004D), width: 2),
                         ),
                       ),
+                      textCapitalization: TextCapitalization.characters,
+                      onChanged: (value) {
+                        if (widget.numeroPermisController.text != value.toUpperCase()) {
+                          widget.numeroPermisController.value = TextEditingValue(
+                            text: value.toUpperCase(),
+                            selection: TextSelection.collapsed(offset: value.length),
+                          );
+                        }
+                      },
                     ),
                     const SizedBox(height: 16),
                     
@@ -380,7 +393,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                         ],
                                       ),
                                     ),
-                                  if (_isPremiumUser && (_versoImage != null || widget.permisVersoUrl != null))
+                                  if (_versoImage != null || widget.permisVersoUrl != null)
                                     Positioned(
                                       right: 0,
                                       bottom: 0,

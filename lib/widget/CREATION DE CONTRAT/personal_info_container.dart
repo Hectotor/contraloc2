@@ -87,7 +87,7 @@ class PersonalInfoContainer extends StatelessWidget {
                   return 'Email non valide';
                 }
                 if (label == 'Téléphone' && value != null && value.isNotEmpty && !_isValidPhone(value)) {
-                  return 'Numéro de téléphone invalide (10 chiffres requis)';
+                  return 'Numéro (10 chiffres requis)';
                 }
                 return null;
               },
