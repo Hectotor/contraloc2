@@ -737,15 +737,21 @@ class _LocationPageState extends State<LocationPage> {
     if (model.prixRayures != null) _rayuresController.text = model.prixRayures!;
     
     // Informations véhicule
-    if (model.typeCarburant != null) _typeCarburantController.text = model.typeCarburant!;
-    if (model.boiteVitesses != null) _boiteVitessesController.text = model.boiteVitesses!;
     if (model.vin != null) _vinController.text = model.vin!;
     
-    // Informations assurance
-    if (model.assuranceNom != null) _assuranceNomController.text = model.assuranceNom!;
+    // Informations assurance    if (model.assuranceNom != null) _assuranceNomController.text = model.assuranceNom!;
     if (model.assuranceNumero != null) _assuranceNumeroController.text = model.assuranceNumero!;
     if (model.franchise != null) _franchiseController.text = model.franchise!;
+    if (model.typeCarburant != null) _typeCarburantController.text = model.typeCarburant!;
+    if (model.boiteVitesses != null) _boiteVitessesController.text = model.boiteVitesses!;
     
+    // Signature
+    if (model.signatureAller != null) {
+      setState(() {
+        _signatureBase64 = model.signatureAller!;
+      });
+    }
+
     // Mise à jour des variables d'état
     setState(() {
       _vehiclePhotoUrl = model.photoVehiculeUrl;

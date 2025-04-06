@@ -203,27 +203,53 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
               ),
               // Titre
-              Padding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 5,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Réservations du ${_formatDate(dateKey)}',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: primaryColor,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Réservations du',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          Text(
+                            _formatDate(dateKey),
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.close, color: Colors.grey[600]),
+                      icon: const Icon(Icons.close, color: Colors.grey),
                       onPressed: () => Navigator.pop(context),
+                      splashRadius: 24,
+                      tooltip: 'Fermer',
                     ),
                   ],
                 ),
               ),
-              Divider(),
+              Divider(height: 0.5, thickness: 0.5, color: Colors.grey[300]),
               // Liste des réservations
               Expanded(
                 child: ListView.builder(
@@ -470,31 +496,46 @@ class _CalendarScreenState extends State<CalendarScreen> {
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
-            leftChevronIcon: Icon(Icons.chevron_left, color: Colors.orange),
-            rightChevronIcon: Icon(Icons.chevron_right, color: Colors.orange),
+            leftChevronIcon: Icon(Icons.chevron_left, color: primaryColor),
+            rightChevronIcon: Icon(Icons.chevron_right, color: primaryColor),
             titleTextFormatter: (date, locale) => DateFormat.yMMMM(locale).format(date),
           ),
           daysOfWeekStyle: DaysOfWeekStyle(
             weekdayStyle: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
-            weekendStyle: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+            weekendStyle: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
           ),
           calendarBuilders: CalendarBuilders(
             markerBuilder: (context, date, events) {
               if (events.isEmpty) return null;
+              
+              // Comparer la date avec la date actuelle
+              final now = DateTime.now();
+              final isFuture = date.isAfter(now);
+              final isPast = date.isBefore(now);
+              
+              // Déterminer la couleur en fonction de la date
+              Color markerColor;
+              if (isFuture) {
+                markerColor = Colors.green;
+              } else if (isPast) {
+                markerColor = Colors.red;
+              } else {
+                markerColor = Colors.orange; // Pour aujourd'hui
+              }
+              
               return Positioned(
                 right: 1,
                 bottom: 1,
                 child: Container(
-                  padding: EdgeInsets.all(4.0),
+                  padding: const EdgeInsets.all(4.0),
                   decoration: BoxDecoration(
                     shape: BoxShape.rectangle,
-
-                    color: Colors.orange,
-
+                    color: markerColor,
+                    borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     '${events.length}',
-                    style: TextStyle(color: Colors.white, fontSize: 10),
+                    style: const TextStyle(color: Colors.white, fontSize: 10),
                   ),
                 ),
               );
