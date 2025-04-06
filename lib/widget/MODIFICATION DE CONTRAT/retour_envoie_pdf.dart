@@ -3,10 +3,10 @@ import 'package:ContraLoc/widget/chargement.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../utils/pdf.dart';
+import 'package:ContraLoc/utils/affichage_contrat_pdf.dart';
 import '../CREATION DE CONTRAT/mail.dart';
-import '../../USERS/contrat_condition.dart';
 import '../../services/collaborateur_util.dart'; // Importer CollaborateurUtil
+import 'package:path_provider/path_provider.dart';
 
 class RetourEnvoiePdf {
   static Future<void> genererEtEnvoyerPdfCloture({
@@ -102,21 +102,10 @@ class RetourEnvoiePdf {
       print('📝 Signature aller récupérée : ${signatureAllerBase64 != null ? 'Présente (${signatureAllerBase64.length} caractères)' : 'Absente'}');
       print('📝 Signature retour récupérée : ${signatureRetourBase64 != null ? 'Présente (${signatureRetourBase64.length} caractères)' : 'Absente'}');
 
-      // Récupérer les données du véhicule
-      final vehicleDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('vehicules')
-          .where('immatriculation', isEqualTo: contratData['immatriculation'])
-          .get();
-
-      final vehicleData = vehicleDoc.docs.isNotEmpty 
-          ? vehicleDoc.docs.first.data() 
-          : {};
-
-      // Générer le PDF de clôture
-      final pdfPath = await generatePdf(
-        {
+      // Générer et afficher le PDF de clôture
+      await AffichageContratPdf.genererEtAfficherContratPdf(
+        context: context,
+        data: {
           'nom': (contratData['nom'] ?? '').toString(),
           'prenom': (contratData['prenom'] ?? '').toString(),
           'adresse': (contratData['adresse'] ?? '').toString(),
@@ -134,54 +123,26 @@ class RetourEnvoiePdf {
           'signatureBase64': signatureBase64 ?? '',
           'signatureRetour': signatureRetourBase64 ?? '',
           'contratId': (contratData['contratId'] ?? '').toString(),
-          
-          // Nouveaux champs ajoutés
-          'nettoyageInt': (contratData['nettoyageInt'] ?? '').toString(),
-          'nettoyageExt': (contratData['nettoyageExt'] ?? '').toString(),
-          'pourcentageEssenceRetour': (contratData['pourcentageEssenceRetour'] ?? '').toString(),
-          'carburantManquant': (contratData['carburantManquant'] ?? '').toString(),
-          'prixRayures': (contratData['prixRayures'] ?? '').toString(),
-          'caution': (contratData['caution'] ?? '').toString(),
-          
-          // Champs supplémentaires
-          'pourcentageEssence': (contratData['pourcentageEssence'] ?? '0').toString(),
-          'typeLocation': (contratData['typeLocation'] ?? '').toString(),
-          'conditions': (contratData['conditions'] ?? ContratModifier.defaultContract).toString(),
+          'nettoyageInt': '',
+          'nettoyageExt': '',
+          'pourcentageEssenceRetour': '',
+          'caution': '',
+          'conditions': '',
+          'dateFinEffectif': dateFinEffectif,
+          'kilometrageRetour': kilometrageRetour,
+          'commentaireRetour': commentaireRetour,
+          'nomEntreprise': nomEntreprise,
+          'logoUrl': logoUrl,
+          'adresseEntreprise': adresse,
+          'telephoneEntreprise': telephone,
+          'siretEntreprise': siret,
         },
-        dateFinEffectif,
-        kilometrageRetour,
-        commentaireRetour,
-        photosRetour,
-        nomEntreprise,
-        logoUrl,
-        adresse,
-        telephone,
-        siret,
-        commentaireRetour,
-        (contratData['typeCarburant'] ?? '').toString(),
-        (contratData['boiteVitesses'] ?? '').toString(),
-        (contratData['vin'] ?? '').toString(),
-        (contratData['assuranceNom'] ?? '').toString(),
-        (contratData['assuranceNumero'] ?? '').toString(),
-        (contratData['franchise'] ?? '').toString(),
-        (contratData['kilometrageSupp'] ?? '').toString(),
-        (contratData['rayures'] ?? '').toString(),
-        (contratData['dateDebut'] ?? '').toString(),
-        (contratData['dateFinTheorique'] ?? '').toString(),
-        (contratData['contratId'] ?? '').toString(),
-        dateFinEffectif,
-        (contratData['kilometrageDepart'] ?? '').toString(),
-        (contratData['kilometrageAutorise'] ?? '').toString(),
-        (contratData['pourcentageEssence'] ?? '0').toString(),
-        (contratData['typeLocation'] ?? '').toString(),
-        (vehicleData['prixLocation'] ?? contratData['prixLocation'] ?? '').toString(),
-        condition: (contratData['conditions'] ?? ContratModifier.defaultContract).toString(),
-        signatureBase64: signatureBase64 ?? '',
-        signatureRetourBase64: signatureRetourBase64 ?? '',
-        signatureAllerBase64: signatureAllerBase64 ?? '',
-        nomCollaborateur: contratData['nomCollaborateur'] != null && contratData['prenomCollaborateur'] != null
-            ? '${contratData['prenomCollaborateur']} ${contratData['nomCollaborateur']}'
-            : null,
+        contratId: (contratData['contratId'] ?? '').toString(),
+        nettoyageIntController: TextEditingController(),
+        nettoyageExtController: TextEditingController(),
+        pourcentageEssenceRetourController: TextEditingController(),
+        cautionController: TextEditingController(),
+        signatureRetourBase64: signatureRetourBase64,
       );
 
       // Fermer le dialogue de chargement
@@ -191,29 +152,30 @@ class RetourEnvoiePdf {
 
       // Envoyer le PDF par email si un email est disponible
       if ((contratData['email'] ?? '').toString().isNotEmpty) {
+        // Le chemin du PDF est maintenant dans le cache local
+        final appDir = await getApplicationDocumentsDirectory();
+        final pdfPath = '${appDir.path}/contrat_${contratData['contratId']}.pdf';
+
         await EmailService.sendClotureEmailWithPdf(
           pdfPath: pdfPath,
           email: (contratData['email'] ?? '').toString(),
           marque: (contratData['marque'] ?? '').toString(),
           modele: (contratData['modele'] ?? '').toString(),
           immatriculation: (contratData['immatriculation'] ?? '').toString(),
+          kilometrageRetour: kilometrageRetour,
+          dateFinEffectif: dateFinEffectif,
+          commentaireRetour: commentaireRetour,
           context: context,
-          prenom: (contratData['prenom'] ?? '').toString(),
-          nom: (contratData['nom'] ?? '').toString(),
+          prenom: contratData['prenom'],
+          nom: contratData['nom'],
           nomEntreprise: nomEntreprise,
           adresse: adresse,
           telephone: telephone,
           logoUrl: logoUrl,
-          kilometrageRetour: kilometrageRetour,
-          dateFinEffectif: dateFinEffectif,
-          commentaireRetour: commentaireRetour,
           nomCollaborateur: contratData['nomCollaborateur'],
           prenomCollaborateur: contratData['prenomCollaborateur'],
         );
-      } else {
-        print("Aucun email client n'a été trouvé. Pas d'envoi de PDF.");
       }
-
       // Récupérer les informations du statut du collaborateur
       final status = await CollaborateurUtil.checkCollaborateurStatus();
       final userId = status['userId'];
