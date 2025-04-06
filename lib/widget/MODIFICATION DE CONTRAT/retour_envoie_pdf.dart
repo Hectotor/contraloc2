@@ -191,7 +191,7 @@ class RetourEnvoiePdf {
 
       // Envoyer le PDF par email si un email est disponible
       if ((contratData['email'] ?? '').toString().isNotEmpty) {
-        await EmailService.sendEmailWithPdf(
+        await EmailService.sendClotureEmailWithPdf(
           pdfPath: pdfPath,
           email: (contratData['email'] ?? '').toString(),
           marque: (contratData['marque'] ?? '').toString(),
@@ -204,6 +204,9 @@ class RetourEnvoiePdf {
           adresse: adresse,
           telephone: telephone,
           logoUrl: logoUrl,
+          kilometrageRetour: kilometrageRetour,
+          dateFinEffectif: dateFinEffectif,
+          commentaireRetour: commentaireRetour,
           nomCollaborateur: contratData['nomCollaborateur'],
           prenomCollaborateur: contratData['prenomCollaborateur'],
         );
