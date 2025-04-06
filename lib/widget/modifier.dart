@@ -522,11 +522,17 @@ class _ModifierScreenState extends State<ModifierScreen> {
                       child: _isUpdatingContrat
                           ? const CircularProgressIndicator(
                               color: Colors.white) 
-                          : const Text(
-                              "Clôturer la location",
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 18),
-                            ),
+                          : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.receipt, color: Colors.white),
+                              SizedBox(width: 10),
+                              Text(
+                                "Clôturer la location",
+                                style: TextStyle(color: Colors.white, fontSize: 18),
+                              ),
+                            ],
+                          ),
                     ),
                   ],
                   const SizedBox(height: 20),
@@ -612,7 +618,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 20),
                         ],
                         if (widget.data['status'] == 'réservé') ...[  
                           ElevatedButton(
@@ -645,7 +651,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 20),
                         ],
                         ElevatedButton(
                           onPressed: () => AffichageContratPdf.genererEtAfficherContratPdf(
@@ -662,12 +668,19 @@ class _ModifierScreenState extends State<ModifierScreen> {
                             backgroundColor: Colors.orange,
                             minimumSize: const Size(double.infinity, 50),
                           ),
-                          child: const Text(
-                            "Afficher le contrat",
-                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.visibility, color: Colors.white),
+                              SizedBox(width: 10),
+                              Text(
+                                "Afficher le contrat",
+                                style: TextStyle(color: Colors.white, fontSize: 18),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: () => AffichageContratPdf.viderCachePdf(context),
                           style: ElevatedButton.styleFrom(
