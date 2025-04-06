@@ -130,7 +130,10 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
       margin: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.20),

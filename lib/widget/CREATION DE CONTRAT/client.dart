@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart'; // Import de l'utilitaire collaborateur
 import 'popup_vehicule_client.dart';
 import 'permis_info_container.dart'; // Import du nouveau composant
+import 'personal_info_container.dart'; // Import du nouveau composant
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
@@ -51,11 +52,11 @@ class ClientPage extends StatefulWidget {
 class _ClientPageState extends State<ClientPage> {
   // Variables d'état
   final _formKey = GlobalKey<FormState>();
-  final _nomController = TextEditingController();
-  final _prenomController = TextEditingController();
-  final _adresseController = TextEditingController();
-  final _telephoneController = TextEditingController();
-  final _emailController = TextEditingController();
+  final TextEditingController _nomController = TextEditingController();
+  final TextEditingController _prenomController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _telephoneController = TextEditingController();
+  final TextEditingController _adresseController = TextEditingController();
   final _numeroPermisController = TextEditingController();
   final _immatriculationVehiculeClientController = TextEditingController();
   final _kilometrageVehiculeClientController = TextEditingController();
@@ -118,9 +119,9 @@ class _ClientPageState extends State<ClientPage> {
           setState(() {
             _nomController.text = data['nom'] ?? '';
             _prenomController.text = data['prenom'] ?? '';
-            _adresseController.text = data['adresse'] ?? '';
-            _telephoneController.text = data['telephone'] ?? '';
             _emailController.text = data['email'] ?? '';
+            _telephoneController.text = data['telephone'] ?? '';
+            _adresseController.text = data['adresse'] ?? '';
             _numeroPermisController.text = data['numeroPermis'] ?? '';
             _immatriculationVehiculeClientController.text = data['immatriculationVehiculeClient'] ?? '';
             _kilometrageVehiculeClientController.text = data['kilometrageVehiculeClient'] ?? '';
@@ -255,85 +256,6 @@ class _ClientPageState extends State<ClientPage> {
     );
   }
 
-  Widget _buildPersonalInfo(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.20),
-            blurRadius: 4,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // En-tête de la carte
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Color(0xFF08004D).withOpacity(0.1),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.person, color: Color(0xFF08004D), size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Informations personnelles",
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF08004D),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Contenu de la carte
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFormField(label: "Prénom", controller: _prenomController),
-                  const SizedBox(height: 12),
-                  _buildFormField(label: "Nom", controller: _nomController),
-                  const SizedBox(height: 12),
-                  _buildFormField(label: "Adresse", controller: _adresseController),
-                  const SizedBox(height: 12),
-                  _buildFormField(
-                    label: "Téléphone", 
-                    controller: _telephoneController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: false)
-                  ),
-                  const SizedBox(height: 12),
-                  _buildFormField(
-                    label: "Email", 
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildLicenseInfo(BuildContext context) {
     return PermisInfoContainer(
       numeroPermisController: _numeroPermisController,
@@ -351,64 +273,6 @@ class _ClientPageState extends State<ClientPage> {
       permisVerso: _permisVerso,
       permisRectoUrl: _permisRectoUrl,
       permisVersoUrl: _permisVersoUrl,
-    );
-  }
-
-  Widget _buildFormField({
-    required String label,
-    required TextEditingController controller,
-    TextInputType keyboardType = TextInputType.text,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 100,
-          child: Text(
-            "$label :",
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: Color(0xFF08004D),
-            ),
-          ),
-        ),
-        Expanded(
-          child: TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            maxLines: null, // Permet un nombre illimité de lignes
-            inputFormatters: [
-              if (label == "N° Permis") UpperCaseTextFormatter(),
-              ...?inputFormatters,
-            ],
-            textCapitalization:
-                (label == "Prénom" || label == "Nom" || label == "Adresse")
-                    ? TextCapitalization.words
-                    : TextCapitalization.none,
-            validator: (value) {
-              // Validation de l'email si le champ n'est pas vide
-              if (label == "Email" && value != null && value.isNotEmpty && !_isValidEmail(value)) {
-                return 'Email non valide';
-              }
-              return null; // Tous les champs sont optionnels
-            },
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF08004D),
-            ),
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-              isDense: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              errorStyle: const TextStyle(color: Colors.red),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -431,10 +295,6 @@ class _ClientPageState extends State<ClientPage> {
     }
     
     return user.uid;
-  }
-
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 
   @override
@@ -465,10 +325,16 @@ class _ClientPageState extends State<ClientPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildPersonalInfo(context),
+                    PersonalInfoContainer(
+                      nomController: _nomController,
+                      prenomController: _prenomController,
+                      emailController: _emailController,
+                      telephoneController: _telephoneController,
+                      adresseController: _adresseController,
+                    ),
                     const SizedBox(height: 15),
                     _buildLicenseInfo(context),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 50),
                     ElevatedButton(
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
@@ -484,9 +350,8 @@ class _ClientPageState extends State<ClientPage> {
                       ),
                       child: const Text(
                         'Suivant',
-                        style: TextStyle(color: Colors.white, fontSize: 18),
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                      
                     ),
                   ],
                 ),
