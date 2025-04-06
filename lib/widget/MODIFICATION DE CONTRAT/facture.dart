@@ -880,6 +880,15 @@ class _FactureScreenState extends State<FactureScreen> {
                                       color: Colors.grey[600],
                                     ),
                                   ),
+                                  if (!_isTTC)
+                                    Text(
+                                      "TVA non applicable\nart. 293 B du CGI",
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
                               ],
                             ),
                           ],
