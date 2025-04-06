@@ -108,10 +108,7 @@ class _TypeLocationContainerState extends State<TypeLocationContainer> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: const Color(0xFF08004D).withOpacity(0.1),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
                   children: [
