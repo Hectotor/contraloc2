@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:ContraLoc/USERS/Subscription/abonnement_screen.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
 import 'package:ContraLoc/widget/MODIFICATION DE CONTRAT/commentaire_retour.dart';
+import 'package:ContraLoc/widget/CREATION DE CONTRAT/premium_dialog.dart';
 
 class EtatVehiculeRetour extends StatefulWidget {
   final List<File> photos;
@@ -55,56 +55,7 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
   }
 
   void _showPremiumDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: const Text(
-            "Fonctionnalité Premium",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF08004D),
-            ),
-          ),
-          content: const Text(
-            "La prise de photos de l'état du véhicule au retour est disponible uniquement avec l'abonnement Premium. Souhaitez-vous découvrir nos offres ?",
-            style: TextStyle(fontSize: 16),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                "Plus tard",
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AbonnementScreen(),
-                  ),
-                );
-              },
-              child: const Text(
-                "Voir les offres",
-                style: TextStyle(
-                  color: Color(0xFF08004D),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+    PremiumDialog.show(context);
   }
 
   Future<void> _pickImage() async {
