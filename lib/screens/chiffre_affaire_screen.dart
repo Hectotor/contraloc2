@@ -94,13 +94,17 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       final String? adminId = isCollaborateur ? userData['adminId'] as String? : null;
       final String userId = isCollaborateur && adminId != null ? adminId : user.uid;
 
-      // Récupérer tous les contrats avec une date de facture (au lieu de contrats clôturés)
+      print('Récupération des contrats pour l\'utilisateur: $userId');
+      
+      // Récupérer tous les contrats avec une date de facture
       QuerySnapshot contratsSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .collection('locations')
-          .where('dateFacture', isNull: false) // Seulement les contrats facturés
+          .where('dateFacture', isNull: false)
           .get();
+
+      print('Nombre de contrats trouvés: ${contratsSnapshot.docs.length}');
 
       // Traiter les contrats
       List<Map<String, dynamic>> contrats = [];
@@ -109,97 +113,67 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       Map<String, Map<String, dynamic>> vehiculesMap = {};
       
       for (var doc in contratsSnapshot.docs) {
+        String contratId = doc.id;
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         
-        // Récupérer les informations du véhicule directement des données du contrat
-        String marque = data['marque'] ?? '';
-        String modele = data['modele'] ?? '';
-        String immatriculation = data['immatriculation'] ?? '';
-        String vehiculeInfoStr = '';
+        // Récupérer les informations du véhicule depuis la collection locations
+        DocumentSnapshot locationDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('locations')
+            .doc(contratId)
+            .get();
+
+        Map<String, dynamic> locationData = locationDoc.data() as Map<String, dynamic>;
         
-        if (marque.isNotEmpty && modele.isNotEmpty) {
-          vehiculeInfoStr = '$marque $modele ($immatriculation)';
-        }
+        // Récupérer les informations du véhicule
+        String marque = locationData['marque'] ?? '';
+        String modele = locationData['modele'] ?? '';
+        String immatriculation = locationData['immatriculation'] ?? '';
+        String vehiculeInfoStr = '$marque $modele ($immatriculation)';
         
-        // Créer un objet vehiculeDetails à partir des données du contrat
-        Map<String, dynamic> vehiculeDetails = {
+        // Ajouter les informations du véhicule au mapping
+        vehiculesMap[vehiculeInfoStr] = {
           'marque': marque,
           'modele': modele,
           'immatriculation': immatriculation,
-          'photoVehiculeUrl': data['photoVehiculeUrl'] ?? '',
+          'photoVehiculeUrl': locationData['photoVehiculeUrl'] ?? '',
         };
         
-        // Ajouter le véhicule à la map des véhicules si pas déjà présent
-        if (!vehiculesMap.containsKey(vehiculeInfoStr) && vehiculeInfoStr.isNotEmpty) {
-          vehiculesMap[vehiculeInfoStr] = vehiculeDetails;
-        }
-        
-        // Récupérer les données financières
-        Map<String, dynamic> factureData = {};
-        double prixLocation = 0;
-        double caution = 0;
-        double coutKmSupplementaires = 0;
-        double fraisNettoyageInterieur = 0;
-        double fraisNettoyageExterieur = 0;
-        double fraisCarburantManquant = 0;
-        double fraisRayuresDommages = 0;
-        double fraisAutre = 0;
-        double remise = 0;
-        String typePaiement = '';
-        String tvaStatus = 'applicable';
-        bool isTTC = true;
-        
-        // Utiliser uniquement la nouvelle structure avec sous-objet facture
-        if (data['facture'] != null && data['facture'] is Map<String, dynamic>) {
-          factureData = data['facture'];
-          prixLocation = _convertToDouble(factureData['facturePrixLocation'] ?? '0');
-          caution = _convertToDouble(factureData['factureCaution'] ?? '0');
-          coutKmSupplementaires = _convertToDouble(factureData['factureCoutKmSupplementaires'] ?? '0');
-          fraisNettoyageInterieur = _convertToDouble(factureData['factureFraisNettoyageInterieur'] ?? '0');
-          fraisNettoyageExterieur = _convertToDouble(factureData['factureFraisNettoyageExterieur'] ?? '0');
-          fraisCarburantManquant = _convertToDouble(factureData['factureFraisCarburantManquant'] ?? '0');
-          fraisRayuresDommages = _convertToDouble(factureData['factureFraisRayuresDommages'] ?? '0');
-          fraisAutre = _convertToDouble(factureData['factureFraisAutre'] ?? '0');
-          remise = _convertToDouble(factureData['factureRemise'] ?? '0');
-          typePaiement = factureData['factureTypePaiement'] ?? '';
-          tvaStatus = factureData['tva'] ?? 'applicable';
-          isTTC = tvaStatus == 'applicable';
-        }
+        // Récupérer les données financières directement du contrat
+        double prixLocation = _convertToDouble(data['facturePrixLocation'] ?? '0');
+        double caution = _convertToDouble(data['factureCaution'] ?? '0');
+        double coutKmSupplementaires = _convertToDouble(data['factureCoutKmSupplementaires'] ?? '0');
+        double fraisNettoyageInterieur = _convertToDouble(data['factureFraisNettoyageInterieur'] ?? '0');
+        double fraisNettoyageExterieur = _convertToDouble(data['factureFraisNettoyageExterieur'] ?? '0');
+        double fraisCarburantManquant = _convertToDouble(data['factureFraisCarburantManquant'] ?? '0');
+        double fraisRayuresDommages = _convertToDouble(data['factureFraisRayuresDommages'] ?? '0');
+        double fraisAutre = _convertToDouble(data['factureFraisAutre'] ?? '0');
+        double remise = _convertToDouble(data['factureRemise'] ?? '0');
+        String typePaiement = data['factureTypePaiement'] ?? '';
+        String tvaStatus = data['tva'] ?? 'applicable';
+        bool isTTC = tvaStatus == 'applicable';
         
         // Récupérer le total des frais s'il existe, sinon le calculer
         double montantTotal = 0;
         
-        if (factureData['factureTotalFrais'] != null && _convertToDouble(factureData['factureTotalFrais']) > 0) {
-          montantTotal = _convertToDouble(factureData['factureTotalFrais']);
+        if (data['factureTotalFrais'] != null && _convertToDouble(data['factureTotalFrais']) > 0) {
+          montantTotal = _convertToDouble(data['factureTotalFrais']);
         } else {
-          // Calculer le total selon que la TVA est applicable ou non
-          double totalBrut = _convertToDouble(factureData['facturePrixLocation'] ?? '0') + 
-                         _convertToDouble(factureData['factureCaution'] ?? '0') + 
-                         _convertToDouble(factureData['factureCoutKmSupplementaires'] ?? '0') + 
-                         _convertToDouble(factureData['factureFraisNettoyageInterieur'] ?? '0') + 
-                         _convertToDouble(factureData['factureFraisNettoyageExterieur'] ?? '0') + 
-                         _convertToDouble(factureData['factureFraisCarburantManquant'] ?? '0') + 
-                         _convertToDouble(factureData['factureFraisRayuresDommages'] ?? '0') + 
-                         _convertToDouble(factureData['factureFraisAutre'] ?? '0');
+          double totalBrut = prixLocation + caution + coutKmSupplementaires + 
+                          fraisNettoyageInterieur + fraisNettoyageExterieur + 
+                          fraisCarburantManquant + fraisRayuresDommages + 
+                          fraisAutre;
           
           if (isTTC) {
-            // Si TVA applicable, le montant est déjà TTC
-            montantTotal = totalBrut - _convertToDouble(factureData['factureRemise'] ?? '0');
+            montantTotal = totalBrut - remise;
           } else {
-            // Si TVA non applicable, le montant est HT
-            montantTotal = totalBrut - _convertToDouble(factureData['factureRemise'] ?? '0');
+            montantTotal = totalBrut - remise;
           }
         }
         
-        // Récupérer la date de facture (au lieu de la date de clôture)
-        DateTime dateFacture;
-        try {
-          // Essayer d'abord de parser comme une date ISO
-          dateFacture = DateTime.parse(data['dateFacture'] ?? DateTime.now().toIso8601String());
-        } catch (e) {
-          // Si ça échoue, utiliser la date actuelle
-          dateFacture = DateTime.now();
-        }
+        // Récupérer la date de facture
+        DateTime dateFacture = (data['dateFacture'] as Timestamp).toDate();
         
         // Ajouter l'année à la liste des années disponibles
         years.add(dateFacture.year.toString());
@@ -207,7 +181,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         // Ajouter à la liste des contrats
         contrats.add({
           'vehiculeInfoStr': vehiculeInfoStr,
-          'vehiculeDetails': vehiculeDetails,
+          'vehiculeDetails': vehiculesMap[vehiculeInfoStr],
           'facturePrixLocation': prixLocation,
           'factureCaution': caution,
           'factureCoutKmSupplementaires': coutKmSupplementaires,
@@ -221,7 +195,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
           'factureTotalFrais': montantTotal,
           'tvaStatus': tvaStatus,
           'isTTC': isTTC,
-          'dateCloture': dateFacture, // On utilise dateFacture mais on garde le nom dateCloture pour compatibilité
+          'dateCloture': dateFacture,
         });
         
         chiffreTotal += montantTotal;
@@ -236,8 +210,9 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       // Mettre à jour l'état
       setState(() {
         _contrats = contrats;
-        _chiffreTotal = chiffreTotal;
+        _detailsVehicules = vehiculesMap;
         _years = sortedYears;
+        _chiffreTotal = chiffreTotal;
         _isLoading = false;
       });
 

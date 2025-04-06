@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'FACTURE/popup_succees.dart';
 
 class FactureScreen extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -446,15 +447,10 @@ class _FactureScreenState extends State<FactureScreen> {
         // Afficher le popup de succès
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Succès'),
-            content: const Text('Facture enregistrée avec succès'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
+          builder: (context) => SuccessPopup(
+            title: 'Succès',
+            message: 'Facture enregistrée avec succès',
+            onConfirm: () => Navigator.pop(context),
           ),
         );
       } catch (e) {
