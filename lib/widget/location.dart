@@ -319,7 +319,7 @@ class _LocationPageState extends State<LocationPage> {
       }
 
       // Récupération des conditions
-      String conditions = await _loadConditions(targetId);
+      String conditions = await _getContractConditions();
 
       // Récupération des données utilisateur
       final adminId = targetId; // Utiliser le targetId comme ID admin
@@ -522,48 +522,67 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   // Méthode pour charger les conditions
-  Future<String> _loadConditions(String targetId) async {
+  Future<String> _getContractConditions() async {
     try {
-      // Vérifier d'abord si le document existe avant d'essayer de le récupérer
-      final userDocRef = _firestore.collection('users').doc(targetId);
-      final contratDocRef = userDocRef.collection('contrats').doc('userId');
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return '';
       
-      // Vérifier si le document existe sans déclencher d'erreur en cas d'absence
-      final docExists = await _firestore.runTransaction<bool>((transaction) async {
-        try {
-          final docSnapshot = await transaction.get(contratDocRef);
-          return docSnapshot.exists;
-        } catch (e) {
-          // En cas d'erreur de connectivité, supposer que le document n'existe pas
-          print('Vérification de l\'existence du document impossible: $e');
-          return false;
-        }
-      }).timeout(const Duration(seconds: 5), onTimeout: () => false);
+      print('Utilisateur actuel: ${user.uid}');
       
-      if (docExists) {
-        // Le document existe, on peut le récupérer
-        final conditionsDoc = await CollaborateurUtil.getDocument(
-          collection: 'users',
-          docId: targetId,
-          subCollection: 'contrats',
-          subDocId: 'userId',
-          useAdminId: true,
-        );
+      // Récupérer les données de l'utilisateur
+      final userData = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get(GetOptions(source: Source.server));
 
-        if (conditionsDoc.exists) {
-          final data = conditionsDoc.data() as Map<String, dynamic>?;
-          return data?['texte'] ?? '';
-        }
-      } else {
-        // Le document n'existe pas, essayer d'autres sources
-        print('Document de conditions personnalisées non trouvé, utilisation des conditions par défaut');
-        final defaultConditionsDoc = await _firestore.collection('contrats').doc('default').get();
-        return (defaultConditionsDoc.data())?['texte'] ?? ContratModifier.defaultContract;
+      if (!userData.exists) {
+        print('❌ Données utilisateur non trouvées');
+        return '';
       }
+
+      final userDataMap = userData.data();
+      print('Données utilisateur: $userDataMap');
+      
+      // Vérifier si c'est un collaborateur
+      final isCollaborateur = userDataMap?['role'] == 'collaborateur';
+      
+      if (isCollaborateur) {
+        final adminId = userDataMap?['adminId'];
+        if (adminId != null) {
+          print('👥 Collaborateur trouvé, vérification admin: $adminId');
+          
+          // Vérifier d'abord si le document existe
+          final conditionsRef = FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('contrats')
+              .doc('userId');
+              
+          print('Vérification du chemin: ${conditionsRef.path}');
+          
+          // Essayons d'accéder au document
+          final conditionsDoc = await conditionsRef
+              .get(GetOptions(source: Source.server));
+
+          if (conditionsDoc.exists) {
+            print('✅ Document trouvé');
+            final data = conditionsDoc.data();
+            print('Contenu du document: $data');
+            return data?['texte'] ?? data?['conditions'] ?? '';
+          } else {
+            print('❌ Document non trouvé');
+            return '';
+          }
+        }
+      }
+      
+      // Si ce n'est pas un collaborateur, utiliser les conditions par défaut
+      print('ℹ️ Utilisation des conditions par défaut');
+      return ContratModifier.defaultContract;
     } catch (e) {
-      print('Erreur lors de la récupération des conditions: $e');
+      print('❌ Erreur lors de la récupération des conditions: $e');
+      return '';
     }
-    return ContratModifier.defaultContract;
   }
 
   // Méthode pour récupérer les données du collaborateur

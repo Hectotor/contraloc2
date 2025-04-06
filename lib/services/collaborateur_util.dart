@@ -92,47 +92,68 @@ class CollaborateurUtil {
     String? subDocId,
     bool useAdminId = false,
   }) async {
-    final status = await checkCollaborateurStatus();
-    final userId = status['userId'];
-    
-    if (userId == null) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
       throw Exception('Utilisateur non connecté');
     }
-    
-    // Déterminer l'ID à utiliser
-    final targetId = (useAdminId && status['isCollaborateur']) 
-        ? status['adminId'] 
-        : userId;
-    
-    if (targetId == null) {
-      throw Exception('ID cible non disponible');
+
+    // Récupérer les données de l'utilisateur
+    final userData = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get(GetOptions(source: Source.server));
+
+    if (!userData.exists) {
+      throw Exception('Données utilisateur non trouvées');
     }
+
+    final userDataMap = userData.data();
     
-    try {
-      // Construire la référence au document
-      DocumentReference docRef = _firestore.collection(collection).doc(docId);
-      
-      // Ajouter la sous-collection si nécessaire
-      if (subCollection != null) {
-        docRef = docRef.collection(subCollection).doc(subDocId ?? docId);
+    // Vérifier si c'est un collaborateur
+    final isCollaborateur = userDataMap?['role'] == 'collaborateur';
+    
+    if (isCollaborateur && useAdminId) {
+      final adminId = userDataMap?['adminId'];
+      if (adminId != null) {
+        print('👥 Collaborateur trouvé, accès aux données admin: $adminId');
+        
+        // Récupérer les données de l'admin
+        final adminDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(adminId)
+            .get(GetOptions(source: Source.server));
+
+        if (!adminDoc.exists) {
+          throw Exception('Données administrateur non trouvées');
+        }
+
+        // Construire la référence au document
+        DocumentReference docRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(adminId);
+        
+        if (subCollection != null && subDocId != null) {
+          docRef = docRef.collection(subCollection).doc(subDocId);
+        }
+
+        print('Requête Firestore pour collaborateur: users/$adminId/${subCollection ?? ''}/${subDocId ?? ''}');
+        return await docRef.get(GetOptions(source: Source.server));
       }
-      
-      // Récupérer directement depuis Firestore
-      final docServer = await docRef.get(GetOptions(source: Source.server));
-      
-      if (docServer.exists) {
-        print('✅ Document récupéré depuis Firestore: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
-      } else {
-        print('❌ Document non trouvé: $collection/$docId${subCollection != null ? "/$subCollection/${subDocId ?? docId}" : ""}');
-      }
-      
-      return docServer;
-    } catch (e) {
-      print('❌ Erreur récupération document: $e');
-      throw e;
     }
+
+    // Pour un utilisateur normal ou si on ne veut pas utiliser l'adminId
+    DocumentReference docRef = FirebaseFirestore.instance
+        .collection(collection)
+        .doc(docId);
+
+    if (subCollection != null && subDocId != null) {
+      docRef = docRef.collection(subCollection).doc(subDocId);
+    }
+
+    print('Requête Firestore normale: $collection/$docId/${subCollection ?? ''}/${subDocId ?? ''}');
+    return await docRef.get(GetOptions(source: Source.server));
   }
-  
+
   /// Récupère les documents d'une collection spécifique
   /// Pour un collaborateur, utilise l'ID de l'administrateur si nécessaire
   static Future<QuerySnapshot> getCollection({
