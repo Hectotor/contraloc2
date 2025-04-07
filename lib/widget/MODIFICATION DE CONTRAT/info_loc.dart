@@ -104,7 +104,7 @@ class _InfoLocState extends State<InfoLoc> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.purple[700]!.withOpacity(0.1),
+                color: Colors.teal[700]!.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -112,21 +112,21 @@ class _InfoLocState extends State<InfoLoc> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.calendar_today, color: Colors.purple[700], size: 24),
+                      Icon(Icons.calendar_today, color: Colors.teal[700], size: 24),
                       const SizedBox(width: 12),
                       Text(
                         "Informations de la location",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.purple[700],
+                          color: Colors.teal[700],
                         ),
                       ),
                     ],
                   ),
                   Icon(
                     _showContent ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    color: Colors.purple[700],
+                    color: Colors.teal[700],
                     size: 24,
                   ),
                 ],
@@ -162,14 +162,14 @@ class _InfoLocState extends State<InfoLoc> {
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        Icon(Icons.photo_library, color: Colors.purple[700], size: 24),
+                        Icon(Icons.photo_library, color: Colors.teal[700], size: 24),
                         const SizedBox(width: 12),
                         Text(
                           "Photos de la location",
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.purple[700],
+                            color: Colors.teal[700],
                           ),
                         ),
                       ],
@@ -216,7 +216,7 @@ class _InfoLocState extends State<InfoLoc> {
                                               ? loadingProgress.cumulativeBytesLoaded /
                                                   loadingProgress.expectedTotalBytes!
                                               : null,
-                                          color: Colors.purple[700],
+                                          color: Colors.teal[700],
                                         ),
                                       ),
                                     );
@@ -235,14 +235,14 @@ class _InfoLocState extends State<InfoLoc> {
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        Icon(Icons.comment, color: Colors.purple[700], size: 24),
+                        Icon(Icons.comment, color: Colors.teal[700], size: 24),
                         const SizedBox(width: 12),
                         Text(
                           "Commentaire",
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.purple[700],
+                            color: Colors.teal[700],
                           ),
                         ),
                       ],
@@ -272,10 +272,10 @@ class _InfoLocState extends State<InfoLoc> {
           width: 100,
           child: Text(
             "$label :",
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
-              color: Color(0xFF08004D),
+              color: Colors.teal[700],
             ),
           ),
         ),
@@ -323,7 +323,7 @@ class _InfoLocState extends State<InfoLoc> {
             ElevatedButton(
               onPressed: () {
                 setState(() {
-                  _isLoading = true;
+                  _isLoading = false;
                 });
                 _checkPermissions();
               },

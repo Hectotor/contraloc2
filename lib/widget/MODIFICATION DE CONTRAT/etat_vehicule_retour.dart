@@ -140,11 +140,10 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+          BoxShadow(  
+            color: Colors.black.withOpacity(0.20),
+            blurRadius: 4,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -157,7 +156,7 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.orange[700]!.withOpacity(0.1),
+                color: Colors.teal[700]!.withOpacity(0.1),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -168,21 +167,21 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.car_repair, color: Colors.orange[700], size: 24),
+                      Icon(Icons.car_repair, color: Colors.teal[700], size: 24),
                       const SizedBox(width: 12),
                       Text(
                         "État du véhicule au retour",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.orange[700],
+                          color: Colors.teal[700],
                         ),
                       ),
                     ],
                   ),
                   Icon(
                     _showContent ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    color: Colors.orange[700],
+                    color: Colors.teal[700],
                     size: 24,
                   ),
                 ],
@@ -204,17 +203,17 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.orange.shade200),
+                          border: Border.all(color: Colors.teal.shade200),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock, color: Colors.orange[700], size: 20),
+                            Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock, color: Colors.teal[700], size: 20),
                             const SizedBox(width: 10),
                             Text(
                               isPremiumUser ? "Ajouter des photos" : "Fonctionnalité Premium",
                               style: TextStyle(
-                                color: Colors.orange[700],
+                                color: Colors.teal[700],
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
                               ),

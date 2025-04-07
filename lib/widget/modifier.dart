@@ -66,6 +66,20 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  String _formatStatus(String? status) {
+    if (status == null) return '';
+    switch (status) {
+      case 'en_cours':
+        return 'EN COURS';
+      case 'restitue':
+        return 'RESTITUÉS';
+      case 'supprime':
+        return 'SUPPRIMÉS';
+      default:
+        return status.replaceAll('_', ' ').toUpperCase();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -411,16 +425,16 @@ class _ModifierScreenState extends State<ModifierScreen> {
        
       appBar: AppBar(
         title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              widget.data['status'] ?? '',
-              style: const TextStyle(fontSize: 20),
+              _formatStatus(widget.data['status']),
+              style: const TextStyle(fontSize: 16, color: Colors.white,),
             ),
             const SizedBox(height: 4),
             Text(
               '${widget.data['modele'] ?? ''} - ${widget.data['immatriculation'] ?? ''}',
-              style: const TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -447,7 +461,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                     data: widget.data,
                     onShowFullScreenImages: _showFullScreenImages,
                   ),
-                  const SizedBox(height: 50),
+                  const SizedBox(height: 20),
                   InfoLoc(
                     data: widget.data,
                     onShowFullScreenImages: _showFullScreenImages,
@@ -459,7 +473,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                       onShowFullScreenImages: _showFullScreenImages,
                     ),
                   ],
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 20),
                   if (widget.data['status'] == 'en_cours') ...[
                     RetourLoc(
                       dateFinEffectifController: _dateFinEffectifController,
@@ -470,7 +484,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                       dateDebut: _parseDateWithFallback(widget.data['dateDebut']),
                       onFraisUpdated: (frais) {},
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 20),
                     EtatVehiculeRetour(
                       photos: _photosRetour,
                       onAddPhoto: _addPhotoRetour,

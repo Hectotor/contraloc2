@@ -18,7 +18,7 @@ class CommentaireRetourWidget extends StatelessWidget {
         suffixIcon: Padding(
           padding: const EdgeInsets.only(bottom: 64),
           child: IconButton(
-            icon: Icon(Icons.check_circle, color: Colors.orange[200]!),
+            icon: Icon(Icons.check_circle, color: Colors.teal[200]!),
             onPressed: () {
               // Fermer le clavier
               FocusScope.of(context).unfocus();
@@ -29,21 +29,21 @@ class CommentaireRetourWidget extends StatelessWidget {
 
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.orange[200]!),
+          borderSide: BorderSide(color: Colors.teal[200]!),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.orange[200]!),
+          borderSide: BorderSide(color: Colors.teal[200]!),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.orange[200]!),
+          borderSide: BorderSide(color: Colors.teal[200]!),
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       ),
       style: TextStyle(
         fontSize: 16,
-        color: Colors.orange[800],
+        color: Colors.teal[800],
       ),
     );
   }

@@ -15,7 +15,7 @@ class InfoClient extends StatefulWidget {
 }
 
 class _InfoClientState extends State<InfoClient> {
-  bool _showContent = true;
+  bool _showContent = false;
 
   void _handleHeaderTap() {
     setState(() {
@@ -202,10 +202,10 @@ class _InfoClientState extends State<InfoClient> {
           width: 100,
           child: Text(
             "$label :",
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
-              color: Color(0xFF08004D),
+              color: Colors.teal[700],
             ),
           ),
         ),
