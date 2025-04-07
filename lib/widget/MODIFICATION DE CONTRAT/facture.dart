@@ -5,6 +5,9 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'FACTURE/popup_succees.dart';
+import 'prix_location.dart';
+import 'total_container.dart';
+import 'kilometrage_Facture_container.dart';
 
 class FactureScreen extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -510,238 +513,27 @@ class _FactureScreenState extends State<FactureScreen> {
                   _buildHeader(),
                   const SizedBox(height: 24),
 
-                  // Section des frais principaux
-                  _buildSection(
-                    title: "Prix de location (Prix / 24h)",
-                    icon: Icons.attach_money,
-                    color: Colors.green[700]!,
-                    children: [
-                      // Champ de date de début
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: TextFormField(
-                          initialValue: widget.data['dateDebut'] ?? '',
-                          decoration: InputDecoration(
-                            labelText: "Date de début",
-                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          ),
-                          readOnly: true,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                      
-                      // Champ de date de fin effective
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: TextFormField(
-                          initialValue: widget.dateFinEffective,
-                          decoration: InputDecoration(
-                            labelText: "Date de fin effective",
-                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          ),
-                          readOnly: true,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                      
-                      // Champ du prix de location initial
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: TextFormField(
-                          initialValue: widget.data['prixLocation'] ?? '',
-                          decoration: InputDecoration(
-                            labelText: "Prix de location initial",
-                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            prefixText: '€',
-                          ),
-                          readOnly: true,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                      
-                      // Prix de location total
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: TextFormField(
-                          controller: _fraisPrixLocationController,
-                          decoration: InputDecoration(
-                            labelText: "Prix de location total",
-                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            prefixText: '€',
-                            helperText: "Calculé automatiquement, mais modifiable",
-                            helperStyle: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
-                          ),
-                          enabled: true,
-                          readOnly: false,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\,?\d{0,2}')),
-                          ],
-                          onChanged: (value) {
-                            // Marquer explicitement que ce champ a été modifié manuellement
-                            setState(() {
-                              widget.data['facturePrixLocation'] = null; // Force la détection de modification
-                              _calculerTotal();
-                            });
-                          },
-                        ),
-                      ),
-                    ],
+                  // Prix de location
+                  PrixLocationWidget(
+                    data: widget.data,
+                    prixLocationController: _fraisPrixLocationController,
                   ),
-                  const SizedBox(height: 24),
 
-                  // Section des frais kilométriques
+                  // Frais kilométriques
+                  const SizedBox(height: 24),
                   _buildSection(
                     title: "Frais kilométriques",
                     icon: Icons.directions_car,
                     color: Colors.blue[700]!,
                     children: [
-                      // Champ de kilométrage de départ
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: TextFormField(
-                          controller: _kmDepartController,
-                          decoration: InputDecoration(
-                            labelText: "Kilométrage de départ",
-                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            suffixText: 'km',
-                          ),
-                          readOnly: true,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
-
-                      // Champ de kilométrage autorisé
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: TextFormField(
-                          controller: _kmAutoriseController,
-                          decoration: InputDecoration(
-                            labelText: "Kilométrage autorisé",
-                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            suffixText: 'km',
-                          ),
-                          readOnly: true,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
-
-                      // Champ du tarif kilométrique
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: TextFormField(
-                          controller: _kmSuppController,
-                          decoration: InputDecoration(
-                            labelText: "Tarif kilométrique",
-                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            suffixText: '€/km',
-                          ),
-                          readOnly: true,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                      
-                      // Champ du kilométrage de retour
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: TextFormField(
-                          controller: _kmRetourController,
-                          decoration: InputDecoration(
-                            labelText: "Kilométrage de retour",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.check_circle),
-                              onPressed: () {
-                                // Fermer le clavier
-                                FocusScope.of(context).unfocus();
-                              },
-                            ),
-                          ),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\,?\d{0,2}')),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _calculerTotal();
-                            });
-                          },
-                        ),
-                      ),
-                      
-                      // Champ des frais kilométriques
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: TextFormField(
-                          controller: _fraisKilometriqueController,
-                          decoration: InputDecoration(
-                            labelText: "Frais kilométriques",
-                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            prefixText: '€',
-                            helperText: "Calculé automatiquement, mais modifiable",
-                            helperStyle: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
-                          ),
-                          enabled: true,
-                          readOnly: false,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\,?\d{0,2}')),
-                          ],
-                          onChanged: (value) {
-                            // Marquer explicitement que ce champ a été modifié manuellement
-                            setState(() {
-                              widget.data['factureFraisKilometrique'] = null; // Force la détection de modification
-                              _calculerTotal();
-                            });
-                          },
-                        ),
+                      KilometrageFactureContainer(
+                        fraisKilometriqueController: _fraisKilometriqueController,
+                        onFraisKilometriqueChanged: () {
+                          setState(() {
+                            widget.data['factureFraisKilometrique'] = null; // Force la détection de modification
+                            _calculerTotal();
+                          });
+                        },
                       ),
                     ],
                   ),
@@ -845,145 +637,10 @@ class _FactureScreenState extends State<FactureScreen> {
                     icon: Icons.attach_money,
                     color: Colors.green[700]!,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(24.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Total',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '${_total.toStringAsFixed(2).replaceAll('.', ',')}€ TTC',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green[700],
-                                  ),
-                                ),
-                                if (_isTTC)
-                                  Text(
-                                    'TVA 20% incluse',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontStyle: FontStyle.italic,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                  if (!_isTTC)
-                                    Text(
-                                      "TVA non applicable\nart. 293 B du CGI",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontStyle: FontStyle.italic,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                              ],
-                            ),
-                          ],
-                        ),
+                      TotalContainer(
+                        total: _total,
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 15),
-                  Container(
-                    padding: const EdgeInsets.all(15),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-          BoxShadow(  
-            color: Colors.black.withOpacity(0.20),
-            blurRadius: 4,
-            offset: const Offset(0, 4),
-          ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'TVA',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF08004D),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Bouton TVA applicable
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _isTTC = true;
-                                    _calculerTotal();
-                                  });
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _isTTC ? Color(0xFF08004D) : Colors.grey.shade200,
-                                  foregroundColor: _isTTC ? Colors.white : Colors.black87,
-                                  elevation: _isTTC ? 2 : 0,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.only(
-                                      topLeft: Radius.circular(8),
-                                      bottomLeft: Radius.circular(8),
-                                    ),
-                                  ),
-                                ),
-                                child: Text(
-                                  'Applicable',
-                                  style: TextStyle(fontSize: 16, fontWeight: _isTTC ? FontWeight.bold : FontWeight.normal),
-                                ),
-                              ),
-                            ),
-                            // Bouton TVA non applicable
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _isTTC = false;
-                                    _calculerTotal();
-                                  });
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: !_isTTC ? Color(0xFF08004D) : Colors.grey.shade200,
-                                  foregroundColor: !_isTTC ? Colors.white : Colors.black87,
-                                  elevation: !_isTTC ? 2 : 0,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.only(
-                                      topRight: Radius.circular(8),
-                                      bottomRight: Radius.circular(8),
-                                    ),
-                                  ),
-                                ),
-                                child: Text(
-                                  'Non applicable',
-                                  style: TextStyle(fontSize: 16, fontWeight: !_isTTC ? FontWeight.bold : FontWeight.normal),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
                   ),
                   const SizedBox(height: 24),
 
@@ -1130,8 +787,6 @@ class _FactureScreenState extends State<FactureScreen> {
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           prefixText: '€',
-          helperText: isEditable ? "Modifiable" : null,
-          helperStyle: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
         ),
         keyboardType: TextInputType.number,
         readOnly: !isEditable,
