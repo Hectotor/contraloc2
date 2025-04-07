@@ -82,7 +82,7 @@ class AffichageContratPdf {
       final contratMisAJour = contratModel.copyWith(
         dateRetour: data['dateFinEffectif'],
         kilometrageRetour: data['kilometrageRetour'],
-        commentaire: data['commentaireRetour'],
+        commentaireRetour: data['commentaireRetour'],
         signatureRetour: signatureRetourBase64,
         pourcentageEssenceRetour: int.tryParse(pourcentageEssenceRetourController.text.isNotEmpty 
             ? pourcentageEssenceRetourController.text 

@@ -391,7 +391,7 @@ Future<String> generatePdf(
                                     fontSize: 12,
                                     font: boldFont,
                                     color: PdfColors.black)),
-                            pw.Text(contratModel.commentaire ?? '',
+                            pw.Text(contratModel.commentaireRetour ?? '',
                                 style: pw.TextStyle(font: ttf)),
                           ],
                         ),

@@ -73,7 +73,7 @@ class _LocationPageState extends State<LocationPage> {
   int _pourcentageEssence = 50; 
   bool _isLoading = false; 
   bool _acceptedConditions = false; 
-  String _signatureBase64 = ''; 
+  String _signatureAller = ''; 
   bool _isSigning = false;
   String? _vehiclePhotoUrl; 
 
@@ -200,8 +200,8 @@ class _LocationPageState extends State<LocationPage> {
           // Charger la signature si elle existe
           if (contractData['signature_aller'] != null) {
             setState(() {
-              _signatureBase64 = contractData['signature_aller'];
-              if (_signatureBase64.isNotEmpty) {
+              _signatureAller = contractData['signature_aller'];
+              if (_signatureAller.isNotEmpty) {
                 _acceptedConditions = true; // Si une signature existe, les conditions ont été acceptées
               }
             });
@@ -389,7 +389,7 @@ class _LocationPageState extends State<LocationPage> {
         status: _determineContractStatus(),
         dateReservation: _calculateReservationDate(),
         dateCreation: Timestamp.now(),
-        signatureAller: _signatureBase64,
+        signatureAller: _signatureAller,
         assuranceNom: _assuranceNomController.text.isNotEmpty ? _assuranceNomController.text : null,
         assuranceNumero: _assuranceNumeroController.text.isNotEmpty ? _assuranceNumeroController.text : null,
         franchise: _franchiseController.text.isNotEmpty ? _franchiseController.text : null,
@@ -611,13 +611,7 @@ class _LocationPageState extends State<LocationPage> {
                                   String prenomCollaborateur) async {
     try {
       // Mettre à jour les informations de l'entreprise dans le modèle de contrat
-      contratModel = contratModel.copyWith(
-        nomEntreprise: nomEntreprise,
-        logoUrl: logoUrl,
-        adresseEntreprise: adresseEntreprise,
-        telephoneEntreprise: telephoneEntreprise,
-        siretEntreprise: siretEntreprise
-      );
+      contratModel = contratModel.copyWith();
       
       // Appel à la nouvelle fonction generatePdf avec ContratModel
       final pdfPath = await generatePdf(
@@ -645,7 +639,7 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   Future<void> _captureSignature() async {
-    if (_signatureBase64.isEmpty) {
+    if (_signatureAller.isEmpty) {
       print('Aucune signature disponible');
       return;
     }
@@ -785,7 +779,7 @@ class _LocationPageState extends State<LocationPage> {
     // Signature
     if (model.signatureAller != null) {
       setState(() {
-        _signatureBase64 = model.signatureAller!;
+        _signatureAller = model.signatureAller!;
       });
     }
 
@@ -974,7 +968,7 @@ class _LocationPageState extends State<LocationPage> {
                       ),
                       if (_acceptedConditions) ...[
                         const SizedBox(height: 15),
-                        if (_signatureBase64.isNotEmpty) ...[
+                        if (_signatureAller.isNotEmpty) ...[
                           Container(
                             width: double.infinity,
                             height: 100,
@@ -984,7 +978,7 @@ class _LocationPageState extends State<LocationPage> {
                               border: Border.all(color: Colors.grey.shade300),
                             ),
                             child: Image.memory(
-                              Uri.parse('data:image/png;base64,$_signatureBase64').data!.contentAsBytes(),
+                              Uri.parse('data:image/png;base64,$_signatureAller').data!.contentAsBytes(),
                               fit: BoxFit.contain,
                             ),
                           ),
@@ -999,17 +993,17 @@ class _LocationPageState extends State<LocationPage> {
                                 checkboxText: 'J\'accepte les conditions de location',
                                 nom: widget.nom,
                                 prenom: widget.prenom,
-                                existingSignature: _signatureBase64,
+                                existingSignature: _signatureAller,
                               );
                               
                               if (signature != null) {
                                 setState(() {
-                                  _signatureBase64 = signature;
+                                  _signatureAller = signature;
                                 });
                               }
                             },
                             icon: const Icon(Icons.edit),
-                            label: Text(_signatureBase64.isEmpty ? 'Signer le contrat' : 'Modifier la signature'),
+                            label: Text(_signatureAller.isEmpty ? 'Signer le contrat' : 'Modifier la signature'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF08004D),
                               foregroundColor: Colors.white,
