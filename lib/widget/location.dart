@@ -101,6 +101,8 @@ class _LocationPageState extends State<LocationPage> {
   String? _logoUrl;
   final TextEditingController _siretController = TextEditingController();
 
+  String _selectedPaymentMethod = 'Espèces';
+
   @override
   void initState() {
     super.initState();
@@ -410,6 +412,7 @@ class _LocationPageState extends State<LocationPage> {
         nomCollaborateur: nomCollaborateur,
         prenomCollaborateur: prenomCollaborateur,
         conditions: conditions,
+        methodePaiement: _selectedPaymentMethod,
       );
 
       // Sauvegarde dans Firestore
@@ -426,6 +429,7 @@ class _LocationPageState extends State<LocationPage> {
           contratModel, 
           _nomEntrepriseController.text, 
           _logoUrl ?? '', 
+          
           _adresseController.text, 
           _telephoneController.text, 
           _siretController.text, 
@@ -881,9 +885,19 @@ class _LocationPageState extends State<LocationPage> {
               children: [
                 TypeLocationContainer(
                   typeLocation: _typeLocationController.text,
-                  onTypeChanged: (value) {
+                  onTypeChanged: (type) {
                     setState(() {
-                      _typeLocationController.text = value;
+                      _typeLocationController.text = type;
+                    });
+                  },
+                  onAccompteChanged: (value) {
+                    setState(() {
+                      _accompteController.text = value;
+                    });
+                  },
+                  onPaymentMethodChanged: (method) {
+                    setState(() {
+                      _selectedPaymentMethod = method;
                     });
                   },
                   prixLocationController: _prixLocationController,

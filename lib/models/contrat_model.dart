@@ -51,6 +51,7 @@ class ContratModel {
   final Timestamp? dateCreation;
   final String? signatureAller;
   final String? signatureRetour;
+  final String? methodePaiement;
   
   // Informations assurance
   final String? assuranceNom;
@@ -128,6 +129,7 @@ class ContratModel {
     this.dateCreation,
     this.signatureAller,
     this.signatureRetour,
+    this.methodePaiement,
     this.assuranceNom,
     this.assuranceNumero,
     this.franchise,
@@ -193,6 +195,7 @@ class ContratModel {
       dateCreation: data['dateCreation'],
       signatureAller: data['signatureAller'],
       signatureRetour: data['signatureRetour'],
+      methodePaiement: data['methodePaiement'],
       assuranceNom: data['assuranceNom'],
       assuranceNumero: data['assuranceNumero'],
       franchise: data['franchise'],
@@ -255,6 +258,7 @@ class ContratModel {
       'photos': photosUrls,
       'signatureAller': signatureAller,
       'signatureRetour': signatureRetour,
+      'methodePaiement': methodePaiement,
       'assuranceNom': assuranceNom ?? '',
       'assuranceNumero': assuranceNumero ?? '',
       'franchise': franchise ?? '',
@@ -337,6 +341,7 @@ class ContratModel {
       'commentaireAller': commentaireAller,
       'commentaireRetour': commentaireRetour,
       'signatureRetour': signatureRetour,
+      'methodePaiement': methodePaiement,
     };
   }
 
@@ -398,6 +403,7 @@ class ContratModel {
     Timestamp? dateCreation,
     String? signatureAller,
     String? signatureRetour,
+    String? methodePaiement,
     String? assuranceNom,
     String? assuranceNumero,
     String? franchise,
@@ -463,6 +469,7 @@ class ContratModel {
       dateCreation: dateCreation ?? this.dateCreation,
       signatureAller: signatureAller ?? this.signatureAller,
       signatureRetour: signatureRetour ?? this.signatureRetour,
+      methodePaiement: methodePaiement ?? this.methodePaiement,
       assuranceNom: assuranceNom ?? this.assuranceNom,
       assuranceNumero: assuranceNumero ?? this.assuranceNumero,
       franchise: franchise ?? this.franchise,
