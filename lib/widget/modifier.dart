@@ -18,7 +18,6 @@ import 'MODIFICATION DE CONTRAT/info_loc.dart';
 import 'MODIFICATION DE CONTRAT/info_loc_retour.dart';
 import 'MODIFICATION DE CONTRAT/retour_loc.dart';
 import 'MODIFICATION DE CONTRAT/retour_envoie_pdf.dart'; 
-import 'MODIFICATION DE CONTRAT/info_veh.dart';
 import 'MODIFICATION DE CONTRAT/info_client.dart';
 import 'MODIFICATION DE CONTRAT/etat_vehicule_retour.dart';
 import 'MODIFICATION DE CONTRAT/signature_retour.dart';
@@ -411,19 +410,22 @@ class _ModifierScreenState extends State<ModifierScreen> {
     return Scaffold(
        
       appBar: AppBar(
-        title: Text(
-          widget.data['status'] == 'restitue' 
-              ? "Restitués" 
-              : widget.data['status'] == 'réservé' 
-                  ? "Réservés" 
-                  : "En cours",
-          style:
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.data['status'] ?? '',
+              style: const TextStyle(fontSize: 20),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${widget.data['modele'] ?? ''} - ${widget.data['immatriculation'] ?? ''}',
+              style: const TextStyle(fontSize: 16),
+            ),
+          ],
         ),
-        backgroundColor: Color(0xFF08004D),
-        iconTheme: const IconThemeData(
-            color: Colors.white), 
-        centerTitle: true,
+        backgroundColor: const Color(0xFF08004D),
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.delete, color: Colors.white),
@@ -441,8 +443,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  InfoVehicule(data: widget.data),
-                  const SizedBox(height: 20),
                   InfoClient(
                     data: widget.data,
                     onShowFullScreenImages: _showFullScreenImages,

@@ -243,7 +243,7 @@ class EmailService {
             </div>
 
             <div style="padding: 20px; background-color: #EFEFEF; border-radius: 0 0 10px 10px;">
-              <p>${prenom != null && nom != null ? "Bonjour <strong>$prenom $nom</strong>," : "Bonjour,"}</p>
+              <p>Bonjour ${prenom ?? ''} ${nom ?? ''},</p>
               
               <p>Nous avons le plaisir de vous transmettre votre contrat de location signé en pièce jointe. 📝</p>
               
@@ -437,7 +437,7 @@ class EmailService {
             </div>
 
             <div style="padding: 20px; background-color: #EFEFEF; border-radius: 0 0 10px 10px;">
-              <p>Bonjour ${prenom != null && nom != null ? "$prenom $nom" : ""},</p>
+              <p>Bonjour ${prenom ?? ''} ${nom ?? ''},</p>
               
               <p>Nous vous confirmons la restitution du véhicule que vous avez loué chez nous.</p>
               

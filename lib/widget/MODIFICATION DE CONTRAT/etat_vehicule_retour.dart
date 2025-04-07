@@ -26,6 +26,13 @@ class EtatVehiculeRetour extends StatefulWidget {
 class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
   bool isPremiumUser = false;
   late TextEditingController _commentaireController;
+  bool _showContent = true;
+
+  void _handleHeaderTap() {
+    setState(() {
+      _showContent = !_showContent;
+    });
+  }
 
   @override
   void initState() {
@@ -144,73 +151,86 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // En-tête de section
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.orange[700]!.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
+          // En-tête de section avec flèche
+          GestureDetector(
+            onTap: _handleHeaderTap,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange[700]!.withOpacity(0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.car_repair, color: Colors.orange[700], size: 24),
+                      const SizedBox(width: 12),
+                      Text(
+                        "État du véhicule au retour",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Icon(
+                    _showContent ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: Colors.orange[700],
+                    size: 24,
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: [
-                Icon(Icons.car_repair, color: Colors.orange[700], size: 24),
-                const SizedBox(width: 12),
-                Text(
-                  "État du véhicule au retour",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange[700],
-                  ),
-                ),
-              ],
-            ),
           ),
-          // Contenu de la section
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: double.infinity,
-                  child: InkWell(
-                    onTap: isPremiumUser ? _pickImage : _showPremiumDialog,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.orange.shade200),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock, color: Colors.orange[700], size: 20),
-                          const SizedBox(width: 10),
-                          Text(
-                            isPremiumUser ? "Ajouter des photos" : "Fonctionnalité Premium",
-                            style: TextStyle(
-                              color: Colors.orange[700],
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
+          if (_showContent)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    child: InkWell(
+                      onTap: isPremiumUser ? _pickImage : _showPremiumDialog,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock, color: Colors.orange[700], size: 20),
+                            const SizedBox(width: 10),
+                            Text(
+                              isPremiumUser ? "Ajouter des photos" : "Fonctionnalité Premium",
+                              style: TextStyle(
+                                color: Colors.orange[700],
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                if (widget.photos.isNotEmpty && isPremiumUser) _buildPhotoScroll(),
-                const SizedBox(height: 20),
-                CommentaireRetourWidget(controller: _commentaireController),
-              ],
+                  const SizedBox(height: 16),
+                  if (widget.photos.isNotEmpty && isPremiumUser) _buildPhotoScroll(),
+                  const SizedBox(height: 20),
+                  CommentaireRetourWidget(controller: _commentaireController),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

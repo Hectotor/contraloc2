@@ -27,6 +27,14 @@ class RetourLoc extends StatefulWidget {
 }
 
 class _RetourLocState extends State<RetourLoc> {
+  bool _showContent = true;
+
+  void _handleHeaderTap() {
+    setState(() {
+      _showContent = !_showContent;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -54,61 +62,71 @@ class _RetourLocState extends State<RetourLoc> {
 
   Widget _buildRetourVehiculeSection(BuildContext context) {
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.20),
+            blurRadius: 4,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // En-tête de section
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.teal[700]!.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
+          // En-tête de section avec flèche
+          GestureDetector(
+            onTap: _handleHeaderTap,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.teal[700]!.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.directions_car_filled_rounded, color: Colors.teal[700], size: 24),
+                      const SizedBox(width: 12),
+                      Text(
+                        "Retour du véhicule",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Icon(
+                    _showContent ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: Colors.teal[700],
+                    size: 24,
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: [
-                Icon(Icons.directions_car_filled_rounded, color: Colors.teal[700], size: 24),
-                const SizedBox(width: 12),
-                Text(
-                  "Retour du véhicule",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.teal[700],
-                  ),
-                ),
-              ],
-            ),
           ),
-          // Contenu de la section
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDateFinField(context),
-                const SizedBox(height: 20),
-                _buildKilometrageRetourField(context),
-                const SizedBox(height: 20),
-                _buildNiveauEssenceField(context),
-                const SizedBox(height: 20),
-              ],
+          if (_showContent)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDateFinField(context),
+                  const SizedBox(height: 20),
+                  _buildKilometrageRetourField(context),
+                  const SizedBox(height: 20),
+                  _buildNiveauEssenceField(context),
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

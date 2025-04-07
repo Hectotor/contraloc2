@@ -429,7 +429,7 @@ class _LocationPageState extends State<LocationPage> {
           contratModel, 
           _nomEntrepriseController.text, 
           _logoUrl ?? '', 
-          
+
           _adresseController.text, 
           _telephoneController.text, 
           _siretController.text, 
@@ -632,7 +632,8 @@ class _LocationPageState extends State<LocationPage> {
           marque: contratModel.marque ?? '',
           modele: contratModel.modele ?? '',
           immatriculation: contratModel.immatriculation ?? '',
-
+          prenom: contratModel.prenom,
+          nom: contratModel.nom,
           context: context,
         );
       }

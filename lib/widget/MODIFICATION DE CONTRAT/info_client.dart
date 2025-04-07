@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class InfoClient extends StatelessWidget {
+class InfoClient extends StatefulWidget {
   final Map<String, dynamic> data;
   final Function(BuildContext, List<dynamic>, int) onShowFullScreenImages;
 
@@ -11,13 +11,16 @@ class InfoClient extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildClientInfoSection(context),
-      ],
-    );
+  State<InfoClient> createState() => _InfoClientState();
+}
+
+class _InfoClientState extends State<InfoClient> {
+  bool _showContent = true;
+
+  void _handleHeaderTap() {
+    setState(() {
+      _showContent = !_showContent;
+    });
   }
 
   Widget _buildClientInfoSection(BuildContext context) {
@@ -26,77 +29,34 @@ class InfoClient extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+          BoxShadow(  
+            color: Colors.black.withOpacity(0.20),
+            blurRadius: 4,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // En-tête de section
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.teal[700]!.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
+          // En-tête de section avec flèche
+          GestureDetector(
+            onTap: _handleHeaderTap,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.teal[700]!.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
               ),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.person, color: Colors.teal[700], size: 24),
-                const SizedBox(width: 12),
-                Text(
-                  "Informations du client",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.teal[700],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Contenu de la section
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildInfoRow(context, "Nom", data['nom'] ?? "Non spécifié"),
-                const SizedBox(height: 12),
-                _buildInfoRow(context, "Prénom", data['prenom'] ?? "Non spécifié"),
-                const SizedBox(height: 12),
-                _buildInfoRow(context, "Adresse", data['adresse'] ?? "Non spécifié"),
-                const SizedBox(height: 12),
-                _buildInfoRow(context, "Téléphone", data['telephone'] ?? "Non spécifié"),
-                const SizedBox(height: 12),
-                _buildInfoRow(context, "Email", data['email'] ?? "Non spécifié"),
-                const SizedBox(height: 12),
-                _buildInfoRow(context, "N° Permis", data['numeroPermis'] ?? "Non spécifié"),
-                if (data['immatriculationClient'] != null && data['immatriculationClient'].isNotEmpty)
-                  const SizedBox(height: 12),
-                if (data['immatriculationClient'] != null && data['immatriculationClient'].isNotEmpty)
-                  _buildInfoRow(context, "N° Immat", data['immatriculationClient']),
-                if (data['kilometrageVehiculeClient'] != null && data['kilometrageVehiculeClient'].isNotEmpty)
-                  const SizedBox(height: 12),
-                if (data['kilometrageVehiculeClient'] != null && data['kilometrageVehiculeClient'].isNotEmpty)
-                  _buildInfoRow(context, "Km", data['kilometrageVehiculeClient']),
-                
-                // Photos du permis de conduire
-                if (data['permisRecto'] != null || data['permisVerso'] != null) ...[  
-                  const SizedBox(height: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
                   Row(
                     children: [
-                      Icon(Icons.credit_card, color: Colors.teal[700], size: 24),
+                      Icon(Icons.person, color: Colors.teal[700], size: 24),
                       const SizedBox(width: 12),
                       Text(
-                        "Permis de conduire",
+                        "Informations du client",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -105,22 +65,72 @@ class InfoClient extends StatelessWidget {
                       ),
                     ],
                   ),
+                  Icon(
+                    _showContent ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: Colors.teal[700],
+                    size: 24,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_showContent)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildInfoRow(context, "Nom", widget.data['nom'] ?? "Non spécifié"),
                   const SizedBox(height: 12),
-                  SizedBox(
-                    height: 100,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
+                  _buildInfoRow(context, "Prénom", widget.data['prenom'] ?? "Non spécifié"),
+                  const SizedBox(height: 12),
+                  _buildInfoRow(context, "Adresse", widget.data['adresse'] ?? "Non spécifié"),
+                  const SizedBox(height: 12),
+                  _buildInfoRow(context, "Téléphone", widget.data['telephone'] ?? "Non spécifié"),
+                  const SizedBox(height: 12),
+                  _buildInfoRow(context, "Email", widget.data['email'] ?? "Non spécifié"),
+                  const SizedBox(height: 12),
+                  _buildInfoRow(context, "N° Permis", widget.data['numeroPermis'] ?? "Non spécifié"),
+                  if (widget.data['immatriculationClient'] != null && widget.data['immatriculationClient'].isNotEmpty)
+                    const SizedBox(height: 12),
+                  if (widget.data['immatriculationClient'] != null && widget.data['immatriculationClient'].isNotEmpty)
+                    _buildInfoRow(context, "N° Immat", widget.data['immatriculationClient']),
+                  if (widget.data['kilometrageVehiculeClient'] != null && widget.data['kilometrageVehiculeClient'].isNotEmpty)
+                    const SizedBox(height: 12),
+                  if (widget.data['kilometrageVehiculeClient'] != null && widget.data['kilometrageVehiculeClient'].isNotEmpty)
+                    _buildInfoRow(context, "Km", widget.data['kilometrageVehiculeClient']),
+                  
+                  // Photos du permis de conduire
+                  if (widget.data['permisRecto'] != null || widget.data['permisVerso'] != null) ...[
+                    const SizedBox(height: 20),
+                    Row(
                       children: [
-                        if (data['permisRecto'] != null)
+                        Icon(Icons.credit_card, color: Colors.teal[700], size: 24),
+                        const SizedBox(width: 12),
+                        Text(
+                          "Permis de conduire",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (widget.data['permisRecto'] != null)
                           GestureDetector(
-                            onTap: () => onShowFullScreenImages(
-                                context, [data['permisRecto']], 0),
+                            onTap: () => widget.onShowFullScreenImages(
+                                context, [widget.data['permisRecto']], 0),
                             child: Padding(
                               padding: const EdgeInsets.only(right: 8.0),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
                                 child: Image.network(
-                                  data['permisRecto'],
+                                  widget.data['permisRecto'],
                                   width: 150,
                                   height: 150,
                                   fit: BoxFit.cover,
@@ -142,16 +152,16 @@ class InfoClient extends StatelessWidget {
                               ),
                             ),
                           ),
-                        if (data['permisVerso'] != null)
+                        if (widget.data['permisVerso'] != null)
                           GestureDetector(
-                            onTap: () => onShowFullScreenImages(
-                                context, [data['permisVerso']], 0),
+                            onTap: () => widget.onShowFullScreenImages(
+                                context, [widget.data['permisVerso']], 0),
                             child: Padding(
                               padding: const EdgeInsets.only(right: 8.0),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
                                 child: Image.network(
-                                  data['permisVerso'],
+                                  widget.data['permisVerso'],
                                   width: 150,
                                   height: 150,
                                   fit: BoxFit.cover,
@@ -175,11 +185,10 @@ class InfoClient extends StatelessWidget {
                           ),
                       ],
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -209,6 +218,16 @@ class InfoClient extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildClientInfoSection(context),
       ],
     );
   }
