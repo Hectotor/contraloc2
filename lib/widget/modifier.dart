@@ -511,7 +511,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                         });
                       },
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 60),
                     ElevatedButton(
                       onPressed: _isUpdatingContrat
                           ? null

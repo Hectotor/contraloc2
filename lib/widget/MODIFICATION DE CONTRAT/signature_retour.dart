@@ -86,11 +86,10 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+          BoxShadow(  
+            color: Colors.black.withOpacity(0.20),
+            blurRadius: 4,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -211,11 +210,11 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
                         borderRadius: BorderRadius.circular(15),
                         border: Border.all(color: Colors.grey.shade300, width: 2),
                         boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.shade200,
-                            blurRadius: 5,
-                            offset: const Offset(0, 3),
-                          ),
+          BoxShadow(  
+            color: Colors.black.withOpacity(0.20),
+            blurRadius: 4,
+            offset: const Offset(0, 4),
+          ),
                         ],
                       ),
                       child: Stack(
@@ -247,12 +246,11 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
                                   color: Colors.red.withOpacity(0.8),
                                   shape: BoxShape.circle,
                                   boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      spreadRadius: 1,
-                                      blurRadius: 3,
-                                      offset: const Offset(0, 1),
-                                    ),
+          BoxShadow(  
+            color: Colors.black.withOpacity(0.20),
+            blurRadius: 4,
+            offset: const Offset(0, 4),
+          ),
                                   ],
                                 ),
                                 padding: const EdgeInsets.all(6),
