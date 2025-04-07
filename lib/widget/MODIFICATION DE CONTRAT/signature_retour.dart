@@ -100,7 +100,7 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.teal[700]!.withOpacity(0.1),
+              color: Colors.green[700]!.withOpacity(0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -110,7 +110,7 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
               children: [
                 Icon(
                   Icons.draw_rounded,
-                  color: Colors.teal[700],
+                  color: Colors.green[700],
                   size: 24,
                 ),
                 SizedBox(width: 12),
@@ -119,7 +119,7 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.teal[700],
+                    color: Colors.green[700],
                   ),
                 ),
               ],
@@ -144,7 +144,7 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
                     children: [
                       Icon(
                         Icons.person,
-                        color: Colors.teal[700],
+                        color: Colors.green[700],
                         size: 20,
                       ),
                       SizedBox(width: 12),
@@ -153,7 +153,7 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
-                          color: Colors.teal[700],
+                          color: Colors.green[700],
                         ),
                       ),
                     ],
@@ -178,7 +178,7 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
                           onChanged: (bool? value) {
                             widget.onRetourAcceptedChanged(value ?? false);
                           },
-                          activeColor: Colors.teal[700],
+                          activeColor: Colors.green[700],
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(5),
                           ),
@@ -294,7 +294,7 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
                           style: TextStyle(color: Colors.white),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal[700],
+                          backgroundColor: Colors.green[700],
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),

@@ -156,7 +156,7 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.teal[700]!.withOpacity(0.1),
+                color: Colors.purple[700]!.withOpacity(0.1),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -167,21 +167,21 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.car_repair, color: Colors.teal[700], size: 24),
+                      Icon(Icons.car_repair, color: Colors.purple[700], size: 24),
                       const SizedBox(width: 12),
                       Text(
                         "État du véhicule au retour",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.teal[700],
+                          color: Colors.purple[700],
                         ),
                       ),
                     ],
                   ),
                   Icon(
                     _showContent ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    color: Colors.teal[700],
+                    color: Colors.purple[700],
                     size: 24,
                   ),
                 ],
@@ -203,17 +203,17 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.teal.shade200),
+                          border: Border.all(color: Colors.purple.shade200),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock, color: Colors.teal[700], size: 20),
+                            Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock, color: Colors.purple[700], size: 20),
                             const SizedBox(width: 10),
                             Text(
                               isPremiumUser ? "Ajouter des photos" : "Fonctionnalité Premium",
                               style: TextStyle(
-                                color: Colors.teal[700],
+                                color: Colors.purple[700],
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
                               ),

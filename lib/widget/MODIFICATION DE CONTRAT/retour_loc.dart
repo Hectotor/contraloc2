@@ -83,7 +83,7 @@ class _RetourLocState extends State<RetourLoc> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.teal[700]!.withOpacity(0.1),
+                color: Colors.orange[700]!.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -91,21 +91,21 @@ class _RetourLocState extends State<RetourLoc> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.directions_car_filled_rounded, color: Colors.teal[700], size: 24),
+                      Icon(Icons.directions_car_filled_rounded, color: Colors.orange[700], size: 24),
                       const SizedBox(width: 12),
                       Text(
                         "Retour du véhicule",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.teal[700],
+                          color: Colors.orange[700],
                         ),
                       ),
                     ],
                   ),
                   Icon(
                     _showContent ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    color: Colors.teal[700],
+                    color: Colors.orange[700],
                     size: 24,
                   ),
                 ],
@@ -207,7 +207,7 @@ class _RetourLocState extends State<RetourLoc> {
           },
           decoration: InputDecoration(
             hintText: "Sélectionner la date et l'heure de retour",
-            prefixIcon: const Icon(Icons.calendar_today, color: Colors.teal),
+            prefixIcon: const Icon(Icons.calendar_today, color: Colors.orange),
             filled: true,
             fillColor: Colors.grey[50],
             border: OutlineInputBorder(
@@ -256,9 +256,9 @@ class _RetourLocState extends State<RetourLoc> {
           controller: widget.kilometrageRetourController,
           decoration: InputDecoration(
             hintText: "Entrez le kilométrage actuel",
-            prefixIcon: const Icon(Icons.speed, color: Colors.teal),
+            prefixIcon: const Icon(Icons.speed, color: Colors.orange),
             suffixIcon: IconButton(
-              icon: Icon(Icons.check_circle, color: Colors.teal[200]),
+              icon: Icon(Icons.check_circle, color: Colors.orange[200]),
               onPressed: () {
                 // Fermer le clavier
                 FocusScope.of(context).unfocus();
@@ -344,7 +344,7 @@ class _RetourLocState extends State<RetourLoc> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.local_gas_station, color: Colors.teal),
+                  Icon(Icons.local_gas_station, color: Colors.orange),
                   const SizedBox(width: 10),
                   Text(
                     "Sélectionnez le niveau d'essence",
@@ -413,10 +413,10 @@ class _RetourLocState extends State<RetourLoc> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.teal.withOpacity(0.2) : Colors.transparent,
+          color: isSelected ? Colors.orange.withOpacity(0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? Colors.teal : Colors.grey[300]!,
+            color: isSelected ? Colors.orange : Colors.grey[300]!,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -425,7 +425,7 @@ class _RetourLocState extends State<RetourLoc> {
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.teal[700] : Colors.grey[700],
+                color: isSelected ? Colors.orange[700] : Colors.grey[700],
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),

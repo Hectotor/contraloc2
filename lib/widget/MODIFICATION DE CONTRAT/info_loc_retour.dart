@@ -121,7 +121,7 @@ class _InfoLocRetourState extends State<InfoLocRetour> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.teal[700]!.withOpacity(0.1),
+                color: Colors.orange[700]!.withOpacity(0.1),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -132,21 +132,21 @@ class _InfoLocRetourState extends State<InfoLocRetour> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.assignment_turned_in, color: Colors.teal[700], size: 24),
+                      Icon(Icons.assignment_turned_in, color: Colors.orange[700], size: 24),
                       const SizedBox(width: 12),
                       Text(
                         "Informations de Retour",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.teal[700],
+                          color: Colors.orange[700],
                         ),
                       ),
                     ],
                   ),
                   Icon(
                     _showContent ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    color: Colors.teal[700],
+                    color: Colors.orange[700],
                     size: 24,
                   ),
                 ],
@@ -170,14 +170,14 @@ class _InfoLocRetourState extends State<InfoLocRetour> {
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        Icon(Icons.photo_library, color: Colors.teal[700], size: 20),
+                        Icon(Icons.photo_library, color: Colors.orange[700], size: 20),
                         const SizedBox(width: 10),
                         Text(
                           "Photos du véhicule au retour",
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Colors.teal[700],
+                            color: Colors.orange[700],
                           ),
                         ),
                       ],
@@ -222,7 +222,7 @@ class _InfoLocRetourState extends State<InfoLocRetour> {
                                             ? loadingProgress.cumulativeBytesLoaded /
                                                 loadingProgress.expectedTotalBytes!
                                             : null,
-                                        color: Colors.teal[700],
+                                        color: Colors.orange[700],
                                       ),
                                     );
                                   },
@@ -252,14 +252,14 @@ class _InfoLocRetourState extends State<InfoLocRetour> {
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        Icon(Icons.comment, color: Colors.teal[700], size: 20),
+                        Icon(Icons.comment, color: Colors.orange[700], size: 20),
                         const SizedBox(width: 10),
                         Text(
                           "Commentaire",
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Colors.teal[700],
+                            color: Colors.orange[700],
                           ),
                         ),
                       ],

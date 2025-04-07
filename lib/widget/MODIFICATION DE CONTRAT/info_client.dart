@@ -45,7 +45,7 @@ class _InfoClientState extends State<InfoClient> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.teal[700]!.withOpacity(0.1),
+                color: Colors.green[700]!.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -53,21 +53,21 @@ class _InfoClientState extends State<InfoClient> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.person, color: Colors.teal[700], size: 24),
+                      Icon(Icons.person, color: Colors.green[700], size: 24),
                       const SizedBox(width: 12),
                       Text(
                         "Informations du client",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.teal[700],
+                          color: Colors.green[700],
                         ),
                       ),
                     ],
                   ),
                   Icon(
                     _showContent ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    color: Colors.teal[700],
+                    color: Colors.green[700],
                     size: 24,
                   ),
                 ],
@@ -105,14 +105,14 @@ class _InfoClientState extends State<InfoClient> {
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        Icon(Icons.credit_card, color: Colors.teal[700], size: 24),
+                        Icon(Icons.credit_card, color: Colors.green[700], size: 24),
                         const SizedBox(width: 12),
                         Text(
                           "Permis de conduire",
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.teal[700],
+                            color: Colors.green[700],
                           ),
                         ),
                       ],
@@ -144,7 +144,7 @@ class _InfoClientState extends State<InfoClient> {
                                             ? loadingProgress.cumulativeBytesLoaded /
                                                 loadingProgress.expectedTotalBytes!
                                             : null,
-                                        color: Colors.teal[700],
+                                        color: Colors.green[700],
                                       ),
                                     );
                                   },
@@ -175,7 +175,7 @@ class _InfoClientState extends State<InfoClient> {
                                             ? loadingProgress.cumulativeBytesLoaded /
                                                 loadingProgress.expectedTotalBytes!
                                             : null,
-                                        color: Colors.teal[700],
+                                        color: Colors.green[700],
                                       ),
                                     );
                                   },
@@ -205,7 +205,7 @@ class _InfoClientState extends State<InfoClient> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
-              color: Colors.teal[700],
+              color: Colors.green[700],
             ),
           ),
         ),
