@@ -42,87 +42,15 @@ class RetourEnvoiePdf {
     }
 
     try {
-      // Récupérer les informations du client
-      DocumentSnapshot clientDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .get();
-
-      // Récupérer la signature du contrat
-      DocumentSnapshot contratDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('locations')
-          .doc(contratId)
-          .get();
-
-      // Utiliser des valeurs par défaut sécurisées
-      Map<String, dynamic> clientData = clientDoc.data() as Map<String, dynamic>? ?? {};
-      Map<String, dynamic> contratDataComplete = contratDoc.data() as Map<String, dynamic>? ?? {};
-
-      String? clientEmail = clientData['email'] as String?;
-      clientEmail ??= '';
-      
-      // Récupérer la signature
-      String? signatureBase64;
-      if (contratDataComplete.containsKey('signature') && 
-          contratDataComplete['signature'] is Map) {
-        signatureBase64 = contratDataComplete['signature']['base64'];
-      }
-
-      // Log pour le débogage
-      print('Signature récupérée : ${signatureBase64 != null ? 'Présente' : 'Absente'}');
-
-      // Récupérer les signatures aller et retour
-      String? signatureAllerBase64;
-      String? signatureRetourBase64;
-      
-      // Récupérer la signature aller
-      if (contratDoc.exists) {
-        // Essayer de récupérer la signature aller
-        if (contratDataComplete.containsKey('signature_aller') && 
-            contratDataComplete['signature_aller'] is String) {
-          signatureAllerBase64 = contratDataComplete['signature_aller'];
-        }
-        
-        // Essayer de récupérer la signature de retour
-        if (contratDataComplete.containsKey('signature_retour') && 
-            contratDataComplete['signature_retour'] is String) {
-          signatureRetourBase64 = contratDataComplete['signature_retour'];
-        }
-      }
-
-      // Log pour le débogage
-      print('📝 Signature aller récupérée : ${signatureAllerBase64 != null ? 'Présente (${signatureAllerBase64.length} caractères)' : 'Absente'}');
-      print('📝 Signature retour récupérée : ${signatureRetourBase64 != null ? 'Présente (${signatureRetourBase64.length} caractères)' : 'Absente'}');
-
-      // Récupérer les données du véhicule
-      final vehicleDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('vehicules')
-          .where('immatriculation', isEqualTo: contratData['immatriculation'])
-          .get();
-
-      final vehicleData = vehicleDoc.docs.isNotEmpty 
-          ? vehicleDoc.docs.first.data() 
-          : {};
-
-      // Créer un objet ContratModel à partir des données Firestore
-      final contrat = ContratModel.fromFirestore(contratData, id: contratData['contratId']);
-      
-      // Mettre à jour les valeurs spécifiques au retour du véhicule
-      final contratMisAJour = contrat.copyWith(
+      // Créer un contrat mis à jour avec les nouvelles données
+      final contratMisAJour = ContratModel(
+        contratId: contratId,
+        userId: user.uid,
         dateRetour: dateFinEffectif,
         kilometrageRetour: kilometrageRetour,
-        commentaire: commentaireRetour,
         pourcentageEssenceRetour: int.parse(pourcentageEssenceRetour),
         signatureRetour: signatureRetourBase64,
-
-        // Utiliser les données du véhicule si disponibles
-        prixLocation: (vehicleData['prixLocation'] ?? contratData['prixLocation'] ?? '').toString(),
+        commentaireRetour: commentaireRetour, // Utiliser le champ commentaireRetour
       );
 
       // Générer le PDF de clôture en utilisant l'objet ContratModel
@@ -149,13 +77,13 @@ class RetourEnvoiePdf {
           context: context,
           prenom: (contratData['prenom'] ?? '').toString(),
           nom: (contratData['nom'] ?? '').toString(),
-          nomEntreprise: contratData['nomEntreprise'] ?? '',
-          adresse: contratData['adresse'] ?? '',
-          telephone: contratData['telephone'] ?? '',
+          nomEntreprise: contratData['nomEntreprise'] ?? 'Contraloc',
           logoUrl: contratData['logoUrl'] ?? '',
-          kilometrageRetour: contratData['kilometrageRetour'] ?? '',
-          dateFinEffectif: contratData['dateFinEffectif'] ?? '',
-          commentaireRetour: contratData['commentaireRetour'] ?? '',
+          adresse: contratData['adresseEntreprise'] ?? '',
+          telephone: contratData['telephoneEntreprise'] ?? '',
+          kilometrageRetour: kilometrageRetour,
+          dateFinEffectif: dateFinEffectif,
+          commentaireRetour: commentaireRetour,
           nomCollaborateur: contratData['nomCollaborateur'],
           prenomCollaborateur: contratData['prenomCollaborateur'],
         );

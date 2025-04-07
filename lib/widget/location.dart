@@ -383,7 +383,7 @@ class _LocationPageState extends State<LocationPage> {
         kilometrageDepart: _kilometrageDepartController.text.isNotEmpty ? _kilometrageDepartController.text : null,
         typeLocation: _typeLocationController.text.isNotEmpty ? _typeLocationController.text : "Gratuite",
         pourcentageEssence: _pourcentageEssence,
-        commentaire: _commentaireController.text.isNotEmpty ? _commentaireController.text : null,
+        commentaireAller: _commentaireController.text.isNotEmpty ? _commentaireController.text : null,
         photosUrls: vehiculeUrls,
         photosFiles: _photos,
         status: _determineContractStatus(),
@@ -634,7 +634,7 @@ class _LocationPageState extends State<LocationPage> {
           marque: contratModel.marque ?? '',
           modele: contratModel.modele ?? '',
           immatriculation: contratModel.immatriculation ?? '',
-          
+
           context: context,
         );
       }
@@ -759,7 +759,7 @@ class _LocationPageState extends State<LocationPage> {
     if (model.dateFinTheorique != null) _dateFinTheoriqueController.text = model.dateFinTheorique!;
     if (model.kilometrageDepart != null) _kilometrageDepartController.text = model.kilometrageDepart!;
     if (model.typeLocation != null) _typeLocationController.text = model.typeLocation!;
-    if (model.commentaire != null) _commentaireController.text = model.commentaire!;
+    if (model.commentaireAller != null) _commentaireController.text = model.commentaireAller!;
     setState(() => _pourcentageEssence = model.pourcentageEssence);
     
     // Informations financières

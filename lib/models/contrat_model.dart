@@ -42,7 +42,8 @@ class ContratModel {
   final String? kilometrageArrivee;
   final String? typeLocation;
   final int pourcentageEssence;
-  final String? commentaire;
+  final String? commentaireAller;
+  final String? commentaireRetour;
   final List<String>? photosUrls;
   final List<File>? photosFiles;
   final String? status;
@@ -86,12 +87,6 @@ class ContratModel {
   final String? kilometrageRetour;
   final int? pourcentageEssenceRetour;
   
-  // Informations facture
-  final bool? factureGeneree;
-  final String? factureId;
-  final Timestamp? dateFacture;
-  final String? factureTotalFrais;
-  
   const ContratModel({
     this.contratId,
     this.userId,
@@ -124,7 +119,8 @@ class ContratModel {
     this.kilometrageArrivee,
     this.typeLocation,
     this.pourcentageEssence = 50,
-    this.commentaire,
+    this.commentaireAller,
+    this.commentaireRetour,
     this.photosUrls,
     this.photosFiles,
     this.status = 'réservé',
@@ -155,10 +151,6 @@ class ContratModel {
     this.dateRetour,
     this.kilometrageRetour,
     this.pourcentageEssenceRetour,
-    this.factureGeneree,
-    this.factureId,
-    this.dateFacture,
-    this.factureTotalFrais,
   });
   
   // Créer une instance à partir des données Firestore
@@ -193,7 +185,8 @@ class ContratModel {
       kilometrageArrivee: data['kilometrageArrivee'],
       typeLocation: data['typeLocation'],
       pourcentageEssence: data['pourcentageEssence'] ?? 50,
-      commentaire: data['commentaire'],
+      commentaireAller: data['commentaire'],
+      commentaireRetour: data['commentaireRetour'],
       photosUrls: List<String>.from(data['photos'] ?? []),
       status: data['status'],
       dateReservation: data['dateReservation'],
@@ -223,10 +216,6 @@ class ContratModel {
       dateRetour: data['dateRetour'],
       kilometrageRetour: data['kilometrageRetour'],
       pourcentageEssenceRetour: data['pourcentageEssenceRetour'],
-      factureGeneree: data['factureGeneree'] ?? false,
-      factureId: data['factureId'],
-      dateFacture: data['dateFacture'],
-      factureTotalFrais: data['factureTotalFrais'],
     );
   }
   
@@ -261,7 +250,8 @@ class ContratModel {
       'kilometrageArrivee': kilometrageArrivee ?? '',
       'typeLocation': typeLocation ?? 'Gratuite',
       'pourcentageEssence': pourcentageEssence,
-      'commentaire': commentaire ?? '',
+      'commentaire': commentaireAller ?? '', // Utiliser le nom 'commentaire' pour l'écriture
+      'commentaireRetour': commentaireRetour ?? '',
       'photos': photosUrls,
       'signatureAller': signatureAller,
       'signatureRetour': signatureRetour,
@@ -297,10 +287,6 @@ class ContratModel {
     if (kilometrageRetour != null) data['kilometrageRetour'] = kilometrageRetour;
     if (pourcentageEssenceRetour != null) data['pourcentageEssenceRetour'] = pourcentageEssenceRetour;
     if (signatureRetour != null) data['signature_retour'] = signatureRetour;
-    if (factureGeneree != null) data['factureGeneree'] = factureGeneree;
-    if (factureId != null) data['factureId'] = factureId;
-    if (dateFacture != null) data['dateFacture'] = dateFacture;
-    if (factureTotalFrais != null) data['factureTotalFrais'] = factureTotalFrais;
     
     return data;
   }
@@ -344,13 +330,13 @@ class ContratModel {
       'pourcentageEssence': pourcentageEssence.toString(),
       'condition': conditions,
       'signatureAller': signatureAller,
-      'signatureRetour': signatureRetour,
-      'signatureBase64': signatureAller,
       'kilometrageSupp': kilometrageSupp,
       'prixRayures': prixRayures,
       'kilometrageAutorise': kilometrageAutorise,
       'typeLocation': typeLocation,
-      'commentaire': commentaire,
+      'commentaireAller': commentaireAller,
+      'commentaireRetour': commentaireRetour,
+      'signatureRetour': signatureRetour,
     };
   }
 
@@ -403,7 +389,8 @@ class ContratModel {
     String? kilometrageArrivee,
     String? typeLocation,
     int? pourcentageEssence,
-    String? commentaire,
+    String? commentaireAller,
+    String? commentaireRetour,
     List<String>? photosUrls,
     List<File>? photosFiles,
     String? status,
@@ -434,10 +421,6 @@ class ContratModel {
     String? dateRetour,
     String? kilometrageRetour,
     int? pourcentageEssenceRetour,
-    bool? factureGeneree,
-    String? factureId,
-    Timestamp? dateFacture,
-    String? factureTotalFrais,
   }) {
     return ContratModel(
       contratId: contratId ?? this.contratId,
@@ -471,7 +454,8 @@ class ContratModel {
       kilometrageArrivee: kilometrageArrivee ?? this.kilometrageArrivee,
       typeLocation: typeLocation ?? this.typeLocation,
       pourcentageEssence: pourcentageEssence ?? this.pourcentageEssence,
-      commentaire: commentaire ?? this.commentaire,
+      commentaireAller: commentaireAller ?? this.commentaireAller,
+      commentaireRetour: commentaireRetour ?? this.commentaireRetour,
       photosUrls: photosUrls ?? this.photosUrls,
       photosFiles: photosFiles ?? this.photosFiles,
       status: status ?? this.status,
@@ -502,10 +486,6 @@ class ContratModel {
       dateRetour: dateRetour ?? this.dateRetour,
       kilometrageRetour: kilometrageRetour ?? this.kilometrageRetour,
       pourcentageEssenceRetour: pourcentageEssenceRetour ?? this.pourcentageEssenceRetour,
-      factureGeneree: factureGeneree ?? this.factureGeneree,
-      factureId: factureId ?? this.factureId,
-      dateFacture: dateFacture ?? this.dateFacture,
-      factureTotalFrais: factureTotalFrais ?? this.factureTotalFrais,
     );
   }
 }
