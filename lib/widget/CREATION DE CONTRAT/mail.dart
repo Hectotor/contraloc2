@@ -247,12 +247,10 @@ class EmailService {
               
               <p>Nous avons le plaisir de vous transmettre votre contrat de location signé en pièce jointe. 📝</p>
               
-              <p style="font-size: 16px; font-weight: bold;">
-                Merci pour votre confiance et bonne route ! 🏎️🚗
-              </p>
+              <p style="font-weight: bold;">Merci pour votre confiance et bonne route ! 🏎️🚗</p>
 
-              <p style="font-size: 16px; font-weight: bold; color: #333;">
-                ⚠️ L'utilisateur est totalement responsable des contraventions, amendes et procès-verbaux établis en violation du code de la route.
+              <p style="font-weight: bold; color: #333;">
+                <strong>⚠️ L'utilisateur est totalement responsable des contraventions, amendes et procès-verbaux établis en violation du code de la route.</strong>
               </p>
 
               <p>Si vous pensez avoir reçu cet email par erreur merci de bien vouloir nous contacter au plus vite à l'adresse suivante : contact@contraloc.fr.</p>
@@ -443,16 +441,14 @@ class EmailService {
               
               <p>Nous vous confirmons la restitution du véhicule que vous avez loué chez nous.</p>
               
-              <p style="font-size: 16px; font-weight: bold;">
-                Merci pour votre confiance et bonne route ! 🏎️🚗
+              <p style="font-weight: bold;">Merci pour votre confiance et bonne route ! 🏎️🚗</p>
+              
+              <p style="font-weight: bold; color: #333;">
+                <strong>⚠️ L'utilisateur est totalement responsable des contraventions, amendes et procès-verbaux établis en violation du code de la route.</strong>
               </p>
-
-              <p style="font-size: 16px; font-weight: bold; color: #333;">
-                ⚠️ L'utilisateur est totalement responsable des contraventions, amendes et procès-verbaux établis en violation du code de la route.
-              </p>
-
+              
               <p>Si vous pensez avoir reçu cet email par erreur, merci de bien vouloir nous contacter au plus vite à l'adresse suivante : contact@contraloc.fr.</p>
-
+              
               <p>Nous vous remercions pour votre confiance et espérons avoir le plaisir de vous accompagner à nouveau très bientôt.</p>
 
               <br>

@@ -440,8 +440,9 @@ class _FactureScreenState extends State<FactureScreen> {
 
         // Appeler la fonction onFraisUpdated pour mettre à jour les données locales
         widget.onFraisUpdated({
-          'facture': factureData,
-          'factureGeneree': true,
+        'facture': factureData, // Inclure les données de facture
+        'factureGeneree': true, // Mettre à jour le flag de génération
+        'factureId': factureData['factureId'], // Mettre à jour l'ID de la facture
         });
 
         // Afficher le popup de succès

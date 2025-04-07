@@ -16,6 +16,7 @@ class RetourEnvoiePdf {
     required String dateFinEffectif,
     required String kilometrageRetour,
     required String commentaireRetour,
+    required String pourcentageEssenceRetour,
     required List<File> photosRetour,
     String? signatureRetourBase64,
   }) async {
@@ -63,11 +64,6 @@ class RetourEnvoiePdf {
 
       String? clientEmail = clientData['email'] as String?;
       clientEmail ??= '';
-      String nomEntreprise = (clientData['nomEntreprise'] ?? 'Contraloc').toString();
-      String adresse = (clientData['adresse'] ?? '').toString();
-      String telephone = (clientData['telephone'] ?? '').toString();
-      String logoUrl = (clientData['logoUrl'] ?? '').toString();
-      String siret = (clientData['siret'] ?? '').toString();
       
       // Récupérer la signature
       String? signatureBase64;
@@ -122,12 +118,9 @@ class RetourEnvoiePdf {
         dateRetour: dateFinEffectif,
         kilometrageRetour: kilometrageRetour,
         commentaire: commentaireRetour,
+        pourcentageEssenceRetour: int.parse(pourcentageEssenceRetour),
         signatureRetour: signatureRetourBase64,
-        nomEntreprise: nomEntreprise,
-        logoUrl: logoUrl,
-        adresseEntreprise: adresse,
-        telephoneEntreprise: telephone,
-        siretEntreprise: siret,
+
         // Utiliser les données du véhicule si disponibles
         prixLocation: (vehicleData['prixLocation'] ?? contratData['prixLocation'] ?? '').toString(),
       );
@@ -156,13 +149,13 @@ class RetourEnvoiePdf {
           context: context,
           prenom: (contratData['prenom'] ?? '').toString(),
           nom: (contratData['nom'] ?? '').toString(),
-          nomEntreprise: nomEntreprise,
-          adresse: adresse,
-          telephone: telephone,
-          logoUrl: logoUrl,
-          kilometrageRetour: kilometrageRetour,
-          dateFinEffectif: dateFinEffectif,
-          commentaireRetour: commentaireRetour,
+          nomEntreprise: contratData['nomEntreprise'] ?? '',
+          adresse: contratData['adresse'] ?? '',
+          telephone: contratData['telephone'] ?? '',
+          logoUrl: contratData['logoUrl'] ?? '',
+          kilometrageRetour: contratData['kilometrageRetour'] ?? '',
+          dateFinEffectif: contratData['dateFinEffectif'] ?? '',
+          commentaireRetour: contratData['commentaireRetour'] ?? '',
           nomCollaborateur: contratData['nomCollaborateur'],
           prenomCollaborateur: contratData['prenomCollaborateur'],
         );

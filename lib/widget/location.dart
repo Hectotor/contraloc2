@@ -634,6 +634,7 @@ class _LocationPageState extends State<LocationPage> {
           marque: contratModel.marque ?? '',
           modele: contratModel.modele ?? '',
           immatriculation: contratModel.immatriculation ?? '',
+          
           context: context,
         );
       }

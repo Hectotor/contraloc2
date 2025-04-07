@@ -246,9 +246,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'photosRetourUrls': allPhotosUrls,
         'pourcentageEssenceRetour': _pourcentageEssenceRetourController.text,
         'signature_retour': signatureRetourBase64,
-        'facture': factureData, // Inclure les données de facture
-        'factureGeneree': true, // Mettre à jour le flag de génération
-        'factureId': factureData['factureId'], // Mettre à jour l'ID de la facture
+
       };
 
       if (isCollaborateur && adminId != null) {
@@ -312,6 +310,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         dateFinEffectif: _dateFinEffectifController.text,
         kilometrageRetour: _kilometrageRetourController.text,
         commentaireRetour: _commentaireRetourController.text,
+        pourcentageEssenceRetour: _pourcentageEssenceRetourController.text,
         photosRetour: _photosRetour,
       );
 
