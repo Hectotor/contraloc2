@@ -1,10 +1,11 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
+import '../models/contrat_model.dart';
 
 class PdfVoitureWidget {
   static pw.Widget build({
-    required Map<String, dynamic> data,
+    required ContratModel contrat,
     required String typeCarburant,
     required String boiteVitesses,
     required String assuranceNom,
@@ -29,7 +30,7 @@ class PdfVoitureWidget {
     required pw.Font ttf,
   }) {
     // Récupérer le type de location du map data, ou utiliser la valeur passée en paramètre
-    final String typeLocationValue = data['typeLocation'] ?? typeLocation;
+    final String typeLocationValue = contrat.typeLocation ?? typeLocation;
     final String typeLocationFinal = typeLocationValue.isEmpty ? "" : typeLocationValue;
 
     return pw.Container(
@@ -52,13 +53,13 @@ class PdfVoitureWidget {
           pw.SizedBox(height: 2), // Réduit la taille de l'espace
           pw.Text('Informations du Véhicule:',
               style: pw.TextStyle(fontSize: 12, font: boldFont)),
-          _buildVehiculeInfo(data, typeCarburant, boiteVitesses, assuranceNom,
+          _buildVehiculeInfo(contrat, typeCarburant, boiteVitesses, assuranceNom,
               assuranceNumero, franchise, ttf),
           pw.SizedBox(height: 10), // Réduit la taille de l'espace
           pw.Text('Détails de la Location:',
               style: pw.TextStyle(fontSize: 12, font: boldFont)),
           _buildLocationDetails(
-              data,
+              contrat,
               dateDebut,
               dateFinTheorique,
               dateFinEffectifData,
@@ -81,7 +82,7 @@ class PdfVoitureWidget {
   }
 
   static pw.Widget _buildVehiculeInfo(
-      Map<String, dynamic> data,
+      ContratModel contrat,
       String typeCarburant,
       String boiteVitesses,
       String assuranceNom,
@@ -93,11 +94,11 @@ class PdfVoitureWidget {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('Marque: ${data['marque']}',
+            pw.Text('Marque: ${contrat.marque}',
                 style: pw.TextStyle(font: ttf, fontSize: 9)),
-            pw.Text('Modèle: ${data['modele']}',
+            pw.Text('Modèle: ${contrat.modele}',
                 style: pw.TextStyle(font: ttf, fontSize: 9)),
-            pw.Text('Immat.: ${data['immatriculation']}',
+            pw.Text('Immat.: ${contrat.immatriculation}',
                 style: pw.TextStyle(font: ttf, fontSize: 9)),
           ],
         ),
@@ -122,7 +123,7 @@ class PdfVoitureWidget {
   }
 
   static pw.Widget _buildLocationDetails(
-      Map<String, dynamic> data,
+      ContratModel contrat,
       String dateDebut,
       String dateFinTheorique,
       String dateFinEffectifData,
@@ -141,7 +142,7 @@ class PdfVoitureWidget {
       pw.Font ttf) {
     
     // Utiliser directement les valeurs passées en paramètre, qui sont déjà traitées
-    final String cautionValue = data['caution'] ?? '';
+    final String cautionValue = contrat.caution ?? '';
     final String typeLocationValue = typeLocation;
 
     double calculateKmSupp() {
@@ -330,23 +331,6 @@ class PdfVoitureWidget {
         return kmRetour - kmDepart;
       } catch (e) {
         return 0.0; // Gestion des erreurs
-      }
-    }
-
-    String _parseEssenceRetour(String? pourcentageEssenceRetour) {
-      print('Valeur pourcentageEssenceRetour reçue: "$pourcentageEssenceRetour"');
-      if (pourcentageEssenceRetour != null && pourcentageEssenceRetour.isNotEmpty) {
-        try {
-          double pourcentage = double.parse(pourcentageEssenceRetour);
-          print('Pourcentage converti en double: $pourcentage');
-          return '${pourcentage.toStringAsFixed(0)}%';
-        } catch (e) {
-          print('Erreur de conversion: $e');
-          return pourcentageEssenceRetour.endsWith('%') ? pourcentageEssenceRetour : '$pourcentageEssenceRetour%';
-        }
-      } else {
-        print('Pourcentage null ou vide');
-        return '';
       }
     }
 
@@ -548,9 +532,10 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.center,
-                  child: pw.Text('Niveau d\'essence retour: ${_parseEssenceRetour(data['pourcentageEssenceRetour'])}%', 
-                      textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                  child: pw.Text(
+                    'Niveau d\'essence retour: ${contrat.pourcentageEssenceRetour ?? 'Non spécifié'}%',
+                    textAlign: pw.TextAlign.center,
+                    style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
               pw.Expanded(
@@ -578,7 +563,7 @@ class PdfVoitureWidget {
             children: [
               pw.Expanded(
                 flex: 1,
-                child: pw.Text('Frais de nettoyage intérieur: ${data['nettoyageInt'] ?? ''} €',
+                child: pw.Text('Frais de nettoyage intérieur: ${contrat.nettoyageInt ?? ''} €',
                     style: pw.TextStyle(font: ttf, fontSize: 9)),
               ),
               pw.Expanded(
@@ -594,7 +579,7 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Frais de nettoyage extérieur: ${data['nettoyageExt'] ?? ''} €',
+                  child: pw.Text('Frais de nettoyage extérieur: ${contrat.nettoyageExt ?? ''} €',
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
@@ -611,7 +596,7 @@ class PdfVoitureWidget {
             children: [
               pw.Expanded(
                 flex: 1,
-                child: pw.Text('Frais de carburant manquant: ${data['carburantManquant'] ?? ''} €',
+                child: pw.Text('Frais de carburant manquant: ${contrat.carburantManquant ?? ''} €',
                     style: pw.TextStyle(font: ttf, fontSize: 9)),
               ),
               pw.Expanded(
@@ -627,7 +612,7 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Frais de rayures/dommages: ${data['prixRayures'] ?? ''} €',
+                  child: pw.Text('Frais de rayures/dommages: ${contrat.prixRayures ?? ''} €',
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),

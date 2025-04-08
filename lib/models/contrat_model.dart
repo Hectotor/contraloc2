@@ -86,7 +86,7 @@ class ContratModel {
   // Informations retour
   final String? dateRetour;
   final String? kilometrageRetour;
-  final int? pourcentageEssenceRetour;
+  final String? pourcentageEssenceRetour;
   
   const ContratModel({
     this.contratId,
@@ -426,7 +426,7 @@ class ContratModel {
     String? conditions,
     String? dateRetour,
     String? kilometrageRetour,
-    int? pourcentageEssenceRetour,
+    String? pourcentageEssenceRetour,
   }) {
     return ContratModel(
       contratId: contratId ?? this.contratId,

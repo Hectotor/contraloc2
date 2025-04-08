@@ -84,9 +84,7 @@ class AffichageContratPdf {
         kilometrageRetour: data['kilometrageRetour'],
         commentaireRetour: data['commentaireRetour'],
         signatureRetour: signatureRetourBase64,
-        pourcentageEssenceRetour: int.tryParse(pourcentageEssenceRetourController.text.isNotEmpty 
-            ? pourcentageEssenceRetourController.text 
-            : (data['pourcentageEssenceRetour'] ?? '').toString()),
+        pourcentageEssenceRetour: data['pourcentageEssenceRetour'],
         nettoyageInt: nettoyageIntController.text,
         nettoyageExt: nettoyageExtController.text,
         caution: cautionController.text,

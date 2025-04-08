@@ -48,7 +48,7 @@ class RetourEnvoiePdf {
         userId: user.uid,
         dateRetour: dateFinEffectif,
         kilometrageRetour: kilometrageRetour,
-        pourcentageEssenceRetour: int.parse(pourcentageEssenceRetour),
+        pourcentageEssenceRetour: pourcentageEssenceRetour,
         signatureRetour: signatureRetourBase64,
         commentaireRetour: commentaireRetour, // Utiliser le champ commentaireRetour
       );

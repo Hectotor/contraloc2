@@ -319,7 +319,7 @@ Future<String> generatePdf(
             ),
             pw.SizedBox(height: 20),
             PdfVoitureWidget.build(
-              data: data,
+              contrat: contratModel,
               typeCarburant: contratModel.typeCarburant ?? '',
               boiteVitesses: contratModel.boiteVitesses ?? '',
               assuranceNom: contratModel.assuranceNom ?? '',
