@@ -562,14 +562,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
                                 widget.data['kilometrageRetour'] = _kilometrageRetourController.text;
                               }
                               
-                              // Récupérer les valeurs de kilométrage
-                              double kilometrageInitial = double.tryParse(widget.data['kilometrageDepart'] ?? '0') ?? 0;
-                              double kilometrageActuel = double.tryParse(_kilometrageRetourController.text) ?? 0;
-                              double tarifKilometrique = double.tryParse(widget.data['tarifKilometrique'] ?? '0') ?? 0;
-                              
-                              // Récupérer la date de fin effective
-                              String dateFinEffective = _dateFinEffectifController.text;
-                              
                               // Afficher la page de la facture
                               await Navigator.push(
                                 context,
@@ -582,10 +574,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                                         widget.data.addAll(frais);
                                       });
                                     },
-                                    kilometrageInitial: kilometrageInitial,
-                                    kilometrageActuel: kilometrageActuel,
-                                    tarifKilometrique: tarifKilometrique,
-                                    dateFinEffective: dateFinEffective,
+
                                   ),
                                 ),
                               );

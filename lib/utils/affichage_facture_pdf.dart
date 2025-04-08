@@ -23,18 +23,19 @@ class AffichageFacturePdf {
         'factureTotalFrais': contratData['factureTotalFrais'] ?? 0.0,
         'factureTypePaiement': contratData['factureTypePaiement'] ?? 'Carte bancaire',
         'dateFacture': contratData['dateFacture']?.toDate() ?? DateTime.now(),
+        'factureId': contratData['factureId'] ?? '',
       };
 
       // Générer le PDF avec FacturePdfGenerator
+      final siretEntreprise = contratData['siretEntreprise'];
       final pdfPath = await FacturePdfGenerator.generateFacturePdf(
         data: contratData,
         factureData: factureData,
         logoUrl: contratData['logoUrl'] ?? '',
         nomEntreprise: contratData['nomEntreprise'] ?? '',
-        adresse: contratData['adresse'] ?? '',
-        telephone: contratData['telephone'] ?? '',
-        siret: contratData['siret'] ?? '',
-        isTTC: contratData['isTTC'] ?? true,
+        adresse: contratData['adresseEntreprise'] ?? '',
+        telephone: contratData['telephoneEntreprise'] ?? '',
+        siret: siretEntreprise?.isNotEmpty == true ? siretEntreprise : null,
       );
 
       // Ouvrir le PDF

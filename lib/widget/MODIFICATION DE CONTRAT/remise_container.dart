@@ -1,61 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-class PrixLocationWidget extends StatefulWidget {
-  final Map<String, dynamic>? data;
-  final TextEditingController? prixLocationController;
+class RemiseContainer extends StatefulWidget {
+  final TextEditingController remiseController;
+  final VoidCallback onRemiseChanged;
 
-  const PrixLocationWidget({
-    Key? key,
-    required this.data,
-    this.prixLocationController,
-  }) : super(key: key);
+  const RemiseContainer({
+    super.key,
+    required this.remiseController,
+    required this.onRemiseChanged,
+  });
 
   @override
-  State<PrixLocationWidget> createState() => _PrixLocationWidgetState();
+  State<RemiseContainer> createState() => _RemiseContainerState();
 }
 
-class _PrixLocationWidgetState extends State<PrixLocationWidget> {
-  final _prixLocationController = TextEditingController();
+class _RemiseContainerState extends State<RemiseContainer> {
   bool _showContent = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.data != null) {
-      _prixLocationController.text = widget.data!['prixLocation']?.toString() ?? '';
-    }
-  }
-
-  @override
-  void dispose() {
-    _prixLocationController.dispose();
-    super.dispose();
-  }
-
-  Widget _buildTextField(String label, TextEditingController controller, {bool readOnly = false, String? prefixText}) {
-    return TextFormField(
-      controller: controller,
-      readOnly: readOnly,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Color(0xFF08004D)),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        prefixText: prefixText,
-      ),
-      style: TextStyle(
-        fontSize: 16,
-        color: Colors.grey[600],
-      ),
-      keyboardType: prefixText != null ? TextInputType.number : null,
-      inputFormatters: prefixText != null ? [
-        FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-      ] : null,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,16 +49,19 @@ class _PrixLocationWidgetState extends State<PrixLocationWidget> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF08004D).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.purple[50],
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.attach_money, color: const Color(0xFF08004D), size: 24),
+                    Icon(Icons.discount, color: Colors.purple[700], size: 24),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        "Prix de location",
+                        "Remise",
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -107,7 +71,7 @@ class _PrixLocationWidgetState extends State<PrixLocationWidget> {
                     ),
                     Icon(
                       _showContent ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                      color: const Color(0xFF08004D),
+                      color: Colors.purple[700],
                     ),
                   ],
                 ),
@@ -120,7 +84,26 @@ class _PrixLocationWidgetState extends State<PrixLocationWidget> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildTextField("Prix de la location", _prixLocationController, prefixText: '€'),
+                    TextFormField(
+                      controller: widget.remiseController,
+                      decoration: InputDecoration(
+                        labelText: "Montant de la remise",
+                        labelStyle: const TextStyle(color: Color(0xFF08004D)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        prefixText: '€',
+                        suffixIcon: const Icon(Icons.discount, color: Colors.purple),
+                      ),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\,?\d{0,2}')),
+                      ],
+                      onChanged: (value) {
+                        widget.onRemiseChanged();
+                      },
+                    ),
                   ],
                 ),
               ),

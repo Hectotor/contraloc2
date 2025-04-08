@@ -1,30 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
-import 'package:intl/date_symbol_data_local.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' show FieldValue;
+import 'prix_location_container.dart';
+import 'frais_kilometrage_supp_container.dart';
+import 'frais_additionnels_container.dart';
+import 'caution_container.dart';
+import 'remise_container.dart';
+import 'type_paiement_container.dart';
+import 'total_frais_container.dart';
+import 'tva_container.dart';
 import 'FACTURE/popup_succees.dart';
-import 'prix_location.dart';
-import 'total_container.dart';
-import 'kilometrage_Facture_container.dart';
 
 class FactureScreen extends StatefulWidget {
   final Map<String, dynamic> data;
   final Function(Map<String, dynamic>) onFraisUpdated;
-  final double kilometrageInitial;
-  final double kilometrageActuel;
-  final double tarifKilometrique;
-  final String dateFinEffective;
 
   const FactureScreen({
     Key? key,
     required this.data,
     required this.onFraisUpdated,
-    required this.kilometrageInitial,
-    required this.kilometrageActuel,
-    required this.tarifKilometrique,
-    required this.dateFinEffective,
   }) : super(key: key);
 
   @override
@@ -32,460 +27,53 @@ class FactureScreen extends StatefulWidget {
 }
 
 class _FactureScreenState extends State<FactureScreen> {
-  // Contrôleurs pour les champs de texte
-  late TextEditingController _cautionController;
+  late TextEditingController _prixLocationController;
+  late TextEditingController _fraisKilometriqueController;
   late TextEditingController _fraisNettoyageIntController;
   late TextEditingController _fraisNettoyageExtController;
   late TextEditingController _fraisCarburantController;
   late TextEditingController _fraisRayuresController;
   late TextEditingController _fraisAutreController;
-  late TextEditingController _remiseController; // Nouveau contrôleur pour la remise
-
-  // Contrôleurs spécifiques pour les champs calculés automatiquement
-  late TextEditingController _fraisKilometriqueController;
-  late TextEditingController _fraisPrixLocationController;
-
-  // Contrôleurs pour les champs de kilométrage
-  late TextEditingController _kmDepartController;
-  late TextEditingController _kmAutoriseController;
-  late TextEditingController _kmSuppController;
-  late TextEditingController _kmRetourController;
-
-  // Type de paiement
-  String _typePaiement = 'Carte bancaire';
-  final List<String> _typesPaiement = ['Carte bancaire', 'Espèces', 'Virement'];
-  
-  // ID unique pour la facture
-  String _factureId = '';
-  
-  // Option pour afficher les prix TTC ou HT
-  bool _isTTC = true;
-
-  // Total calculé
-  double _total = 0.0;
+  late TextEditingController _cautionController;
+  late TextEditingController _remiseController;
+  String _tvaType = 'applicable';
+  String _selectedPaymentType = 'Carte bancaire';
 
   @override
   void initState() {
     super.initState();
-    initializeDateFormatting('fr_FR', null); // Initialisation des locales françaises
-    
-    // Vérifier si un factureId existe déjà
-    if (widget.data['factureId'] != null && widget.data['factureId'].toString().isNotEmpty) {
-      _factureId = widget.data['factureId'];
-      print('Utilisation du factureId existant: $_factureId');
-    } else {
-      // Générer un ID unique pour la facture seulement si aucun n'existe
-      _factureId = 'FAC-${DateTime.now().millisecondsSinceEpoch}-${widget.data['contratId']?.substring(0, 5) ?? ''}';
-      print('Nouveau factureId généré: $_factureId');
-    }
     
     // Initialiser les contrôleurs avec des valeurs par défaut à 0
+    _prixLocationController = TextEditingController(text: "0");
     _fraisKilometriqueController = TextEditingController(text: "0");
-    _fraisPrixLocationController = TextEditingController(text: "0");
-    _cautionController = TextEditingController(text: "0");
     _fraisNettoyageIntController = TextEditingController(text: "0");
     _fraisNettoyageExtController = TextEditingController(text: "0");
     _fraisCarburantController = TextEditingController(text: "0");
     _fraisRayuresController = TextEditingController(text: "0");
     _fraisAutreController = TextEditingController(text: "0");
-    _kmDepartController = TextEditingController(text: "0");
-    _kmAutoriseController = TextEditingController(text: "0");
-    _kmSuppController = TextEditingController(text: "0");
-    _kmRetourController = TextEditingController(text: "0");
+    _cautionController = TextEditingController(text: "0");
     _remiseController = TextEditingController(text: "0");
-    
-    // Charger les données existantes si disponibles
-    if (widget.data.isNotEmpty) {
-      // Vérifier si les données sont dans un sous-objet 'facture'
-      if (widget.data['facture'] != null && widget.data['facture'] is Map<String, dynamic>) {
-        Map<String, dynamic> factureData = widget.data['facture'];
-        
-        // Charger les valeurs des contrôleurs depuis factureData
-        _cautionController.text = factureData['factureCaution']?.toString() ?? "0";
-        _fraisNettoyageIntController.text = factureData['factureFraisNettoyageInterieur']?.toString() ?? "0";
-        _fraisNettoyageExtController.text = factureData['factureFraisNettoyageExterieur']?.toString() ?? "0";
-        _fraisCarburantController.text = factureData['factureFraisCarburantManquant']?.toString() ?? "0";
-        _fraisRayuresController.text = factureData['factureFraisRayuresDommages']?.toString() ?? "0";
-        _fraisAutreController.text = factureData['factureFraisAutre']?.toString() ?? "0";
-        _fraisPrixLocationController.text = factureData['facturePrixLocation']?.toString() ?? "0";
-        
-        // Assurer que les frais kilométriques sont correctement chargés
-        var fraisKm = factureData['factureFraisKilometrique'];
-        if (fraisKm != null) {
-          // Convertir en chaîne et formater si nécessaire
-          String fraisKmStr = fraisKm.toString();
-          // Remplacer le point par une virgule pour l'affichage
-          fraisKmStr = fraisKmStr.replaceAll('.', ',');
-          _fraisKilometriqueController.text = fraisKmStr;
-          print('Frais kilométriques chargés: $fraisKmStr (original: $fraisKm)');
-        } else {
-          _fraisKilometriqueController.text = "0";
-        }
-        
-        _remiseController.text = factureData['factureRemise']?.toString() ?? "0";
-
-        // Charger le type de paiement s'il existe
-        if (factureData['factureTypePaiement'] != null && _typesPaiement.contains(factureData['factureTypePaiement'])) {
-          _typePaiement = factureData['factureTypePaiement'];
-        }
-        
-        // Charger l'option TTC/HT si elle existe
-        if (factureData['tva'] != null) {
-          _isTTC = factureData['tva'] == 'applicable';
-        }
-      } else {
-        // Fallback au format ancien (données directement dans widget.data)
-        _cautionController.text = widget.data['factureCaution']?.toString() ?? "0";
-        _fraisNettoyageIntController.text = widget.data['factureFraisNettoyageInterieur']?.toString() ?? "0";
-        _fraisNettoyageExtController.text = widget.data['factureFraisNettoyageExterieur']?.toString() ?? "0";
-        _fraisCarburantController.text = widget.data['factureFraisCarburantManquant']?.toString() ?? "0";
-        _fraisRayuresController.text = widget.data['factureFraisRayuresDommages']?.toString() ?? "0";
-        _fraisAutreController.text = widget.data['factureFraisAutre']?.toString() ?? "0";
-        _fraisPrixLocationController.text = widget.data['facturePrixLocation']?.toString() ?? "0";
-        
-        // Assurer que les frais kilométriques sont correctement chargés
-        var fraisKm = widget.data['factureFraisKilometrique'];
-        if (fraisKm != null) {
-          // Convertir en chaîne et formater si nécessaire
-          String fraisKmStr = fraisKm.toString();
-          // Remplacer le point par une virgule pour l'affichage
-          fraisKmStr = fraisKmStr.replaceAll('.', ',');
-          _fraisKilometriqueController.text = fraisKmStr;
-          print('Frais kilométriques chargés: $fraisKmStr (original: $fraisKm)');
-        } else {
-          _fraisKilometriqueController.text = "0";
-        }
-        
-        _remiseController.text = widget.data['factureRemise']?.toString() ?? "0";
-
-        // Charger le type de paiement s'il existe
-        if (widget.data['factureTypePaiement'] != null && _typesPaiement.contains(widget.data['factureTypePaiement'])) {
-          _typePaiement = widget.data['factureTypePaiement'];
-        }
-        
-        // Charger l'option TTC/HT si elle existe
-        if (widget.data['tva'] != null) {
-          _isTTC = widget.data['tva'] == 'applicable';
-        }
-      }
-    }
-
-    // Charger les données de kilométrage
-    _kmDepartController.text = widget.kilometrageInitial.toString();
-    _kmRetourController.text = widget.kilometrageActuel.toString();
-    _kmSuppController.text = widget.data['kilometrageSupp']?.toString() ?? '0';
-    
-    // Calculer le kilométrage autorisé (s'il existe dans les données)
-    double kmAutorise = double.tryParse(widget.data['kilometrageAutorise']?.toString() ?? '0') ?? 0.0;
-    _kmAutoriseController.text = kmAutorise.toString();
-    
-    // Ajouter des écouteurs pour recalculer le total lorsque les valeurs changent
-    _cautionController.addListener(_calculerTotal);
-    _fraisNettoyageIntController.addListener(_calculerTotal);
-    _fraisNettoyageExtController.addListener(_calculerTotal);
-    _fraisCarburantController.addListener(_calculerTotal);
-    _fraisRayuresController.addListener(_calculerTotal);
-    _fraisAutreController.addListener(_calculerTotal);
-    _remiseController.addListener(_calculerTotal);
-    
-    // Calculer le total initial
-    // Retarder légèrement le calcul pour s'assurer que les contrôleurs sont correctement initialisés
-    Future.delayed(Duration.zero, () {
-      _calculerTotal();
-    });
   }
 
-  @override
-  void dispose() {
-    _fraisKilometriqueController.dispose();
-    _fraisPrixLocationController.dispose();
-    _cautionController.dispose();
-    _fraisNettoyageIntController.dispose();
-    _fraisNettoyageExtController.dispose();
-    _fraisCarburantController.dispose();
-    _fraisRayuresController.dispose();
-    _fraisAutreController.dispose();
-    _kmDepartController.dispose();
-    _kmAutoriseController.dispose();
-    _kmSuppController.dispose();
-    _kmRetourController.dispose();
-    _remiseController.dispose(); // Dispose du contrôleur de remise
-    super.dispose();
+  double _parseDouble(String value) {
+    if (value.isEmpty) return 0;
+    return double.tryParse(value.replaceAll(',', '.')) ?? 0;
   }
 
-  // Méthode pour notifier le parent des changements
-
-  // Calculer le total des frais
-  void _calculerTotal() {
-    setState(() {
-      double total = 0.0;
-      bool prixLocationModifie = false;
-      bool fraisKmModifies = false;
-
-      // Vérifier si l'utilisateur a modifié manuellement les valeurs
-      if (widget.data.containsKey('facturePrixLocation') && 
-          _fraisPrixLocationController.text != widget.data['facturePrixLocation']?.toString()) {
-        prixLocationModifie = true;
-      }
-
-      if (widget.data.containsKey('factureFraisKilometrique') && 
-          _fraisKilometriqueController.text != widget.data['factureFraisKilometrique']?.toString()) {
-        fraisKmModifies = true;
-      }
-
-      // Calcul du prix de location basé sur la durée
-      try {
-        // Récupérer les dates
-        String dateDebutStr = (widget.data['dateDebut'] as String?) ?? '';
-        String dateFinStr = widget.dateFinEffective;
-        String prixLocationStr = (widget.data['prixLocation'] as String?) ?? '0';
-        
-        // Convertir le prix de location en double
-        double prixLocationJournalier = double.tryParse(prixLocationStr.replaceAll(',', '.')) ?? 0.0;
-        
-        // Ne pas recalculer si l'utilisateur a modifié manuellement ou vidé le champ
-        if (!prixLocationModifie && _fraisPrixLocationController.text.isNotEmpty && 
-            dateDebutStr.isNotEmpty && dateFinStr.isNotEmpty && prixLocationJournalier > 0) {
-          // Extraire les dates en garantissant différents formats possibles
-          DateTime? dateDebut;
-          DateTime? dateFin;
-          
-          // Essayer de parser le format complet avec heure (ex: "mardi 1 avril 2025 à 17:19")
-          try {
-            // Extraire la date et l'heure
-            RegExp regExpDate = RegExp(r'\d{1,2}\s+\w+\s+\d{4}');
-            RegExp regExpHeure = RegExp(r'\d{1,2}:\d{2}');
-            
-            // Pour la date de début
-            var matchDate = regExpDate.firstMatch(dateDebutStr);
-            var matchHeure = regExpHeure.firstMatch(dateDebutStr);
-            
-            if (matchDate != null) {
-              String simplifiedDate = matchDate.group(0)!;
-              String heure = matchHeure != null ? matchHeure.group(0)! : "00:00";
-              
-              // Combiner la date et l'heure
-              dateDebut = DateFormat('d MMMM yyyy HH:mm', 'fr_FR').parse("$simplifiedDate $heure");
-            }
-            
-            // Pour la date de fin
-            matchDate = regExpDate.firstMatch(dateFinStr);
-            matchHeure = regExpHeure.firstMatch(dateFinStr);
-            
-            if (matchDate != null) {
-              String simplifiedDate = matchDate.group(0)!;
-              String heure = matchHeure != null ? matchHeure.group(0)! : "00:00";
-              
-              // Combiner la date et l'heure
-              dateFin = DateFormat('d MMMM yyyy HH:mm', 'fr_FR').parse("$simplifiedDate $heure");
-            }
-          } catch (e) {
-            print('Erreur lors de l\'extraction de la date et de l\'heure: $e');
-          }
-          
-          // Si l'extraction a échoué, essayer d'autres formats courants
-          if (dateDebut == null) {
-            try {
-              // Essayer le format dd/MM/yyyy
-              dateDebut = DateFormat('dd/MM/yyyy').parse(dateDebutStr);
-            } catch (e) {
-              print('Impossible de parser la date de début: $e');
-            }
-          }
-          
-          if (dateFin == null) {
-            try {
-              // Essayer le format dd/MM/yyyy
-              dateFin = DateFormat('dd/MM/yyyy').parse(dateFinStr);
-            } catch (e) {
-              print('Impossible de parser la date de fin: $e');
-            }
-          }
-          
-          // Si les deux dates sont valides, calculer la durée
-          if (dateDebut != null && dateFin != null) {
-            // Calculer la durée en heures
-            int dureeHeures = dateFin.difference(dateDebut).inHours;
-            
-            // Calculer le nombre de tranches de 24h (arrondi au supérieur)
-            double dureeJours = dureeHeures / 24.0;
-            dureeJours = (dureeHeures % 24 == 0) ? dureeJours : dureeJours.ceilToDouble();
-            dureeJours = dureeJours <= 0 ? 1.0 : dureeJours; // Au moins 1 tranche de 24h
-            
-            // Calculer le prix total de location (100€ pour 24h)
-            double prixLocationTotal = dureeJours * prixLocationJournalier;
-            
-            // Mettre à jour le champ du prix de location total
-            _fraisPrixLocationController.text = prixLocationTotal.toStringAsFixed(2).replaceAll('.', ',');
-            
-            // Afficher les informations de calcul pour le débogage
-            print('Date de début: $dateDebut, Date de fin: $dateFin, Durée: $dureeHeures heures ($dureeJours tranches de 24h), Prix par 24h: $prixLocationJournalier€, Total: ${prixLocationTotal}€');
-          }
-        }
-      } catch (e) {
-        // En cas d'erreur, garder la valeur actuelle
-        print('Erreur lors du calcul de la durée de location: $e');
-      }
-
-      // Calcul des frais kilométriques seulement si le champ n'a pas été modifié manuellement
-      // et si le kilométrage de retour a été saisi
-      if (!fraisKmModifies && _kmRetourController.text.isNotEmpty && _kmRetourController.text != "0") {
-        double kmDepart = double.tryParse(_kmDepartController.text.replaceAll(',', '.')) ?? 0;
-        double kmAutorise = double.tryParse(_kmAutoriseController.text.replaceAll(',', '.')) ?? 0;
-        double kmRetour = double.tryParse(_kmRetourController.text.replaceAll(',', '.')) ?? 0;
-        double kmSupp = double.tryParse(_kmSuppController.text.replaceAll(',', '.')) ?? 0;
-
-        // Ne calculer que si le kilométrage de retour est supérieur au kilométrage de départ + autorisé
-        if (kmRetour > (kmDepart + kmAutorise) && kmSupp > 0) {
-          // Calcul : (kmRetour - (kmDepart + kmAutorise)) * kmSupp
-          double fraisKm = (kmRetour - (kmDepart + kmAutorise)) * kmSupp;
-          
-          // Assurer que le résultat est positif
-          fraisKm = fraisKm < 0 ? 0 : fraisKm;
-          
-          _fraisKilometriqueController.text = fraisKm.toStringAsFixed(2).replaceAll('.', ',');
-          print('Frais kilométriques calculés: ${_fraisKilometriqueController.text} (kmDepart: $kmDepart, kmAutorise: $kmAutorise, kmRetour: $kmRetour, kmSupp: $kmSupp)');
-        }
-      }
-
-      // Ajouter tous les frais qui ont une valeur non nulle
-      if (_fraisPrixLocationController.text.isNotEmpty) {
-        total += double.tryParse(_fraisPrixLocationController.text.replaceAll(',', '.')) ?? 0.0;
-      }
-      if (_fraisKilometriqueController.text.isNotEmpty) {
-        total += double.tryParse(_fraisKilometriqueController.text.replaceAll(',', '.')) ?? 0.0;
-      }
-      total += double.tryParse(_fraisNettoyageIntController.text.replaceAll(',', '.')) ?? 0.0;
-      total += double.tryParse(_fraisNettoyageExtController.text.replaceAll(',', '.')) ?? 0.0;
-      total += double.tryParse(_fraisCarburantController.text.replaceAll(',', '.')) ?? 0.0;
-      total += double.tryParse(_fraisRayuresController.text.replaceAll(',', '.')) ?? 0.0;
-      total += double.tryParse(_fraisAutreController.text.replaceAll(',', '.')) ?? 0.0;
-      total += double.tryParse(_cautionController.text.replaceAll(',', '.')) ?? 0.0;
-      
-      // Appliquer la remise (soustraire du total)
-      double remise = double.tryParse(_remiseController.text.replaceAll(',', '.')) ?? 0.0;
-      total -= remise;
-      
-      // S'assurer que le total n'est pas négatif
-      total = total < 0 ? 0 : total;
-      
-      // Appliquer la TVA si applicable (20%)
-      if (_isTTC) {
-        // Si on est en mode TTC, le total est déjà TTC
-        _total = total;
-      } else {
-        // Si on est en mode HT, le total est HT
-        _total = total;
-      }
-    });
-  }
-
-  Future<void> _sauvegarderDonneesFrais() async {
-    try {
-      // Obtenir l'utilisateur actuel
-      final User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Utilisateur non connecté')),
-        );
-        return;
-      }
-
-      // Convertir les valeurs des contrôleurs en nombres
-      double caution = double.tryParse(_cautionController.text.replaceAll(',', '.')) ?? 0.0;
-      double fraisNettoyageInt = double.tryParse(_fraisNettoyageIntController.text.replaceAll(',', '.')) ?? 0.0;
-      double fraisNettoyageExt = double.tryParse(_fraisNettoyageExtController.text.replaceAll(',', '.')) ?? 0.0;
-      double fraisCarburant = double.tryParse(_fraisCarburantController.text.replaceAll(',', '.')) ?? 0.0;
-      double fraisRayures = double.tryParse(_fraisRayuresController.text.replaceAll(',', '.')) ?? 0.0;
-      double fraisAutre = double.tryParse(_fraisAutreController.text.replaceAll(',', '.')) ?? 0.0;
-      double remise = double.tryParse(_remiseController.text.replaceAll(',', '.')) ?? 0.0;
-      double fraisKilometrique = double.tryParse(_fraisKilometriqueController.text.replaceAll(',', '.')) ?? 0.0;
-      double prixLocation = double.tryParse(_fraisPrixLocationController.text.replaceAll(',', '.')) ?? 0.0;
-
-      // Créer un objet avec les données de la facture
-      Map<String, dynamic> factureData = {
-        'factureCaution': caution,
-        'facturePrixLocation': prixLocation,
-        'factureFraisNettoyageInterieur': fraisNettoyageInt,
-        'factureFraisNettoyageExterieur': fraisNettoyageExt,
-        'factureFraisCarburantManquant': fraisCarburant,
-        'factureFraisRayuresDommages': fraisRayures,
-        'factureFraisAutre': fraisAutre,
-        'factureFraisKilometrique': fraisKilometrique,
-        'factureRemise': remise,
-        'factureTotalFrais': _total,
-        'factureTypePaiement': _typePaiement,
-        'dateFacture': Timestamp.now(),
-        'tva': _isTTC ? 'applicable' : 'non applicable',
-        'factureGeneree': true,
-      };
-
-      // Logs pour déboguer
-      print('Données du widget: ${widget.data}');
-      print('ID utilisateur: ${widget.data['userId']}');
-      print('ID contrat: ${widget.data['contratId']}');
-
-      try {
-        // Vérifier si l'utilisateur est un collaborateur
-        final userId = widget.data['isCollaborateur'] == true 
-            ? widget.data['adminId'] 
-            : widget.data['userId'];
-
-        print('Utilisateur final: $userId');
-
-        // Mettre à jour le document du contrat avec les données de facture
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .collection('locations')
-            .doc(widget.data['contratId'])
-            .update(factureData);
-
-        // Appeler la fonction onFraisUpdated pour mettre à jour les données locales
-        widget.onFraisUpdated({
-        'facture': factureData, // Inclure les données de facture
-        'factureGeneree': true, // Mettre à jour le flag de génération
-        'factureId': factureData['factureId'], // Mettre à jour l'ID de la facture
-        });
-
-        // Afficher le popup de succès
-        showDialog(
-          context: context,
-          builder: (context) => SuccessPopup(
-            title: 'Succès',
-            message: 'Facture enregistrée avec succès',
-            onConfirm: () => Navigator.pop(context),
-          ),
-        );
-      } catch (e) {
-        print('Erreur lors de la sauvegarde des frais: $e');
-        // Afficher le popup d'erreur
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Erreur'),
-            content: Text('Erreur lors de la sauvegarde des frais: ${e.toString()}'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      print('Erreur lors de la sauvegarde des frais: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la sauvegarde: $e')),
-      );
-    }
+  double _calculerTotal() {
+    return _parseDouble(_prixLocationController.text) +
+        _parseDouble(_fraisKilometriqueController.text) +
+        _parseDouble(_fraisNettoyageIntController.text) +
+        _parseDouble(_fraisNettoyageExtController.text) +
+        _parseDouble(_fraisCarburantController.text) +
+        _parseDouble(_fraisRayuresController.text) +
+        _parseDouble(_fraisAutreController.text) +
+        _parseDouble(_cautionController.text);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text(
           'Facture',
@@ -500,304 +88,186 @@ class _FactureScreenState extends State<FactureScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // En-tête avec description
-                  _buildHeader(),
-                  const SizedBox(height: 24),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              PrixLocationContainer(
+                prixLocationController: _prixLocationController,
+                onPrixLocationChanged: () {
+                  setState(() {
+                    // Le total se met à jour automatiquement
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+              FraisKilometrageSuppContainer(
+                fraisKilometriqueController: _fraisKilometriqueController,
+                onFraisKilometriqueChanged: () {
+                  setState(() {
+                    // Le total se met à jour automatiquement
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+              FraisAdditionnelsContainer(
+                fraisNettoyageIntController: _fraisNettoyageIntController,
+                fraisNettoyageExtController: _fraisNettoyageExtController,
+                fraisCarburantController: _fraisCarburantController,
+                fraisRayuresController: _fraisRayuresController,
+                fraisAutreController: _fraisAutreController,
+                onFraisChanged: () {
+                  setState(() {
+                    // Le total se met à jour automatiquement
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+              CautionContainer(
+                cautionController: _cautionController,
+                onCautionChanged: () {
+                  setState(() {
+                    // Le total se met à jour automatiquement
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+              RemiseContainer(
+                remiseController: _remiseController,
+                onRemiseChanged: () {
+                  setState(() {
+                    // Le total se met à jour automatiquement
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+              TypePaiementContainer(
+                selectedType: _selectedPaymentType,
+                onTypePaiementChanged: (type) {
+                  setState(() {
+                    _selectedPaymentType = type;
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+              TotalFraisContainer(
+                prixLocationController: _prixLocationController,
+                fraisKilometriqueController: _fraisKilometriqueController,
+                fraisNettoyageIntController: _fraisNettoyageIntController,
+                fraisNettoyageExtController: _fraisNettoyageExtController,
+                fraisCarburantController: _fraisCarburantController,
+                fraisRayuresController: _fraisRayuresController,
+                fraisAutreController: _fraisAutreController,
+                cautionController: _cautionController,
+                remiseController: _remiseController,
+              ),
+              const SizedBox(height: 24),
+              TVAContainer(
+                onTVATypeChanged: (type) {
+                  setState(() {
+                    _tvaType = type;
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+              Center(
+                child: SizedBox(
+                  width: 350,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final userId = FirebaseAuth.instance.currentUser?.uid;
+                      if (userId != null && widget.data['contratId'] != null) {
+                        try {
+                          // Générer un numéro de facture unique
+                          final now = DateTime.now();
+                          final numeroFacture = 'F-${now.year}${now.month.toString().padLeft(2, '0')}-${now.day}${now.hour}${now.minute}${now.second}';
 
-                  // Prix de location
-                  PrixLocationWidget(
-                    data: widget.data,
-                    prixLocationController: _fraisPrixLocationController,
-                  ),
+                          await FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(userId)
+                              .collection('locations')
+                              .doc(widget.data['contratId'])
+                              .set({
+                                'facturePrixLocation': double.tryParse(_prixLocationController.text) ?? 0.0,
+                                'factureCaution': double.tryParse(_cautionController.text) ?? 0.0,
+                                'factureFraisNettoyageInterieur': double.tryParse(_fraisNettoyageIntController.text) ?? 0.0,
+                                'factureFraisNettoyageExterieur': double.tryParse(_fraisNettoyageExtController.text) ?? 0.0,
+                                'factureFraisCarburantManquant': double.tryParse(_fraisCarburantController.text) ?? 0.0,
+                                'factureFraisRayuresDommages': double.tryParse(_fraisRayuresController.text) ?? 0.0,
+                                'factureFraisAutre': double.tryParse(_fraisAutreController.text) ?? 0.0,
+                                'factureFraisKilometrique': double.tryParse(_fraisKilometriqueController.text) ?? 0.0,
+                                'factureRemise': double.tryParse(_remiseController.text) ?? 0.0,
+                                'factureTotalFrais': _calculerTotal(),
+                                'factureTypePaiement': _selectedPaymentType,
+                                'dateFacture': FieldValue.serverTimestamp(),
+                                'factureTVA': _tvaType,
+                                'factureGeneree': true,
+                                'factureId': numeroFacture,  // Ajout du numéro de facture
+                              }, SetOptions(merge: true));
 
-                  // Frais kilométriques
-                  const SizedBox(height: 24),
-                  _buildSection(
-                    title: "Frais kilométriques",
-                    icon: Icons.directions_car,
-                    color: Colors.blue[700]!,
-                    children: [
-                      KilometrageFactureContainer(
-                        fraisKilometriqueController: _fraisKilometriqueController,
-                        onFraisKilometriqueChanged: () {
-                          setState(() {
-                            widget.data['factureFraisKilometrique'] = null; // Force la détection de modification
-                            _calculerTotal();
+                          // Mettre à jour les données dans le parent
+                          widget.onFraisUpdated({
+                            'facturePrixLocation': _prixLocationController.text,
+                            'factureCaution': _cautionController.text,
+                            'factureFraisNettoyageInterieur': _fraisNettoyageIntController.text,
+                            'factureFraisNettoyageExterieur': _fraisNettoyageExtController.text,
+                            'factureFraisCarburantManquant': _fraisCarburantController.text,
+                            'factureFraisRayuresDommages': _fraisRayuresController.text,
+                            'factureFraisAutre': _fraisAutreController.text,
+                            'factureFraisKilometrique': _fraisKilometriqueController.text,
+                            'factureRemise': _remiseController.text,
+                            'factureTotalFrais': _calculerTotal().toString(),
+                            'factureTypePaiement': _selectedPaymentType,
+                            'factureTVA': _tvaType,
+                            'factureId': numeroFacture,  // Ajout du numéro de facture
                           });
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
 
-                  // Section des frais additionnels
-                  _buildSection(
-                    title: "Frais additionnels",
-                    icon: Icons.add_circle_outline,
-                    color: Colors.orange[700]!,
-                    children: [
-                      _buildTextField("Frais nettoyage intérieur", _fraisNettoyageIntController),
-                      _buildTextField("Frais nettoyage extérieur", _fraisNettoyageExtController),
-                      _buildTextField("Frais carburant manquant", _fraisCarburantController),
-                      _buildTextField("Frais rayures/dommages", _fraisRayuresController),
-                      _buildTextField("Frais autres", _fraisAutreController),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Section de la caution
-                  _buildSection(
-                    title: "Caution",
-                    icon: Icons.security,
-                    color: Colors.blue[700]!,
-                    children: [
-                      _buildTextField("Frais caution", _cautionController),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Section de la remise
-                  _buildSection(
-                    title: "Remise",
-                    icon: Icons.discount,
-                    color: Colors.purple[700]!,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: TextFormField(
-                          controller: _remiseController,
-                          decoration: InputDecoration(
-                            labelText: "Remise",
-                            labelStyle: const TextStyle(color: Color(0xFF08004D)),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                          // Afficher le popup de succès
+                          showDialog(
+                            context: context,
+                            builder: (context) => SuccessPopup(
+                              title: 'Succès',
+                              message: 'La facture a été sauvegardée avec succès.',
+                              onConfirm: () {
+                                Navigator.pop(context); // Fermer le popup
+                                Navigator.pop(context); // Fermer la page de facture
+                              },
                             ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            suffixText: '€',
-                          ),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\,?\d{0,2}')),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _calculerTotal();
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Section du type de paiement
-                  _buildSection(
-                    title: "Type de paiement",
-                    icon: Icons.payment,
-                    color: Colors.purple[700]!,
-                    children: [
-                      DropdownButtonFormField<String>(
-                        value: _typePaiement,
-                        decoration: InputDecoration(
-                          labelText: "Type de paiement",
-                          labelStyle: const TextStyle(color: Color(0xFF08004D)),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
-                        items: _typesPaiement.map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
                           );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _typePaiement = newValue ?? 'Carte bancaire';
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Section du total
-                  _buildSection(
-                    title: "Total",
-                    icon: Icons.attach_money,
-                    color: Colors.green[700]!,
-                    children: [
-                      TotalContainer(
-                        total: _total,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Bouton de validation
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
-                    child: Center(
-                      child: SizedBox(
-                        width: 350, // Largeur fixe du bouton
-                        child: ElevatedButton(
-                          onPressed: _sauvegarderDonneesFrais,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF08004D),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Erreur lors de la sauvegarde : ${e.toString()}'),
+                              backgroundColor: Colors.red,
                             ),
-                          ),
-                          child: const Text(
-                            'Valider',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF08004D),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Valider',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(  
-            color: Colors.black.withOpacity(0.20),
-            blurRadius: 4,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Gestion de la facture',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF08004D),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Saisissez les éléments pour générer la facture',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSection({
-    required String title,
-    required IconData icon,
-    required Color color,
-    required List<Widget> children,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(  
-            color: Colors.black.withOpacity(0.20),
-            blurRadius: 4,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // En-tête de section
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(icon, color: color, size: 24),
-                const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
                 ),
-              ],
-            ),
+              ),              const SizedBox(height: 60),
+            ],
           ),
-          // Contenu de la section
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(children: children),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTextField(String label, TextEditingController controller, {bool isEditable = true}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: TextFormField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: Color(0xFF08004D)),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          prefixText: '€',
         ),
-        keyboardType: TextInputType.number,
-        readOnly: !isEditable,
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'^\d*\,?\d{0,2}')),
-        ],
-        onChanged: (value) {
-          setState(() {
-            _calculerTotal();
-          });
-        },
       ),
     );
   }

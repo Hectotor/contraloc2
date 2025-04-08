@@ -13,7 +13,7 @@ import 'pdf_info_contact.dart';
 /// Classe utilitaire pour générer des PDF de facture
 class FacturePdfGenerator {
   /// Génère un PDF de facture avec un design professionnel
-    static Future<String> generateFacturePdf({
+  static Future<String> generateFacturePdf({
     required Map<String, dynamic> data,
     required Map<String, dynamic> factureData,
     required String logoUrl,

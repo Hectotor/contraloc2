@@ -56,7 +56,6 @@ class PdfInfoContactWidget {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          // Suppression du bloc logo ici
           pw.Text('Informations Loueur:',
               style: pw.TextStyle(
                 fontSize: 15,
@@ -68,7 +67,6 @@ class PdfInfoContactWidget {
           pw.Text(nomEntreprise,
               style: pw.TextStyle(fontSize: 12, font: boldFont)),
           pw.SizedBox(height: 2),
-          // Ajout du nom du collaborateur s'il est disponible
           if (nomCollaborateur != null && nomCollaborateur.isNotEmpty)
             pw.Text('Contrat créé par: $nomCollaborateur', style: pw.TextStyle(font: ttf, fontSize: 9)),
           if (nomCollaborateur != null && nomCollaborateur.isNotEmpty)
@@ -79,7 +77,8 @@ class PdfInfoContactWidget {
           if (telephone.isNotEmpty)
             pw.Text('Téléphone: $telephone', style: pw.TextStyle(font: ttf, fontSize: 9)),
           pw.SizedBox(height: 2),
-          pw.Text('SIRET: $siret', style: pw.TextStyle(font: ttf, fontSize: 9)),
+          if (siret.isNotEmpty)
+            pw.Text('SIRET: $siret', style: pw.TextStyle(font: ttf, fontSize: 9)),
         ],
       ),
     );
