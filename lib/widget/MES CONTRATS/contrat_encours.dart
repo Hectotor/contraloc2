@@ -25,7 +25,7 @@ class _ContratEnCoursState extends State<ContratEnCours> {
   @override
   void initState() {
     super.initState();
-    _vehicleAccessManager = VehicleAccessManager();
+    _vehicleAccessManager = VehicleAccessManager.instance;
     _initializeAccess();
     _searchController.text = widget.searchText;
   }
@@ -59,7 +59,7 @@ class _ContratEnCoursState extends State<ContratEnCours> {
               .where('status', isEqualTo: 'en_cours')
               // Ne pas filtrer par statussupprime car le champ peut ne pas exister
               .orderBy('dateCreation', descending: true)
-              .get();
+              .get(const GetOptions(source: Source.serverAndCache));
               
           return snapshot;
         })
@@ -156,11 +156,25 @@ class _ContratEnCoursState extends State<ContratEnCours> {
     }
 
     try {
-      final vehiculeDoc = await _vehicleAccessManager.getVehicleByImmatriculation(immatriculation);
-      if (vehiculeDoc.docs.isNotEmpty) {
-        final data = vehiculeDoc.docs.first.data();
+      // Récupérer les données du véhicule directement depuis le serveur et le cache
+      final String effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+      if (effectiveUserId.isEmpty) {
+        return null;
+      }
+      
+      // Requête directe qui récupère depuis le serveur et met à jour le cache
+      final query = FirebaseFirestore.instance
+          .collection('users')
+          .doc(effectiveUserId)
+          .collection('vehicules')
+          .where('immatriculation', isEqualTo: immatriculation);
+      
+      final QuerySnapshot snapshot = await query.get(const GetOptions(source: Source.serverAndCache));
+      
+      if (snapshot.docs.isNotEmpty) {
+        final data = snapshot.docs.first.data() as Map<String, dynamic>?;
         
-        if (data != null && data is Map<String, dynamic>) {
+        if (data != null) {
           // Utiliser photoVehiculeUrl au lieu de photoUrls
           if (data.containsKey('photoVehiculeUrl')) {
             final photoUrl = data['photoVehiculeUrl'] as String?;

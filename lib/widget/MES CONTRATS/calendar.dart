@@ -38,7 +38,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-    _vehicleAccessManager = VehicleAccessManager();
+    _vehicleAccessManager = VehicleAccessManager.instance;
     _initializeAccess();
   }
 

@@ -28,7 +28,7 @@ class _ContratRestituesState extends State<ContratRestitues> {
   @override
   void initState() {
     super.initState();
-    _vehicleAccessManager = VehicleAccessManager();
+    _vehicleAccessManager = VehicleAccessManager.instance;
     _initializeAccess();
     _searchController.text = widget.searchText;
   }
@@ -61,7 +61,7 @@ class _ContratRestituesState extends State<ContratRestitues> {
               .collection('locations')
               .where('status', isEqualTo: 'restitue')
               .orderBy('dateRestitution', descending: true)
-              .get();
+              .get(const GetOptions(source: Source.serverAndCache));
 
           return snapshot;
         })
@@ -102,15 +102,26 @@ class _ContratRestituesState extends State<ContratRestitues> {
     }
 
     try {
-      // Utiliser le gestionnaire d'accès aux véhicules pour récupérer le véhicule par immatriculation
-      final vehiculeDoc = await _vehicleAccessManager.getVehicleByImmatriculation(immatriculation);
-
-      if (vehiculeDoc.docs.isNotEmpty) {
-        // Accéder aux données de manière sûre
-        final data = vehiculeDoc.docs.first.data();
+      // Récupérer les données du véhicule directement depuis le serveur et le cache
+      final String effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+      if (effectiveUserId.isEmpty) {
+        return null;
+      }
+      
+      // Requête directe qui récupère depuis le serveur et met à jour le cache
+      final query = FirebaseFirestore.instance
+          .collection('users')
+          .doc(effectiveUserId)
+          .collection('vehicules')
+          .where('immatriculation', isEqualTo: immatriculation);
+      
+      final QuerySnapshot snapshot = await query.get(const GetOptions(source: Source.serverAndCache));
+      
+      if (snapshot.docs.isNotEmpty) {
+        final data = snapshot.docs.first.data() as Map<String, dynamic>?;
         String? photoUrl;
-
-        if (data != null && data is Map<String, dynamic>) {
+        
+        if (data != null) {
           if (data.containsKey('photoUrls') && data['photoUrls'] is List && (data['photoUrls'] as List).isNotEmpty) {
             photoUrl = (data['photoUrls'] as List).first.toString();
           } else if (data.containsKey('photoVehiculeUrl')) {

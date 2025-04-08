@@ -88,7 +88,11 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       }
 
       // Vérifier si l'utilisateur est un collaborateur
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get(const GetOptions(source: Source.serverAndCache));
+      
       final userData = userDoc.data();
       final bool isCollaborateur = userData != null && userData['role'] == 'collaborateur';
       final String? adminId = isCollaborateur ? userData['adminId'] as String? : null;
@@ -96,13 +100,14 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
 
       print('Récupération des contrats pour l\'utilisateur: $userId');
       
-      // Récupérer tous les contrats avec une date de facture
+      // Récupérer tous les contrats avec une date de facture, triés par date (plus récents en premier)
       QuerySnapshot contratsSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .collection('locations')
           .where('dateFacture', isNull: false)
-          .get();
+          .orderBy('dateFacture', descending: true)
+          .get(const GetOptions(source: Source.serverAndCache));
 
       print('Nombre de contrats trouvés: ${contratsSnapshot.docs.length}');
 
@@ -112,34 +117,57 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       Set<String> years = {};
       Map<String, Map<String, dynamic>> vehiculesMap = {};
       
+      // Récupérer tous les véhicules uniques en une seule requête
+      final vehiculesRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('vehicules');
+      
+      // Extraire les IDs des véhicules des contrats
+      Set<String> vehiculesIds = {};
       for (var doc in contratsSnapshot.docs) {
-        String contratId = doc.id;
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        
-        // Récupérer les informations du véhicule depuis la collection locations
-        DocumentSnapshot locationDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .collection('locations')
-            .doc(contratId)
-            .get();
+        final data = doc.data() as Map<String, dynamic>;
+        final vehiculeId = data['vehiculeId'] as String?;
+        if (vehiculeId != null) {
+          vehiculesIds.add(vehiculeId);
+        }
+      }
 
-        Map<String, dynamic> locationData = locationDoc.data() as Map<String, dynamic>;
+      // Récupérer les informations des véhicules en une seule requête
+      if (vehiculesIds.isNotEmpty) {
+        final vehiculesSnapshot = await vehiculesRef
+            .where(FieldPath.documentId, whereIn: vehiculesIds.toList())
+            .get(const GetOptions(source: Source.serverAndCache));
+
+        // Créer un mapping des véhicules par ID
+        for (var doc in vehiculesSnapshot.docs) {
+          final vehiculeData = doc.data();
+          final vehiculeInfoStr = '${vehiculeData['marque']} ${vehiculeData['modele']} (${vehiculeData['immatriculation']})';
+          vehiculesMap[vehiculeInfoStr] = {
+            'marque': vehiculeData['marque'] ?? '',
+            'modele': vehiculeData['modele'] ?? '',
+            'immatriculation': vehiculeData['immatriculation'] ?? '',
+            'photoVehiculeUrl': vehiculeData['photoVehiculeUrl'] ?? '',
+          };
+        }
+      }
+
+      // Maintenant traiter les contrats avec les informations des véhicules déjà récupérées
+      for (var doc in contratsSnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
         
-        // Récupérer les informations du véhicule
-        String marque = locationData['marque'] ?? '';
-        String modele = locationData['modele'] ?? '';
-        String immatriculation = locationData['immatriculation'] ?? '';
-        String vehiculeInfoStr = '$marque $modele ($immatriculation)';
-        
-        // Ajouter les informations du véhicule au mapping
-        vehiculesMap[vehiculeInfoStr] = {
-          'marque': marque,
-          'modele': modele,
-          'immatriculation': immatriculation,
-          'photoVehiculeUrl': locationData['photoVehiculeUrl'] ?? '',
-        };
-        
+        // Récupérer les informations du véhicule depuis le mapping
+        String? vehiculeInfoStr;
+        if (data['marque'] != null && data['modele'] != null && data['immatriculation'] != null) {
+          vehiculeInfoStr = '${data['marque']} ${data['modele']} (${data['immatriculation']})';
+        } else {
+          // Si les informations ne sont pas directement dans le contrat, utiliser le mapping
+          vehiculeInfoStr = vehiculesMap.keys.firstWhere(
+            (key) => key.contains(data['immatriculation'] ?? ''),
+            orElse: () => '',
+          );
+        }
+
         // Récupérer les données financières directement du contrat
         double prixLocation = _convertToDouble(data['facturePrixLocation'] ?? '0');
         double caution = _convertToDouble(data['factureCaution'] ?? '0');

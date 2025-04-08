@@ -28,7 +28,7 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
   @override
   void initState() {
     super.initState();
-    _vehicleAccessManager = VehicleAccessManager();
+    _vehicleAccessManager = VehicleAccessManager.instance;
     _initializeAccess();
     _searchController.text = widget.searchText;
     

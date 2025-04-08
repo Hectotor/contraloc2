@@ -38,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _deleteVehicule = DeleteVehicule(context);
     
     // Initialiser le gestionnaire d'accès aux véhicules
-    _vehicleAccessManager = VehicleAccessManager();
+    _vehicleAccessManager = VehicleAccessManager.instance;
     
     // Charger les données utilisateur et initialiser le gestionnaire de véhicules
     _initializeData();
