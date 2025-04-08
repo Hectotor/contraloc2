@@ -295,58 +295,58 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
 
       final DateTime now = DateTime.now();
       int deletedCount = 0;
+      const int daysBeforeDeletion = 90; // 90 jours avant suppression
 
       for (final doc in snapshot.docs) {
         try {
           final data = doc.data();
           DateTime? dateSuppressionDefinitive;
+          DateTime? dateSuppression;
 
-          // Essayer de parser la date de suppression définitive
-          if (data['dateSuppressionDefinitive'] != null) {
-            if (data['dateSuppressionDefinitive'] is String) {
-              // Si c'est un format ISO 8601
-              if (data['dateSuppressionDefinitive'].toString().contains('T') && 
-                  data['dateSuppressionDefinitive'].toString().contains('-')) {
-                try {
-                  dateSuppressionDefinitive = DateTime.parse(data['dateSuppressionDefinitive']);
-                  print('Date ISO 8601 parsée: $dateSuppressionDefinitive');
-                } catch (e) {
-                  print('Erreur lors du parsing de la date ISO: $e');
-                }
-              }
-              // Si c'est au format court (dd/MM/yyyy)
-              else if (data['dateSuppressionDefinitive'].toString().contains('/')) {
-                final parts = data['dateSuppressionDefinitive'].toString().split('/');
-                if (parts.length == 3) {
-                  final jour = int.parse(parts[0]);
-                  final mois = int.parse(parts[1]);
-                  final annee = int.parse(parts[2]);
-                  dateSuppressionDefinitive = DateTime(annee, mois, jour);
-                }
-              } else {
-                // Essayer avec le format long français
-                dateSuppressionDefinitive = _parseFrenchDate(data['dateSuppressionDefinitive'] as String);
-              }
-            } else if (data['dateSuppressionDefinitive'] is Timestamp) {
-              dateSuppressionDefinitive = (data['dateSuppressionDefinitive'] as Timestamp).toDate();
+          // Essayer de parser la date de suppression
+          if (data['dateSuppression'] != null) {
+            if (data['dateSuppression'] is Timestamp) {
+              dateSuppression = (data['dateSuppression'] as Timestamp).toDate();
+              print('Date de suppression trouvée: $dateSuppression');
             }
           }
 
-          // Si la date est valide et dépassée, supprimer définitivement le contrat
-          if (dateSuppressionDefinitive != null && dateSuppressionDefinitive.isBefore(now)) {
-            // D'abord supprimer les fichiers associés au contrat
-            await _deleteContractFiles(effectiveUserId, doc.id, data);
-            
-            // Ensuite supprimer le document du contrat
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(effectiveUserId)
-                .collection('locations')
-                .doc(doc.id)
-                .delete();
-            
-            deletedCount++;
-            print('Contrat ${doc.id} supprimé définitivement (date limite dépassée)');
+          // Si on a la date de suppression, vérifier qu'elle est ancienne
+          if (dateSuppression != null) {
+            final daysSinceSuppression = now.difference(dateSuppression).inDays;
+            print('Jours depuis la suppression: $daysSinceSuppression');
+
+            // Vérifier si le contrat est marqué comme définitivement supprimé
+            if (data['dateSuppressionDefinitive'] != null) {
+              if (data['dateSuppressionDefinitive'] is Timestamp) {
+                dateSuppressionDefinitive = (data['dateSuppressionDefinitive'] as Timestamp).toDate();
+                print('Date de suppression définitive trouvée: $dateSuppressionDefinitive');
+              }
+            }
+
+            // Si la date est valide et dépassée, ou si le contrat est marqué comme définitivement supprimé
+            if ((dateSuppressionDefinitive != null && dateSuppressionDefinitive.isBefore(now)) || 
+                (daysSinceSuppression >= daysBeforeDeletion)) {
+              
+              print('Suppression du contrat ${doc.id}:'
+                  '\n  - Date suppression: $dateSuppression'
+                  '\n  - Jours depuis suppression: $daysSinceSuppression'
+                  '\n  - Date limite: ${now.subtract(Duration(days: daysBeforeDeletion))}');
+
+              // D'abord supprimer les fichiers associés au contrat
+              await _deleteContractFiles(effectiveUserId, doc.id, data);
+              
+              // Ensuite supprimer le document du contrat
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(effectiveUserId)
+                  .collection('locations')
+                  .doc(doc.id)
+                  .delete();
+              
+              deletedCount++;
+              print('Contrat ${doc.id} supprimé définitivement');
+            }
           }
         } catch (e) {
           print('Erreur lors de la vérification du contrat ${doc.id}: $e');

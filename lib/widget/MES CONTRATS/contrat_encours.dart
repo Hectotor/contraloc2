@@ -156,24 +156,18 @@ class _ContratEnCoursState extends State<ContratEnCours> {
     }
 
     try {
-      // Utiliser le gestionnaire d'accès aux véhicules pour récupérer le véhicule par immatriculation
       final vehiculeDoc = await _vehicleAccessManager.getVehicleByImmatriculation(immatriculation);
-
       if (vehiculeDoc.docs.isNotEmpty) {
-        // Accéder aux données de manière sûre
         final data = vehiculeDoc.docs.first.data();
-        String? photoUrl;
         
         if (data != null && data is Map<String, dynamic>) {
-          if (data.containsKey('photoUrls') && data['photoUrls'] is List && (data['photoUrls'] as List).isNotEmpty) {
-            photoUrl = (data['photoUrls'] as List).first.toString();
-          } else if (data.containsKey('photoVehiculeUrl')) {
-            photoUrl = data['photoVehiculeUrl'] as String?;
+          // Utiliser photoVehiculeUrl au lieu de photoUrls
+          if (data.containsKey('photoVehiculeUrl')) {
+            final photoUrl = data['photoVehiculeUrl'] as String?;
+            _photoUrlCache[cacheKey] = photoUrl;
+            return photoUrl;
           }
         }
-        
-        _photoUrlCache[cacheKey] = photoUrl;
-        return photoUrl;
       }
       
       _photoUrlCache[cacheKey] = null;
