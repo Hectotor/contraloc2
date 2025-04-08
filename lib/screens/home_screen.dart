@@ -66,38 +66,21 @@ class _HomeScreenState extends State<HomeScreen> {
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
           try {
-            // Essayer d'abord depuis le cache
-            try {
-              final userDoc = await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user.uid)
-                  .get(const GetOptions(source: Source.cache));
-              
-              if (userDoc.exists && userDoc.data() != null) {
-                final userData = userDoc.data()!;
-                if (userData.containsKey('prenom') && userData['prenom'] != null) {
-                  prenom = userData['prenom'];
-                  print('✅ Prénom du collaborateur récupéré depuis le cache: $prenom');
-                }
-              }
-            } catch (cacheError) {
-              print('⚠️ Tentative de cache échouée, nouvelle tentative avec le serveur: $cacheError');
-              // Si la cache échoue, essayer le serveur
-              final userDoc = await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user.uid)
-                  .get(const GetOptions(source: Source.server));
-              
-              if (userDoc.exists && userDoc.data() != null) {
-                final userData = userDoc.data()!;
-                if (userData.containsKey('prenom') && userData['prenom'] != null) {
-                  prenom = userData['prenom'];
-                  print('✅ Prénom du collaborateur récupéré depuis le serveur: $prenom');
-                }
+            // Récupérer directement depuis le serveur et mettre à jour le cache en même temps
+            final userDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get(const GetOptions(source: Source.serverAndCache));
+            
+            if (userDoc.exists && userDoc.data() != null) {
+              final userData = userDoc.data()!;
+              if (userData.containsKey('prenom') && userData['prenom'] != null) {
+                prenom = userData['prenom'];
+                print('✅ Prénom du collaborateur récupéré: $prenom');
               }
             }
-          } catch (e) {
-            print('⚠️ Erreur lors de la récupération du prénom du collaborateur: $e');
+          } catch (error) {
+            print('❌ Erreur lors de la récupération des données du collaborateur: $error');
           }
         }
       }
