@@ -39,6 +39,8 @@ class _FactureScreenState extends State<FactureScreen> {
   String _tvaType = 'applicable';
   String _selectedPaymentType = 'Carte bancaire';
 
+  String? adminId;  // Pour stocker l'ID de l'admin si l'utilisateur est un collaborateur
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +55,27 @@ class _FactureScreenState extends State<FactureScreen> {
     _fraisAutreController = TextEditingController(text: "0");
     _cautionController = TextEditingController(text: "0");
     _remiseController = TextEditingController(text: "0");
+
+    // Vérifier si c'est un collaborateur et récupérer l'adminId
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Récupérer l'adminId directement depuis les données du contrat
+      adminId = widget.data['adminId'];
+      // Si adminId n'est pas disponible, le récupérer depuis le document utilisateur
+      if (adminId == null) {
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get()
+            .then((doc) {
+          if (doc.exists && doc.data()?['role'] == 'collaborateur') {
+            setState(() {
+              adminId = doc.data()?['adminId'];
+            });
+          }
+        });
+      }
+    }
   }
 
   double _parseDouble(String value) {
@@ -210,7 +233,9 @@ class _FactureScreenState extends State<FactureScreen> {
 
                           // Sauvegarde dans Firestore
                           final db = FirebaseFirestore.instance;
-                          final docRef = db.collection('users').doc(userId).collection('locations').doc(widget.data['contratId']);
+                          // Utiliser l'adminId si l'utilisateur est un collaborateur, sinon utiliser userId
+                          final userIdToUse = adminId ?? userId;
+                          final docRef = db.collection('users').doc(userIdToUse).collection('locations').doc(widget.data['contratId']);
                           print('Référence du document: $docRef');
                           
                           // Sauvegarder les données
