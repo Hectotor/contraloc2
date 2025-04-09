@@ -271,7 +271,6 @@ class _FactureScreenState extends State<FactureScreen> {
                               message: 'La facture a été sauvegardée avec succès.',
                               onConfirm: () {
                                 Navigator.pop(context); // Fermer le popup
-                                Navigator.pop(context); // Fermer la page de facture
                               },
                             ),
                           );

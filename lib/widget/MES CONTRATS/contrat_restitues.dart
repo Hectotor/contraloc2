@@ -406,31 +406,47 @@ class _ContratRestituesState extends State<ContratRestitues> {
                           ? Image.network(
                               photoUrl,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Center(
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                color: Colors.grey[200],
+                                child: Center(
+                                  child: Icon(
+                                    Icons.directions_car,
+                                    size: 40,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                              ),
+                              loadingBuilder: (context, child, loadingProgress) {
+                                return Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    if (loadingProgress != null) ...[
+                                      Container(
+                                        color: Colors.grey[200],
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value: loadingProgress.expectedTotalBytes != null
+                                              ? loadingProgress.cumulativeBytesLoaded /
+                                                  loadingProgress.expectedTotalBytes!
+                                              : null,
+                                            color: primaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ] else
+                                      child,
+                                  ],
+                                );
+                              },
+                            )
+                          : Container(
+                              color: Colors.grey[200],
+                              child: Center(
                                 child: Icon(
                                   Icons.directions_car,
                                   size: 40,
                                   color: primaryColor,
                                 ),
-                              ),
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value: loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
-                                      : null,
-                                    color: primaryColor,
-                                  ),
-                                );
-                              },
-                            )
-                          : Center(
-                              child: Icon(
-                                Icons.directions_car,
-                                size: 40,
-                                color: primaryColor,
                               ),
                             ),
                       ),
