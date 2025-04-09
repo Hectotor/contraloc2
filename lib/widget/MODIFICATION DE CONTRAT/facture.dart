@@ -183,7 +183,7 @@ class _FactureScreenState extends State<FactureScreen> {
                         print('Enregistrement de la facture - userId: $userId, contratId: ${widget.data['contratId']}');
                         
                         try {
-                          // Générer un numéro de facture unique
+                          // Générer un numéro de facture unique basé sur la date et l'heure
                           final now = DateTime.now();
                           final numeroFacture = 'F-${now.year}${now.month.toString().padLeft(2, '0')}-${now.day}${now.hour}${now.minute}${now.second}';
                           print('Numéro de facture généré: $numeroFacture');
