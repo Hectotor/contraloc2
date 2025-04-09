@@ -17,8 +17,12 @@ class SearchFiltre {
     String vehiculeInfo = '';
     if (data.containsKey('vehiculeInfoStr') && data['vehiculeInfoStr'] != null) {
       vehiculeInfo = (data['vehiculeInfoStr'] as String).toLowerCase();
-    } else if (data.containsKey('immatriculation')) {
-      vehiculeInfo = (data['immatriculation'] as String? ?? '').toLowerCase();
+    } else {
+      vehiculeInfo = [
+        data['marque']?.toLowerCase(),
+        data['modele']?.toLowerCase(),
+        data['immatriculation']?.toLowerCase()
+      ].where((element) => element != null && element.isNotEmpty).join(' ');
     }
     
     if (vehiculeInfo.contains(searchLower)) {

@@ -23,72 +23,12 @@ class ContratScreen extends StatefulWidget {
 class _ContratScreenState extends State<ContratScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
-  // Compteurs pour chaque type de contrat
-  int _activeContractsCount = 0;
-  int _returnedContractsCount = 0;
-  int _calendarEventsCount = 0;
-  int _deletedContractsCount = 0;
-  
-  // Méthode pour mettre à jour le compteur de contrats en cours
-  void _updateActiveContractsCount(int count) {
-    // Utiliser Future.microtask pour éviter d'appeler setState pendant la phase de build
-    if (_activeContractsCount != count) {
-      Future.microtask(() {
-        if (mounted) {
-          setState(() {
-            _activeContractsCount = count;
-          });
-        }
-      });
-    }
-  }
-  
-  // Méthode pour mettre à jour le compteur de contrats restitués
-  void _updateReturnedContractsCount(int count) {
-    if (_returnedContractsCount != count) {
-      Future.microtask(() {
-        if (mounted) {
-          setState(() {
-            _returnedContractsCount = count;
-          });
-        }
-      });
-    }
-  }
-
-  // Méthode pour mettre à jour le compteur d'événements du calendrier
-  void _updateCalendarEventsCount(int count) {
-    if (_calendarEventsCount != count) {
-      Future.microtask(() {
-        if (mounted) {
-          setState(() {
-            _calendarEventsCount = count;
-          });
-        }
-      });
-    }
-  }
-
-  // Méthode pour mettre à jour le compteur de contrats supprimés
-  void _updateDeletedContractsCount(int count) {
-    if (_deletedContractsCount != count) {
-      Future.microtask(() {
-        if (mounted) {
-          setState(() {
-            _deletedContractsCount = count;
-          });
-        }
-      });
-    }
-  }
-
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    
+
     // Set the initial tab based on the showRestitues parameter
     if (widget.showRestitues) {
       _tabController.index = 1; // Restitués tab
@@ -118,164 +58,28 @@ class _ContratScreenState extends State<ContratScreen>
           indicatorSize: TabBarIndicatorSize.label,
           isScrollable: true,
           tabs: [
-            Tab(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(right: 4),
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Color(0xFF08004D), width: 1),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          spreadRadius: 1,
-                          blurRadius: 2,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    constraints: BoxConstraints(minWidth: 16, minHeight: 16),
-                    alignment: Alignment.center,
-                    child: FittedBox(
-                      fit: BoxFit.contain,
-                      child: Text(
-                        '$_activeContractsCount',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Color(0xFF08004D),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Text('En cours'),
-                ],
+            const Tab(
+              child: Text(
+                'En cours',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            Tab(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(right: 4),
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Color(0xFF08004D), width: 1),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          spreadRadius: 1,
-                          blurRadius: 2,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    constraints: BoxConstraints(minWidth: 16, minHeight: 16),
-                    alignment: Alignment.center,
-                    child: FittedBox(
-                      fit: BoxFit.contain,
-                      child: Text(
-                        '$_returnedContractsCount',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Color(0xFF08004D),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Text('Restitués'),
-                ],
+            const Tab(
+              child: Text(
+                'Restitués',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            Tab(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(right: 4),
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Color(0xFF08004D), width: 1),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          spreadRadius: 1,
-                          blurRadius: 2,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    constraints: BoxConstraints(minWidth: 16, minHeight: 16),
-                    alignment: Alignment.center,
-                    child: FittedBox(
-                      fit: BoxFit.contain,
-                      child: Text(
-                        '$_calendarEventsCount',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Color(0xFF08004D),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Text('Réservés'),
-                ],
+            const Tab(
+              child: Text(
+                'Calendrier',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            Tab(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(right: 4),
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Color(0xFF08004D), width: 1),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          spreadRadius: 1,
-                          blurRadius: 2,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    constraints: BoxConstraints(minWidth: 16, minHeight: 16),
-                    alignment: Alignment.center,
-                    child: FittedBox(
-                      fit: BoxFit.contain,
-                      child: Text(
-                        '$_deletedContractsCount',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Color(0xFF08004D),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Text('Supprimés'),
-                ],
+            const Tab(
+              child: Text(
+                'Supprimés',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -283,50 +87,6 @@ class _ContratScreenState extends State<ContratScreen>
       ),
       body: Column(
         children: [
-          // Widgets invisibles pour charger les données initiales
-          Offstage(
-            offstage: true,
-            child: SizedBox(
-              height: 0,
-              width: 0,
-              child: contrat_encours.ContratEnCours(
-                searchText: '',
-                onContractsCountChanged: _updateActiveContractsCount,
-              ),
-            ),
-          ),
-          Offstage(
-            offstage: true,
-            child: SizedBox(
-              height: 0,
-              width: 0,
-              child: contrat_restitues.ContratRestitues(
-                searchText: '',
-                onContractsCountChanged: _updateReturnedContractsCount,
-              ),
-            ),
-          ),
-          Offstage(
-            offstage: true,
-            child: SizedBox(
-              height: 0,
-              width: 0,
-              child: calendar_screen.CalendarScreen(
-                onEventsCountChanged: _updateCalendarEventsCount,
-              ),
-            ),
-          ),
-          Offstage(
-            offstage: true,
-            child: SizedBox(
-              height: 0,
-              width: 0,
-              child: contrat_supprimes.ContratSupprimes(
-                searchText: '',
-                onContractsCountChanged: _updateDeletedContractsCount,
-              ),
-            ),
-          ),
           // TabBar pour la navigation entre les onglets
           Expanded(
             child: TabBarView(
@@ -338,7 +98,6 @@ class _ContratScreenState extends State<ContratScreen>
                   duration: const Duration(milliseconds: 300),
                   child: contrat_encours.ContratEnCours(
                     searchText: '',
-                    onContractsCountChanged: _updateActiveContractsCount,
                   ),
                   transitionBuilder: (Widget child, Animation<double> animation) {
                     return SlideTransition(
@@ -359,7 +118,6 @@ class _ContratScreenState extends State<ContratScreen>
                   duration: const Duration(milliseconds: 300),
                   child: contrat_restitues.ContratRestitues(
                     searchText: '',
-                    onContractsCountChanged: _updateReturnedContractsCount,
                   ),
                   transitionBuilder: (Widget child, Animation<double> animation) {
                     return SlideTransition(
@@ -378,9 +136,7 @@ class _ContratScreenState extends State<ContratScreen>
                 // Calendrier
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
-                  child: calendar_screen.CalendarScreen(
-                    onEventsCountChanged: _updateCalendarEventsCount,
-                  ),
+                  child: calendar_screen.CalendarScreen(),
                   transitionBuilder: (Widget child, Animation<double> animation) {
                     return SlideTransition(
                       position: Tween<Offset>(
@@ -400,7 +156,6 @@ class _ContratScreenState extends State<ContratScreen>
                   duration: const Duration(milliseconds: 300),
                   child: contrat_supprimes.ContratSupprimes(
                     searchText: '',
-                    onContractsCountChanged: _updateDeletedContractsCount,
                   ),
                   transitionBuilder: (Widget child, Animation<double> animation) {
                     return SlideTransition(
