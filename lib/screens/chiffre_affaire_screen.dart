@@ -519,9 +519,25 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           indicatorSize: TabBarIndicatorSize.label,
-          tabs: const [
-            Tab(text: 'Résumé'),
-            Tab(text: 'Par période'),
+          tabs: [
+            Tab(
+              child: Text(
+                'Résumé',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            Tab(
+              child: Text(
+                'Par période',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'vehicle_access_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class ContratSummary extends StatefulWidget {
   const ContratSummary({Key? key}) : super(key: key);
@@ -19,6 +21,9 @@ class _ContratSummaryState extends State<ContratSummary> {
   int _deletedReservedContracts = 0;
   bool _isLoading = true;
   String? _error;
+  DateTime? _lastUpdated;
+  static const String _cacheKey = 'contrat_summary_cache';
+  static const Duration _cacheValidity = Duration(minutes: 15);
 
   // Couleur principale
   static const Color _primaryColor = Color(0xFF08004D);
@@ -37,11 +42,105 @@ class _ContratSummaryState extends State<ContratSummary> {
     'réservé': Icons.calendar_today,
   };
 
+  // Formatage de date en français
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    
+    if (diff.inMinutes < 1) {
+      return 'À l\'instant';
+    } else if (diff.inHours < 1) {
+      final minutes = diff.inMinutes;
+      return '${minutes} ${minutes > 1 ? "minutes" : "minute"}';
+    } else if (diff.inDays < 1) {
+      final hours = diff.inHours;
+      return '${hours} ${hours > 1 ? "heures" : "heure"}';
+    } else if (diff.inDays < 2) {
+      return 'Hier à ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } else {
+      return '${date.day} ${_getMonthName(date.month)} à ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    }
+  }
+
+  // Renvoie le nom du mois en français
+  String _getMonthName(int month) {
+    const months = [
+      'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+    ];
+    return months[month - 1];
+  }
+
   @override
   void initState() {
     super.initState();
     print('ContratSummary: Initialisation');
-    _loadContractCounts();
+    _loadFromCacheAndUpdate();
+  }
+
+  Future<void> _loadFromCacheAndUpdate() async {
+    // Essayer de charger depuis le cache d'abord
+    bool cacheLoaded = await _loadFromCache();
+    
+    // Si le cache n'est pas disponible ou expiré, charger depuis Firestore
+    if (!cacheLoaded) {
+      await _loadContractCounts();
+    }
+  }
+
+  Future<bool> _loadFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cacheString = prefs.getString(_cacheKey);
+      
+      if (cacheString != null) {
+        final cacheData = json.decode(cacheString);
+        final lastUpdatedMillis = cacheData['lastUpdated'] as int;
+        final lastUpdated = DateTime.fromMillisecondsSinceEpoch(lastUpdatedMillis);
+        
+        // Vérifier si le cache est encore valide
+        if (DateTime.now().difference(lastUpdated) < _cacheValidity) {
+          setState(() {
+            _activeContracts = cacheData['activeContracts'];
+            _returnedContracts = cacheData['returnedContracts'];
+            _reservedContracts = cacheData['reservedContracts'];
+            _deletedActiveContracts = cacheData['deletedActiveContracts'];
+            _deletedReturnedContracts = cacheData['deletedReturnedContracts'];
+            _deletedReservedContracts = cacheData['deletedReservedContracts'];
+            _lastUpdated = lastUpdated;
+            _isLoading = false;
+          });
+          print('ContratSummary: Données chargées depuis le cache (mis à jour le ${_lastUpdated?.toLocal().toString().substring(0, 19)})');
+          return true;
+        } else {
+          print('ContratSummary: Cache expiré, chargement depuis Firestore');
+        }
+      }
+    } catch (e) {
+      print('ContratSummary: Erreur lors du chargement du cache: $e');
+    }
+    return false;
+  }
+
+  Future<void> _saveToCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now();
+      final cacheData = {
+        'activeContracts': _activeContracts,
+        'returnedContracts': _returnedContracts,
+        'reservedContracts': _reservedContracts,
+        'deletedActiveContracts': _deletedActiveContracts,
+        'deletedReturnedContracts': _deletedReturnedContracts,
+        'deletedReservedContracts': _deletedReservedContracts,
+        'lastUpdated': now.millisecondsSinceEpoch,
+      };
+      await prefs.setString(_cacheKey, json.encode(cacheData));
+      setState(() => _lastUpdated = now);
+      print('ContratSummary: Données mises en cache');
+    } catch (e) {
+      print('ContratSummary: Erreur lors de la mise en cache: $e');
+    }
   }
 
   Future<void> _loadContractCounts() async {
@@ -65,7 +164,7 @@ class _ContratSummaryState extends State<ContratSummary> {
           .doc(targetUserId)
           .collection('locations');
       print('ContratSummary: Requête Firestore configurée');
-
+      
       // Active contracts
       final activeSnapshot = await locationQuery
           .where('status', isEqualTo: 'en_cours')
@@ -143,6 +242,9 @@ class _ContratSummaryState extends State<ContratSummary> {
 
       setState(() => _isLoading = false);
       print('ContratSummary: Chargement terminé');
+      
+      // Sauvegarder les données dans le cache
+      _saveToCache();
     } catch (e) {
       print('ContratSummary: Erreur lors du chargement: $e');
       setState(() {
@@ -276,7 +378,28 @@ class _ContratSummaryState extends State<ContratSummary> {
           else
             Column(
               children: [ 
-                const SizedBox(height: 30),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (_lastUpdated != null)
+                      Expanded(
+                        child: Text(
+                          'Dernière mise à jour: ${_formatDate(_lastUpdated!)}',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh, size: 20),
+                      onPressed: () {
+                        print('ContratSummary: Rafraîchissement manuel');
+                        _loadContractCounts();
+                      },
+                      tooltip: 'Rafraîchir',
+                      color: _primaryColor,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
                 _buildContractCard(
                   "En cours",
                   _activeContracts,
