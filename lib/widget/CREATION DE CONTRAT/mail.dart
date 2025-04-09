@@ -44,6 +44,19 @@ class EmailService {
           if (adminId != null) {
             print('👥 Collaborateur détecté, utilisation des données de l\'administrateur: $adminId');
             
+            // Récupérer les données de l'entreprise depuis l'admin
+            final adminDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(adminId)
+                .get();
+            
+            if (adminDoc.exists) {
+              nomEntreprise ??= adminDoc.data()?['nomEntreprise'];
+              adresse ??= adminDoc.data()?['adresse'];
+              telephone ??= adminDoc.data()?['telephone'];
+              logoUrl ??= adminDoc.data()?['logoUrl'];
+            }
+            
             // Récupérer l'email de l'administrateur
             if (sendCopyToAdmin) {
               try {
@@ -96,62 +109,32 @@ class EmailService {
               }
             }
           }
-        } else if (sendCopyToAdmin) {
-          // Si c'est l'admin lui-même, utiliser son propre email
-          adminEmail = userDoc.data()?['email'] ?? user.email;
-          print('📧 Email administrateur (utilisateur actuel): $adminEmail');
-          
-          // Si toujours null, utiliser l'email de l'utilisateur Firebase
-          if (adminEmail == null && user.email != null) {
-            adminEmail = user.email;
-            print('📧 Utilisation de l\'email Firebase comme fallback: $adminEmail');
+        } else {
+          // Si c'est l'admin lui-même, utiliser ses propres données
+          if (sendCopyToAdmin) {
+            adminEmail = userDoc.data()?['email'] ?? user.email;
+            print('📧 Email administrateur (utilisateur actuel): $adminEmail');
+            
+            // Si toujours null, utiliser l'email de l'utilisateur Firebase
+            if (adminEmail == null && user.email != null) {
+              adminEmail = user.email;
+              print('📧 Utilisation de l\'email Firebase comme fallback: $adminEmail');
+            }
           }
+          
+          // Récupérer les données de l'entreprise
+          nomEntreprise ??= userDoc.data()?['nomEntreprise'];
+          adresse ??= userDoc.data()?['adresse'];
+          telephone ??= userDoc.data()?['telephone'];
+          logoUrl ??= userDoc.data()?['logoUrl'];
         }
       } catch (e) {
         print('❌ Erreur lors de la vérification du rôle: $e');
-        // Tenter d'utiliser l'email Firebase comme fallback
+        // Tenter d'utiliser les données de l'utilisateur actuel comme fallback
         if (sendCopyToAdmin && user.email != null) {
           adminEmail = user.email;
           print('📧 Utilisation de l\'email Firebase comme fallback après erreur: $adminEmail');
         }
-      }
-
-      // Essayer d'abord de récupérer depuis le cache pour éviter les erreurs de permission
-      try {
-        final userData = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('authentification')
-            .doc(user.uid)
-            .get(GetOptions(source: Source.cache));
-
-        if (userData.exists) {
-          nomEntreprise = userData.data()?['nomEntreprise'] ?? 'Contraloc';
-          adresse = userData.data()?['adresse'] ?? '';
-          telephone = userData.data()?['telephone'] ?? '';
-          logoUrl = userData.data()?['logoUrl'];
-          print('📋 Données entreprise récupérées depuis le cache');
-        } else {
-          // Si les données ne sont pas dans le cache, essayer de récupérer depuis le serveur
-          final serverData = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .collection('authentification')
-              .doc(user.uid)
-              .get();
-              
-          if (serverData.exists) {
-            nomEntreprise = serverData.data()?['nomEntreprise'] ?? 'Contraloc';
-            adresse = serverData.data()?['adresse'] ?? '';
-            telephone = serverData.data()?['telephone'] ?? '';
-            logoUrl = serverData.data()?['logoUrl'];
-            print('🔄 Données entreprise récupérées depuis le serveur');
-          }
-        }
-      } catch (e) {
-        print('❌ Erreur récupération données entreprise: $e');
-        // En cas d'erreur, utiliser des valeurs par défaut
-        nomEntreprise = nomEntreprise ?? 'Contraloc';
       }
 
       // Récupérer les paramètres SMTP depuis admin/smtpSettings
@@ -387,6 +370,19 @@ class EmailService {
           if (adminId != null) {
             print('👥 Collaborateur détecté, utilisation des données de l\'administrateur: $adminId');
             
+            // Récupérer les données de l'entreprise depuis l'admin
+            final adminDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(adminId)
+                .get();
+            
+            if (adminDoc.exists) {
+              nomEntreprise ??= adminDoc.data()?['nomEntreprise'];
+              adresse ??= adminDoc.data()?['adresse'];
+              telephone ??= adminDoc.data()?['telephone'];
+              logoUrl ??= adminDoc.data()?['logoUrl'];
+            }
+            
             // Récupérer l'email de l'administrateur
             if (sendCopyToAdmin) {
               try {
@@ -439,20 +435,28 @@ class EmailService {
               }
             }
           }
-        } else if (sendCopyToAdmin) {
-          // Si c'est l'admin lui-même, utiliser son propre email
-          adminEmail = userDoc.data()?['email'] ?? user.email;
-          print('📧 Email administrateur (utilisateur actuel): $adminEmail');
-          
-          // Si toujours null, utiliser l'email de l'utilisateur Firebase
-          if (adminEmail == null && user.email != null) {
-            adminEmail = user.email;
-            print('📧 Utilisation de l\'email Firebase comme fallback: $adminEmail');
+        } else {
+          // Si c'est l'admin lui-même, utiliser ses propres données
+          if (sendCopyToAdmin) {
+            adminEmail = userDoc.data()?['email'] ?? user.email;
+            print('📧 Email administrateur (utilisateur actuel): $adminEmail');
+            
+            // Si toujours null, utiliser l'email de l'utilisateur Firebase
+            if (adminEmail == null && user.email != null) {
+              adminEmail = user.email;
+              print('📧 Utilisation de l\'email Firebase comme fallback: $adminEmail');
+            }
           }
+          
+          // Récupérer les données de l'entreprise
+          nomEntreprise ??= userDoc.data()?['nomEntreprise'];
+          adresse ??= userDoc.data()?['adresse'];
+          telephone ??= userDoc.data()?['telephone'];
+          logoUrl ??= userDoc.data()?['logoUrl'];
         }
       } catch (e) {
         print('❌ Erreur lors de la vérification du rôle: $e');
-        // Tenter d'utiliser l'email Firebase comme fallback
+        // Tenter d'utiliser les données de l'utilisateur actuel comme fallback
         if (sendCopyToAdmin && user.email != null) {
           adminEmail = user.email;
           print('📧 Utilisation de l\'email Firebase comme fallback après erreur: $adminEmail');

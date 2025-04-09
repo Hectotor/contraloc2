@@ -629,6 +629,10 @@ class _LocationPageState extends State<LocationPage> {
         await EmailService.sendEmailWithPdf(
           pdfPath: pdfPath,
           email: contratModel.email!,
+          nomEntreprise: nomEntreprise,
+          logoUrl: logoUrl,
+          adresse: adresseEntreprise,
+          telephone: telephoneEntreprise,
           marque: contratModel.marque ?? '',
           modele: contratModel.modele ?? '',
           immatriculation: contratModel.immatriculation ?? '',
