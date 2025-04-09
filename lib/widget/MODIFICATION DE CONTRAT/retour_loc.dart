@@ -254,6 +254,10 @@ class _RetourLocState extends State<RetourLoc> {
         const SizedBox(height: 8),
         TextFormField(
           controller: widget.kilometrageRetourController,
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+          ],
           decoration: InputDecoration(
             hintText: "Entrez le kilométrage actuel",
             prefixIcon: const Icon(Icons.speed, color: Colors.orange),
@@ -280,10 +284,6 @@ class _RetourLocState extends State<RetourLoc> {
             ),
             contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
           ),
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-          ],
           style: TextStyle(
             fontSize: 16,
             color: Colors.grey[800],
