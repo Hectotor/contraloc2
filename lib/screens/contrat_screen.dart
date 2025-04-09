@@ -3,6 +3,7 @@ import '../widget/MES CONTRATS/contrat_encours.dart' as contrat_encours;
 import '../widget/MES CONTRATS/contrat_restitues.dart' as contrat_restitues;
 import '../widget/MES CONTRATS/calendar.dart' as calendar_screen;
 import '../widget/MES CONTRATS/contrat_supprimes.dart' as contrat_supprimes;
+import '../widget/MES CONTRATS/contrat_summary.dart' as contrat_summary;
 
 class ContratScreen extends StatefulWidget {
   final bool showSuccessMessage;
@@ -27,7 +28,7 @@ class _ContratScreenState extends State<ContratScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
 
     // Set the initial tab based on the showRestitues parameter
     if (widget.showRestitues) {
@@ -79,6 +80,12 @@ class _ContratScreenState extends State<ContratScreen>
             const Tab(
               child: Text(
                 'Supprimés',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const Tab(
+              child: Text(
+                'Résumé',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -152,24 +159,12 @@ class _ContratScreenState extends State<ContratScreen>
                 ),
                 
                 // Contrats supprimés
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: contrat_supprimes.ContratSupprimes(
-                    searchText: '',
-                  ),
-                  transitionBuilder: (Widget child, Animation<double> animation) {
-                    return SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(1.0, 0.0),
-                        end: Offset.zero,
-                      ).animate(CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeInOut,
-                      )),
-                      child: child,
-                    );
-                  },
+                contrat_supprimes.ContratSupprimes(
+                  searchText: '',
                 ),
+                
+                // Résumé des contrats
+                contrat_summary.ContratSummary(),
               ],
             ),
           ),
