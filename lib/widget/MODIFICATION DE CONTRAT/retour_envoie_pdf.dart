@@ -63,25 +63,50 @@ class RetourEnvoiePdf {
         final appDir = await getApplicationDocumentsDirectory();
         final pdfPath = '${appDir.path}/contrat_$contratId.pdf';
 
-        await EmailService.sendClotureEmailWithPdf(
-          pdfPath: pdfPath,
-          email: (contratData['email'] ?? '').toString(),
-          marque: (contratData['marque'] ?? '').toString(),
-          modele: (contratData['modele'] ?? '').toString(),
-          immatriculation: (contratData['immatriculation'] ?? '').toString(),
-          context: context,
-          prenom: (contratData['prenom'] ?? '').toString(),
-          nom: (contratData['nom'] ?? '').toString(),
-          nomEntreprise: contratData['nomEntreprise'] ?? 'Contraloc',
-          logoUrl: contratData['logoUrl'] ?? '',
-          adresse: contratData['adresseEntreprise'] ?? '',
-          telephone: contratData['telephoneEntreprise'] ?? '',
-          kilometrageRetour: kilometrageRetour,
-          dateFinEffectif: dateFinEffectif,
-          commentaireRetour: commentaireRetour,
-          nomCollaborateur: contratData['nomCollaborateur'],
-          prenomCollaborateur: contratData['prenomCollaborateur'],
-        );
+        try {
+          await EmailService.sendClotureEmailWithPdf(
+            pdfPath: pdfPath,
+            email: (contratData['email'] ?? '').toString(),
+            marque: (contratData['marque'] ?? '').toString(),
+            modele: (contratData['modele'] ?? '').toString(),
+            immatriculation: (contratData['immatriculation'] ?? '').toString(),
+            context: context,
+            prenom: (contratData['prenom'] ?? '').toString(),
+            nom: (contratData['nom'] ?? '').toString(),
+            nomEntreprise: contratData['nomEntreprise'] ?? 'Contraloc',
+            logoUrl: contratData['logoUrl'] ?? '',
+            adresse: contratData['adresseEntreprise'] ?? '',
+            telephone: contratData['telephoneEntreprise'] ?? '',
+            kilometrageRetour: kilometrageRetour,
+            dateFinEffectif: dateFinEffectif,
+            commentaireRetour: commentaireRetour,
+            nomCollaborateur: contratData['nomCollaborateur'],
+            prenomCollaborateur: contratData['prenomCollaborateur'],
+            sendCopyToAdmin: true, // Ajout de ce paramètre pour envoyer une copie à l'administrateur
+          );
+
+          // Afficher un message de succès après l'envoi du PDF
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Contrat clôturé"),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } catch (e) {
+          // Afficher un message d'erreur si l'envoi échoue
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Erreur lors de l'envoi du PDF : $e"),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          print("Erreur détaillée : $e");
+          return;
+        }
       } else {
         print("Aucun email client n'a été trouvé. Pas d'envoi de PDF.");
       }
@@ -127,14 +152,6 @@ class RetourEnvoiePdf {
         print('❌ Erreur lors de la mise à jour du statut du contrat: $e');
         throw Exception('Erreur lors de la mise à jour du statut du contrat: $e');
       }
-
-      // Afficher un message de succès
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Contrat clôturé"),
-          backgroundColor: Colors.green,
-        ),
-      );
 
     } catch (e) {
       // Fermer le dialogue de chargement en cas d'erreur

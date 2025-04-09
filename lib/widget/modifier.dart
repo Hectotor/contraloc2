@@ -418,6 +418,90 @@ class _ModifierScreenState extends State<ModifierScreen> {
     }
   }
 
+  Future<void> _showConfirmationDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // empêche la fermeture en cliquant à l'extérieur
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmation'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: const <Widget>[
+                Text('Êtes-vous sûr de vouloir renvoyer le contrat à votre client ?'),
+                SizedBox(height: 10),
+                Text('Cette action enverra un email avec le contrat PDF au client.'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Annuler'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Ferme la boîte de dialogue
+              },
+            ),
+            TextButton(
+              child: const Text('Renvoyer'),
+              onPressed: () async {
+                Navigator.of(context).pop(); // Ferme la boîte de dialogue
+                
+                if (!_formKey.currentState!.validate()) return;
+                
+                try {
+                  setState(() {
+                    _isUpdatingContrat = true;
+                  });
+                  
+                  // Récupérer la signature de retour
+                  final signatureBytes = await _signatureRetourController.toPngBytes();
+                  String? signatureBase64;
+                  if (signatureBytes != null) {
+                    signatureBase64 = base64Encode(signatureBytes);
+                  }
+
+                  // Générer et envoyer le PDF
+                  await RetourEnvoiePdf.genererEtEnvoyerPdfCloture(
+                    context: context,
+                    contratData: widget.data,
+                    contratId: widget.contratId,
+                    dateFinEffectif: _dateFinEffectifController.text,
+                    kilometrageRetour: _kilometrageRetourController.text,
+                    commentaireRetour: _commentaireRetourController.text,
+                    pourcentageEssenceRetour: _pourcentageEssenceRetourController.text,
+                    signatureRetourBase64: signatureBase64,
+                  );
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Le contrat a été renvoyé avec succès'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Erreur lors de l\'envoi du contrat: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } finally {
+                  setState(() {
+                    _isUpdatingContrat = false;
+                  });
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -655,6 +739,28 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           const SizedBox(height: 20),
                         ],
                         ElevatedButton(
+                          onPressed: () => _showConfirmationDialog(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.send, color: Colors.white),
+                              SizedBox(width: 10),
+                              Text(
+                                "Renvoyer le contrat",
+                                style: TextStyle(color: Colors.white, fontSize: 18),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
                           onPressed: () => AffichageContratPdf.genererEtAfficherContratPdf(
                             context: context,
                             data: widget.data,
@@ -667,7 +773,10 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange,
-                            minimumSize: const Size(double.infinity, 50),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -680,74 +789,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () async {
-                            if (!_formKey.currentState!.validate()) return;
-                            
-                            try {
-                              setState(() {
-                                _isUpdatingContrat = true;
-                              });
-                              
-                              // Récupérer la signature de retour
-                              final signatureBytes = await _signatureRetourController.toPngBytes();
-                              String? signatureBase64;
-                              if (signatureBytes != null) {
-                                signatureBase64 = base64Encode(signatureBytes);
-                              }
-
-                              // Générer et envoyer le PDF
-                              await RetourEnvoiePdf.genererEtEnvoyerPdfCloture(
-                                context: context,
-                                contratData: widget.data,
-                                contratId: widget.contratId,
-                                dateFinEffectif: _dateFinEffectifController.text,
-                                kilometrageRetour: _kilometrageRetourController.text,
-                                commentaireRetour: _commentaireRetourController.text,
-                                pourcentageEssenceRetour: _pourcentageEssenceRetourController.text,
-                                signatureRetourBase64: signatureBase64,
-                              );
-
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Le contrat a été renvoyé avec succès'),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Erreur lors de l\'envoi du contrat: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            } finally {
-                              setState(() {
-                                _isUpdatingContrat = false;
-                              });
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue, 
-                            minimumSize: const Size(double.infinity, 50),
-                          ),
-                          child: _isUpdatingContrat
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white) 
-                              : const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.send, color: Colors.white),
-                                  SizedBox(width: 8),
-                                  Text('Renvoyer le contrat', style: TextStyle(color: Colors.white)),
-                                ],
-                              ),
                         ),
                         const SizedBox(height: 20),
                         ElevatedButton(
