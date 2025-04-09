@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import 'facture_pdf.dart';
 
 class AffichageFacturePdf {
@@ -24,6 +26,7 @@ class AffichageFacturePdf {
         'factureTypePaiement': contratData['factureTypePaiement'] ?? 'Carte bancaire',
         'dateFacture': contratData['dateFacture']?.toDate() ?? DateTime.now(),
         'factureId': contratData['factureId'] ?? '',
+        'factureTVA': contratData['factureTVA'] ?? 'applicable',
       };
 
       // Générer le PDF avec FacturePdfGenerator
@@ -35,11 +38,24 @@ class AffichageFacturePdf {
         nomEntreprise: contratData['nomEntreprise'] ?? '',
         adresse: contratData['adresseEntreprise'] ?? '',
         telephone: contratData['telephoneEntreprise'] ?? '',
-        siret: siretEntreprise?.isNotEmpty == true ? siretEntreprise : null,
+        siret: siretEntreprise?.isNotEmpty == true ? siretEntreprise : '',
       );
 
+      // Supprimer le fichier PDF existant s'il existe
+      final appDir = await getApplicationDocumentsDirectory();
+      final localPdfPath = '${appDir.path}/facture_${contratData['factureId']}.pdf';
+      final localPdfFile = File(localPdfPath);
+      if (await localPdfFile.exists()) {
+        await localPdfFile.delete();
+        print('Ancien PDF supprimé');
+      }
+
+      // Sauvegarder le nouveau PDF
+      await File(pdfPath).copy(localPdfPath);
+      print('Nouveau PDF sauvegardé: $localPdfPath');
+
       // Ouvrir le PDF
-      await OpenFilex.open(pdfPath);
+      await OpenFilex.open(localPdfPath);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur lors de la génération du PDF: $e')),

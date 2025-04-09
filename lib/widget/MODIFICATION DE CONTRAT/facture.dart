@@ -180,33 +180,46 @@ class _FactureScreenState extends State<FactureScreen> {
                     onPressed: () async {
                       final userId = FirebaseAuth.instance.currentUser?.uid;
                       if (userId != null && widget.data['contratId'] != null) {
+                        print('Enregistrement de la facture - userId: $userId, contratId: ${widget.data['contratId']}');
+                        
                         try {
                           // Générer un numéro de facture unique
                           final now = DateTime.now();
                           final numeroFacture = 'F-${now.year}${now.month.toString().padLeft(2, '0')}-${now.day}${now.hour}${now.minute}${now.second}';
+                          print('Numéro de facture généré: $numeroFacture');
 
-                          await FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(userId)
-                              .collection('locations')
-                              .doc(widget.data['contratId'])
-                              .set({
-                                'facturePrixLocation': double.tryParse(_prixLocationController.text) ?? 0.0,
-                                'factureCaution': double.tryParse(_cautionController.text) ?? 0.0,
-                                'factureFraisNettoyageInterieur': double.tryParse(_fraisNettoyageIntController.text) ?? 0.0,
-                                'factureFraisNettoyageExterieur': double.tryParse(_fraisNettoyageExtController.text) ?? 0.0,
-                                'factureFraisCarburantManquant': double.tryParse(_fraisCarburantController.text) ?? 0.0,
-                                'factureFraisRayuresDommages': double.tryParse(_fraisRayuresController.text) ?? 0.0,
-                                'factureFraisAutre': double.tryParse(_fraisAutreController.text) ?? 0.0,
-                                'factureFraisKilometrique': double.tryParse(_fraisKilometriqueController.text) ?? 0.0,
-                                'factureRemise': double.tryParse(_remiseController.text) ?? 0.0,
-                                'factureTotalFrais': _calculerTotal(),
-                                'factureTypePaiement': _selectedPaymentType,
-                                'dateFacture': FieldValue.serverTimestamp(),
-                                'factureTVA': _tvaType,
-                                'factureGeneree': true,
-                                'factureId': numeroFacture,  // Ajout du numéro de facture
-                              }, SetOptions(merge: true));
+                          // Préparer les données à sauvegarder
+                          final factureData = {
+                            'facturePrixLocation': double.tryParse(_prixLocationController.text) ?? 0.0,
+                            'factureCaution': double.tryParse(_cautionController.text) ?? 0.0,
+                            'factureFraisNettoyageInterieur': double.tryParse(_fraisNettoyageIntController.text) ?? 0.0,
+                            'factureFraisNettoyageExterieur': double.tryParse(_fraisNettoyageExtController.text) ?? 0.0,
+                            'factureFraisCarburantManquant': double.tryParse(_fraisCarburantController.text) ?? 0.0,
+                            'factureFraisRayuresDommages': double.tryParse(_fraisRayuresController.text) ?? 0.0,
+                            'factureFraisAutre': double.tryParse(_fraisAutreController.text) ?? 0.0,
+                            'factureFraisKilometrique': double.tryParse(_fraisKilometriqueController.text) ?? 0.0,
+                            'factureRemise': double.tryParse(_remiseController.text) ?? 0.0,
+                            'factureTotalFrais': _calculerTotal(),
+                            'factureTypePaiement': _selectedPaymentType,
+                            'dateFacture': FieldValue.serverTimestamp(),
+                            'factureTVA': _tvaType,
+                            'factureGeneree': true,
+                            'factureId': numeroFacture,
+                          };
+                          print('Données à sauvegarder: $factureData');
+
+                          // Sauvegarde dans Firestore
+                          final db = FirebaseFirestore.instance;
+                          final docRef = db.collection('users').doc(userId).collection('locations').doc(widget.data['contratId']);
+                          print('Référence du document: $docRef');
+                          
+                          // Sauvegarder les données
+                          await docRef.set(factureData, SetOptions(merge: true));
+                          print('Données sauvegardées avec succès');
+
+                          // Vérifier le résultat après la sauvegarde
+                          final snapshot = await docRef.get();
+                          print('Données sauvegardées: ${snapshot.data()}');
 
                           // Mettre à jour les données dans le parent
                           widget.onFraisUpdated({
@@ -222,7 +235,7 @@ class _FactureScreenState extends State<FactureScreen> {
                             'factureTotalFrais': _calculerTotal().toString(),
                             'factureTypePaiement': _selectedPaymentType,
                             'factureTVA': _tvaType,
-                            'factureId': numeroFacture,  // Ajout du numéro de facture
+                            'factureId': numeroFacture,
                           });
 
                           // Afficher le popup de succès
