@@ -26,6 +26,7 @@ class PdfVoitureWidget {
     required double? coutTotalTheorique,
     required double? coutTotal,
     required String accompte,
+    required String selectedPaymentMethod,
     required pw.Font boldFont,
     required pw.Font ttf,
   }) {
@@ -75,6 +76,7 @@ class PdfVoitureWidget {
               coutTotalTheorique,
               coutTotal,
               accompte,
+              selectedPaymentMethod,
               ttf),
         ],
       ),
@@ -139,6 +141,7 @@ class PdfVoitureWidget {
       double? coutTotalTheorique,
       double? coutTotal,
       String accompte,
+      String selectedPaymentMethod,
       pw.Font ttf) {
     
     // Utiliser directement les valeurs passées en paramètre, qui sont déjà traitées
@@ -360,9 +363,16 @@ class PdfVoitureWidget {
                 child: pw.Container(
                   alignment: pw.Alignment.center,
                   child: accompte.isNotEmpty
-                    ? pw.Text('Accompte: $accompte €', 
-                        textAlign: pw.TextAlign.center,
-                        style: pw.TextStyle(font: ttf, fontSize: 9))
+                    ? pw.Column(
+                        children: [
+                          pw.Text('Accompte: $accompte €', 
+                            textAlign: pw.TextAlign.center,
+                            style: pw.TextStyle(font: ttf, fontSize: 9)),
+                          pw.Text('Méthode de paiement: $selectedPaymentMethod', 
+                            textAlign: pw.TextAlign.center,
+                            style: pw.TextStyle(font: ttf, fontSize: 9)),
+                        ],
+                      )
                     : pw.SizedBox(),
                 ),
               ),

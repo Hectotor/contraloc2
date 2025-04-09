@@ -39,6 +39,7 @@ class AffichageFacturePdf {
         adresse: contratData['adresseEntreprise'] ?? '',
         telephone: contratData['telephoneEntreprise'] ?? '',
         siret: siretEntreprise?.isNotEmpty == true ? siretEntreprise : '',
+        //selectedPaymentMethod: contratData['methodePaiement'] ?? '',
       );
 
       // Supprimer le fichier PDF existant s'il existe
