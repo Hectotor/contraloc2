@@ -46,6 +46,7 @@ Future<pw.MemoryImage?> _loadImageFromFirebaseStorage(String logoUrl) async {
 Future<String> generatePdf(
   ContratModel contratModel, {
   String? nomCollaborateur,
+  pw.MemoryImage? signatureRetourImage,
 }) async {
   // Obtenir les paramètres du PDF à partir du modèle de contrat
   final data = contratModel.toPdfParams();
@@ -454,9 +455,9 @@ Future<String> generatePdf(
               scriptFont: scriptFont,
               dateFinEffectif: contratModel.dateRetour, // Ajout du paramètre
               signatureImage: signatureImage, // Passer la signature
-              signatureRetourImage: signatureRetourImage, // Passer la signature de retour
+              signatureRetourImage: signatureRetourImage,
             ),
-            pw.SizedBox(height: 80),
+            pw.SizedBox(height: 10),
           ],
         ),
 

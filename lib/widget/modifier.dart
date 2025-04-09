@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
+import 'dart:convert'; // Ajout de l'import pour la fonction base64Encode
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:photo_view/photo_view.dart';
@@ -681,6 +682,75 @@ class _ModifierScreenState extends State<ModifierScreen> {
                               ),
                             ],
                           ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () async {
+                            if (!_formKey.currentState!.validate()) return;
+                            
+                            try {
+                              setState(() {
+                                _isUpdatingContrat = true;
+                              });
+                              
+                              // Récupérer la signature de retour
+                              final signatureBytes = await _signatureRetourController.toPngBytes();
+                              String? signatureBase64;
+                              if (signatureBytes != null) {
+                                signatureBase64 = base64Encode(signatureBytes);
+                              }
+
+                              // Générer et envoyer le PDF
+                              await RetourEnvoiePdf.genererEtEnvoyerPdfCloture(
+                                context: context,
+                                contratData: widget.data,
+                                contratId: widget.contratId,
+                                dateFinEffectif: _dateFinEffectifController.text,
+                                kilometrageRetour: _kilometrageRetourController.text,
+                                commentaireRetour: _commentaireRetourController.text,
+                                pourcentageEssenceRetour: _pourcentageEssenceRetourController.text,
+                                photosRetour: _photosRetour,
+                                signatureRetourBase64: signatureBase64,
+                              );
+
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Le contrat a été renvoyé avec succès'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Erreur lors de l\'envoi du contrat: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            } finally {
+                              setState(() {
+                                _isUpdatingContrat = false;
+                              });
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue, 
+                            minimumSize: const Size(double.infinity, 50),
+                          ),
+                          child: _isUpdatingContrat
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white) 
+                              : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.send, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Text('Renvoyer le contrat', style: TextStyle(color: Colors.white)),
+                                ],
+                              ),
                         ),
                         const SizedBox(height: 20),
                         ElevatedButton(

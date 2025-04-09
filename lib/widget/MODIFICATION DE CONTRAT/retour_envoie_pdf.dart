@@ -3,6 +3,8 @@ import 'package:ContraLoc/widget/chargement.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
+import 'package:pdf/widgets.dart' as pw;
 import '../../utils/pdf.dart';
 import '../CREATION DE CONTRAT/mail.dart';
 import '../../services/collaborateur_util.dart'; // Importer CollaborateurUtil
@@ -54,9 +56,17 @@ class RetourEnvoiePdf {
         commentaireRetour: commentaireRetour,
       );
 
+      // Convertir la signature base64 en MemoryImage
+      pw.MemoryImage? signatureRetourImage;
+      if (signatureRetourBase64 != null && signatureRetourBase64.isNotEmpty) {
+        final bytes = base64.decode(signatureRetourBase64);
+        signatureRetourImage = pw.MemoryImage(bytes);
+      }
+
       // Générer le PDF de clôture en utilisant l'objet ContratModel
       final pdfPath = await generatePdf(
         contratMisAJour,
+        signatureRetourImage: signatureRetourImage,
         nomCollaborateur: contratData['nomCollaborateur'] != null && contratData['prenomCollaborateur'] != null
             ? '${contratData['prenomCollaborateur']} ${contratData['nomCollaborateur']}'
             : null,
