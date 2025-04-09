@@ -18,6 +18,7 @@ class AffichageContratPdf {
     required TextEditingController pourcentageEssenceRetourController,
     required TextEditingController cautionController,
     String? signatureRetourBase64,
+    bool afficherPdf = true, // Nouveau paramètre pour contrôler l'ouverture du PDF
   }) async {
     bool dialogShown = false;
     if (context.mounted) {
@@ -46,7 +47,9 @@ class AffichageContratPdf {
           dialogShown = false;
         }
         
-        await OpenFilex.open(localPdfPath);
+        if (afficherPdf) {
+          await OpenFilex.open(localPdfPath);
+        }
         return;
       }
       
@@ -120,7 +123,10 @@ class AffichageContratPdf {
         dialogShown = false;
       }
 
-      await OpenFilex.open(pdfPath);
+      // Ouvrir le PDF uniquement si afficherPdf est true
+      if (afficherPdf) {
+        await OpenFilex.open(pdfPath);
+      }
 
     } catch (e) {
       print(' Erreur lors de la génération du PDF : $e');

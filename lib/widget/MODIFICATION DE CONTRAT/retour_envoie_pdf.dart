@@ -32,7 +32,9 @@ class RetourEnvoiePdf {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       // Fermer le dialogue de chargement
-      Navigator.pop(context);
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Utilisateur non connecté")),
       );
@@ -40,21 +42,33 @@ class RetourEnvoiePdf {
     }
 
     try {
-      // Générer le PDF en utilisant AffichageContratPdf
+      // Générer le PDF sans l'afficher
       await AffichageContratPdf.genererEtAfficherContratPdf(
         context: context,
-        data: contratData, // Utiliser les données d'origine car elles contiennent déjà tout
+        data: contratData,
         contratId: contratId,
         nettoyageIntController: TextEditingController(text: contratData['nettoyageInt']),
         nettoyageExtController: TextEditingController(text: contratData['nettoyageExt']),
         pourcentageEssenceRetourController: TextEditingController(text: pourcentageEssenceRetour),
         cautionController: TextEditingController(text: contratData['caution']),
         signatureRetourBase64: signatureRetourBase64,
+        afficherPdf: false, // Ne pas afficher le PDF
       );
 
       // Fermer le dialogue de chargement
       if (context.mounted) {
         Navigator.pop(context);
+        
+        // Afficher un message de succès qui s'affiche brièvement
+        final snackBar = SnackBar(
+          content: const Text("Contrat clôturé et envoyé"),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2), // Afficher pendant 2 secondes
+        );
+        
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(snackBar);
       }
 
       // Envoyer le PDF par email si un email est disponible
@@ -82,7 +96,7 @@ class RetourEnvoiePdf {
             commentaireRetour: commentaireRetour,
             nomCollaborateur: contratData['nomCollaborateur'],
             prenomCollaborateur: contratData['prenomCollaborateur'],
-            sendCopyToAdmin: true, // Ajout de ce paramètre pour envoyer une copie à l'administrateur
+            sendCopyToAdmin: true,
           );
 
           // Afficher un message de succès après l'envoi du PDF
@@ -111,18 +125,14 @@ class RetourEnvoiePdf {
         print("Aucun email client n'a été trouvé. Pas d'envoi de PDF.");
       }
 
-      // Récupérer les informations du statut du collaborateur
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
-      final userId = status['userId'];
-      final isCollaborateur = status['isCollaborateur'] == true;
-      final adminId = status['adminId'];
-
-      print('🔄 Mise à jour du statut du contrat - userId: $userId, isCollaborateur: $isCollaborateur, adminId: $adminId');
-
       // Mise à jour du statut du contrat
       try {
+        final status = await CollaborateurUtil.checkCollaborateurStatus();
+        final userId = status['userId'];
+        final isCollaborateur = status['isCollaborateur'] == true;
+        final adminId = status['adminId'];
+
         if (isCollaborateur && adminId != null) {
-          // Si c'est un collaborateur, utiliser la collection de l'admin
           await CollaborateurUtil.updateDocument(
             collection: 'locations',
             docId: contratId,
@@ -133,23 +143,20 @@ class RetourEnvoiePdf {
             },
             useAdminId: true,
           );
-          print('✅ Statut du contrat mis à jour dans la collection de l\'admin: $adminId');
         } else {
-          // Si c'est un admin, utiliser sa propre collection
           await FirebaseFirestore.instance
               .collection('users')
               .doc(userId)
               .collection('locations')
               .doc(contratId)
-              .update({
+              .set({
             'status': 'restitue',
             'dateRestitution': FieldValue.serverTimestamp(),
             'pdfClotureSent': true,
-          });
-          print('✅ Statut du contrat mis à jour dans la collection de l\'utilisateur: $userId');
+          }, SetOptions(merge: true));
         }
       } catch (e) {
-        print('❌ Erreur lors de la mise à jour du statut du contrat: $e');
+        print('Erreur lors de la mise à jour du statut du contrat: $e');
         throw Exception('Erreur lors de la mise à jour du statut du contrat: $e');
       }
 
@@ -162,12 +169,10 @@ class RetourEnvoiePdf {
       // Gestion des erreurs
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Erreur lors de l'envoi du PDF : $e"),
+          content: Text("Erreur lors de la génération du PDF : $e"),
           backgroundColor: Colors.red,
         ),
       );
-      
-      // Log de l'erreur pour le débogage
       print("Erreur détaillée : $e");
     }
   }
