@@ -358,7 +358,13 @@ class FacturePdfGenerator {
                 pw.Text('Informations de paiement', 
                   style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
                 pw.Divider(color: PdfColors.grey400, thickness: 0.5),
-                pw.Text('Mode de paiement: ${factureData['factureTypePaiement'] ?? "Carte bancaire"}', 
+                // Afficher l'acompte si il existe
+                if (data['accompte'] != null) ...[
+                  pw.Text('Acompte: ${data['accompte']}', 
+                    style: pw.TextStyle(fontSize: 9)),
+                ],
+                // Afficher la méthode de paiement, soit celle du contrat, soit celle de la facture
+                pw.Text('Méthode de paiement: ${data['methodePaiement'] ?? factureData['factureTypePaiement'] ?? "Carte bancaire"}', 
                   style: pw.TextStyle(fontSize: 9)),
               ],
             ),

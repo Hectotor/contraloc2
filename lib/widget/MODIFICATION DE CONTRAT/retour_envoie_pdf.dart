@@ -42,15 +42,16 @@ class RetourEnvoiePdf {
     }
 
     try {
-      // Créer un contrat mis à jour avec les nouvelles données
-      final contratMisAJour = ContratModel(
-        contratId: contratId,
-        userId: user.uid,
+      // Créer un contrat initial à partir des données Firestore
+      final contratInitial = ContratModel.fromFirestore(contratData, id: contratId);
+      
+      // Mettre à jour les valeurs spécifiques au retour du véhicule
+      final contratMisAJour = contratInitial.copyWith(
         dateRetour: dateFinEffectif,
         kilometrageRetour: kilometrageRetour,
         pourcentageEssenceRetour: pourcentageEssenceRetour,
         signatureRetour: signatureRetourBase64,
-        commentaireRetour: commentaireRetour, // Utiliser le champ commentaireRetour
+        commentaireRetour: commentaireRetour,
       );
 
       // Générer le PDF de clôture en utilisant l'objet ContratModel
