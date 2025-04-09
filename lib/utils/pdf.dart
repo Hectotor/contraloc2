@@ -438,7 +438,7 @@ Future<String> generatePdf(
               return pw.Padding(
                 padding: const pw.EdgeInsets.only(bottom: 5),
                 child: pw.Text(paragraph.trim(),
-                    style: pw.TextStyle(fontSize: 8, font: ttf)),
+                    style: pw.TextStyle(fontSize: 7, font: ttf)),
               );
             }).toList() ?? [],
             pw.SizedBox(height: 20), // Augmenté de 40 à 80

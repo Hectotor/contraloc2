@@ -257,7 +257,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'kilometrageRetour': _kilometrageRetourController.text.isNotEmpty
             ? _kilometrageRetourController.text
             : null,
-        'photosRetourUrls': allPhotosUrls,
         'pourcentageEssenceRetour': _pourcentageEssenceRetourController.text,
         'signature_retour': signatureRetourBase64,
 
@@ -325,7 +324,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
         kilometrageRetour: _kilometrageRetourController.text,
         commentaireRetour: _commentaireRetourController.text,
         pourcentageEssenceRetour: _pourcentageEssenceRetourController.text,
-        photosRetour: _photosRetour,
       );
 
       Navigator.pushReplacement(
@@ -709,7 +707,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
                                 kilometrageRetour: _kilometrageRetourController.text,
                                 commentaireRetour: _commentaireRetourController.text,
                                 pourcentageEssenceRetour: _pourcentageEssenceRetourController.text,
-                                photosRetour: _photosRetour,
                                 signatureRetourBase64: signatureBase64,
                               );
 
