@@ -1,11 +1,9 @@
-import 'package:ContraLoc/utils/affichage_contrat_pdf.dart';
-import 'package:ContraLoc/widget/chargement.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:ContraLoc/services/access_condition.dart';
-import 'package:ContraLoc/models/contrat_model.dart';
-import 'package:ContraLoc/USERS/contrat_condition.dart';
+import '../models/contrat_model.dart';
+import '../widget/chargement.dart';
+import '../utils/affichage_contrat_pdf.dart';
 import '../widget/CREATION DE CONTRAT/mail.dart';
 import '../widget/CREATION DE CONTRAT/popup_felicitation.dart';
 
@@ -13,41 +11,60 @@ class GenerationContratPdf {
   static Future<void> genererEtEnvoyerPdf({
     required BuildContext context,
     required String contratId,
-    required String nom,
-    required String prenom,
-    required String adresse,
-    required String telephone,
-    required String email,
-    required String numeroPermis,
-    required String immatriculationVehiculeClient,
-    required String kilometrageVehiculeClient,
-    required String marque,
-    required String modele,
-    required String immatriculation,
-    required String dateDebut,
-    required String dateFinTheorique,
-    required String kilometrageDepart,
-    required String typeLocation,
-    required int pourcentageEssence,
-    required String commentaireAller,
-    required List<String> photosUrls,
-    required String signatureAller,
-    required String vin,
+    String? nom,
+    String? prenom,
+    String? adresse,
+    String? telephone,
+    String? email,
+    String? signatureAller,
+    String? signatureRetour,
+    String? photoVehiculeRetourUrl,
+    String? vin,
     required String typeCarburant,
     required String boiteVitesses,
-    required String assuranceNom,
-    required String assuranceNumero,
-    required String franchise,
-    required String prixLocation,
-    required String accompte,
-    required String caution,
-    required String nettoyageInt,
-    required String nettoyageExt,
-    required String pourcentageEssenceRetour,
-    required String methodePaiement,
+    String? assuranceNom,
+    String? assuranceNumero,
+    String? franchise,
+    String? prixLocation,
+    String? accompte,
+    String? nettoyageInt,
+    String? nettoyageExt,
+    String? methodePaiement,
+    String? numeroPermis,
+    String? immatriculationVehiculeClient,
+    String? kilometrageVehiculeClient,
     String? permisRectoUrl,
     String? permisVersoUrl,
     String? photoVehiculeUrl,
+    String? dateDebut,
+    String? dateFinTheorique,
+    String? kilometrageDepart,
+    String? typeLocation,
+    int? pourcentageEssence,
+    String? commentaireAller,
+    List<String>? photosUrls,
+    String? caution,
+    String? carburantManquant,
+    String? prixRayures,
+    String? kilometrageAutorise,
+    String? kilometrageSupp,
+    String? nomEntreprise,
+    String? logoUrl,
+    String? adresseEntreprise,
+    String? telephoneEntreprise,
+    String? siretEntreprise,
+    String? nomCollaborateur,
+    String? prenomCollaborateur,
+    String? conditions,
+    String? dateRetour,
+    String? kilometrageRetour,
+    String? marque,
+    String? modele,
+    String? immatriculation,
+    String? pourcentageEssenceRetour,
+    String? status,
+    String? commentaireRetour,
+    Timestamp? dateCreation,
   }) async {
     try {
       // Si les contrôleurs ne sont pas fournis, créer des instances par défaut
@@ -87,12 +104,27 @@ class GenerationContratPdf {
         throw Exception('❌ Données administrateur non trouvées');
       }
 
+      // Logs détaillés pour comprendre les données brutes
+      print('=== Données brutes de l\'admin ===');
+      print('Document ID: ${adminData.id}');
+      print('Données brutes: ${adminData.data()}');
+      print('=== Fin des données brutes ===');
+
       final adminDataMap = adminData.data()!;
-      final nomEntreprise = adminDataMap['nomEntreprise'] ?? '';
-      final logoUrl = adminDataMap['logoUrl'] ?? '';
-      final adresseEntreprise = adminDataMap['adresse'] ?? '';
-      final telephoneEntreprise = adminDataMap['telephone'] ?? '';
-      final siretEntreprise = adminDataMap['siret'] ?? '';
+      final nomEntreprise = adminDataMap['nomEntreprise'] ?? 'Non défini';
+      final logoUrl = adminDataMap['logoUrl'] ?? 'Non défini';
+      final adresseEntreprise = adminDataMap['adresse'] ?? 'Non défini';
+      final telephoneEntreprise = adminDataMap['telephone'] ?? 'Non défini';
+      final siretEntreprise = adminDataMap['siret'] ?? 'Non défini';
+
+      // Logs pour vérifier les données de l'entreprise
+      print('=== Données entreprise ===');
+      print('Nom: $nomEntreprise');
+      print('Logo: $logoUrl');
+      print('Adresse: $adresseEntreprise');
+      print('Téléphone: $telephoneEntreprise');
+      print('SIRET: $siretEntreprise');
+      print('=== Fin des données entreprise ===');
 
       // Récupérer les informations du collaborateur
       final collaborateurData = await FirebaseFirestore.instance
@@ -103,10 +135,6 @@ class GenerationContratPdf {
       final collaborateurDataMap = collaborateurData.data()!;
       final nomCollaborateur = collaborateurDataMap['nom'] ?? '';
       final prenomCollaborateur = collaborateurDataMap['prenom'] ?? '';
-
-      // Récupérer les conditions du contrat
-      final conditionsData = await AccessCondition.getContractConditions();
-      final conditionsText = conditionsData?['texte'] ?? ContratModifier.defaultContract;
 
       // Fonction pour convertir la date française en format ISO
       DateTime parseFrenchDate(String dateStr) {
@@ -149,21 +177,25 @@ class GenerationContratPdf {
 
       // Calculer le statut du contrat
       final now = DateTime.now();
-      final dateDebutDateTime = parseFrenchDate(dateDebut);
+      final dateDebutDateTime = dateDebut != null ? parseFrenchDate(dateDebut) : null;
       
       // Logs pour déboguer
       print('=== Calcul du statut ===');
       print('Date actuelle: $now');
       print('Date de début: $dateDebutDateTime');
-      print('Différence en jours: ${dateDebutDateTime.difference(now).inDays}');
+      print('Différence en jours: ${dateDebutDateTime != null ? dateDebutDateTime.difference(now).inDays : null}');
       
-      final status = dateDebutDateTime.difference(now).inDays > 1 
+      final status = dateDebutDateTime != null && dateDebutDateTime.difference(now).inDays > 1 
           ? 'réservé'  // Si la date est dans plus de 24h
           : 'en_cours'; // Sinon, en_cours
 
-      // Créer un contratModel avec les données fournies
+      // Créer le contratModel avec le statut calculé
       final contratModel = ContratModel(
         contratId: contratId,
+        userId: user.uid,
+        adminId: targetId,
+        createdBy: user.uid,
+        isCollaborateur: true,
         nom: nom,
         prenom: prenom,
         adresse: adresse,
@@ -172,6 +204,8 @@ class GenerationContratPdf {
         numeroPermis: numeroPermis,
         immatriculationVehiculeClient: immatriculationVehiculeClient,
         kilometrageVehiculeClient: kilometrageVehiculeClient,
+        permisRectoUrl: permisRectoUrl,
+        permisVersoUrl: permisVersoUrl,
         marque: marque,
         modele: modele,
         immatriculation: immatriculation,
@@ -179,7 +213,7 @@ class GenerationContratPdf {
         dateFinTheorique: dateFinTheorique,
         kilometrageDepart: kilometrageDepart,
         typeLocation: typeLocation,
-        pourcentageEssence: pourcentageEssence,
+        pourcentageEssence: pourcentageEssence ?? 50,
         commentaireAller: commentaireAller,
         photosUrls: photosUrls,
         signatureAller: signatureAller,
@@ -194,11 +228,7 @@ class GenerationContratPdf {
         caution: caution,
         nettoyageInt: nettoyageInt,
         nettoyageExt: nettoyageExt,
-        pourcentageEssenceRetour: pourcentageEssenceRetour,
         methodePaiement: methodePaiement,
-        permisRectoUrl: permisRectoUrl,
-        permisVersoUrl: permisVersoUrl,
-        photoVehiculeUrl: photoVehiculeUrl,
         nomEntreprise: nomEntreprise,
         logoUrl: logoUrl,
         adresseEntreprise: adresseEntreprise,
@@ -206,14 +236,27 @@ class GenerationContratPdf {
         siretEntreprise: siretEntreprise,
         nomCollaborateur: nomCollaborateur,
         prenomCollaborateur: prenomCollaborateur,
-        conditions: conditionsText,
-        userId: user.uid,
-        adminId: adminId,
-        createdBy: user.uid,
-        isCollaborateur: true,
-        status: status,
+        conditions: conditions,
+        dateRetour: dateRetour,
+        commentaireRetour: commentaireRetour,
+        signatureRetour: signatureRetour,
+        kilometrageRetour: kilometrageRetour,
+        pourcentageEssenceRetour: pourcentageEssenceRetour,
+        status: status, // Utiliser le statut calculé
         dateCreation: Timestamp.now(),
       );
+
+      // Vérifier si les données sont correctement passées au contratModel
+      print('=== Vérification contratModel ===');
+      print('nomEntreprise: ${contratModel.nomEntreprise}');
+      print('logoUrl: ${contratModel.logoUrl}');
+      print('adresseEntreprise: ${contratModel.adresseEntreprise}');
+      print('telephoneEntreprise: ${contratModel.telephoneEntreprise}');
+      print('siretEntreprise: ${contratModel.siretEntreprise}');
+      print('nomCollaborateur: ${contratModel.nomCollaborateur}');
+      print('prenomCollaborateur: ${contratModel.prenomCollaborateur}');
+      print('conditions: ${contratModel.conditions}');
+      print('=== Fin de la vérification contratModel ===');
 
       // Afficher le dialogue de chargement
       showDialog(
@@ -260,26 +303,28 @@ class GenerationContratPdf {
       }
 
       // Si un email est fourni, envoyer le PDF
-      if (email.isNotEmpty) {
+      if (email != null && email.isNotEmpty) {
         await EmailService.sendEmailWithPdf(
           pdfPath: await AffichageContratPdf.genererEtAfficherContratPdf(
-            context: context,
             data: contratData,
-            contratId: contratId,
             afficherPdf: false,
+            contratId: contratId, 
+            context: context,
           ),
-          email: email,
-          marque: marque,
-          modele: modele,
-          immatriculation: immatriculation,
           context: context,
-          prenom: prenom,
-          nom: nom,
-          nomEntreprise: nomEntreprise,
-          adresse: adresse,
-          telephone: telephone,
-          logoUrl: logoUrl,
+          email: email,
+          marque: marque ?? '',
+          modele: modele ?? '',
+          immatriculation: immatriculation ?? '',
+          prenom: prenom ?? '',
+          nom: nom ?? '',
+          nomEntreprise: nomEntreprise ?? '',
+          adresse: adresseEntreprise,
+          telephone: telephoneEntreprise,
+          logoUrl: logoUrl ?? '',
           sendCopyToAdmin: true,
+          nomCollaborateur: nomCollaborateur,
+          prenomCollaborateur: prenomCollaborateur,
         );
       }
 

@@ -78,8 +78,7 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _accompteController = TextEditingController();
   final TextEditingController _nettoyageIntController = TextEditingController();
   final TextEditingController _nettoyageExtController = TextEditingController();
-  final TextEditingController _carburantManquantController =
-      TextEditingController();
+  final TextEditingController _carburantManquantController =TextEditingController();
   final TextEditingController _kilometrageAutoriseController = TextEditingController();
   final TextEditingController _kilometrageSuppController = TextEditingController();
   final TextEditingController _vinController = TextEditingController();
@@ -90,7 +89,6 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _typeCarburantController = TextEditingController();
   final TextEditingController _boiteVitessesController = TextEditingController();
   final TextEditingController _typeLocationController = TextEditingController();
-  final TextEditingController _pourcentageEssenceRetourController = TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
   String? _selectedPaymentMethod;
 
@@ -154,6 +152,9 @@ class _LocationPageState extends State<LocationPage> {
           _rayuresController.text = vehicleData['rayures'] ?? '';
           _typeCarburantController.text = vehicleData['typeCarburant'] ?? '';
           _boiteVitessesController.text = vehicleData['boiteVitesses'] ?? '';
+          _cautionController.text = vehicleData['caution'] ?? '';
+          _carburantManquantController.text = vehicleData['carburantManquant'] ?? '';
+          _kilometrageSuppController.text = vehicleData['kilometrageSupp'] ?? '';
         });
       } else {
         print('Aucun véhicule trouvé avec l\'immatriculation: ${widget.immatriculation}');
@@ -306,6 +307,15 @@ class _LocationPageState extends State<LocationPage> {
         vehiculeUrls.add(url);
       }
 
+      // Récupérer les informations de l'entreprise
+      final adminDoc = await _firestore.collection('users').doc(targetId).get();
+      final adminData = adminDoc.data();
+      final nomEntreprise = adminData?['nomEntreprise'] ?? '';
+      final logoUrl = adminData?['logoUrl'] ?? '';
+      final adresseEntreprise = adminData?['adresseEntreprise'] ?? '';
+      final telephoneEntreprise = adminData?['telephoneEntreprise'] ?? '';
+      final siretEntreprise = adminData?['siretEntreprise'] ?? '';
+
       // Création du contrat
       final contratModel = ContratModel(
         contratId: contratId,
@@ -329,26 +339,36 @@ class _LocationPageState extends State<LocationPage> {
         modele: widget.modele,
         immatriculation: widget.immatriculation,
         photoVehiculeUrl: _vehiclePhotoUrl,
-        vin: _vinController.text.isNotEmpty ? _vinController.text : null,
-        typeCarburant: _typeCarburantController.text.isNotEmpty ? _typeCarburantController.text : null,
-        boiteVitesses: _boiteVitessesController.text.isNotEmpty ? _boiteVitessesController.text : null,
-        dateDebut: _dateDebutController.text.isNotEmpty ? _dateDebutController.text : null,
-        dateFinTheorique: _dateFinTheoriqueController.text.isNotEmpty ? _dateFinTheoriqueController.text : null,
-        kilometrageDepart: _kilometrageDepartController.text.isNotEmpty ? _kilometrageDepartController.text : null,
+        vin: _vinController.text.isNotEmpty ? _vinController.text : '',
+        typeCarburant: _typeCarburantController.text.isNotEmpty ? _typeCarburantController.text : '',
+        boiteVitesses: _boiteVitessesController.text.isNotEmpty ? _boiteVitessesController.text : '',
+        dateDebut: _dateDebutController.text.isNotEmpty ? _dateDebutController.text : '',
+        dateFinTheorique: _dateFinTheoriqueController.text.isNotEmpty ? _dateFinTheoriqueController.text : '',
+        kilometrageDepart: _kilometrageDepartController.text.isNotEmpty ? _kilometrageDepartController.text : '',
         typeLocation: _typeLocationController.text.isNotEmpty ? _typeLocationController.text : "Gratuite",
         pourcentageEssence: _pourcentageEssence,
-        commentaireAller: _commentaireController.text.isNotEmpty ? _commentaireController.text : null,
+        commentaireAller: _commentaireController.text.isNotEmpty ? _commentaireController.text : '',
         photosUrls: vehiculeUrls,
         photosFiles: _photos,
         status: _determineContractStatus(),
         dateReservation: _calculateReservationDate(),
         dateCreation: Timestamp.now(),
         signatureAller: _signatureAller,
-        assuranceNom: _assuranceNomController.text.isNotEmpty ? _assuranceNomController.text : null,
-        assuranceNumero: _assuranceNumeroController.text.isNotEmpty ? _assuranceNumeroController.text : null,
-        franchise: _franchiseController.text.isNotEmpty ? _franchiseController.text : null,
-        prixLocation: _prixLocationController.text.isNotEmpty ? _prixLocationController.text : null,
-        accompte: _accompteController.text.isNotEmpty ? _accompteController.text : null,
+        assuranceNom: _assuranceNomController.text.isNotEmpty ? _assuranceNomController.text : '',
+        assuranceNumero: _assuranceNumeroController.text.isNotEmpty ? _assuranceNumeroController.text : '',
+        franchise: _franchiseController.text.isNotEmpty ? _franchiseController.text : '',
+        prixLocation: _prixLocationController.text.isNotEmpty ? _prixLocationController.text : '',
+        accompte: _accompteController.text.isNotEmpty ? _accompteController.text : '',
+        nomEntreprise: nomEntreprise,
+        logoUrl: logoUrl,
+        adresseEntreprise: adresseEntreprise,
+        telephoneEntreprise: telephoneEntreprise,
+        siretEntreprise: siretEntreprise,
+        prixRayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : '',
+        kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : '',
+        kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : '',
+        carburantManquant: _carburantManquantController.text.isNotEmpty ? _carburantManquantController.text : '',
+        
       );
 
       // Sauvegarder le contrat dans Firestore
@@ -374,6 +394,11 @@ class _LocationPageState extends State<LocationPage> {
         marque: widget.marque,
         modele: widget.modele,
         immatriculation: widget.immatriculation,
+        logoUrl: logoUrl,
+        nomEntreprise: nomEntreprise,
+        adresseEntreprise: adresseEntreprise,
+        telephoneEntreprise: telephoneEntreprise,
+        siretEntreprise: siretEntreprise,
         dateDebut: _dateDebutController.text,
         dateFinTheorique: _dateFinTheoriqueController.text,
         kilometrageDepart: _kilometrageDepartController.text,
@@ -393,11 +418,14 @@ class _LocationPageState extends State<LocationPage> {
         caution: _cautionController.text,
         nettoyageInt: _nettoyageIntController.text,
         nettoyageExt: _nettoyageExtController.text,
-        pourcentageEssenceRetour: _pourcentageEssenceRetourController.text,
         permisRectoUrl: permisRectoUrl,
         permisVersoUrl: permisVersoUrl,
         photoVehiculeUrl: _vehiclePhotoUrl,
+        prixRayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : null,
+        kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : null,
+        kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : null,
         methodePaiement: _selectedPaymentMethod ?? 'Espèces',
+
       );
 
       // Affichage du succès et navigation
