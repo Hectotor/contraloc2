@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:ContraLoc/SCREENS/contrat_screen.dart';
 
 class Popup {
   static Future<void> showSuccess(BuildContext context, {String? email}) {
     return showDialog(
       context: context,
+      barrierDismissible: false, // Empêche la fermeture en cliquant à l'extérieur
       builder: (BuildContext context) {
         return Dialog(
           backgroundColor: Colors.white,
@@ -48,7 +50,22 @@ class Popup {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () async {
+                      // Fermer le popup
+                      Navigator.of(context).pop();
+                      
+                      // Attendre un court instant pour éviter les conflits de navigation
+                      await Future.delayed(const Duration(milliseconds: 100));
+                      
+                      // Naviguer vers ContratScreen
+                      if (context.mounted) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ContratScreen()),
+                          (Route<dynamic> route) => false,
+                        );
+                      }
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF08004D),
                       padding: const EdgeInsets.symmetric(vertical: 15),

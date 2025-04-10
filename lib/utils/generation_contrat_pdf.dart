@@ -3,7 +3,6 @@ import 'package:ContraLoc/widget/chargement.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:ContraLoc/services/collaborateur_util.dart';
 import 'package:ContraLoc/services/access_condition.dart';
 import 'package:ContraLoc/models/contrat_model.dart';
 import 'package:ContraLoc/USERS/contrat_condition.dart';
@@ -58,10 +57,30 @@ class GenerationContratPdf {
         throw Exception('Utilisateur non connecté');
       }
 
-      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
-      final String targetId = collaborateurStatus['isCollaborateur'] 
-          ? collaborateurStatus['adminId'] ?? user.uid 
-          : user.uid;
+      // Récupérer les données de l'utilisateur
+      final authDataDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('authentification')
+          .doc(user.uid)
+          .get();
+
+      if (!authDataDoc.exists) {
+        throw Exception('Données authentification non trouvées');
+      }
+
+      final authData = authDataDoc.data()!;
+      final isCollaborateur = authData['role'] == 'collaborateur';
+      String targetId = user.uid;
+      String? createdBy = user.uid;
+
+      if (isCollaborateur) {
+        final adminId = authData['adminId'];
+        if (adminId != null) {
+          targetId = adminId;
+          createdBy = user.uid; // Garder l'ID du collaborateur qui crée le contrat
+        }
+      }
 
       final loueurDoc = await FirebaseFirestore.instance
           .collection('users')
@@ -144,20 +163,35 @@ class GenerationContratPdf {
 
       // Sauvegarder le contrat dans Firestore
       final contratData = contratModel.toFirestore();
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser != null) {
-        // Vérifier si l'utilisateur est un collaborateur
-        final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
-        final targetUserId = collaborateurStatus['isCollaborateur'] 
-            ? collaborateurStatus['adminId'] 
-            : currentUser.uid;
+      
+      // Ajouter les informations manquantes
+      contratData['userId'] = user.uid;
+      contratData['adminId'] = isCollaborateur ? targetId : null;
+      contratData['createdBy'] = createdBy;
+      contratData['isCollaborateur'] = isCollaborateur;
+      contratData['dateCreation'] = Timestamp.now();
+      
+      // Logs pour déboguer
+      print('=== Début de la sauvegarde du contrat ===');
+      print('User ID: ${user.uid}');
+      print('Role: ${authData['role']}');
+      print('Admin ID: ${authData['adminId']}');
+      print('Target ID: $targetId');
+      print('Contrat ID: $contratId');
+      print('=== Données du contrat ===');
+      print(contratData);
+      print('=== Fin des logs ===');
 
+      try {
         await FirebaseFirestore.instance
             .collection('users')
-            .doc(targetUserId)
+            .doc(targetId)
             .collection('locations')
             .doc(contratId)
             .set(contratData, SetOptions(merge: true));
+      } catch (e) {
+        print('Erreur lors de la sauvegarde: $e');
+        throw Exception('Erreur lors de la sauvegarde du contrat: $e');
       }
 
       // Si un email est fourni, envoyer le PDF
@@ -209,7 +243,6 @@ class GenerationContratPdf {
           ),
         );
       }
-      rethrow;
     }
   }
 }
