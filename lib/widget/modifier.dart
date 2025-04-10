@@ -1,7 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/services.dart';
 import 'dart:io';
 import 'dart:convert'; // Ajout de l'import pour la fonction base64Encode
 import 'package:intl/intl.dart';
@@ -10,10 +8,10 @@ import 'package:photo_view/photo_view.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart'; 
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:signature/signature.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/affichage_facture_pdf.dart';
 import '../utils/affichage_contrat_pdf.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
+import 'package:ContraLoc/services/access_locations.dart';
 import 'MODIFICATION DE CONTRAT/supp_contrat.dart';
 import 'MODIFICATION DE CONTRAT/info_loc.dart';
 import 'MODIFICATION DE CONTRAT/info_loc_retour.dart';
@@ -60,8 +58,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
   final TextEditingController _cautionController = TextEditingController();
 
   Map<String, dynamic> _fraisSupplementaires = {};
-
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   String _formatStatus(String? status) {
     if (status == null) return '';
@@ -183,14 +179,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
   Future<void> _updateContrat() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Utilisateur non connecté")),
-      );
-      return;
-    }
-
     if (_kilometrageRetourController.text.isNotEmpty &&
         int.tryParse(_kilometrageRetourController.text) != null &&
         widget.data['kilometrageDepart'] != null &&
@@ -222,12 +210,14 @@ class _ModifierScreenState extends State<ModifierScreen> {
     );
 
     try {
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
-      final userId = status['userId'];
-      final isCollaborateur = status['isCollaborateur'] == true;
-      final adminId = status['adminId'];
-
-      print(' Mise à jour du contrat - userId: $userId, isCollaborateur: $isCollaborateur, adminId: $adminId');
+      // Récupérer les données d'authentification pour déterminer l'adminId
+      final authData = await AccessLocations.getAuthData();
+      final isCollaborateur = authData['isCollaborateur'] as bool;
+      final targetId = isCollaborateur ? authData['adminId']?.toString() : authData['userId']?.toString();
+      
+      print('📝 MODIFERSCREEN - Mise à jour - isCollaborateur: $isCollaborateur, targetId: $targetId');
+      print('📝 MODIFERSCREEN - contratId: ${widget.contratId}');
+      print('📝 MODIFERSCREEN - authData: $authData');
 
       List<String> allPhotosUrls = List<String>.from(_photosRetourUrls);
 
@@ -282,58 +272,12 @@ class _ModifierScreenState extends State<ModifierScreen> {
             : null,
         'pourcentageEssenceRetour': _pourcentageEssenceRetourController.text,
         'signature_retour': signatureRetourBase64,
-
+        'photosRetourUrls': allPhotosUrls,
+        'facture': factureData,
       };
 
-      if (isCollaborateur && adminId != null) {
-        try {
-          print('📝 Début de la mise à jour du document: users/$adminId/locations/${widget.contratId}');
-          print('📄 Données à mettre à jour: $updateData');
-          
-          await _firestore
-              .collection('users')
-              .doc(adminId)
-              .collection('locations')
-              .doc(widget.contratId)
-              .set(updateData, SetOptions(merge: true))
-              .then((_) => print('✅ Document mis à jour avec succès'))
-              .catchError((error) {
-                print('❌ Erreur lors de la mise à jour: $error');
-                throw error;
-              });
-          
-          print(' Contrat mis à jour dans la collection de l\'administrateur');
-        } catch (e) {
-          print('❌ Erreur mise à jour document: $e');
-          rethrow;
-        }
-      } else {
-        try {
-          final userId = FirebaseAuth.instance.currentUser?.uid;
-          print(' Début de la mise à jour du contrat par l\'administrateur');
-          print(' ID Administrateur: $userId');
-          print(' ID Contrat: ${widget.contratId}');
-          print('📝 Début de la mise à jour du document: users/$userId/locations/${widget.contratId}');
-          print('📄 Données à mettre à jour: $updateData');
-          
-          await _firestore
-              .collection('users')
-              .doc(userId)
-              .collection('locations')
-              .doc(widget.contratId)
-              .set(updateData, SetOptions(merge: true))
-              .then((_) => print('✅ Document mis à jour avec succès'))
-              .catchError((error) {
-                print('❌ Erreur lors de la mise à jour: $error');
-                throw error;
-              });
-          
-          print(' Contrat mis à jour dans la collection de l\'administrateur');
-        } catch (e) {
-          print('❌ Erreur mise à jour document: $e');
-          rethrow;
-        }
-      }
+      // Utilisation de AccessLocations pour la mise à jour
+      await AccessLocations.updateContract(widget.contratId, updateData);
 
       Navigator.pop(context);
 

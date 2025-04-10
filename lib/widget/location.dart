@@ -453,12 +453,17 @@ class _LocationPageState extends State<LocationPage> {
       );
 
       // Sauvegarder le contrat dans Firestore
+      print('📝 Sauvegarde du contrat dans la collection de ${collaborateurStatus['isCollaborateur'] ? 'l\'administrateur' : 'l\'utilisateur'}');
+      print('📝 Path: users/$targetId/locations/$contratId');
+      
       await _firestore
           .collection('users')
-          .doc(userId)
+          .doc(targetId)
           .collection('locations')
           .doc(contratId)
           .set(contratModel.toFirestore(), SetOptions(merge: true));
+
+      print('✅ Contrat sauvegardé avec succès');
 
       // Générer et envoyer le PDF
       await GenerationContratPdf.genererEtEnvoyerPdf(

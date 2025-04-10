@@ -421,6 +421,7 @@ class CollaborateurUtil {
         .get(GetOptions(source: Source.server));
 
     if (!authDoc.exists) {
+      print('❌ Auth document not found');
       return false;
     }
 
@@ -662,11 +663,9 @@ class CollaborateurUtil {
     print('flutter: 🔍 Récupération des données utilisateur depuis Firestore (ID: ${user.uid})');
     
     try {
-      // Récupérer les données de l'utilisateur
+      // Récupérer les données de l'utilisateur directement depuis la collection users
       final userData = await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
-          .collection('authentification')
           .doc(user.uid)
           .get(GetOptions(source: Source.server));
 

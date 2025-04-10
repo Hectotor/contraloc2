@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../utils/affichage_contrat_pdf.dart';
 import '../CREATION DE CONTRAT/mail.dart';
-import '../../services/collaborateur_util.dart';
+import '../../services/access_locations.dart'; // Importer AccessLocations
 
 class RetourEnvoiePdf {
   static Future<void> genererEtEnvoyerPdfCloture({
@@ -118,34 +118,13 @@ class RetourEnvoiePdf {
 
       // Mise à jour du statut du contrat
       try {
-        final status = await CollaborateurUtil.checkCollaborateurStatus();
-        final userId = status['userId'];
-        final isCollaborateur = status['isCollaborateur'] == true;
-        final adminId = status['adminId'];
-
-        if (isCollaborateur && adminId != null) {
-          await CollaborateurUtil.updateDocument(
-            collection: 'locations',
-            docId: contratId,
-            data: {
-              'status': 'restitue',
-              'dateRestitution': FieldValue.serverTimestamp(),
-              'pdfClotureSent': true,
-            },
-            useAdminId: true,
-          );
-        } else {
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userId)
-              .collection('locations')
-              .doc(contratId)
-              .set({
-            'status': 'restitue',
-            'dateRestitution': FieldValue.serverTimestamp(),
-            'pdfClotureSent': true,
-          }, SetOptions(merge: true));
-        }
+        // Utiliser AccessLocations.updateContract qui construit correctement le chemin
+        await AccessLocations.updateContract(contratId, {
+          'status': 'restitue',
+          'dateRestitution': FieldValue.serverTimestamp(),
+          
+          'pdfClotureSent': true,
+        });
       } catch (e) {
         print('Erreur lors de la mise à jour du statut du contrat: $e');
         throw Exception('Erreur lors de la mise à jour du statut du contrat: $e');
