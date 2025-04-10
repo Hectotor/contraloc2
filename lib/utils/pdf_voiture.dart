@@ -538,12 +538,13 @@ class PdfVoitureWidget {
                 child: pw.Text('Niveau d\'essence départ: $pourcentageEssence%',
                     style: pw.TextStyle(font: ttf, fontSize: 9)),
               ),
+              if (contrat.pourcentageEssenceRetour != null )
               pw.Expanded(
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.center,
                   child: pw.Text(
-                    'Niveau d\'essence retour: ${contrat.pourcentageEssenceRetour ?? 'Non spécifié'}%',
+                    'Niveau d\'essence retour: ${contrat.pourcentageEssenceRetour}%',
                     textAlign: pw.TextAlign.center,
                     style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),

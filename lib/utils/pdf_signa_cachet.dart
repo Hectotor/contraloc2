@@ -138,6 +138,7 @@ class SignaCachetWidget {
           pw.Text('Téléphone : $telephone',
               style: const pw.TextStyle(fontSize: 9),
               textAlign: pw.TextAlign.center),
+          if (siret.isNotEmpty && siret != 'Non défini')
           pw.Text('SIRET : $siret',
               style: const pw.TextStyle(fontSize: 9),
               textAlign: pw.TextAlign.center),

@@ -695,4 +695,20 @@ class CollaborateurUtil {
       return {};
     }
   }
+
+  /// Vérifie si un utilisateur a le rôle admin
+  static Future<bool> isAdmin() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get(GetOptions(source: Source.server));
+    
+    if (!userDoc.exists) return false;
+    
+    final userData = userDoc.data();
+    return userData?['role'] == 'admin';
+  }
 }

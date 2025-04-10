@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
+import 'package:ContraLoc/services/access_admin.dart';
 import 'package:ContraLoc/utils/generation_contrat_pdf.dart';
 import 'package:ContraLoc/models/contrat_model.dart';
 import 'package:intl/intl.dart';
@@ -99,6 +100,8 @@ class _LocationPageState extends State<LocationPage> {
   String? telephoneEntreprise;
   String? siretEntreprise;
 
+  Map<String, dynamic>? adminDataMap;
+
   @override
   void initState() {
     super.initState();
@@ -110,22 +113,7 @@ class _LocationPageState extends State<LocationPage> {
     _entrepriseClientController.text = widget.entrepriseClient ?? '';
     
     // Initialiser les variables d'entreprise
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      _firestore.collection('users').doc(user.uid).get().then((doc) {
-        if (doc.exists) {
-          final data = doc.data();
-          setState(() {
-            nomEntreprise = data?['nomEntreprise'] ?? '';
-            logoUrl = data?['logoUrl'] ?? '';
-            adresseEntreprise = data?['adresse'] ?? '';
-            telephoneEntreprise = data?['telephone'] ?? '';
-            siretEntreprise = data?['siret'] ?? '';
-          });
-        }
-      });
-    }
-    
+    _loadAdminInfo();
     _fetchVehicleData();
     
     // Charger les données du contrat si un ID est fourni
@@ -138,6 +126,27 @@ class _LocationPageState extends State<LocationPage> {
           });
         }
       });
+    }
+  }
+
+  Future<void> _loadAdminInfo() async {
+    try {
+      final adminInfo = await AccessAdmin.getAdminInfo();
+      setState(() {
+        nomEntreprise = adminInfo['nomEntreprise'];
+        logoUrl = adminInfo['logoUrl'];
+        adresseEntreprise = adminInfo['adresseEntreprise'];
+        telephoneEntreprise = adminInfo['telephoneEntreprise'];
+        siretEntreprise = adminInfo['siretEntreprise'];
+      });
+      print('✅ Informations admin chargées avec succès');
+      print('nomEntreprise: $nomEntreprise');
+      print('logoUrl: $logoUrl');
+      print('adresseEntreprise: $adresseEntreprise');
+      print('telephoneEntreprise: $telephoneEntreprise');
+      print('siretEntreprise: $siretEntreprise');
+    } catch (e) {
+      print('❌ Erreur lors du chargement des informations admin: $e');
     }
   }
 
@@ -381,13 +390,21 @@ class _LocationPageState extends State<LocationPage> {
       }
 
       // Récupérer les informations de l'entreprise
-      final adminDoc = await _firestore.collection('users').doc(targetId).get();
-      final adminData = adminDoc.data();
-      final nomEntreprise = adminData?['nomEntreprise'] ?? '';
-      final logoUrl = adminData?['logoUrl'] ?? '';
-      final adresseEntreprise = adminData?['adresseEntreprise'] ?? '';
-      final telephoneEntreprise = adminData?['telephoneEntreprise'] ?? '';
-      final siretEntreprise = adminData?['siretEntreprise'] ?? '';
+      print('Récupération des informations de l\'entreprise...');
+      
+      // Utiliser les données de l'admin déjà récupérées
+      final nomEntreprise = adminDataMap?['nomEntreprise'] ?? '';
+      final logoUrl = adminDataMap?['logoUrl'] ?? '';
+      final adresseEntreprise = adminDataMap?['adresse'] ?? '';
+      final telephoneEntreprise = adminDataMap?['telephone'] ?? '';
+      final siretEntreprise = adminDataMap?['siret'] ?? '';
+      
+      print('Informations entreprise récupérées:');
+      print('Nom: $nomEntreprise');
+      print('Logo: $logoUrl');
+      print('Adresse: $adresseEntreprise');
+      print('Téléphone: $telephoneEntreprise');
+      print('SIRET: $siretEntreprise');
 
       // Création du contrat
       final contratModel = ContratModel(

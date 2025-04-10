@@ -95,22 +95,24 @@ class GenerationContratPdf {
       final targetId = adminId;
 
       // Récupérer les données de l'admin
-      final adminData = await FirebaseFirestore.instance
+      final adminAuthDoc = await FirebaseFirestore.instance
           .collection('users')
+          .doc(targetId)
+          .collection('authentification')
           .doc(targetId)
           .get(GetOptions(source: Source.server));
 
-      if (!adminData.exists) {
+      if (!adminAuthDoc.exists) {
         throw Exception('❌ Données administrateur non trouvées');
       }
 
       // Logs détaillés pour comprendre les données brutes
       print('=== Données brutes de l\'admin ===');
-      print('Document ID: ${adminData.id}');
-      print('Données brutes: ${adminData.data()}');
+      print('Document ID: ${adminAuthDoc.id}');
+      print('Données brutes: ${adminAuthDoc.data()}');
       print('=== Fin des données brutes ===');
 
-      final adminDataMap = adminData.data()!;
+      final adminDataMap = adminAuthDoc.data()!;
       final nomEntreprise = adminDataMap['nomEntreprise'] ?? 'Non défini';
       final logoUrl = adminDataMap['logoUrl'] ?? 'Non défini';
       final adresseEntreprise = adminDataMap['adresse'] ?? 'Non défini';
