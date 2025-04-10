@@ -16,22 +16,25 @@ class RetourEnvoiePdf {
     required String commentaireRetour,
     required String pourcentageEssenceRetour,
     String? signatureRetourBase64,
+    bool dialogueDejaAffiche = false,
   }) async {
-    // Afficher un dialogue de chargement personnalisé
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Chargement(
-          message: "Préparation du PDF de clôture...",
-        );
-      },
-    );
+    // Afficher un dialogue de chargement personnalisé seulement si un dialogue n'est pas déjà affiché
+    if (!dialogueDejaAffiche) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Chargement(
+            message: "Préparation du PDF de clôture...",
+          );
+        },
+      );
+    }
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      // Fermer le dialogue de chargement
-      if (context.mounted) {
+      // Fermer le dialogue de chargement seulement si c'est cette méthode qui l'a ouvert
+      if (!dialogueDejaAffiche && context.mounted) {
         Navigator.pop(context);
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -50,11 +53,13 @@ class RetourEnvoiePdf {
         afficherPdf: false, // Ne pas afficher le PDF
       );
 
-      // Fermer le dialogue de chargement
-      if (context.mounted) {
+      // Fermer le dialogue de chargement seulement si c'est cette méthode qui l'a ouvert
+      if (!dialogueDejaAffiche && context.mounted) {
         Navigator.pop(context);
-        
-        // Afficher un message de succès qui s'affiche brièvement
+      }
+      
+      // Afficher un message de succès qui s'affiche brièvement
+      if (context.mounted) {
         final snackBar = SnackBar(
           content: const Text("Contrat clôturé et envoyé"),
           backgroundColor: Colors.green,
@@ -130,8 +135,8 @@ class RetourEnvoiePdf {
       }
 
     } catch (e) {
-      // Fermer le dialogue de chargement en cas d'erreur
-      if (context.mounted) {
+      // Fermer le dialogue de chargement en cas d'erreur seulement si c'est cette méthode qui l'a ouvert
+      if (!dialogueDejaAffiche && context.mounted) {
         Navigator.pop(context);
       }
 

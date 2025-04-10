@@ -274,7 +274,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
       // Utilisation de AccessLocations pour la mise à jour
       await AccessLocations.updateContract(widget.contratId, updateData);
 
-      Navigator.pop(context);
+      // Ne pas fermer le dialogue de chargement ici
+      // Navigator.pop(context);
 
       await RetourEnvoiePdf.genererEtEnvoyerPdfCloture(
         context: context,
@@ -284,7 +285,13 @@ class _ModifierScreenState extends State<ModifierScreen> {
         kilometrageRetour: _kilometrageRetourController.text,
         commentaireRetour: _commentaireRetourController.text,
         pourcentageEssenceRetour: _pourcentageEssenceRetourController.text,
+        dialogueDejaAffiche: true, // Nouveau paramètre pour indiquer que le dialogue est déjà affiché
       );
+
+      // Fermer le dialogue de chargement après l'opération complète
+      if (mounted) {
+        Navigator.pop(context);
+      }
 
       if (mounted) {
         Navigator.pushReplacement(
