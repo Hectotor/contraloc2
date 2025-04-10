@@ -45,16 +45,20 @@ class _FactureScreenState extends State<FactureScreen> {
   void initState() {
     super.initState();
     
-    // Initialiser les contrôleurs avec des valeurs par défaut à 0
-    _prixLocationController = TextEditingController(text: "0");
-    _fraisKilometriqueController = TextEditingController(text: "0");
-    _fraisNettoyageIntController = TextEditingController(text: "0");
-    _fraisNettoyageExtController = TextEditingController(text: "0");
-    _fraisCarburantController = TextEditingController(text: "0");
-    _fraisRayuresController = TextEditingController(text: "0");
-    _fraisAutreController = TextEditingController(text: "0");
-    _cautionController = TextEditingController(text: "0");
-    _remiseController = TextEditingController(text: "0");
+    // Initialiser les contrôleurs avec les valeurs existantes ou 0 par défaut
+    _prixLocationController = TextEditingController(text: widget.data['facturePrixLocation']?.toString() ?? "0");
+    _fraisKilometriqueController = TextEditingController(text: widget.data['factureCoutKmSupplementaires']?.toString() ?? "0");
+    _fraisNettoyageIntController = TextEditingController(text: widget.data['factureFraisNettoyageInterieur']?.toString() ?? "0");
+    _fraisNettoyageExtController = TextEditingController(text: widget.data['factureFraisNettoyageExterieur']?.toString() ?? "0");
+    _fraisCarburantController = TextEditingController(text: widget.data['factureFraisCarburantManquant']?.toString() ?? "0");
+    _fraisRayuresController = TextEditingController(text: widget.data['factureFraisRayuresDommages']?.toString() ?? "0");
+    _fraisAutreController = TextEditingController(text: widget.data['factureFraisAutre']?.toString() ?? "0");
+    _cautionController = TextEditingController(text: widget.data['factureCaution']?.toString() ?? "0");
+    _remiseController = TextEditingController(text: widget.data['factureRemise']?.toString() ?? "0");
+
+    // Initialiser le type de TVA et le type de paiement s'ils existent
+    _tvaType = widget.data['factureTVA'] ?? 'applicable';
+    _selectedPaymentType = widget.data['factureTypePaiement'] ?? 'Carte bancaire';
 
     // Vérifier si c'est un collaborateur et récupérer l'adminId
     final user = FirebaseAuth.instance.currentUser;
@@ -220,7 +224,7 @@ class _FactureScreenState extends State<FactureScreen> {
                             'factureFraisCarburantManquant': double.tryParse(_fraisCarburantController.text) ?? 0.0,
                             'factureFraisRayuresDommages': double.tryParse(_fraisRayuresController.text) ?? 0.0,
                             'factureFraisAutre': double.tryParse(_fraisAutreController.text) ?? 0.0,
-                            'factureFraisKilometrique': double.tryParse(_fraisKilometriqueController.text) ?? 0.0,
+                            'factureCoutKmSupplementaires': double.tryParse(_fraisKilometriqueController.text) ?? 0.0,
                             'factureRemise': double.tryParse(_remiseController.text) ?? 0.0,
                             'factureTotalFrais': _calculerTotal(),
                             'factureTypePaiement': _selectedPaymentType,
@@ -255,7 +259,7 @@ class _FactureScreenState extends State<FactureScreen> {
                             'factureFraisCarburantManquant': _fraisCarburantController.text,
                             'factureFraisRayuresDommages': _fraisRayuresController.text,
                             'factureFraisAutre': _fraisAutreController.text,
-                            'factureFraisKilometrique': _fraisKilometriqueController.text,
+                            'factureCoutKmSupplementaires': _fraisKilometriqueController.text,
                             'factureRemise': _remiseController.text,
                             'factureTotalFrais': _calculerTotal().toString(),
                             'factureTypePaiement': _selectedPaymentType,

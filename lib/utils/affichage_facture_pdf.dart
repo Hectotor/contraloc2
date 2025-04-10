@@ -20,7 +20,7 @@ class AffichageFacturePdf {
         'factureFraisCarburantManquant': contratData['factureFraisCarburantManquant'] ?? 0.0,
         'factureFraisRayuresDommages': contratData['factureFraisRayuresDommages'] ?? 0.0,
         'factureFraisAutre': contratData['factureFraisAutre'] ?? 0.0,
-        'factureFraisKilometrique': contratData['factureFraisKilometrique'] ?? 0.0,
+        'factureCoutKmSupplementaires': contratData['factureCoutKmSupplementaires'] ?? 0.0,
         'factureRemise': contratData['factureRemise'] ?? 0.0,
         'factureTotalFrais': contratData['factureTotalFrais'] ?? 0.0,
         'factureTypePaiement': contratData['factureTypePaiement'] ?? 'Carte bancaire',

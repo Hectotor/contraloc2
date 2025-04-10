@@ -252,14 +252,14 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
       // Récupérer les données de facture existantes
       Map<String, dynamic> factureData = {
-        'facturePrixLocation': widget.data['facture']?['facturePrixLocation'] ?? 0.0,
-        'factureCaution': widget.data['facture']?['factureCaution'] ?? 0.0,
+        'facturePrixLocation': widget.data['facturePrixLocation'] ?? 0.0,
+        'factureCaution': widget.data['factureCaution'] ?? 0.0,
         'factureFraisNettoyageInterieur': widget.data['facture']?['factureFraisNettoyageInterieur'] ?? 0.0,
         'factureFraisNettoyageExterieur': widget.data['facture']?['factureFraisNettoyageExterieur'] ?? 0.0,
         'factureFraisCarburantManquant': widget.data['facture']?['factureFraisCarburantManquant'] ?? 0.0,
         'factureFraisRayuresDommages': widget.data['facture']?['factureFraisRayuresDommages'] ?? 0.0,
         'factureFraisAutre': widget.data['facture']?['factureFraisAutre'] ?? 0.0,
-        'factureFraisKilometrique': widget.data['facture']?['factureFraisKilometrique'] ?? 0.0,
+        'factureCoutKmSupplementaires': widget.data['facture']?['factureCoutKmSupplementaires'] ?? 0.0,
         'factureRemise': widget.data['facture']?['factureRemise'] ?? 0.0,
         'factureTotalFrais': widget.data['facture']?['factureTotalFrais'] ?? 0.0,
         'factureTypePaiement': widget.data['facture']?['factureTypePaiement'] ?? 'Carte bancaire',

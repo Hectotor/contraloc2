@@ -91,7 +91,7 @@ class FacturePdfGenerator {
     final fraisCarburant = _parseDouble(factureData['factureFraisCarburantManquant']);
     final fraisRayures = _parseDouble(factureData['factureFraisRayuresDommages']);
     final fraisAutre = _parseDouble(factureData['factureFraisAutre']);
-    final fraisKilometrique = _parseDouble(factureData['factureFraisKilometrique']);
+    final fraisKilometrique = _parseDouble(factureData['factureCoutKmSupplementaires']);
     final remise = _parseDouble(factureData['factureRemise']);
     final caution = _parseDouble(factureData['factureCaution']);
     
