@@ -122,7 +122,6 @@ class RetourEnvoiePdf {
         await AccessLocations.updateContract(contratId, {
           'status': 'restitue',
           'dateRestitution': FieldValue.serverTimestamp(),
-          
           'pdfClotureSent': true,
         });
       } catch (e) {

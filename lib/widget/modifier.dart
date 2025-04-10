@@ -210,15 +210,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
     );
 
     try {
-      // Récupérer les données d'authentification pour déterminer l'adminId
-      final authData = await AccessLocations.getAuthData();
-      final isCollaborateur = authData['isCollaborateur'] as bool;
-      final targetId = isCollaborateur ? authData['adminId']?.toString() : authData['userId']?.toString();
-      
-      print('📝 MODIFERSCREEN - Mise à jour - isCollaborateur: $isCollaborateur, targetId: $targetId');
-      print('📝 MODIFERSCREEN - contratId: ${widget.contratId}');
-      print('📝 MODIFERSCREEN - authData: $authData');
-
       List<String> allPhotosUrls = List<String>.from(_photosRetourUrls);
 
       if (_photosRetour.isNotEmpty) {
@@ -273,8 +264,12 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'pourcentageEssenceRetour': _pourcentageEssenceRetourController.text,
         'signature_retour': signatureRetourBase64,
         'photosRetourUrls': allPhotosUrls,
-        'facture': factureData,
       };
+
+      // N'ajouter les données de facture que si elles existent déjà dans le contrat
+      if (widget.data['facture'] != null) {
+        updateData['facture'] = factureData;
+      }
 
       // Utilisation de AccessLocations pour la mise à jour
       await AccessLocations.updateContract(widget.contratId, updateData);
