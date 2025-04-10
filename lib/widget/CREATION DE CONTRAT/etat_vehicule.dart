@@ -218,12 +218,18 @@ class _EtatVehiculeState extends State<EtatVehicule> {
   }
 
   Widget _buildPhotoScroll() {
+    // Précharger toutes les images
+    for (var photo in widget.photos) {
+      precacheImage(FileImage(photo), context);
+    }
+
     return SizedBox(
       height: 150,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: widget.photos.length,
         itemBuilder: (context, index) {
+          final photo = widget.photos[index];
           return Stack(
             children: [
               Container(
@@ -233,7 +239,7 @@ class _EtatVehiculeState extends State<EtatVehicule> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   image: DecorationImage(
-                    image: FileImage(widget.photos[index]),
+                    image: FileImage(photo),
                     fit: BoxFit.cover,
                   ),
                 ),
