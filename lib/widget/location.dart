@@ -90,6 +90,7 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _cautionController = TextEditingController();
   final TextEditingController _entrepriseClientController = TextEditingController();
   final TextEditingController _conditionsController = TextEditingController();
+  final TextEditingController _prixRayuresController = TextEditingController();
   String? _selectedPaymentMethod;
 
   String? nomEntreprise;
@@ -155,7 +156,7 @@ class _LocationPageState extends State<LocationPage> {
     if (model.nettoyageInt != null) _nettoyageIntController.text = model.nettoyageInt!;
     if (model.nettoyageExt != null) _nettoyageExtController.text = model.nettoyageExt!;
     if (model.carburantManquant != null) _carburantManquantController.text = model.carburantManquant!;
-    if (model.kilometrageAutorise != null) _kilometrageAutoriseController.text = model.kilometrageAutorise!;
+    if (model.kilometrageAutorise != null) _kilometrageAutoriseController.text = model.kilometrageAutorise ?? '';
     if (model.kilometrageSupp != null) _kilometrageSuppController.text = model.kilometrageSupp!;
     if (model.prixRayures != null) _rayuresController.text = model.prixRayures!;
     
@@ -224,6 +225,7 @@ class _LocationPageState extends State<LocationPage> {
           _cautionController.text = vehicleData['caution'] ?? '';
           _carburantManquantController.text = vehicleData['carburantManquant'] ?? '';
           _kilometrageSuppController.text = vehicleData['kilometrageSupp'] ?? '';
+          _prixRayuresController.text = vehicleData['prixRayures'] ?? '';
         });
       } else {
         print('Aucun véhicule trouvé avec l\'immatriculation: ${widget.immatriculation}');
@@ -257,7 +259,12 @@ class _LocationPageState extends State<LocationPage> {
           // Créer un modèle de contrat à partir des données Firestore
           final contractData = contratDoc.data()!;
           final contratModel = ContratModel.fromFirestore(contractData, id: contratId);
-      
+          
+          // Mettre à jour les contrôleurs avec les données du modèle
+          setState(() {
+            _updateControllersFromModel(contratModel);
+          });
+
           // Charger la signature si elle existe
           if (contractData['signature_aller'] != null) {
             setState(() {
@@ -430,7 +437,7 @@ class _LocationPageState extends State<LocationPage> {
         siretEntreprise: siretEntreprise,
         prixRayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : null,
         kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : null,
-        kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : null,
+        kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : '',
         carburantManquant: _carburantManquantController.text.isNotEmpty ? _carburantManquantController.text : '',
         conditions: conditionsText,
         methodePaiement: _selectedPaymentMethod ?? 'Espèces',
@@ -475,6 +482,7 @@ class _LocationPageState extends State<LocationPage> {
         carburantManquant: _carburantManquantController.text.isNotEmpty ? _carburantManquantController.text : '',
         kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : '',
         kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : '',
+        prixRayures: _prixRayuresController.text.isNotEmpty ? _prixRayuresController.text : '',
         methodePaiement: _selectedPaymentMethod ?? 'Espèces',
         numeroPermis: widget.numeroPermis,
         immatriculationVehiculeClient: widget.immatriculationVehiculeClient,

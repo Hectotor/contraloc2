@@ -210,18 +210,19 @@ class ContratModel {
       carburantManquant: data['carburantManquant'],
       kilometrageAutorise: data['kilometrageAutorise'],
       kilometrageSupp: data['kilometrageSupp'],
-      prixRayures: data['prixRayures'],
+      prixRayures: data['rayures'],
       logoUrl: data['logoUrl'],
       nomEntreprise: data['nomEntreprise'],
-      adresseEntreprise: data['adresseEntreprise'],
-      telephoneEntreprise: data['telephoneEntreprise'],
-      siretEntreprise: data['siretEntreprise'],
+      adresseEntreprise: data['adresse'],
+      telephoneEntreprise: data['telephone'],
+      siretEntreprise: data['siret'],
       nomCollaborateur: data['nomCollaborateur'],
       prenomCollaborateur: data['prenomCollaborateur'],
       conditions: data['conditions'],
       dateRetour: data['dateRetour'],
       kilometrageRetour: data['kilometrageRetour'],
       pourcentageEssenceRetour: data['pourcentageEssenceRetour'],
+      
     );
   }
   
@@ -285,6 +286,7 @@ class ContratModel {
       'dateCreation': dateCreation,
       'status': status ?? 'en_cours',
       'conditions': conditions ?? '',
+
       'contratId': contratId,
     };
     
