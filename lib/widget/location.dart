@@ -91,7 +91,6 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _cautionController = TextEditingController();
   final TextEditingController _entrepriseClientController = TextEditingController();
   final TextEditingController _conditionsController = TextEditingController();
-  final TextEditingController _prixRayuresController = TextEditingController();
   String? _selectedPaymentMethod;
 
   String? nomEntreprise;
@@ -139,12 +138,6 @@ class _LocationPageState extends State<LocationPage> {
         telephoneEntreprise = adminInfo['telephoneEntreprise'];
         siretEntreprise = adminInfo['siretEntreprise'];
       });
-      print('✅ Informations admin chargées avec succès');
-      print('nomEntreprise: $nomEntreprise');
-      print('logoUrl: $logoUrl');
-      print('adresseEntreprise: $adresseEntreprise');
-      print('telephoneEntreprise: $telephoneEntreprise');
-      print('siretEntreprise: $siretEntreprise');
     } catch (e) {
       print('❌ Erreur lors du chargement des informations admin: $e');
     }
@@ -167,7 +160,7 @@ class _LocationPageState extends State<LocationPage> {
     if (model.carburantManquant != null) _carburantManquantController.text = model.carburantManquant!;
     if (model.kilometrageAutorise != null) _kilometrageAutoriseController.text = model.kilometrageAutorise ?? '';
     if (model.kilometrageSupp != null) _kilometrageSuppController.text = model.kilometrageSupp!;
-    if (model.prixRayures != null) _rayuresController.text = model.prixRayures!;
+    if (model.rayures != null) _rayuresController.text = model.rayures!;
     
     // Informations véhicule
     if (model.vin != null) _vinController.text = model.vin!;
@@ -234,7 +227,6 @@ class _LocationPageState extends State<LocationPage> {
           _cautionController.text = vehicleData['caution'] ?? '';
           _carburantManquantController.text = vehicleData['carburantManquant'] ?? '';
           _kilometrageSuppController.text = vehicleData['kilometrageSupp'] ?? '';
-          _prixRayuresController.text = vehicleData['prixRayures'] ?? '';
         });
       } else {
         print('Aucun véhicule trouvé avec l\'immatriculation: ${widget.immatriculation}');
@@ -452,7 +444,7 @@ class _LocationPageState extends State<LocationPage> {
         adresseEntreprise: adresseEntreprise,
         telephoneEntreprise: telephoneEntreprise,
         siretEntreprise: siretEntreprise,
-        prixRayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : null,
+        rayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : null,
         kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : null,
         kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : '',
         carburantManquant: _carburantManquantController.text.isNotEmpty ? _carburantManquantController.text : '',
@@ -499,7 +491,7 @@ class _LocationPageState extends State<LocationPage> {
         carburantManquant: _carburantManquantController.text.isNotEmpty ? _carburantManquantController.text : '',
         kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : '',
         kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : '',
-        prixRayures: _prixRayuresController.text.isNotEmpty ? _prixRayuresController.text : '',
+        rayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : '',
         methodePaiement: _selectedPaymentMethod ?? 'Espèces',
         numeroPermis: widget.numeroPermis,
         immatriculationVehiculeClient: widget.immatriculationVehiculeClient,

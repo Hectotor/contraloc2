@@ -45,7 +45,6 @@ class AccessAdmin {
     }
 
     final adminAuthData = adminAuthDoc.data() ?? {};
-    print('✅ Données authentification admin: $adminAuthData');
     
     final result = {
       'nomEntreprise': adminAuthData['nomEntreprise'] as String?,
@@ -54,7 +53,6 @@ class AccessAdmin {
       'telephoneEntreprise': adminAuthData['telephone'] as String?,
       'siretEntreprise': adminAuthData['siret'] as String?,
     };
-    print('📦 Résultat final: $result');
     
     return result;
   }

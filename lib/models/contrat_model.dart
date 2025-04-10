@@ -68,7 +68,7 @@ class ContratModel {
   final String? carburantManquant;
   final String? kilometrageAutorise;
   final String? kilometrageSupp;
-  final String? prixRayures;
+  final String? rayures;
   
   // Informations entreprise
   final String? logoUrl;
@@ -143,7 +143,7 @@ class ContratModel {
     this.carburantManquant,
     this.kilometrageAutorise,
     this.kilometrageSupp,
-    this.prixRayures,
+    this.rayures,
     this.logoUrl,
     this.nomEntreprise,
     this.adresseEntreprise,
@@ -210,7 +210,7 @@ class ContratModel {
       carburantManquant: data['carburantManquant'],
       kilometrageAutorise: data['kilometrageAutorise'],
       kilometrageSupp: data['kilometrageSupp'],
-      prixRayures: data['rayures'],
+      rayures: data['rayures'],
       logoUrl: data['logoUrl'],
       nomEntreprise: data['nomEntreprise'],
       adresseEntreprise: data['adresse'],
@@ -275,7 +275,7 @@ class ContratModel {
       'carburantManquant': carburantManquant ?? '',
       'kilometrageAutorise': kilometrageAutorise ?? '',
       'kilometrageSupp': kilometrageSupp ?? '',
-      'prixRayures': prixRayures,
+      'rayures': rayures,
       'logoUrl': logoUrl,
       'nomEntreprise': nomEntreprise,
       'adresseEntreprise': adresseEntreprise,
@@ -342,7 +342,7 @@ class ContratModel {
       'condition': conditions,
       'signatureAller': signatureAller,
       'kilometrageSupp': kilometrageSupp,
-      'prixRayures': prixRayures,
+      'rayures': rayures,
       'kilometrageAutorise': kilometrageAutorise,
       'typeLocation': typeLocation,
       'commentaireAller': commentaireAller,
@@ -423,7 +423,7 @@ class ContratModel {
     String? carburantManquant,
     String? kilometrageAutorise,
     String? kilometrageSupp,
-    String? prixRayures,
+    String? rayures,
     String? logoUrl,
     String? nomEntreprise,
     String? adresseEntreprise,
@@ -490,7 +490,7 @@ class ContratModel {
       carburantManquant: carburantManquant ?? this.carburantManquant,
       kilometrageAutorise: kilometrageAutorise ?? this.kilometrageAutorise,
       kilometrageSupp: kilometrageSupp ?? this.kilometrageSupp,
-      prixRayures: prixRayures ?? this.prixRayures,
+      rayures: rayures ?? this.rayures,
       logoUrl: logoUrl ?? this.logoUrl,
       nomEntreprise: nomEntreprise ?? this.nomEntreprise,
       adresseEntreprise: adresseEntreprise ?? this.adresseEntreprise,

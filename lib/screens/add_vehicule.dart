@@ -375,7 +375,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       'caution': _cautionController.text,
       'franchise': _franchiseController.text,
       'kilometrageSupp': _kilometrageSuppController.text,
-      'rayures': _rayuresController.text, // Ajout de rayures pour cohérence avec le PDF
+      'rayures': _rayuresController.text.isNotEmpty ? _rayuresController.text : null,
       'assuranceNom': _assuranceNomController.text,
       'assuranceNumero': _assuranceNumeroController.text,
       'entretienDate': _entretienDateController.text,
@@ -417,6 +417,28 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
         .doc(targetId)
         .collection('vehicules')
         .doc(docId);
+  }
+
+  @override
+  void dispose() {
+    _marqueController.dispose();
+    _modeleController.dispose();
+    _immatriculationController.dispose();
+    _vinController.dispose();
+    _prixLocationController.dispose();
+    _cautionController.dispose();
+    _franchiseController.dispose();
+    _kilometrageSuppController.dispose();
+    _rayuresController.dispose();
+    _assuranceNomController.dispose();
+    _assuranceNumeroController.dispose();
+    _entretienDateController.dispose();
+    _entretienKilometrageController.dispose();
+    _entretienNotesController.dispose();
+    _carburantManquantController.dispose();
+    _nettoyageIntController.dispose();
+    _nettoyageExtController.dispose();
+    super.dispose();
   }
 
   @override

@@ -623,7 +623,7 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Frais de rayures/dommages: ${contrat.prixRayures ?? ''} €',
+                  child: pw.Text('Frais de rayures/dommages: ${contrat.rayures ?? ''} €',
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
