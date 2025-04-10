@@ -57,46 +57,52 @@ class GenerationContratPdf {
         throw Exception('Utilisateur non connecté');
       }
 
-      // Récupérer les données de l'utilisateur
-      final authDataDoc = await FirebaseFirestore.instance
+      // Récupérer les données principales de l'utilisateur
+      final userDataDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .collection('authentification')
-          .doc(user.uid)
-          .get();
+          .get(GetOptions(source: Source.server));
 
-      if (!authDataDoc.exists) {
-        throw Exception('Données authentification non trouvées');
+      if (!userDataDoc.exists) {
+        throw Exception('❌ Données utilisateur non trouvées');
       }
 
-      final authData = authDataDoc.data()!;
-      final isCollaborateur = authData['role'] == 'collaborateur';
-      String targetId = user.uid;
-      String? createdBy = user.uid;
-      String? adminId = authData['adminId'];
-
-      if (isCollaborateur && adminId != null) {
-        targetId = adminId;
-        createdBy = user.uid;
+      final userData = userDataDoc.data()!;
+      final adminId = userData['adminId'];
+      
+      if (adminId == null) {
+        throw Exception('❌ ID administrateur non trouvé');
       }
 
-      final loueurDoc = await FirebaseFirestore.instance
+      // Utiliser l'adminId comme cible
+      final targetId = adminId;
+
+      // Récupérer les données de l'admin
+      final adminData = await FirebaseFirestore.instance
           .collection('users')
           .doc(targetId)
-          .get();
+          .get(GetOptions(source: Source.server));
 
-      if (!loueurDoc.exists) {
-        throw Exception('Impossible de récupérer les informations du loueur');
+      if (!adminData.exists) {
+        throw Exception('❌ Données administrateur non trouvées');
       }
 
-      final loueurData = loueurDoc.data()!;
-      final nomEntreprise = loueurData['nomEntreprise'] ?? '';
-      final logoUrl = loueurData['logoUrl'] ?? '';
-      final adresseEntreprise = loueurData['adresse'] ?? '';
-      final telephoneEntreprise = loueurData['telephone'] ?? '';
-      final siretEntreprise = loueurData['siret'] ?? '';
-      final nomCollaborateur = loueurData['nom'] ?? '';
-      final prenomCollaborateur = loueurData['prenom'] ?? '';
+      final adminDataMap = adminData.data()!;
+      final nomEntreprise = adminDataMap['nomEntreprise'] ?? '';
+      final logoUrl = adminDataMap['logoUrl'] ?? '';
+      final adresseEntreprise = adminDataMap['adresse'] ?? '';
+      final telephoneEntreprise = adminDataMap['telephone'] ?? '';
+      final siretEntreprise = adminDataMap['siret'] ?? '';
+
+      // Récupérer les informations du collaborateur
+      final collaborateurData = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get(GetOptions(source: Source.server));
+
+      final collaborateurDataMap = collaborateurData.data()!;
+      final nomCollaborateur = collaborateurDataMap['nom'] ?? '';
+      final prenomCollaborateur = collaborateurDataMap['prenom'] ?? '';
 
       // Récupérer les conditions du contrat
       final conditionsData = await AccessCondition.getContractConditions();
@@ -150,8 +156,8 @@ class GenerationContratPdf {
         conditions: conditionsText,
         userId: user.uid,
         adminId: adminId,
-        createdBy: createdBy,
-        isCollaborateur: isCollaborateur,
+        createdBy: user.uid,
+        isCollaborateur: true,
         dateCreation: Timestamp.now(),
       );
 
@@ -170,24 +176,33 @@ class GenerationContratPdf {
       // Logs pour déboguer
       print('=== Début de la sauvegarde du contrat ===');
       print('User ID: ${user.uid}');
-      print('Role: ${authData['role']}');
       print('Admin ID: $adminId');
       print('Target ID: $targetId');
       print('Contrat ID: $contratId');
       print('=== Données du contrat ===');
       print(contratData);
+      print('=== Structure de sauvegarde ===');
+      print('Collection: users/$targetId/locations/$contratId');
       print('=== Fin des logs ===');
 
       try {
+        // Sauvegarder dans la collection locations de l'admin
         await FirebaseFirestore.instance
             .collection('users')
             .doc(targetId)
             .collection('locations')
             .doc(contratId)
             .set(contratData, SetOptions(merge: true));
+
+        print('=== Sauvegarde réussie ===');
+        print('Sauvegardé dans: users/$targetId/locations/$contratId');
+
       } catch (e) {
-        print('Erreur lors de la sauvegarde: $e');
-        throw Exception('Erreur lors de la sauvegarde du contrat: $e');
+        print('=== Erreur lors de la sauvegarde ===');
+        print('Erreur: $e');
+        print('Type de l\'erreur: ${e.runtimeType}');
+        print('Message: ${e.toString()}');
+        throw Exception('❌ Erreur lors de la sauvegarde du contrat: $e');
       }
 
       // Si un email est fourni, envoyer le PDF
