@@ -16,6 +16,7 @@ import '../widget/CREATION DE CONTRAT/kilometrage_container.dart';
 import '../widget/CREATION DE CONTRAT/type_location_container.dart';
 import '../widget/CREATION DE CONTRAT/essence_container.dart';
 import '../widget/CREATION DE CONTRAT/etat_commentaire_container.dart';
+import '../services/access_condition.dart';
 
 class LocationPage extends StatefulWidget {
   final String marque;
@@ -27,8 +28,6 @@ class LocationPage extends StatefulWidget {
   final String? telephone;
   final String? email;
   final String? entrepriseClient;
-  final File? permisRecto;
-  final File? permisVerso;
   final String? numeroPermis;
   final String? immatriculationVehiculeClient;
   final String? kilometrageVehiculeClient;
@@ -45,8 +44,6 @@ class LocationPage extends StatefulWidget {
     this.telephone,
     this.email,
     this.entrepriseClient,
-    this.permisRecto,
-    this.permisVerso,
     this.numeroPermis,
     this.immatriculationVehiculeClient,
     this.kilometrageVehiculeClient,
@@ -92,7 +89,14 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _typeLocationController = TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
   final TextEditingController _entrepriseClientController = TextEditingController();
+  final TextEditingController _conditionsController = TextEditingController();
   String? _selectedPaymentMethod;
+
+  String? nomEntreprise;
+  String? logoUrl;
+  String? adresseEntreprise;
+  String? telephoneEntreprise;
+  String? siretEntreprise;
 
   @override
   void initState() {
@@ -101,7 +105,25 @@ class _LocationPageState extends State<LocationPage> {
     
     _dateDebutController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
     _typeLocationController.text = "Gratuite";
+    _conditionsController.text = "Conditions générales de location";
     _entrepriseClientController.text = widget.entrepriseClient ?? '';
+    
+    // Initialiser les variables d'entreprise
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _firestore.collection('users').doc(user.uid).get().then((doc) {
+        if (doc.exists) {
+          final data = doc.data();
+          setState(() {
+            nomEntreprise = data?['nomEntreprise'] ?? '';
+            logoUrl = data?['logoUrl'] ?? '';
+            adresseEntreprise = data?['adresse'] ?? '';
+            telephoneEntreprise = data?['telephone'] ?? '';
+            siretEntreprise = data?['siret'] ?? '';
+          });
+        }
+      });
+    }
     
     _fetchVehicleData();
     
@@ -116,6 +138,50 @@ class _LocationPageState extends State<LocationPage> {
         }
       });
     }
+  }
+
+  void _updateControllersFromModel(ContratModel model) {
+    // Mise à jour des contrôleurs avec les données du modèle
+    if (model.dateDebut != null) _dateDebutController.text = model.dateDebut!;
+    if (model.dateFinTheorique != null) _dateFinTheoriqueController.text = model.dateFinTheorique!;
+    if (model.kilometrageDepart != null) _kilometrageDepartController.text = model.kilometrageDepart!;
+    if (model.typeLocation != null) _typeLocationController.text = model.typeLocation!;
+    if (model.commentaireAller != null) _commentaireController.text = model.commentaireAller!;
+    setState(() => _pourcentageEssence = model.pourcentageEssence);
+    
+    // Informations financières
+    if (model.prixLocation != null) _prixLocationController.text = model.prixLocation!;
+    if (model.accompte != null) _accompteController.text = model.accompte!;
+    if (model.nettoyageInt != null) _nettoyageIntController.text = model.nettoyageInt!;
+    if (model.nettoyageExt != null) _nettoyageExtController.text = model.nettoyageExt!;
+    if (model.carburantManquant != null) _carburantManquantController.text = model.carburantManquant!;
+    if (model.kilometrageAutorise != null) _kilometrageAutoriseController.text = model.kilometrageAutorise!;
+    if (model.kilometrageSupp != null) _kilometrageSuppController.text = model.kilometrageSupp!;
+    if (model.prixRayures != null) _rayuresController.text = model.prixRayures!;
+    
+    // Informations véhicule
+    if (model.vin != null) _vinController.text = model.vin!;
+    
+    // Informations assurance
+    if (model.assuranceNom != null) _assuranceNomController.text = model.assuranceNom!;
+    if (model.assuranceNumero != null) _assuranceNumeroController.text = model.assuranceNumero!;
+    if (model.franchise != null) _franchiseController.text = model.franchise!;
+    if (model.typeCarburant != null) _typeCarburantController.text = model.typeCarburant!;
+    if (model.boiteVitesses != null) _boiteVitessesController.text = model.boiteVitesses!;
+    
+    // Signature
+    if (model.signatureAller != null) {
+      setState(() {
+        _signatureAller = model.signatureAller!;
+      });
+    }
+
+    // Mise à jour des variables d'état
+    _vehiclePhotoUrl = model.photoVehiculeUrl;
+    _cautionController.text = model.caution ?? '';
+    _entrepriseClientController.text = model.entrepriseClient ?? '';
+    _selectedPaymentMethod = model.methodePaiement ?? 'Espèces';
+    _conditionsController.text = model.conditions ?? '';
   }
 
   Future<void> _fetchVehicleData() async {
@@ -223,9 +289,6 @@ class _LocationPageState extends State<LocationPage> {
             }
           }
       
-          // Mettre à jour les contrôleurs avec les données du contrat
-          _updateControllersFromModel(contratModel);
-          
           return contratModel;
         } else {
           print('Aucun contrat trouvé avec l\'ID: $contratId');
@@ -251,11 +314,15 @@ class _LocationPageState extends State<LocationPage> {
       return;
     }
 
+    // Récupérer les conditions du contrat depuis Firestore
+    final conditions = await AccessCondition.getContractConditions();
+    final conditionsText = conditions?['texte'] ?? 'Conditions générales de location';
+
     if ((widget.nom != null &&
           widget.nom!.isNotEmpty &&
           widget.prenom != null &&
           widget.prenom!.isNotEmpty) &&
-      !_acceptedConditions) {
+          !_acceptedConditions) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Vous devez accepter les conditions de location")),
@@ -296,13 +363,9 @@ class _LocationPageState extends State<LocationPage> {
       String? permisVersoUrl;
       List<String> vehiculeUrls = [];
 
-      if (widget.permisRecto != null) {
-        permisRectoUrl = await _compressAndUploadPhoto(
-            widget.permisRecto!, 'permis_recto', contratId);
-      }
-      if (widget.permisVerso != null) {
-        permisVersoUrl = await _compressAndUploadPhoto(
-            widget.permisVerso!, 'permis_verso', contratId);
+      if (widget.numeroPermis != null) {
+        permisRectoUrl = widget.numeroPermis;
+        permisVersoUrl = widget.numeroPermis;
       }
 
       for (var photo in _photos) {
@@ -337,8 +400,6 @@ class _LocationPageState extends State<LocationPage> {
         kilometrageVehiculeClient: widget.kilometrageVehiculeClient,
         permisRectoUrl: permisRectoUrl,
         permisVersoUrl: permisVersoUrl,
-        permisRectoFile: widget.permisRecto,
-        permisVersoFile: widget.permisVerso,
         marque: widget.marque,
         modele: widget.modele,
         immatriculation: widget.immatriculation,
@@ -353,7 +414,6 @@ class _LocationPageState extends State<LocationPage> {
         pourcentageEssence: _pourcentageEssence,
         commentaireAller: _commentaireController.text.isNotEmpty ? _commentaireController.text : '',
         photosUrls: vehiculeUrls,
-        photosFiles: _photos,
         status: _determineContractStatus(),
         dateReservation: _calculateReservationDate(),
         dateCreation: Timestamp.now(),
@@ -368,11 +428,12 @@ class _LocationPageState extends State<LocationPage> {
         adresseEntreprise: adresseEntreprise,
         telephoneEntreprise: telephoneEntreprise,
         siretEntreprise: siretEntreprise,
-        prixRayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : '',
-        kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : '',
-        kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : '',
+        prixRayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : null,
+        kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : null,
+        kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : null,
         carburantManquant: _carburantManquantController.text.isNotEmpty ? _carburantManquantController.text : '',
-        
+        conditions: conditionsText,
+        methodePaiement: _selectedPaymentMethod ?? 'Espèces',
       );
 
       // Sauvegarder le contrat dans Firestore
@@ -387,50 +448,49 @@ class _LocationPageState extends State<LocationPage> {
       await GenerationContratPdf.genererEtEnvoyerPdf(
         context: context,
         contratId: contratId,
-        nom: widget.nom!,
-        prenom: widget.prenom!,
-        entrepriseClient: _entrepriseClientController.text,
-        adresse: widget.adresse!,
-        telephone: widget.telephone!,
-        email: widget.email!,
-        numeroPermis: widget.numeroPermis!,
-        immatriculationVehiculeClient: widget.immatriculationVehiculeClient!,
-        kilometrageVehiculeClient: widget.kilometrageVehiculeClient!,
-        marque: widget.marque,
-        modele: widget.modele,
-        immatriculation: widget.immatriculation,
-        logoUrl: logoUrl,
-        nomEntreprise: nomEntreprise,
-        adresseEntreprise: adresseEntreprise,
-        telephoneEntreprise: telephoneEntreprise,
-        siretEntreprise: siretEntreprise,
+        nom: widget.nom,
+        prenom: widget.prenom,
+        adresse: widget.adresse,
+        telephone: widget.telephone,
+        email: widget.email,
+        signatureAller: _signatureAller,
+        photoVehiculeUrl: _vehiclePhotoUrl,
         dateDebut: _dateDebutController.text,
         dateFinTheorique: _dateFinTheoriqueController.text,
         kilometrageDepart: _kilometrageDepartController.text,
         typeLocation: _typeLocationController.text,
         pourcentageEssence: _pourcentageEssence,
         commentaireAller: _commentaireController.text,
-        photosUrls: vehiculeUrls,
-        signatureAller: _signatureAller,
-        vin: _vinController.text,
-        typeCarburant: _typeCarburantController.text,
-        boiteVitesses: _boiteVitessesController.text,
-        assuranceNom: _assuranceNomController.text,
-        assuranceNumero: _assuranceNumeroController.text,
-        franchise: _franchiseController.text,
-        prixLocation: _prixLocationController.text,
-        accompte: _accompteController.text,
-        caution: _cautionController.text,
-        nettoyageInt: _nettoyageIntController.text,
-        nettoyageExt: _nettoyageExtController.text,
+        vin: _vinController.text.isNotEmpty ? _vinController.text : '',
+        typeCarburant: _typeCarburantController.text.isNotEmpty ? _typeCarburantController.text : '',
+        boiteVitesses: _boiteVitessesController.text.isNotEmpty ? _boiteVitessesController.text : '',
+        assuranceNom: _assuranceNomController.text.isNotEmpty ? _assuranceNomController.text : '',
+        assuranceNumero: _assuranceNumeroController.text.isNotEmpty ? _assuranceNumeroController.text : '',
+        franchise: _franchiseController.text.isNotEmpty ? _franchiseController.text : '',
+        prixLocation: _prixLocationController.text.isNotEmpty ? _prixLocationController.text : '',
+        accompte: _accompteController.text.isNotEmpty ? _accompteController.text : '',
+        caution: _cautionController.text.isNotEmpty ? _cautionController.text : '',
+        nettoyageInt: _nettoyageIntController.text.isNotEmpty ? _nettoyageIntController.text : '',
+        nettoyageExt: _nettoyageExtController.text.isNotEmpty ? _nettoyageExtController.text : '',
+        carburantManquant: _carburantManquantController.text.isNotEmpty ? _carburantManquantController.text : '',
+        kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : '',
+        kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : '',
+        methodePaiement: _selectedPaymentMethod ?? 'Espèces',
+        numeroPermis: widget.numeroPermis,
+        immatriculationVehiculeClient: widget.immatriculationVehiculeClient,
+        kilometrageVehiculeClient: widget.kilometrageVehiculeClient,
         permisRectoUrl: permisRectoUrl,
         permisVersoUrl: permisVersoUrl,
-        photoVehiculeUrl: _vehiclePhotoUrl,
-        prixRayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : null,
-        kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : null,
-        kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : null,
-        methodePaiement: _selectedPaymentMethod ?? 'Espèces',
-
+        marque: widget.marque,
+        modele: widget.modele,
+        immatriculation: widget.immatriculation,
+        conditions: conditionsText,
+        entrepriseClient: _entrepriseClientController.text,
+        nomEntreprise: nomEntreprise,
+        logoUrl: logoUrl,
+        adresseEntreprise: adresseEntreprise,
+        telephoneEntreprise: telephoneEntreprise,
+        siretEntreprise: siretEntreprise,
       );
 
       // Affichage du succès et navigation
@@ -635,57 +695,29 @@ class _LocationPageState extends State<LocationPage> {
 
   @override
   void dispose() {
+    _dateDebutController.dispose();
+    _dateFinTheoriqueController.dispose();
+    _kilometrageDepartController.dispose();
+    _commentaireController.dispose();
     _prixLocationController.dispose();
     _accompteController.dispose();
-    _cautionController.dispose();
     _nettoyageIntController.dispose();
     _nettoyageExtController.dispose();
+    _carburantManquantController.dispose();
+    _kilometrageAutoriseController.dispose();
+    _kilometrageSuppController.dispose();
+    _vinController.dispose();
+    _assuranceNomController.dispose();
+    _assuranceNumeroController.dispose();
+    _franchiseController.dispose();
+    _rayuresController.dispose();
+    _typeCarburantController.dispose();
+    _boiteVitessesController.dispose();
+    _typeLocationController.dispose();
+    _cautionController.dispose();
     _entrepriseClientController.dispose();
+    _conditionsController.dispose();
     super.dispose();
-  }
-
-  void _updateControllersFromModel(ContratModel model) {
-    // Mise à jour des contrôleurs avec les données du modèle
-    if (model.dateDebut != null) _dateDebutController.text = model.dateDebut!;
-    if (model.dateFinTheorique != null) _dateFinTheoriqueController.text = model.dateFinTheorique!;
-    if (model.kilometrageDepart != null) _kilometrageDepartController.text = model.kilometrageDepart!;
-    if (model.typeLocation != null) _typeLocationController.text = model.typeLocation!;
-    if (model.commentaireAller != null) _commentaireController.text = model.commentaireAller!;
-    setState(() => _pourcentageEssence = model.pourcentageEssence);
-    
-    // Informations financières
-    if (model.prixLocation != null) _prixLocationController.text = model.prixLocation!;
-    if (model.accompte != null) _accompteController.text = model.accompte!;
-    if (model.nettoyageInt != null) _nettoyageIntController.text = model.nettoyageInt!;
-    if (model.nettoyageExt != null) _nettoyageExtController.text = model.nettoyageExt!;
-    if (model.carburantManquant != null) _carburantManquantController.text = model.carburantManquant!;
-    if (model.kilometrageAutorise != null) _kilometrageAutoriseController.text = model.kilometrageAutorise!;
-    if (model.kilometrageSupp != null) _kilometrageSuppController.text = model.kilometrageSupp!;
-    if (model.prixRayures != null) _rayuresController.text = model.prixRayures!;
-    
-    // Informations véhicule
-    if (model.vin != null) _vinController.text = model.vin!;
-    
-    // Informations assurance    if (model.assuranceNom != null) _assuranceNomController.text = model.assuranceNom!;
-    if (model.assuranceNumero != null) _assuranceNumeroController.text = model.assuranceNumero!;
-    if (model.franchise != null) _franchiseController.text = model.franchise!;
-    if (model.typeCarburant != null) _typeCarburantController.text = model.typeCarburant!;
-    if (model.boiteVitesses != null) _boiteVitessesController.text = model.boiteVitesses!;
-    
-    // Signature
-    if (model.signatureAller != null) {
-      setState(() {
-        _signatureAller = model.signatureAller!;
-      });
-    }
-
-    // Mise à jour des variables d'état
-    setState(() {
-      _vehiclePhotoUrl = model.photoVehiculeUrl;
-      _cautionController.text = model.caution ?? '';
-      _entrepriseClientController.text = model.entrepriseClient ?? '';
-      _selectedPaymentMethod = model.methodePaiement ?? 'Espèces';
-    });
   }
 
   Future<void> _selectDateTime(TextEditingController controller) async {

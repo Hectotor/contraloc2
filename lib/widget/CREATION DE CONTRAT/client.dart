@@ -224,10 +224,7 @@ class _ClientPageState extends State<ClientPage> {
                 numeroPermis: _numeroPermisController.text,
                 immatriculationVehiculeClient: _immatriculationVehiculeClientController.text, // Immatriculation du véhicule du client
                 kilometrageVehiculeClient: _kilometrageVehiculeClientController.text,
-                // Passer les fichiers d'images
-                permisRecto: _permisRecto,
-                permisVerso: _permisVerso,
-              ),
+            ),
             ),
           );
         }
