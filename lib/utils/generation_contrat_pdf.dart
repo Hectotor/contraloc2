@@ -108,6 +108,21 @@ class GenerationContratPdf {
       final conditionsData = await AccessCondition.getContractConditions();
       final conditionsText = conditionsData?['texte'] ?? ContratModifier.defaultContract;
 
+      // Calculer le statut du contrat
+      final now = DateTime.now();
+      final dateDebutDateTime = DateTime.parse(dateDebut);
+      final difference = dateDebutDateTime.difference(now).inDays;
+      
+      // Logs pour déboguer
+      print('=== Calcul du statut ===');
+      print('Date actuelle: $now');
+      print('Date de début: $dateDebutDateTime');
+      print('Différence en jours: $difference');
+      
+      final status = difference > 1 
+          ? 'réservé'  // Si la date est dans plus de 24h
+          : 'en_cours'; // Sinon, en_cours
+
       // Créer un contratModel avec les données fournies
       final contratModel = ContratModel(
         contratId: contratId,
@@ -158,6 +173,7 @@ class GenerationContratPdf {
         adminId: adminId,
         createdBy: user.uid,
         isCollaborateur: true,
+        status: status,
         dateCreation: Timestamp.now(),
       );
 
