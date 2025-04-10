@@ -73,13 +73,11 @@ class GenerationContratPdf {
       final isCollaborateur = authData['role'] == 'collaborateur';
       String targetId = user.uid;
       String? createdBy = user.uid;
+      String? adminId = authData['adminId'];
 
-      if (isCollaborateur) {
-        final adminId = authData['adminId'];
-        if (adminId != null) {
-          targetId = adminId;
-          createdBy = user.uid; // Garder l'ID du collaborateur qui crée le contrat
-        }
+      if (isCollaborateur && adminId != null) {
+        targetId = adminId;
+        createdBy = user.uid;
       }
 
       final loueurDoc = await FirebaseFirestore.instance
@@ -150,6 +148,11 @@ class GenerationContratPdf {
         nomCollaborateur: nomCollaborateur,
         prenomCollaborateur: prenomCollaborateur,
         conditions: conditionsText,
+        userId: user.uid,
+        adminId: adminId,
+        createdBy: createdBy,
+        isCollaborateur: isCollaborateur,
+        dateCreation: Timestamp.now(),
       );
 
       // Afficher le dialogue de chargement
@@ -164,18 +167,11 @@ class GenerationContratPdf {
       // Sauvegarder le contrat dans Firestore
       final contratData = contratModel.toFirestore();
       
-      // Ajouter les informations manquantes
-      contratData['userId'] = user.uid;
-      contratData['adminId'] = isCollaborateur ? targetId : null;
-      contratData['createdBy'] = createdBy;
-      contratData['isCollaborateur'] = isCollaborateur;
-      contratData['dateCreation'] = Timestamp.now();
-      
       // Logs pour déboguer
       print('=== Début de la sauvegarde du contrat ===');
       print('User ID: ${user.uid}');
       print('Role: ${authData['role']}');
-      print('Admin ID: ${authData['adminId']}');
+      print('Admin ID: $adminId');
       print('Target ID: $targetId');
       print('Contrat ID: $contratId');
       print('=== Données du contrat ===');

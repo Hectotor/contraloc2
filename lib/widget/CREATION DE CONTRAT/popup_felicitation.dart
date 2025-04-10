@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ContraLoc/SCREENS/contrat_screen.dart';
+import 'package:ContraLoc/widget/navigation.dart';
 
 class Popup {
   static Future<void> showSuccess(BuildContext context, {String? email}) {
@@ -57,12 +57,15 @@ class Popup {
                       // Attendre un court instant pour éviter les conflits de navigation
                       await Future.delayed(const Duration(milliseconds: 100));
                       
-                      // Naviguer vers ContratScreen
+                      // Naviguer vers NavigationPage avec l'onglet Contrats sélectionné
                       if (context.mounted) {
-                        Navigator.pushAndRemoveUntil(
+                        Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const ContratScreen()),
-                          (Route<dynamic> route) => false,
+                          MaterialPageRoute(
+                            builder: (context) => const NavigationPage(
+                              initialTab: 1, // 1 correspond à l'onglet Contrats
+                            ),
+                          ),
                         );
                       }
                     },
