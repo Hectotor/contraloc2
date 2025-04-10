@@ -52,6 +52,7 @@ class ClientPage extends StatefulWidget {
 class _ClientPageState extends State<ClientPage> {
   // Variables d'état
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController entrepriseClientController = TextEditingController();
   final TextEditingController _nomController = TextEditingController();
   final TextEditingController _prenomController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -117,6 +118,7 @@ class _ClientPageState extends State<ClientPage> {
           print('Données récupérées: $data');
           
           setState(() {
+            entrepriseClientController.text = data['entrepriseClient'] ?? '';
             _nomController.text = data['nom'] ?? '';
             _prenomController.text = data['prenom'] ?? '';
             _emailController.text = data['email'] ?? '';
@@ -153,6 +155,7 @@ class _ClientPageState extends State<ClientPage> {
       try {
         // Préparer les données du client
         Map<String, dynamic> clientData = {
+          'entrepriseClient': entrepriseClientController.text,
           'nom': _nomController.text,
           'prenom': _prenomController.text,
           'adresse': _adresseController.text,
@@ -212,6 +215,7 @@ class _ClientPageState extends State<ClientPage> {
                 modele: widget.modele,
                 immatriculation: widget.immatriculation, // Immatriculation du véhicule de location
                 // Passer les données client à la page suivante
+                entrepriseClient: entrepriseClientController.text,
                 nom: _nomController.text,
                 prenom: _prenomController.text,
                 adresse: _adresseController.text,
@@ -339,6 +343,7 @@ class _ClientPageState extends State<ClientPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     PersonalInfoContainer(
+                      entrepriseClientController: entrepriseClientController,
                       nomController: _nomController,
                       prenomController: _prenomController,
                       emailController: _emailController,

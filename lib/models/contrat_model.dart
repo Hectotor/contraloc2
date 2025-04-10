@@ -12,6 +12,7 @@ class ContratModel {
   // Informations client
   final String? nom;
   final String? prenom;
+  final String? entrepriseClient;
   final String? adresse;
   final String? telephone;
   final String? email;
@@ -96,6 +97,7 @@ class ContratModel {
     this.isCollaborateur = false,
     this.nom,
     this.prenom,
+    this.entrepriseClient,
     this.adresse,
     this.telephone,
     this.email,
@@ -165,6 +167,7 @@ class ContratModel {
       isCollaborateur: data['isCollaborateur'] ?? false,
       nom: data['nom'],
       prenom: data['prenom'],
+      entrepriseClient: data['entrepriseClient'],
       adresse: data['adresse'],
       telephone: data['telephone'],
       email: data['email'],
@@ -210,9 +213,9 @@ class ContratModel {
       prixRayures: data['prixRayures'],
       logoUrl: data['logoUrl'],
       nomEntreprise: data['nomEntreprise'],
-      adresseEntreprise: data['adresse'],
-      telephoneEntreprise: data['telephone'],
-      siretEntreprise: data['siret'],
+      adresseEntreprise: data['adresseEntreprise'],
+      telephoneEntreprise: data['telephoneEntreprise'],
+      siretEntreprise: data['siretEntreprise'],
       nomCollaborateur: data['nomCollaborateur'],
       prenomCollaborateur: data['prenomCollaborateur'],
       conditions: data['conditions'],
@@ -231,6 +234,7 @@ class ContratModel {
       'isCollaborateur': isCollaborateur,
       'nom': nom ?? '',
       'prenom': prenom ?? '',
+      'entrepriseClient': entrepriseClient ?? '',
       'adresse': adresse ?? '',
       'telephone': telephone ?? '',
       'email': email ?? '',
@@ -310,6 +314,7 @@ class ContratModel {
       'dateReservation': dateReservation?.toDate().toString() ?? '',
       'nom': nom,
       'prenom': prenom,
+      'entrepriseClient': entrepriseClient ?? '',
       'email': email,
       'numeroPermis': numeroPermis,
       'immatriculationVehiculeClient': immatriculationVehiculeClient,
@@ -370,6 +375,7 @@ class ContratModel {
     bool? isCollaborateur,
     String? nom,
     String? prenom,
+    String? entrepriseClient,
     String? adresse,
     String? telephone,
     String? email,
@@ -436,6 +442,7 @@ class ContratModel {
       isCollaborateur: isCollaborateur ?? this.isCollaborateur,
       nom: nom ?? this.nom,
       prenom: prenom ?? this.prenom,
+      entrepriseClient: entrepriseClient ?? this.entrepriseClient,
       adresse: adresse ?? this.adresse,
       telephone: telephone ?? this.telephone,
       email: email ?? this.email,

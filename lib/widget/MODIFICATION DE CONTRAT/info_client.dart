@@ -80,6 +80,8 @@ class _InfoClientState extends State<InfoClient> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (widget.data['entrepriseClient'] != null && widget.data['entrepriseClient'].toString().isNotEmpty)
+                    _buildInfoRow(context, "Entreprise", widget.data['entrepriseClient'] ?? "Non spécifié"),
                   _buildInfoRow(context, "Nom", widget.data['nom'] ?? "Non spécifié"),
                   const SizedBox(height: 12),
                   _buildInfoRow(context, "Prénom", widget.data['prenom'] ?? "Non spécifié"),

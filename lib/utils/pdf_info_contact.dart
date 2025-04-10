@@ -107,6 +107,9 @@ class PdfInfoContactWidget {
                 color: PdfColors.blue900,
               )),
           pw.Divider(color: PdfColors.black),
+          if (clientData['entrepriseClient'] != null && clientData['entrepriseClient'].toString().isNotEmpty)
+            pw.Text('Entreprise: ${clientData['entrepriseClient']}',
+                style: pw.TextStyle(font: ttf, fontSize: 9)),
           pw.Text('Nom: ${clientData['nom']}', style: pw.TextStyle(font: ttf, fontSize: 9)),
           pw.Text('Prénom: ${clientData['prenom']}',
               style: pw.TextStyle(font: ttf, fontSize: 9)),

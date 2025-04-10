@@ -17,7 +17,6 @@ import '../widget/CREATION DE CONTRAT/type_location_container.dart';
 import '../widget/CREATION DE CONTRAT/essence_container.dart';
 import '../widget/CREATION DE CONTRAT/etat_commentaire_container.dart';
 
-
 class LocationPage extends StatefulWidget {
   final String marque;
   final String modele;
@@ -27,6 +26,7 @@ class LocationPage extends StatefulWidget {
   final String? adresse;
   final String? telephone;
   final String? email;
+  final String? entrepriseClient;
   final File? permisRecto;
   final File? permisVerso;
   final String? numeroPermis;
@@ -44,6 +44,7 @@ class LocationPage extends StatefulWidget {
     this.adresse,
     this.telephone,
     this.email,
+    this.entrepriseClient,
     this.permisRecto,
     this.permisVerso,
     this.numeroPermis,
@@ -90,6 +91,7 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _boiteVitessesController = TextEditingController();
   final TextEditingController _typeLocationController = TextEditingController();
   final TextEditingController _cautionController = TextEditingController();
+  final TextEditingController _entrepriseClientController = TextEditingController();
   String? _selectedPaymentMethod;
 
   @override
@@ -99,6 +101,7 @@ class _LocationPageState extends State<LocationPage> {
     
     _dateDebutController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
     _typeLocationController.text = "Gratuite";
+    _entrepriseClientController.text = widget.entrepriseClient ?? '';
     
     _fetchVehicleData();
     
@@ -325,6 +328,7 @@ class _LocationPageState extends State<LocationPage> {
         isCollaborateur: collaborateurStatus['isCollaborateur'] ?? false,
         nom: widget.nom,
         prenom: widget.prenom,
+        entrepriseClient: _entrepriseClientController.text,
         adresse: widget.adresse,
         telephone: widget.telephone,
         email: widget.email,
@@ -385,6 +389,7 @@ class _LocationPageState extends State<LocationPage> {
         contratId: contratId,
         nom: widget.nom!,
         prenom: widget.prenom!,
+        entrepriseClient: _entrepriseClientController.text,
         adresse: widget.adresse!,
         telephone: widget.telephone!,
         email: widget.email!,
@@ -635,6 +640,7 @@ class _LocationPageState extends State<LocationPage> {
     _cautionController.dispose();
     _nettoyageIntController.dispose();
     _nettoyageExtController.dispose();
+    _entrepriseClientController.dispose();
     super.dispose();
   }
 
@@ -677,6 +683,7 @@ class _LocationPageState extends State<LocationPage> {
     setState(() {
       _vehiclePhotoUrl = model.photoVehiculeUrl;
       _cautionController.text = model.caution ?? '';
+      _entrepriseClientController.text = model.entrepriseClient ?? '';
       _selectedPaymentMethod = model.methodePaiement ?? 'Espèces';
     });
   }

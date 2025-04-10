@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 class PersonalInfoContainer extends StatefulWidget {
+  final TextEditingController entrepriseClientController;
   final TextEditingController nomController;
   final TextEditingController prenomController;
   final TextEditingController emailController;
@@ -9,6 +10,7 @@ class PersonalInfoContainer extends StatefulWidget {
 
   const PersonalInfoContainer({
     Key? key,
+    required this.entrepriseClientController,
     required this.nomController,
     required this.prenomController,
     required this.emailController,
@@ -33,17 +35,8 @@ class _PersonalInfoContainerState extends State<PersonalInfoContainer> {
   }
 
   Widget _buildField(BuildContext context, String label, TextEditingController controller) {
-    final EdgeInsetsGeometry padding;
-    if (label == 'Prénom') {
-      padding = const EdgeInsets.only(left: 16, right: 16, top: 24, bottom: 8);
-    } else if (label == 'Email') {
-      padding = const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 24);
-    } else {
-      padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 5);
-    }
-
     return Padding(
-      padding: padding,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
           Expanded(
@@ -96,7 +89,7 @@ class _PersonalInfoContainerState extends State<PersonalInfoContainer> {
               },
               keyboardType: label == 'Téléphone' ? TextInputType.phone : null,
               onChanged: (value) {
-                if (label == 'Prénom' || label == 'Nom' || label == 'Adresse') {
+                if (label == 'Prénom' || label == 'Nom' || label == 'Adresse' || label == 'Entreprise') {
                   controller.value = TextEditingValue(
                     text: value.split(' ').map((word) => _capitalize(word)).join(' '),
                     selection: TextSelection.collapsed(offset: value.length),
@@ -112,6 +105,7 @@ class _PersonalInfoContainerState extends State<PersonalInfoContainer> {
 
   List<Widget> _buildFields(BuildContext context) {
     return [
+      _buildField(context, 'Entreprise', widget.entrepriseClientController),
       _buildField(context, 'Prénom', widget.prenomController),
       _buildField(context, 'Nom', widget.nomController),
       _buildField(context, 'Adresse', widget.adresseController),

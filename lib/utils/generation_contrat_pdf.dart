@@ -64,6 +64,7 @@ class GenerationContratPdf {
     String? pourcentageEssenceRetour,
     String? status,
     String? commentaireRetour,
+    String? entrepriseClient,
     Timestamp? dateCreation,
   }) async {
     try {
@@ -196,6 +197,7 @@ class GenerationContratPdf {
         adminId: targetId,
         createdBy: user.uid,
         isCollaborateur: true,
+        entrepriseClient: entrepriseClient,
         nom: nom,
         prenom: prenom,
         adresse: adresse,
