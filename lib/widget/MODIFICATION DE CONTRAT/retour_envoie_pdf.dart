@@ -2,7 +2,6 @@ import 'package:ContraLoc/widget/chargement.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:path_provider/path_provider.dart';
 import '../../utils/affichage_contrat_pdf.dart';
 import '../CREATION DE CONTRAT/mail.dart';
 import '../../services/collaborateur_util.dart';
@@ -43,7 +42,7 @@ class RetourEnvoiePdf {
 
     try {
       // Générer le PDF sans l'afficher
-      await AffichageContratPdf.genererEtAfficherContratPdf(
+      final pdfPath = await AffichageContratPdf.genererEtAfficherContratPdf(
         context: context,
         data: contratData,
         contratId: contratId,
@@ -73,10 +72,6 @@ class RetourEnvoiePdf {
 
       // Envoyer le PDF par email si un email est disponible
       if ((contratData['email'] ?? '').toString().isNotEmpty) {
-        // Récupérer le chemin du PDF depuis le cache
-        final appDir = await getApplicationDocumentsDirectory();
-        final pdfPath = '${appDir.path}/contrat_$contratId.pdf';
-
         try {
           await EmailService.sendClotureEmailWithPdf(
             pdfPath: pdfPath,

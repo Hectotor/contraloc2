@@ -98,60 +98,88 @@ class CollaborateurUtil {
     }
 
     // Récupérer les données de l'utilisateur
-    final userData = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get(GetOptions(source: Source.server));
+    final userData = await getUserData();
+    final userRole = userData['role'];
+    final userAdminId = userData['adminId'];
+    
+    print('flutter: 🔍 Récupération du document');
+    print('flutter: 📝 Rôle: $userRole, AdminId: $userAdminId');
+    print('flutter: 📊 Données utilisateur: $userData');
+    
+    String finalAdminId = userRole == 'collaborateur' && userAdminId != null 
+        ? userAdminId 
+        : user.uid;
 
-    if (!userData.exists) {
-      throw Exception('Données utilisateur non trouvées');
+    print('flutter: 🔄 Utilisation de l\'ID: $finalAdminId pour la requête');
+    print('flutter: 📁 Chemin de la requête: $collection/$finalAdminId/${subCollection ?? ''}/${subDocId ?? ''}');
+
+    if (useAdminId) {
+      print('flutter: 🔍 Récupération avec ID admin');
+      return await _firestore.collection(collection)
+          .doc(finalAdminId)
+          .collection(subCollection ?? '')
+          .doc(subDocId ?? '')
+          .get();
     }
 
-    final userDataMap = userData.data();
+    print('flutter: 🔍 Récupération avec ID document');
+    return await _firestore.collection(collection)
+        .doc(docId)
+        .collection(subCollection ?? '')
+        .doc(subDocId ?? '')
+        .get();
+  }
+
+  /// Met à jour un document dans une collection spécifique
+  /// Pour un collaborateur, utilise l'ID de l'administrateur si nécessaire
+  static Future<void> updateDocument({
+    required String collection,
+    required String docId,
+    String? subCollection,
+    String? subDocId,
+    required Map<String, dynamic> data,
+    bool useAdminId = false,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('Utilisateur non connecté');
+    }
+
+    // Récupérer les données de l'utilisateur
+    final userData = await getUserData();
+    final userRole = userData['role'];
+    final userAdminId = userData['adminId'];
     
-    // Vérifier si c'est un collaborateur
-    final isCollaborateur = userDataMap?['role'] == 'collaborateur';
+    print('flutter: 📝 Rôle: $userRole, AdminId: $userAdminId');
+    print('flutter: 📊 Données utilisateur: $userData');
     
-    if (isCollaborateur && useAdminId) {
-      final adminId = userDataMap?['adminId'];
-      if (adminId != null) {
-        print('👥 Collaborateur trouvé, accès aux données admin: $adminId');
-        
-        // Récupérer les données de l'admin
-        final adminDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(adminId)
-            .get(GetOptions(source: Source.server));
+    String finalAdminId = userRole == 'collaborateur' && userAdminId != null 
+        ? userAdminId 
+        : user.uid;
 
-        if (!adminDoc.exists) {
-          throw Exception('Données administrateur non trouvées');
-        }
+    print('flutter: 🔄 Utilisation de l\'ID: $finalAdminId pour la mise à jour');
+    print('flutter: 📁 Chemin de la mise à jour: $collection/$finalAdminId/${subCollection ?? ''}/${subDocId ?? ''}');
 
-        // Construire la référence au document
-        DocumentReference docRef = FirebaseFirestore.instance
-            .collection('users')
-            .doc(adminId);
-        
-        if (subCollection != null && subDocId != null) {
-          docRef = docRef.collection(subCollection).doc(subDocId);
-        }
-
-        print('Requête Firestore pour collaborateur: users/$adminId/${subCollection ?? ''}/${subDocId ?? ''}');
-        return await docRef.get(GetOptions(source: Source.server));
+    try {
+      if (useAdminId) {
+        print('flutter: 🔍 Mise à jour avec ID admin');
+        await _firestore.collection(collection)
+            .doc(finalAdminId)
+            .collection(subCollection ?? '')
+            .doc(subDocId ?? '')
+            .set(data, SetOptions(merge: true));
+      } else {
+        print('flutter: 🔍 Mise à jour avec ID document');
+        await _firestore.collection(collection)
+            .doc(docId)
+            .collection(subCollection ?? '')
+            .doc(subDocId ?? '')
+            .set(data, SetOptions(merge: true));
       }
+    } catch (e) {
+      print('❌ Erreur lors de la mise à jour du document: $e');
+      rethrow;
     }
-
-    // Pour un utilisateur normal ou si on ne veut pas utiliser l'adminId
-    DocumentReference docRef = FirebaseFirestore.instance
-        .collection(collection)
-        .doc(docId);
-
-    if (subCollection != null && subDocId != null) {
-      docRef = docRef.collection(subCollection).doc(subDocId);
-    }
-
-    print('Requête Firestore normale: $collection/$docId/${subCollection ?? ''}/${subDocId ?? ''}');
-    return await docRef.get(GetOptions(source: Source.server));
   }
 
   /// Récupère les documents d'une collection spécifique
@@ -419,93 +447,6 @@ class CollaborateurUtil {
         .snapshots();
   }
 
-  /// Met à jour un document dans une collection spécifique
-  /// Pour un collaborateur, utilise l'ID de l'administrateur si nécessaire
-  /// Paramètres:
-  /// - collection: Nom de la collection principale (ex: 'users')
-  /// - docId: ID du document dans la collection principale
-  /// - subCollection: Nom de la sous-collection (optionnel)
-  /// - subDocId: ID du document dans la sous-collection (optionnel)
-  /// - data: Données à mettre à jour
-  /// - useAdminId: Si true et que l'utilisateur est un collaborateur, utilise l'ID de l'admin
-  static Future<void> updateDocument({
-    required String collection,
-    required String docId,
-    String? subCollection,
-    String? subDocId,
-    required Map<String, dynamic> data,
-    bool useAdminId = false,
-  }) async {
-    final status = await checkCollaborateurStatus();
-    final userId = status['userId'];
-    final isCollaborateur = status['isCollaborateur'] == true;
-    final adminId = status['adminId'];
-    
-    if (userId == null) {
-      throw Exception('Utilisateur non connecté');
-    }
-    
-    // Vérifier les permissions d'écriture pour les collaborateurs
-    if (isCollaborateur) {
-      final hasPermission = await checkCollaborateurPermission('ecriture');
-      if (!hasPermission) {
-        throw Exception('Permission d\'écriture refusée pour ce collaborateur');
-      }
-    }
-    
-    // Déterminer l'ID à utiliser
-    final targetId = (useAdminId && isCollaborateur) 
-        ? status['adminId'] 
-        : userId;
-    
-    if (targetId == null) {
-      throw Exception('ID cible non disponible');
-    }
-    
-    try {
-      // Construire la référence au document
-      DocumentReference docRef;
-      
-      // Correction du chemin d'accès pour respecter la structure Firestore
-      if (useAdminId && isCollaborateur && adminId != null) {
-        // Pour un collaborateur qui met à jour dans la collection de l'admin
-        docRef = _firestore
-            .collection('users')
-            .doc(adminId)
-            .collection(collection)
-            .doc(docId);
-            
-        print('📁 Chemin d\'accès corrigé: users/$adminId/$collection/$docId');
-      } else {
-        // Pour un admin qui met à jour dans sa propre collection
-        docRef = _firestore.collection(collection).doc(docId);
-        
-        // Ajouter la sous-collection si nécessaire
-        if (subCollection != null) {
-          docRef = docRef.collection(subCollection).doc(subDocId ?? docId);
-        }
-      }
-      
-      // Utiliser _executeWithRetry pour gérer les erreurs de connectivité
-      await _executeWithRetry(
-        operation: () async {
-          print('📝 Mise à jour du document: ${docRef.path}');
-          
-          // Utiliser set() avec merge: true au lieu de update()
-          // Cela permet de mettre à jour partiellement un document existant
-          // ou de le créer s'il n'existe pas, avec des permissions potentiellement moins restrictives
-          await docRef.set(data, SetOptions(merge: true));
-          
-          print('✅ Document mis à jour avec succès (via set avec merge)');
-          return true;
-        },
-      );
-    } catch (e) {
-      print('❌ Erreur mise à jour document: $e');
-      throw e;
-    }
-  }
-
   /// Vérifie si un collaborateur a une permission spécifique
   /// Paramètres:
   /// - permissionType: 'lecture', 'ecriture', ou 'suppression'
@@ -693,6 +634,65 @@ class CollaborateurUtil {
     } catch (e) {
       print("❌ Erreur lors du nettoyage du cache: $e");
       // Ne pas relancer l'erreur pour ne pas bloquer la déconnexion
+    }
+  }
+
+  /// Nettoie le cache Firestore pour forcer la récupération des données depuis le serveur
+  static Future<void> clearFirestoreCache() async {
+    try {
+      // Nettoyer le cache en désactivant temporairement la persistance
+      await FirebaseFirestore.instance.disableNetwork();
+      await Future.delayed(const Duration(milliseconds: 500));
+      await FirebaseFirestore.instance.enableNetwork();
+      
+      print('✅ Cache Firestore nettoyé');
+    } catch (e) {
+      print('❌ Erreur lors du nettoyage du cache Firestore: $e');
+    }
+  }
+
+  /// Récupère les données d'un utilisateur
+  static Future<Map<String, dynamic>> getUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print('❌ Aucun utilisateur connecté');
+      return {};
+    }
+
+    print('flutter: 🔍 Récupération des données utilisateur depuis Firestore (ID: ${user.uid})');
+    
+    try {
+      // Récupérer les données de l'utilisateur
+      final userData = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('authentification')
+          .doc(user.uid)
+          .get(GetOptions(source: Source.server));
+
+      print('flutter: 📄 Document utilisateur trouvé: ${userData.exists}');
+      print('flutter: 📊 Type de données: ${userData.data()?.runtimeType}');
+      print('flutter: 📊 Données brutes: ${userData.data()}');
+      
+      if (!userData.exists) {
+        print('❌ Document utilisateur non trouvé pour l\'ID: ${user.uid}');
+        return {};
+      }
+
+      final userDataMap = userData.data() ?? {};
+      print('flutter: 📊 Données utilisateur: $userDataMap');
+      print('flutter: 📊 Clés disponibles: ${userDataMap.keys}');
+      
+      final userRole = userDataMap['role'];
+      final userAdminId = userDataMap['adminId'];
+      
+      print('flutter: 📝 Rôle: $userRole, AdminId: $userAdminId');
+      
+      return userDataMap;
+    } catch (e) {
+      print('❌ Erreur lors de la récupération des données utilisateur: $e');
+      print('flutter: ❌ Stack trace: ${StackTrace.current.toString()}');
+      return {};
     }
   }
 }

@@ -2,6 +2,7 @@ import 'package:ContraLoc/utils/pdf.dart';
 import 'package:ContraLoc/USERS/contrat_condition.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
+import 'package:ContraLoc/services/access_condition.dart';
 import '../widget/navigation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -97,7 +98,6 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _telephoneController = TextEditingController();
   final TextEditingController _nomEntrepriseController = TextEditingController();
   final TextEditingController _adresseController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
   String? _logoUrl;
   final TextEditingController _siretController = TextEditingController();
 
@@ -320,41 +320,14 @@ class _LocationPageState extends State<LocationPage> {
         vehiculeUrls.add(url);
       }
 
-      // Récupération des conditions
-      String conditions = await _getContractConditions();
-
-      // Récupération des données utilisateur
-      final adminId = targetId; // Utiliser le targetId comme ID admin
-      final adminDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(adminId)
-          .collection('authentification')
-          .doc(adminId)
-          .get();
-
-      final data = adminDoc.data();
-      if (data != null) {
-        setState(() {
-          _nomEntrepriseController.text = data['nomEntreprise'] ?? '';
-          _logoUrl = data['logoUrl'] as String?;
-          _siretController.text = data['siret'] ?? '';
-          _telephoneController.text = data['telephone'] ?? '';
-          _adresseController.text = data['adresse'] ?? '';
-          _emailController.text = data['email'] ?? '';
-        });
-      }
-
-      // Récupération des informations du collaborateur
-      String nomCollaborateur = '';
-      String prenomCollaborateur = '';
+      // Création du contrat
+      print('🔄 Début de la récupération des conditions');
+      final conditionsData = await AccessCondition.getContractConditions();
+      print('Conditions récupérées: $conditionsData');
       
-      if (collaborateurStatus['isCollaborateur'] ?? false) {
-        final collaborateurData = await _getCollaborateurData(userId);
-        nomCollaborateur = collaborateurData['nom'] ?? '';
-        prenomCollaborateur = collaborateurData['prenom'] ?? '';
-      }
-
-      // Création du modèle de contrat
+      final conditionsText = conditionsData?['texte'] ?? ContratModifier.defaultContract;
+      print('Conditions utilisées: ${conditionsText?.length ?? 0} caractères');
+      
       final contratModel = ContratModel(
         contratId: contratId,
         userId: userId,
@@ -409,9 +382,9 @@ class _LocationPageState extends State<LocationPage> {
         adresseEntreprise: _adresseController.text,
         telephoneEntreprise: _telephoneController.text,
         siretEntreprise: _siretController.text,
-        nomCollaborateur: nomCollaborateur,
-        prenomCollaborateur: prenomCollaborateur,
-        conditions: conditions,
+        nomCollaborateur: collaborateurStatus['isCollaborateur'] ? collaborateurStatus['nom'] ?? '' : '',
+        prenomCollaborateur: collaborateurStatus['isCollaborateur'] ? collaborateurStatus['prenom'] ?? '' : '',
+        conditions: conditionsText,
         methodePaiement: _selectedPaymentMethod,
       );
 
@@ -433,8 +406,8 @@ class _LocationPageState extends State<LocationPage> {
           _adresseController.text, 
           _telephoneController.text, 
           _siretController.text, 
-          nomCollaborateur, 
-          prenomCollaborateur
+          collaborateurStatus['isCollaborateur'] ? collaborateurStatus['nom'] ?? '' : '',
+          collaborateurStatus['isCollaborateur'] ? collaborateurStatus['prenom'] ?? '' : ''
         );
       }
 
@@ -531,81 +504,6 @@ class _LocationPageState extends State<LocationPage> {
       }
     }
     return null;
-  }
-
-  // Méthode pour charger les conditions
-  Future<String> _getContractConditions() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return '';
-      
-      print('Utilisateur actuel: ${user.uid}');
-      
-      // Récupérer les données de l'utilisateur
-      final userData = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get(GetOptions(source: Source.server));
-
-      if (!userData.exists) {
-        print('❌ Données utilisateur non trouvées');
-        return '';
-      }
-
-      final userDataMap = userData.data();
-      print('Données utilisateur: $userDataMap');
-      
-      // Vérifier si c'est un collaborateur
-      final isCollaborateur = userDataMap?['role'] == 'collaborateur';
-      
-      if (isCollaborateur) {
-        final adminId = userDataMap?['adminId'];
-        if (adminId != null) {
-          print('👥 Collaborateur trouvé, vérification admin: $adminId');
-          
-          // Vérifier d'abord si le document existe
-          final conditionsRef = FirebaseFirestore.instance
-              .collection('users')
-              .doc(adminId)
-              .collection('contrats')
-              .doc('userId');
-              
-          print('Vérification du chemin: ${conditionsRef.path}');
-          
-          // Essayons d'accéder au document
-          final conditionsDoc = await conditionsRef
-              .get(GetOptions(source: Source.server));
-
-          if (conditionsDoc.exists) {
-            print('✅ Document trouvé');
-            final data = conditionsDoc.data();
-            print('Contenu du document: $data');
-            return data?['texte'] ?? data?['conditions'] ?? '';
-          } else {
-            print('❌ Document non trouvé');
-            return '';
-          }
-        }
-      }
-      
-      // Si ce n'est pas un collaborateur, utiliser les conditions par défaut
-      print('ℹ️ Utilisation des conditions par défaut');
-      return ContratModifier.defaultContract;
-    } catch (e) {
-      print('❌ Erreur lors de la récupération des conditions: $e');
-      return '';
-    }
-  }
-
-  // Méthode pour récupérer les données du collaborateur
-  Future<Map<String, dynamic>> _getCollaborateurData(String userId) async {
-    try {
-      final collaborateurDoc = await _firestore.collection('users').doc(userId).get();
-      return collaborateurDoc.data() ?? {};
-    } catch (e) {
-      print('Erreur lors de la récupération des données du collaborateur: $e');
-      return {};
-    }
   }
 
   // Méthode pour générer et envoyer le PDF

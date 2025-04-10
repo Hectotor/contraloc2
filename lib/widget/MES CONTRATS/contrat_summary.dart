@@ -78,6 +78,12 @@ class _ContratSummaryState extends State<ContratSummary> {
     _loadFromCacheAndUpdate();
   }
 
+  @override
+  void dispose() {
+    _saveToCache();
+    super.dispose();
+  }
+
   Future<void> _loadFromCacheAndUpdate() async {
     // Essayer de charger depuis le cache d'abord
     bool cacheLoaded = await _loadFromCache();
@@ -100,17 +106,19 @@ class _ContratSummaryState extends State<ContratSummary> {
         
         // Vérifier si le cache est encore valide
         if (DateTime.now().difference(lastUpdated) < _cacheValidity) {
-          setState(() {
-            _activeContracts = cacheData['activeContracts'];
-            _returnedContracts = cacheData['returnedContracts'];
-            _reservedContracts = cacheData['reservedContracts'];
-            _deletedActiveContracts = cacheData['deletedActiveContracts'];
-            _deletedReturnedContracts = cacheData['deletedReturnedContracts'];
-            _deletedReservedContracts = cacheData['deletedReservedContracts'];
-            _lastUpdated = lastUpdated;
-            _isLoading = false;
-          });
-          print('ContratSummary: Données chargées depuis le cache (mis à jour le ${_lastUpdated?.toLocal().toString().substring(0, 19)})');
+          if (mounted) {
+            setState(() {
+              _activeContracts = cacheData['activeContracts'];
+              _returnedContracts = cacheData['returnedContracts'];
+              _reservedContracts = cacheData['reservedContracts'];
+              _deletedActiveContracts = cacheData['deletedActiveContracts'];
+              _deletedReturnedContracts = cacheData['deletedReturnedContracts'];
+              _deletedReservedContracts = cacheData['deletedReservedContracts'];
+              _lastUpdated = lastUpdated;
+              _isLoading = false;
+            });
+            print('ContratSummary: Données chargées depuis le cache (mis à jour le ${_lastUpdated?.toLocal().toString().substring(0, 19)})');
+          }
           return true;
         } else {
           print('ContratSummary: Cache expiré, chargement depuis Firestore');
@@ -136,8 +144,10 @@ class _ContratSummaryState extends State<ContratSummary> {
         'lastUpdated': now.millisecondsSinceEpoch,
       };
       await prefs.setString(_cacheKey, json.encode(cacheData));
-      setState(() => _lastUpdated = now);
-      print('ContratSummary: Données mises en cache');
+      if (mounted) {
+        setState(() => _lastUpdated = now);
+        print('ContratSummary: Données mises en cache');
+      }
     } catch (e) {
       print('ContratSummary: Erreur lors de la mise en cache: $e');
     }
@@ -145,7 +155,9 @@ class _ContratSummaryState extends State<ContratSummary> {
 
   Future<void> _loadContractCounts() async {
     print('ContratSummary: Début du chargement des contrats');
+    if (!mounted) return;
     setState(() => _isLoading = true);
+
     try {
       // Initialiser le VehicleAccessManager si nécessaire
       await _vehicleAccessManager.initialize();
@@ -170,10 +182,13 @@ class _ContratSummaryState extends State<ContratSummary> {
           .where('status', isEqualTo: 'en_cours')
           .get(const GetOptions(source: Source.serverAndCache));
       print('ContratSummary: Nombre total de contrats en cours: ${activeSnapshot.docs.length}');
-      setState(() {
-        _activeContracts = activeSnapshot.docs.length;
-        print('ContratSummary: Contrats en cours = $_activeContracts');
-      });
+      
+      if (mounted) {
+        setState(() {
+          _activeContracts = activeSnapshot.docs.length;
+          print('ContratSummary: Contrats en cours = $_activeContracts');
+        });
+      }
 
       // Contracts en cours supprimés
       final deletedActiveSnapshot = await locationQuery
@@ -181,24 +196,30 @@ class _ContratSummaryState extends State<ContratSummary> {
           .where('statussupprime', isEqualTo: 'supprimé')
           .get(const GetOptions(source: Source.serverAndCache));
       print('ContratSummary: Nombre de contrats en cours supprimés: ${deletedActiveSnapshot.docs.length}');
-      setState(() {
-        _deletedActiveContracts = deletedActiveSnapshot.docs.length;
-        print('ContratSummary: Dont $_deletedActiveContracts supprimés (en cours)');
-        if (_deletedActiveContracts > 0) {
-          _activeContracts -= _deletedActiveContracts;
-          print('ContratSummary: Contrats en cours après déduction = $_activeContracts');
-        }
-      });
+      
+      if (mounted) {
+        setState(() {
+          _deletedActiveContracts = deletedActiveSnapshot.docs.length;
+          print('ContratSummary: Dont $_deletedActiveContracts supprimés (en cours)');
+          if (_deletedActiveContracts > 0) {
+            _activeContracts -= _deletedActiveContracts;
+            print('ContratSummary: Contrats en cours après déduction = $_activeContracts');
+          }
+        });
+      }
 
       // Returned contracts
       final returnedSnapshot = await locationQuery
           .where('status', isEqualTo: 'restitue')
           .get(const GetOptions(source: Source.serverAndCache));
       print('ContratSummary: Nombre total de contrats restitués: ${returnedSnapshot.docs.length}');
-      setState(() {
-        _returnedContracts = returnedSnapshot.docs.length;
-        print('ContratSummary: Contrats restitués = $_returnedContracts');
-      });
+      
+      if (mounted) {
+        setState(() {
+          _returnedContracts = returnedSnapshot.docs.length;
+          print('ContratSummary: Contrats restitués = $_returnedContracts');
+        });
+      }
 
       // Returned contracts supprimés
       final deletedReturnedSnapshot = await locationQuery
@@ -206,24 +227,30 @@ class _ContratSummaryState extends State<ContratSummary> {
           .where('statussupprime', isEqualTo: 'supprimé')
           .get(const GetOptions(source: Source.serverAndCache));
       print('ContratSummary: Nombre de contrats restitués supprimés: ${deletedReturnedSnapshot.docs.length}');
-      setState(() {
-        _deletedReturnedContracts = deletedReturnedSnapshot.docs.length;
-        print('ContratSummary: Dont $_deletedReturnedContracts supprimés (restitués)');
-        if (_deletedReturnedContracts > 0) {
-          _returnedContracts -= _deletedReturnedContracts;
-          print('ContratSummary: Contrats restitués après déduction = $_returnedContracts');
-        }
-      });
+      
+      if (mounted) {
+        setState(() {
+          _deletedReturnedContracts = deletedReturnedSnapshot.docs.length;
+          print('ContratSummary: Dont $_deletedReturnedContracts supprimés (restitués)');
+          if (_deletedReturnedContracts > 0) {
+            _returnedContracts -= _deletedReturnedContracts;
+            print('ContratSummary: Contrats restitués après déduction = $_returnedContracts');
+          }
+        });
+      }
 
       // Reserved contracts
       final reservedSnapshot = await locationQuery
           .where('status', isEqualTo: 'réservé')
           .get(const GetOptions(source: Source.serverAndCache));
       print('ContratSummary: Nombre total de contrats réservés: ${reservedSnapshot.docs.length}');
-      setState(() {
-        _reservedContracts = reservedSnapshot.docs.length;
-        print('ContratSummary: Contrats réservés = $_reservedContracts');
-      });
+      
+      if (mounted) {
+        setState(() {
+          _reservedContracts = reservedSnapshot.docs.length;
+          print('ContratSummary: Contrats réservés = $_reservedContracts');
+        });
+      }
 
       // Reserved contracts supprimés
       final deletedReservedSnapshot = await locationQuery
@@ -231,26 +258,33 @@ class _ContratSummaryState extends State<ContratSummary> {
           .where('statussupprime', isEqualTo: 'supprimé')
           .get(const GetOptions(source: Source.serverAndCache));
       print('ContratSummary: Nombre de contrats réservés supprimés: ${deletedReservedSnapshot.docs.length}');
-      setState(() {
-        _deletedReservedContracts = deletedReservedSnapshot.docs.length;
-        print('ContratSummary: Dont $_deletedReservedContracts supprimés (réservés)');
-        if (_deletedReservedContracts > 0) {
-          _reservedContracts -= _deletedReservedContracts;
-          print('ContratSummary: Contrats réservés après déduction = $_reservedContracts');
-        }
-      });
+      
+      if (mounted) {
+        setState(() {
+          _deletedReservedContracts = deletedReservedSnapshot.docs.length;
+          print('ContratSummary: Dont $_deletedReservedContracts supprimés (réservés)');
+          if (_deletedReservedContracts > 0) {
+            _reservedContracts -= _deletedReservedContracts;
+            print('ContratSummary: Contrats réservés après déduction = $_reservedContracts');
+          }
+        });
+      }
 
-      setState(() => _isLoading = false);
-      print('ContratSummary: Chargement terminé');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        print('ContratSummary: Chargement terminé');
+      }
       
       // Sauvegarder les données dans le cache
       _saveToCache();
     } catch (e) {
       print('ContratSummary: Erreur lors du chargement: $e');
-      setState(() {
-        _isLoading = false;
-        _error = 'Erreur lors du chargement des données: ${e.toString()}';
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = 'Erreur lors du chargement des données: ${e.toString()}';
+        });
+      }
     }
   }
 

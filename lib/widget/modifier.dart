@@ -41,19 +41,15 @@ class ModifierScreen extends StatefulWidget {
 
 class _ModifierScreenState extends State<ModifierScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _dateFinEffectifController =
-      TextEditingController();
-  final TextEditingController _commentaireRetourController =
-      TextEditingController();
+  final TextEditingController _dateFinEffectifController = TextEditingController();
+  final TextEditingController _commentaireRetourController = TextEditingController();
   final SignatureController _signatureRetourController = SignatureController(
     penStrokeWidth: 3,
     penColor: Colors.black,
     exportBackgroundColor: Colors.white,
   );
-  final TextEditingController _kilometrageRetourController =
-      TextEditingController();
-  final TextEditingController _pourcentageEssenceRetourController =
-      TextEditingController();
+  final TextEditingController _kilometrageRetourController = TextEditingController();
+  final TextEditingController _pourcentageEssenceRetourController = TextEditingController();
   final List<File> _photosRetour = [];
   List<String> _photosRetourUrls = [];
   bool _isUpdatingContrat = false; 
@@ -98,6 +94,23 @@ class _ModifierScreenState extends State<ModifierScreen> {
     if (widget.data['photosRetourUrls'] != null) {
       _photosRetourUrls = List<String>.from(widget.data['photosRetourUrls']);
     }
+  }
+
+  @override
+  void dispose() {
+    _dateFinEffectifController.dispose();
+    _commentaireRetourController.dispose();
+    _kilometrageRetourController.dispose();
+    _pourcentageEssenceRetourController.dispose();
+    _nettoyageIntController.dispose();
+    _nettoyageExtController.dispose();
+    _cautionController.dispose();
+    try {
+      _signatureRetourController.dispose();
+    } catch (e) {
+      print('Erreur lors du dispose du SignatureController: $e');
+    }
+    super.dispose();
   }
 
   Future<void> _selectDateTime(TextEditingController controller) async {
@@ -194,9 +207,11 @@ class _ModifierScreenState extends State<ModifierScreen> {
       return;
     }
 
-    setState(() {
-      _isUpdatingContrat = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isUpdatingContrat = true;
+      });
+    }
 
     showDialog(
       context: context,
@@ -221,7 +236,15 @@ class _ModifierScreenState extends State<ModifierScreen> {
         allPhotosUrls.addAll(newUrls);
       }
 
-      String? signatureRetourBase64 = _signatureRetourBase64 != null && _signatureRetourBase64!.isNotEmpty ? _signatureRetourBase64 : null;
+      String? signatureRetourBase64;
+      try {
+        final signatureBytes = await _signatureRetourController.toPngBytes();
+        if (signatureBytes != null) {
+          signatureRetourBase64 = base64Encode(signatureBytes);
+        }
+      } catch (e) {
+        print('Erreur lors de la capture de la signature: $e');
+      }
 
       Map<String, dynamic> fraisFinaux = _fraisSupplementaires;
       
@@ -267,7 +290,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
           print('📝 Début de la mise à jour du document: users/$adminId/locations/${widget.contratId}');
           print('📄 Données à mettre à jour: $updateData');
           
-          // Utiliser la méthode set avec merge:true et la bonne structure de collection
           await _firestore
               .collection('users')
               .doc(adminId)
@@ -283,7 +305,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
           print(' Contrat mis à jour dans la collection de l\'administrateur');
         } catch (e) {
           print('❌ Erreur mise à jour document: $e');
-          rethrow; // Relancer l'erreur pour qu'elle soit capturée par le bloc catch principal
+          rethrow;
         }
       } else {
         try {
@@ -294,7 +316,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
           print('📝 Début de la mise à jour du document: users/$userId/locations/${widget.contratId}');
           print('📄 Données à mettre à jour: $updateData');
           
-          // Utiliser la méthode set avec merge:true et la bonne structure de collection
           await _firestore
               .collection('users')
               .doc(userId)
@@ -310,7 +331,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
           print(' Contrat mis à jour dans la collection de l\'administrateur');
         } catch (e) {
           print('❌ Erreur mise à jour document: $e');
-          rethrow; // Relancer l'erreur pour qu'elle soit capturée par le bloc catch principal
+          rethrow;
         }
       }
 
@@ -326,24 +347,30 @@ class _ModifierScreenState extends State<ModifierScreen> {
         pourcentageEssenceRetour: _pourcentageEssenceRetourController.text,
       );
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const NavigationPage(initialTab: 1),
-        ),
-      );
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const NavigationPage(initialTab: 1),
+          ),
+        );
+      }
     } catch (e) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Erreur : $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erreur : $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        _isUpdatingContrat = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isUpdatingContrat = false;
+        });
+      }
     }
   }
 
@@ -449,9 +476,11 @@ class _ModifierScreenState extends State<ModifierScreen> {
                 if (!_formKey.currentState!.validate()) return;
                 
                 try {
-                  setState(() {
-                    _isUpdatingContrat = true;
-                  });
+                  if (mounted) {
+                    setState(() {
+                      _isUpdatingContrat = true;
+                    });
+                  }
                   
                   // Récupérer la signature de retour
                   final signatureBytes = await _signatureRetourController.toPngBytes();
@@ -472,7 +501,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                     signatureRetourBase64: signatureBase64,
                   );
 
-                  if (context.mounted) {
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Le contrat a été renvoyé avec succès'),
@@ -481,7 +510,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                     );
                   }
                 } catch (e) {
-                  if (context.mounted) {
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Erreur lors de l\'envoi du contrat: $e'),
@@ -490,9 +519,11 @@ class _ModifierScreenState extends State<ModifierScreen> {
                     );
                   }
                 } finally {
-                  setState(() {
-                    _isUpdatingContrat = false;
-                  });
+                  if (mounted) {
+                    setState(() {
+                      _isUpdatingContrat = false;
+                    });
+                  }
                 }
               },
             ),

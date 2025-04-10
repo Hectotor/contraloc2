@@ -9,7 +9,7 @@ import 'pdf.dart';
 
 class AffichageContratPdf {
   /// Génère et affiche un PDF de contrat basé sur les données fournies
-  static Future<void> genererEtAfficherContratPdf({
+  static Future<String> genererEtAfficherContratPdf({
     required BuildContext context,
     required Map<String, dynamic> data,
     required String contratId,
@@ -50,7 +50,7 @@ class AffichageContratPdf {
         if (afficherPdf) {
           await OpenFilex.open(localPdfPath);
         }
-        return;
+        return localPdfPath;
       }
       
       // Si le contrat est en cours ou si le PDF n'existe pas en cache, générer un nouveau PDF
@@ -106,18 +106,6 @@ class AffichageContratPdf {
             : null,
       );
       
-      try {
-        // Ne sauvegarder en cache que si le contrat n'est PAS en cours
-        if (!isContratEnCours) {
-          await File(pdfPath).copy(localPdfPath);
-          print(' PDF sauvegardé en cache local: $localPdfPath');
-        } else {
-          print(' Contrat en cours - PDF non sauvegardé en cache');
-        }
-      } catch (e) {
-        print(' Erreur lors de la sauvegarde du PDF en cache local: $e');
-      }
-
       if (dialogShown && context.mounted) {
         Navigator.pop(context);
         dialogShown = false;
@@ -128,6 +116,7 @@ class AffichageContratPdf {
         await OpenFilex.open(pdfPath);
       }
 
+      return pdfPath;
     } catch (e) {
       print(' Erreur lors de la génération du PDF : $e');
       
@@ -142,6 +131,7 @@ class AffichageContratPdf {
           backgroundColor: Colors.red,
         ),
       );
+      rethrow;
     }
   }
 
