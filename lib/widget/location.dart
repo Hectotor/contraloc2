@@ -1,26 +1,22 @@
-import 'package:ContraLoc/utils/pdf.dart';
-import 'package:ContraLoc/USERS/contrat_condition.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:ContraLoc/services/collaborateur_util.dart';
-import 'package:ContraLoc/services/access_condition.dart';
-import '../widget/navigation.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:ContraLoc/services/collaborateur_util.dart';
+import 'package:ContraLoc/utils/generation_contrat_pdf.dart';
+import 'package:ContraLoc/models/contrat_model.dart';
+import 'package:intl/intl.dart';
 import 'dart:io';
-import 'package:cloud_firestore/cloud_firestore.dart'; 
-import 'package:firebase_storage/firebase_storage.dart'; 
-import 'package:intl/intl.dart'; 
-import 'chargement.dart'; 
-import '../widget/CREATION DE CONTRAT/MAIL.DART';
-import 'package:flutter_image_compress/flutter_image_compress.dart'; 
-import 'CREATION DE CONTRAT/popup_felicitation.dart';
-import 'popup_signature.dart';
-import '../models/contrat_model.dart';
-import 'CREATION DE CONTRAT/date_container.dart';
-import 'CREATION DE CONTRAT/kilometrage_container.dart';
-import 'CREATION DE CONTRAT/type_location_container.dart';
-import 'CREATION DE CONTRAT/essence_container.dart';
-import 'CREATION DE CONTRAT/etat_commentaire_container.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import '../widget/chargement.dart';
+import '../widget/popup_signature.dart';
+import '../widget/CREATION DE CONTRAT/date_container.dart';
+import '../widget/CREATION DE CONTRAT/kilometrage_container.dart';
+import '../widget/CREATION DE CONTRAT/type_location_container.dart';
+import '../widget/CREATION DE CONTRAT/essence_container.dart';
+import '../widget/CREATION DE CONTRAT/etat_commentaire_container.dart';
+
 
 class LocationPage extends StatefulWidget {
   final String marque;
@@ -93,24 +89,19 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _rayuresController = TextEditingController();
   final TextEditingController _typeCarburantController = TextEditingController();
   final TextEditingController _boiteVitessesController = TextEditingController();
-  final TextEditingController _cautionController = TextEditingController();
   final TextEditingController _typeLocationController = TextEditingController();
-  final TextEditingController _telephoneController = TextEditingController();
-  final TextEditingController _nomEntrepriseController = TextEditingController();
-  final TextEditingController _adresseController = TextEditingController();
-  String? _logoUrl;
-  final TextEditingController _siretController = TextEditingController();
-
-  String _selectedPaymentMethod = 'Espèces';
+  final TextEditingController _pourcentageEssenceRetourController = TextEditingController();
+  final TextEditingController _cautionController = TextEditingController();
+  String? _selectedPaymentMethod;
 
   @override
   void initState() {
     super.initState();
-
-    _dateDebutController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
+    _selectedPaymentMethod = 'Espèces';
     
+    _dateDebutController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
     _typeLocationController.text = "Gratuite";
-
+    
     _fetchVehicleData();
     
     // Charger les données du contrat si un ID est fourni
@@ -163,8 +154,6 @@ class _LocationPageState extends State<LocationPage> {
           _rayuresController.text = vehicleData['rayures'] ?? '';
           _typeCarburantController.text = vehicleData['typeCarburant'] ?? '';
           _boiteVitessesController.text = vehicleData['boiteVitesses'] ?? '';
-          _cautionController.text = vehicleData['caution'] ?? '';
-
         });
       } else {
         print('Aucun véhicule trouvé avec l\'immatriculation: ${widget.immatriculation}');
@@ -252,27 +241,26 @@ class _LocationPageState extends State<LocationPage> {
     if (_typeLocationController.text == "Payante" && _prixLocationController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-              "Veuillez d'abord configurer le prix de location du véhicule dans sa fiche"),
+          content: Text("Veuillez d'abord configurer le prix de location du véhicule dans sa fiche"),
         ),
       );
       return;
     }
 
     if ((widget.nom != null &&
-            widget.nom!.isNotEmpty &&
-            widget.prenom != null &&
-            widget.prenom!.isNotEmpty) &&
-        !_acceptedConditions) {
+          widget.nom!.isNotEmpty &&
+          widget.prenom != null &&
+          widget.prenom!.isNotEmpty) &&
+      !_acceptedConditions) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text("Vous devez accepter les conditions de location")),
+          content: Text("Vous devez accepter les conditions de location")),
       );
       return;
     }
 
     setState(() {
-      _isLoading = true; 
+      _isLoading = true;
     });
 
     try {
@@ -280,7 +268,7 @@ class _LocationPageState extends State<LocationPage> {
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text("Vous devez être connecté pour créer un contrat")),
+            content: Text("Vous devez être connecté pour créer un contrat")),
         );
         return;
       }
@@ -290,8 +278,6 @@ class _LocationPageState extends State<LocationPage> {
       final String targetId = collaborateurStatus['isCollaborateur'] 
           ? collaborateurStatus['adminId'] ?? user.uid 
           : user.uid;
-
-      print('Création contrat - userId: $userId, targetId: $targetId');
 
       // Gestion de l'ID du contrat
       final contratId = widget.contratId ?? _firestore
@@ -321,13 +307,6 @@ class _LocationPageState extends State<LocationPage> {
       }
 
       // Création du contrat
-      print('🔄 Début de la récupération des conditions');
-      final conditionsData = await AccessCondition.getContractConditions();
-      print('Conditions récupérées: $conditionsData');
-      
-      final conditionsText = conditionsData?['texte'] ?? ContratModifier.defaultContract;
-      print('Conditions utilisées: ${conditionsText?.length ?? 0} caractères');
-      
       final contratModel = ContratModel(
         contratId: contratId,
         userId: userId,
@@ -370,69 +349,82 @@ class _LocationPageState extends State<LocationPage> {
         franchise: _franchiseController.text.isNotEmpty ? _franchiseController.text : null,
         prixLocation: _prixLocationController.text.isNotEmpty ? _prixLocationController.text : null,
         accompte: _accompteController.text.isNotEmpty ? _accompteController.text : null,
-        caution: _cautionController.text.isNotEmpty ? _cautionController.text : null,
-        nettoyageInt: _nettoyageIntController.text.isNotEmpty ? _nettoyageIntController.text : null,
-        nettoyageExt: _nettoyageExtController.text.isNotEmpty ? _nettoyageExtController.text : null,
-        carburantManquant: _carburantManquantController.text.isNotEmpty ? _carburantManquantController.text : null,
-        kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : null,
-        kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : null,
-        prixRayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : null,
-        logoUrl: _logoUrl,
-        nomEntreprise: _nomEntrepriseController.text,
-        adresseEntreprise: _adresseController.text,
-        telephoneEntreprise: _telephoneController.text,
-        siretEntreprise: _siretController.text,
-        nomCollaborateur: collaborateurStatus['isCollaborateur'] ? collaborateurStatus['nom'] ?? '' : '',
-        prenomCollaborateur: collaborateurStatus['isCollaborateur'] ? collaborateurStatus['prenom'] ?? '' : '',
-        conditions: conditionsText,
-        methodePaiement: _selectedPaymentMethod,
       );
 
-      // Sauvegarde dans Firestore
+      // Sauvegarder le contrat dans Firestore
       await _firestore
           .collection('users')
-          .doc(targetId)
+          .doc(userId)
           .collection('locations')
           .doc(contratId)
           .set(contratModel.toFirestore(), SetOptions(merge: true));
 
-      // Génération et envoi du PDF si un email est fourni
-      if (widget.email != null && widget.email!.isNotEmpty) {
-        await _generateAndSendPdf(
-          contratModel, 
-          _nomEntrepriseController.text, 
-          _logoUrl ?? '', 
-
-          _adresseController.text, 
-          _telephoneController.text, 
-          _siretController.text, 
-          collaborateurStatus['isCollaborateur'] ? collaborateurStatus['nom'] ?? '' : '',
-          collaborateurStatus['isCollaborateur'] ? collaborateurStatus['prenom'] ?? '' : ''
-        );
-      }
+      // Générer et envoyer le PDF
+      await GenerationContratPdf.genererEtEnvoyerPdf(
+        context: context,
+        contratId: contratId,
+        nom: widget.nom!,
+        prenom: widget.prenom!,
+        adresse: widget.adresse!,
+        telephone: widget.telephone!,
+        email: widget.email!,
+        numeroPermis: widget.numeroPermis!,
+        immatriculationVehiculeClient: widget.immatriculationVehiculeClient!,
+        kilometrageVehiculeClient: widget.kilometrageVehiculeClient!,
+        marque: widget.marque,
+        modele: widget.modele,
+        immatriculation: widget.immatriculation,
+        dateDebut: _dateDebutController.text,
+        dateFinTheorique: _dateFinTheoriqueController.text,
+        kilometrageDepart: _kilometrageDepartController.text,
+        typeLocation: _typeLocationController.text,
+        pourcentageEssence: _pourcentageEssence,
+        commentaireAller: _commentaireController.text,
+        photosUrls: vehiculeUrls,
+        signatureAller: _signatureAller,
+        vin: _vinController.text,
+        typeCarburant: _typeCarburantController.text,
+        boiteVitesses: _boiteVitessesController.text,
+        assuranceNom: _assuranceNomController.text,
+        assuranceNumero: _assuranceNumeroController.text,
+        franchise: _franchiseController.text,
+        prixLocation: _prixLocationController.text,
+        accompte: _accompteController.text,
+        caution: _cautionController.text,
+        nettoyageInt: _nettoyageIntController.text,
+        nettoyageExt: _nettoyageExtController.text,
+        pourcentageEssenceRetour: _pourcentageEssenceRetourController.text,
+        permisRectoUrl: permisRectoUrl,
+        permisVersoUrl: permisVersoUrl,
+        photoVehiculeUrl: _vehiclePhotoUrl,
+        methodePaiement: _selectedPaymentMethod ?? 'Espèces',
+      );
 
       // Affichage du succès et navigation
       if (context.mounted) {
-        Popup.showSuccess(context).then((_) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const NavigationPage(fromPage: 'fromLocation'),
-            ),
-          );
-        });
-      }
-    } catch (e) {
-      // Gestion des erreurs
-      print('Erreur lors de la validation du contrat : $e');
-      if (context.mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : ${e.toString()}')),
+          const SnackBar(
+            content: Text('Contrat créé avec succès'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
+
+    } catch (e) {
+      print('❌ Erreur lors de la création du contrat: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la création du contrat: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -504,45 +496,6 @@ class _LocationPageState extends State<LocationPage> {
       }
     }
     return null;
-  }
-
-  // Méthode pour générer et envoyer le PDF
-  Future<void> _generateAndSendPdf(ContratModel contratModel, String nomEntreprise, String logoUrl, 
-                                  String adresseEntreprise, String telephoneEntreprise, 
-                                  String siretEntreprise, String nomCollaborateur, 
-                                  String prenomCollaborateur) async {
-    try {
-      // Mettre à jour les informations de l'entreprise dans le modèle de contrat
-      contratModel = contratModel.copyWith();
-      
-      // Appel à la nouvelle fonction generatePdf avec ContratModel
-      final pdfPath = await generatePdf(
-        contratModel,
-        nomCollaborateur: nomCollaborateur.isNotEmpty && prenomCollaborateur.isNotEmpty 
-            ? '$prenomCollaborateur $nomCollaborateur' 
-            : null,
-      );
-      
-      if (contratModel.email != null && contratModel.email!.isNotEmpty) {
-        await EmailService.sendEmailWithPdf(
-          pdfPath: pdfPath,
-          email: contratModel.email!,
-          nomEntreprise: nomEntreprise,
-          logoUrl: logoUrl,
-          adresse: adresseEntreprise,
-          telephone: telephoneEntreprise,
-          marque: contratModel.marque ?? '',
-          modele: contratModel.modele ?? '',
-          immatriculation: contratModel.immatriculation ?? '',
-          prenom: contratModel.prenom,
-          nom: contratModel.nom,
-          context: context,
-        );
-      }
-    } catch (e) {
-      print('Erreur lors de la génération ou de l\'envoi du PDF: $e');
-      throw e; // Propager l'erreur pour la gestion globale
-    }
   }
 
   Future<void> _captureSignature() async {
@@ -651,6 +604,9 @@ class _LocationPageState extends State<LocationPage> {
   void dispose() {
     _prixLocationController.dispose();
     _accompteController.dispose();
+    _cautionController.dispose();
+    _nettoyageIntController.dispose();
+    _nettoyageExtController.dispose();
     super.dispose();
   }
 
@@ -666,7 +622,6 @@ class _LocationPageState extends State<LocationPage> {
     // Informations financières
     if (model.prixLocation != null) _prixLocationController.text = model.prixLocation!;
     if (model.accompte != null) _accompteController.text = model.accompte!;
-    if (model.caution != null) _cautionController.text = model.caution!;
     if (model.nettoyageInt != null) _nettoyageIntController.text = model.nettoyageInt!;
     if (model.nettoyageExt != null) _nettoyageExtController.text = model.nettoyageExt!;
     if (model.carburantManquant != null) _carburantManquantController.text = model.carburantManquant!;
@@ -693,6 +648,8 @@ class _LocationPageState extends State<LocationPage> {
     // Mise à jour des variables d'état
     setState(() {
       _vehiclePhotoUrl = model.photoVehiculeUrl;
+      _cautionController.text = model.caution ?? '';
+      _selectedPaymentMethod = model.methodePaiement ?? 'Espèces';
     });
   }
 

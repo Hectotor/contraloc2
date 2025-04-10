@@ -67,9 +67,9 @@ class PdfInfoContactWidget {
           pw.Text(nomEntreprise,
               style: pw.TextStyle(fontSize: 12, font: boldFont)),
           pw.SizedBox(height: 2),
-          if (nomCollaborateur != null && nomCollaborateur.isNotEmpty)
+          if (nomCollaborateur?.isNotEmpty == true)
             pw.Text('Contrat créé par: $nomCollaborateur', style: pw.TextStyle(font: ttf, fontSize: 9)),
-          if (nomCollaborateur != null && nomCollaborateur.isNotEmpty)
+          if (nomCollaborateur?.isNotEmpty == true)
             pw.SizedBox(height: 2),
           if (adresse.isNotEmpty)
             pw.Text('Adresse: $adresse', style: pw.TextStyle(font: ttf, fontSize: 9)),

@@ -796,10 +796,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
                             context: context,
                             data: widget.data,
                             contratId: widget.contratId,
-                            nettoyageIntController: _nettoyageIntController,
-                            nettoyageExtController: _nettoyageExtController,
-                            pourcentageEssenceRetourController: _pourcentageEssenceRetourController,
-                            cautionController: _cautionController,
                             signatureRetourBase64: _signatureRetourBase64,
                           ),
                           style: ElevatedButton.styleFrom(

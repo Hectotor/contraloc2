@@ -13,10 +13,6 @@ class AffichageContratPdf {
     required BuildContext context,
     required Map<String, dynamic> data,
     required String contratId,
-    required TextEditingController nettoyageIntController,
-    required TextEditingController nettoyageExtController,
-    required TextEditingController pourcentageEssenceRetourController,
-    required TextEditingController cautionController,
     String? signatureRetourBase64,
     bool afficherPdf = true, // Nouveau paramètre pour contrôler l'ouverture du PDF
   }) async {
@@ -88,9 +84,7 @@ class AffichageContratPdf {
         commentaireRetour: data['commentaireRetour'],
         signatureRetour: signatureRetourBase64,
         pourcentageEssenceRetour: data['pourcentageEssenceRetour'],
-        nettoyageInt: nettoyageIntController.text,
-        nettoyageExt: nettoyageExtController.text,
-        caution: cautionController.text,
+
         nomEntreprise: data['nomEntreprise'] ?? userData['nomEntreprise'] ?? '',
         logoUrl: data['logoUrl'] ?? userData['logoUrl'] ?? '',
         adresseEntreprise: data['adresseEntreprise'] ?? userData['adresse'] ?? '',

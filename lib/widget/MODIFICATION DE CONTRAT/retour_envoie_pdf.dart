@@ -46,10 +46,6 @@ class RetourEnvoiePdf {
         context: context,
         data: contratData,
         contratId: contratId,
-        nettoyageIntController: TextEditingController(text: contratData['nettoyageInt']),
-        nettoyageExtController: TextEditingController(text: contratData['nettoyageExt']),
-        pourcentageEssenceRetourController: TextEditingController(text: pourcentageEssenceRetour),
-        cautionController: TextEditingController(text: contratData['caution']),
         signatureRetourBase64: signatureRetourBase64,
         afficherPdf: false, // Ne pas afficher le PDF
       );
