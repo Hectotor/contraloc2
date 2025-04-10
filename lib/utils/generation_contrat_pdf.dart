@@ -108,18 +108,56 @@ class GenerationContratPdf {
       final conditionsData = await AccessCondition.getContractConditions();
       final conditionsText = conditionsData?['texte'] ?? ContratModifier.defaultContract;
 
+      // Fonction pour convertir la date française en format ISO
+      DateTime parseFrenchDate(String dateStr) {
+        // Extraire les composants de la date française
+        final parts = dateStr.split(' ');
+        
+        // Les composants sont dans l'ordre: [jour, numéro, mois, année, à, heure]
+        final day = parts[1];  // Le numéro du jour
+        final month = parts[2]; // Le mois
+        final year = parts[3];  // L'année
+        final time = parts[5];  // L'heure
+        
+        // Tableau des mois en français
+        final months = {
+          'janvier': '01',
+          'février': '02',
+          'mars': '03',
+          'avril': '04',
+          'mai': '05',
+          'juin': '06',
+          'juillet': '07',
+          'août': '08',
+          'septembre': '09',
+          'octobre': '10',
+          'novembre': '11',
+          'décembre': '12'
+        };
+        
+        // Construire la date en format ISO
+        final isoDate = '$year-${months[month]}-$day $time';
+        
+        // Logs de débogage
+        print('=== Debug date parsing ===');
+        print('Date brute: $dateStr');
+        print('Jour: $day, Mois: $month, Année: $year, Heure: $time');
+        print('Date ISO: $isoDate');
+        
+        return DateTime.parse(isoDate);
+      }
+
       // Calculer le statut du contrat
       final now = DateTime.now();
-      final dateDebutDateTime = DateTime.parse(dateDebut);
-      final difference = dateDebutDateTime.difference(now).inDays;
+      final dateDebutDateTime = parseFrenchDate(dateDebut);
       
       // Logs pour déboguer
       print('=== Calcul du statut ===');
       print('Date actuelle: $now');
       print('Date de début: $dateDebutDateTime');
-      print('Différence en jours: $difference');
+      print('Différence en jours: ${dateDebutDateTime.difference(now).inDays}');
       
-      final status = difference > 1 
+      final status = dateDebutDateTime.difference(now).inDays > 1 
           ? 'réservé'  // Si la date est dans plus de 24h
           : 'en_cours'; // Sinon, en_cours
 
