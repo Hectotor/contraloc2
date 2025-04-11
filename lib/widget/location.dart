@@ -7,6 +7,7 @@ import 'package:ContraLoc/utils/generation_contrat_pdf.dart';
 import 'package:ContraLoc/models/contrat_model.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
+import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -973,8 +974,12 @@ class _LocationPageState extends State<LocationPage> {
                 const SizedBox(height: 15),
                 
                 // Afficher le conteneur de signature si au moins le nom OU le prénom est présent
-                if ((widget.nom != null && widget.nom!.isNotEmpty) || 
-                    (widget.prenom != null && widget.prenom!.isNotEmpty)) 
+                // OU si une signature existe déjà OU si on est en mode modification (widget.contratId != null)
+                // Note: widget.nom et widget.prenom contiennent les valeurs du client déjà existant
+                if (((widget.nom != null && widget.nom!.isNotEmpty) || 
+                    (widget.prenom != null && widget.prenom!.isNotEmpty)) ||
+                    _signatureAller.isNotEmpty || 
+                    widget.contratId != null) 
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(10),
@@ -986,12 +991,12 @@ class _LocationPageState extends State<LocationPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Signature de Location',
                         style: TextStyle(
                           fontSize: 16, 
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF08004D),
+                          color: const Color(0xFF08004D),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -1020,54 +1025,67 @@ class _LocationPageState extends State<LocationPage> {
                           ),
                         ],
                       ),
-                      if (_acceptedConditions) ...[
-                        const SizedBox(height: 15),
-                        if (_signatureAller.isNotEmpty) ...[
+                      if (_acceptedConditions) ...[  
+                        const SizedBox(height: 10),
+                        if (_signatureAller.isNotEmpty) ...[  // Afficher la signature existante
                           Container(
                             width: double.infinity,
-                            height: 100,
+                            height: 200,
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(color: Colors.grey.shade300, width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.shade200,
+                                  blurRadius: 5,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
-                            child: Image.memory(
-                              Uri.parse('data:image/png;base64,$_signatureAller').data!.contentAsBytes(),
-                              fit: BoxFit.contain,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(13),
+                              child: Image.memory(
+                                base64Decode(_signatureAller),
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 10),
-                        ],
-                        Center(
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              final signature = await PopupSignature.showSignatureDialog(
-                                context,
-                                title: 'Signature du contrat',
-                                checkboxText: 'J\'accepte les conditions de location',
-                                nom: widget.nom,
-                                prenom: widget.prenom,
-                                existingSignature: _signatureAller,
-                              );
-                              
-                              if (signature != null) {
-                                setState(() {
-                                  _signatureAller = signature;
-                                });
-                              }
-                            },
-                            icon: const Icon(Icons.edit),
-                            label: Text(_signatureAller.isEmpty ? 'Signer le contrat' : 'Modifier la signature'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF08004D),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                          Center(
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                await _captureSignature();
+                              },
+                              icon: const Icon(Icons.edit, color: Colors.white),
+                              label: const Text('Modifier la signature', style: TextStyle(color: Colors.white)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF08004D),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                               ),
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                             ),
                           ),
-                        ),
+                        ] else ...[  // Afficher le bouton pour ajouter une signature
+                          Center(
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                await _captureSignature();
+                              },
+                              icon: const Icon(Icons.draw, color: Colors.white),
+                              label: const Text('Ajouter une signature', style: TextStyle(color: Colors.white)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF08004D),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ],
                   ),
