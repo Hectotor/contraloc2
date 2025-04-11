@@ -9,7 +9,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'SCREENS/splash_screen.dart';
 import 'package:ContraLoc/USERS/Subscription/subscription_service.dart'; // Import SubscriptionService
-import 'package:ContraLoc/utils/photo_upload_manager.dart'; // Import pour GlobalNotification
+
+// Clé de navigateur globale pour la navigation sans contexte
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 // Couleur principale de l'application
 const Color primaryColor = Color(0xFF08004D);
@@ -103,8 +105,7 @@ class MyApp extends StatelessWidget {
         return OrientationBuilder(
           builder: (context, orientation) {
             return MaterialApp(
-              navigatorKey: GlobalNotification.navigatorKey, // Utilisation de la clé de navigateur globale pour les notifications
-              scaffoldMessengerKey: PhotoUploadManager.scaffoldMessengerKey, // Clé pour le ScaffoldMessenger
+              navigatorKey: navigatorKey, // Utilisation de la clé de navigateur globale
               title: 'Contraloc',
               debugShowCheckedModeBanner: false,
               theme: ThemeData(

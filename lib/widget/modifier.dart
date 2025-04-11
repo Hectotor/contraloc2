@@ -1,16 +1,13 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:signature/signature.dart';
-import 'package:uuid/uuid.dart';
-import '../services/access_locations.dart';
 import '../utils/affichage_facture_pdf.dart';
 import '../utils/affichage_contrat_pdf.dart';
-import '../utils/photo_upload_manager.dart';
+import 'package:ContraLoc/services/access_locations.dart';
 import 'MODIFICATION DE CONTRAT/supp_contrat.dart';
 import 'MODIFICATION DE CONTRAT/info_loc.dart';
 import 'MODIFICATION DE CONTRAT/info_loc_retour.dart';
@@ -23,6 +20,8 @@ import 'MODIFICATION DE CONTRAT/cloturer_location.dart';
 import 'MODIFICATION DE CONTRAT/facture.dart';
 import 'navigation.dart';
 import 'CREATION DE CONTRAT/client.dart';
+import 'package:uuid/uuid.dart';
+import 'photo_upload_popup.dart';
 
 class ModifierScreen extends StatefulWidget {
   final String contratId;
@@ -46,7 +45,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
   );
   final TextEditingController _kilometrageRetourController = TextEditingController();
   final TextEditingController _pourcentageEssenceRetourController = TextEditingController();
-  List<File> _photosRetour = [];
+  final List<File> _photosRetour = [];
   List<String> _photosRetourUrls = [];
   bool _isUpdatingContrat = false; 
   bool _signatureRetourAccepted = false;
@@ -93,10 +92,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
   @override
   void dispose() {
-    // Vérifier s'il reste des photos à télécharger avant de fermer l'écran
-    _checkPendingUploads();
-    
-    // Liberer tous les contrôleurs
     _dateFinEffectifController.dispose();
     _commentaireRetourController.dispose();
     _kilometrageRetourController.dispose();
@@ -104,88 +99,40 @@ class _ModifierScreenState extends State<ModifierScreen> {
     _nettoyageIntController.dispose();
     _nettoyageExtController.dispose();
     _cautionController.dispose();
-    
     try {
       _signatureRetourController.dispose();
     } catch (e) {
       print('Erreur lors du dispose du SignatureController: $e');
     }
-    
     super.dispose();
-  }
-
-  // Méthode pour vérifier s'il y a des photos en attente de téléchargement
-  void _checkPendingUploads() {
-    if (_photosEnEchec.isNotEmpty || _photosUploadInfos.isNotEmpty) {
-      // Sauvegarder les informations pour une tentative ultérieure
-      print('Il reste ${_photosEnEchec.length} photos en échec et ${_photosUploadInfos.length} lots de photos à télécharger');
-      // Ici, on pourrait implanter un mécanisme pour sauvegarder ces informations
-      // dans un stockage persistant (SharedPreferences, Hive, etc.)
-    }
   }
 
   Future<void> _selectDateTime(TextEditingController controller) async {
   }
 
-  // Variable pour stocker les photos qui n'ont pas pu être téléchargées
-  List<File> _photosEnEchec = [];
-
-  // Variable pour stocker les PhotoUploadInfo
-  List<PhotoUploadInfo> _photosUploadInfos = [];
-
-  // Méthode pour télécharger les photos en arrière-plan
-  Future<void> _uploadPhotosInBackground() async {
-    // Vérifier si nous avons des photos à télécharger directement
-    if (_photosRetour.isNotEmpty) {
-      PhotoUploadManager.uploadPhotosInBackground(
-        context: context, // Le contexte est toujours nécessaire pour certaines opérations internes
-        contratId: widget.contratId,
-        photos: _photosRetour,
-        existingUrls: _photosRetourUrls,
-        folder: 'photos_retour',
-        onFailure: (failedPhotos) {
-          if (mounted) {
-            setState(() {
-              _photosEnEchec = failedPhotos;
-            });
-          }
-        },
-        onSuccess: () {
-          if (mounted) {
-            setState(() {
-              _photosRetour = [];
-            });
-          }
-        },
+  Future<List<String>> _uploadPhotos(List<File> photos) async {
+    try {
+      // Afficher le popup de téléchargement
+      List<String>? uploadedUrls = await showDialog<List<String>>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => PhotoUploadPopup(
+          photos: photos,
+          contratId: widget.contratId,
+          onUploadComplete: (List<String> urls) {
+            Navigator.of(context).pop(urls);
+          },
+        ),
       );
-      return;
-    }
-    
-    // Vérifier si nous avons des PhotoUploadInfo en attente
-    if (_photosUploadInfos.isNotEmpty) {
-      // Prendre le premier élément de la liste
-      final uploadInfo = _photosUploadInfos.removeAt(0);
-      
-      PhotoUploadManager.uploadPhotosInBackground(
-        context: context, // Le contexte est toujours nécessaire pour certaines opérations internes
-        contratId: uploadInfo.contratId,
-        photos: uploadInfo.photos,
-        existingUrls: uploadInfo.existingUrls,
-        folder: uploadInfo.folder,
-        onFailure: (failedPhotos) {
-          if (mounted) {
-            setState(() {
-              _photosEnEchec = failedPhotos;
-            });
-          }
-        },
-        onSuccess: () {
-          // Si nous avons d'autres PhotoUploadInfo, traiter le suivant
-          if (_photosUploadInfos.isNotEmpty && mounted) {
-            _uploadPhotosInBackground();
-          }
-        },
-      );
+
+      if (uploadedUrls == null) {
+        throw Exception('Téléchargement annulé par l\'utilisateur');
+      }
+
+      return uploadedUrls;
+    } catch (e) {
+      print('Erreur lors du téléchargement des photos: $e');
+      throw e;
     }
   }
 
@@ -223,33 +170,11 @@ class _ModifierScreenState extends State<ModifierScreen> {
     );
 
     try {
-      // Stocker les photos pour les télécharger en arrière-plan plus tard
-      List<File> photosToUploadLater = [];
-      if (_photosRetour.isNotEmpty) {
-        photosToUploadLater = List<File>.from(_photosRetour);
-        // Vider la liste des photos à télécharger immédiatement
-        _photosRetour = [];
-      }
-      
-      // Vérifier si on a des photos en échec de téléchargement précédent
-      if (_photosEnEchec.isNotEmpty) {
-        // Ajouter les photos en échec aux photos à télécharger
-        photosToUploadLater.addAll(_photosEnEchec);
-        // Vider la liste des photos en échec
-        _photosEnEchec = [];
-      }
-      
-      // Utiliser uniquement les URLs de photos déjà téléchargées
       List<String> allPhotosUrls = List<String>.from(_photosRetourUrls);
 
-      // Créer un PhotoUploadInfo si nous avons des photos à télécharger
-      if (photosToUploadLater.isNotEmpty) {
-        _photosUploadInfos.add(PhotoUploadInfo(
-          contratId: widget.contratId,
-          folder: 'photos_retour',
-          photos: photosToUploadLater,
-          existingUrls: allPhotosUrls,
-        ));
+      if (_photosRetour.isNotEmpty) {
+        List<String> newUrls = await _uploadPhotos(_photosRetour);
+        allPhotosUrls.addAll(newUrls);
       }
 
       String? signatureRetourBase64;
@@ -314,13 +239,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
       // Utilisation de AccessLocations pour la mise à jour
       await AccessLocations.updateContract(widget.contratId, updateData);
 
-      // Lancer le téléchargement des photos en arrière-plan après la mise à jour du contrat
-      if (photosToUploadLater.isNotEmpty) {
-        // Restaurer les photos pour le téléchargement en arrière-plan
-        _photosRetour = photosToUploadLater;
-        // Lancer le téléchargement en arrière-plan sans attendre
-        _uploadPhotosInBackground();
-      }
+      // Ne pas fermer le dialogue de chargement ici
+      // Navigator.pop(context);
 
       await RetourEnvoiePdf.genererEtEnvoyerPdfCloture(
         context: context,
@@ -525,33 +445,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
     );
   }
 
-  // Méthode pour afficher un widget avec les photos en échec
-  Widget _buildPhotosEnEchecWidget() {
-    if (_photosEnEchec.isEmpty) return const SizedBox.shrink();
-    
-    return PhotoUploadManager.buildPhotosEnEchecWidget(
-      context: context,
-      photosEnEchec: _photosEnEchec,
-      contratId: widget.contratId,
-      existingUrls: _photosRetourUrls,
-      folder: 'photos_retour',
-      onFailure: (failedPhotos) {
-        if (mounted) {
-          setState(() {
-            _photosEnEchec = failedPhotos;
-          });
-        }
-      },
-      onSuccess: () {
-        if (mounted) {
-          setState(() {
-            _photosEnEchec = [];
-          });
-        }
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -570,15 +463,31 @@ class _ModifierScreenState extends State<ModifierScreen> {
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF08004D),
-        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.delete, color: Colors.white),
             onPressed: () => SuppContrat.showDeleteConfirmationDialog(
                 context, widget.contratId),
           ),
+          IconButton(
+            icon: const Icon(Icons.photo_library),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => PhotoUploadPopup(
+                  photos: _photosRetour, // Utilise les photos existantes
+                  contratId: widget.contratId,
+                  onUploadComplete: (urls) {
+                    // On ne fait rien ici car c'est juste pour visualiser
+                  },
+                ),
+              );
+            },
+            tooltip: 'Visualiser les photos',
+          ),
         ],
+        backgroundColor: const Color(0xFF08004D),
+        elevation: 0,
       ),
       body: Stack(
         children: [
@@ -686,6 +595,58 @@ class _ModifierScreenState extends State<ModifierScreen> {
                         bottom: 30.0), 
                     child: Column(
                       children: [
+                        if (widget.data['status'] == 'reserve') ...[
+                          ElevatedButton(
+                            onPressed: () => AffichageFacturePdf.genererEtAfficherFacturePdf(
+                              context: context,
+                              contratData: widget.data,
+                              contratId: widget.contratId,
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.receipt, color: Colors.white),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Afficher la facture",
+                                  style: TextStyle(color: Colors.white, fontSize: 18),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ClientPage(
+                                    marque: widget.data['marque'],
+                                    modele: widget.data['modele'],
+                                    immatriculation: widget.data['immatriculation'],
+                                    contratId: widget.contratId,
+                                  ),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: const Size(double.infinity, 50),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.edit, color: Colors.white),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Modifier le contrat",
+                                  style: TextStyle(color: Colors.white, fontSize: 18),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
                         if (widget.data['status'] == 'restitue') ...[
                           ElevatedButton(
                             onPressed: () async {
@@ -729,86 +690,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           ),
                           const SizedBox(height: 20),
                         ],
-                        if (widget.data['status'] == 'restitue') ...[
-                          ElevatedButton(
-                            onPressed: () => AffichageFacturePdf.genererEtAfficherFacturePdf(
-                              context: context,
-                              contratId: widget.contratId,
-                              contratData: widget.data,
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 30),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.receipt, color: Colors.white),
-                                SizedBox(width: 10),
-                                Text(
-                                  "Voir la facture",
-                                  style: TextStyle(color: Colors.white, fontSize: 18),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                        if (widget.data['status'] == 'réservé') ...[  
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ClientPage(
-                                    marque: widget.data['marque'],
-                                    modele: widget.data['modele'],
-                                    immatriculation: widget.data['immatriculation'],
-                                    contratId: widget.contratId,
-                                  ),
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              minimumSize: const Size(double.infinity, 50),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.edit, color: Colors.white),
-                                SizedBox(width: 10),
-                                Text(
-                                  "Modifier le contrat",
-                                  style: TextStyle(color: Colors.white, fontSize: 18),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                        //ElevatedButton(
-                          //onPressed: () => _showConfirmationDialog(),
-                          //style: ElevatedButton.styleFrom(
-                          //  backgroundColor: Colors.green,
-                          //  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                          //  shape: RoundedRectangleBorder(
-                          //    borderRadius: BorderRadius.circular(10),
-                          //  ),
-                          //),
-                          //child: const Row(
-                          //  mainAxisAlignment: MainAxisAlignment.center,
-                          //  children: [
-                          //    Icon(Icons.send, color: Colors.white),
-                          //    SizedBox(width: 10),
-                          //    Text(
-                          //      "Renvoyer le contrat",
-                          //      style: TextStyle(color: Colors.white, fontSize: 18),
-                          //    ),
-                          //  ],
-                          //),
-                        //),
-                          const SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: () => AffichageContratPdf.genererEtAfficherContratPdf(
                             context: context,
@@ -848,7 +729,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           //),
                         //),
                         //const SizedBox(height: 20),
-                        _buildPhotosEnEchecWidget(),
                       ],
                     ),
                   ),
