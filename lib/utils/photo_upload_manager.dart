@@ -37,7 +37,7 @@ class GlobalNotification {
       message: message,
       backgroundColor: Colors.green.shade800,
       icon: Icons.check_circle,
-      durationSeconds: 5,
+      durationSeconds: 6,
       onTap: () {
         if (successUrls != null) {
           _showSuccessPhotosDialog(navigatorKey.currentContext!, successUrls);
@@ -52,7 +52,7 @@ class GlobalNotification {
       message: message,
       backgroundColor: Colors.red.shade800,
       icon: Icons.error_outline,
-      durationSeconds: 6,
+      durationSeconds: 10,
       onTap: () {
         if (failedPhotos != null) {
           _showFailedPhotosDialog(navigatorKey.currentContext!, failedPhotos);
@@ -67,7 +67,7 @@ class GlobalNotification {
       message: message,
       backgroundColor: Colors.blue.shade800,
       icon: Icons.info_outline,
-      durationSeconds: 4,
+      durationSeconds: 6,
     );
   }
   

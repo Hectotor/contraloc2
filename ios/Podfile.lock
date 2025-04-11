@@ -1427,15 +1427,15 @@ PODS:
     - FlutterMacOS
   - printing (1.0.0):
     - Flutter
-  - purchases_flutter (8.7.1):
+  - purchases_flutter (8.7.2):
     - Flutter
-    - PurchasesHybridCommon (= 13.26.1)
-  - PurchasesHybridCommon (13.26.1):
-    - RevenueCat (= 5.20.2)
+    - PurchasesHybridCommon (= 13.28.0)
+  - PurchasesHybridCommon (13.28.0):
+    - RevenueCat (= 5.21.0)
   - quill_native_bridge_ios (0.0.1):
     - Flutter
   - RecaptchaInterop (101.0.0)
-  - RevenueCat (5.20.2)
+  - RevenueCat (5.21.0)
   - SDWebImage (5.21.0):
     - SDWebImage/Core (= 5.21.0)
   - SDWebImage/Core (5.21.0)
@@ -1575,11 +1575,11 @@ SPEC CHECKSUMS:
   open_filex: 432f3cd11432da3e39f47fcc0df2b1603854eff1
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   printing: 54ff03f28fe9ba3aa93358afb80a8595a071dd07
-  purchases_flutter: 017615776de2b6d42e01cbd49892ca78aabb4c10
-  PurchasesHybridCommon: aeebb5b2a956514f8f3ebde2a1574e07d2164ae8
+  purchases_flutter: bd645b9bea1c536b34d24778de8da95cc6a65235
+  PurchasesHybridCommon: f0d344e7073314988b3d98fbb9da69db85aaff38
   quill_native_bridge_ios: f47af4b14e7757968486641656c5d23250cee521
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
-  RevenueCat: 9af6740f8629097fcacda9b3cb6b927319c53a26
+  RevenueCat: 57028a8673201fdaacd1354065e8adbcba5739a4
   SDWebImage: f84b0feeb08d2d11e6a9b843cb06d75ebf5b8868
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7

@@ -729,7 +729,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           ),
                           const SizedBox(height: 20),
                         ],
-                        if (widget.data['factureGeneree'] == true) ...[
+                        if (widget.data['status'] == 'restitue') ...[
                           ElevatedButton(
                             onPressed: () => AffichageFacturePdf.genererEtAfficherFacturePdf(
                               context: context,
@@ -746,7 +746,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                                 Icon(Icons.receipt, color: Colors.white),
                                 SizedBox(width: 10),
                                 Text(
-                                  "Afficher la facture",
+                                  "Voir la facture",
                                   style: TextStyle(color: Colors.white, fontSize: 18),
                                 ),
                               ],
@@ -787,28 +787,28 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           ),
                           const SizedBox(height: 20),
                         ],
-                        ElevatedButton(
-                          onPressed: () => _showConfirmationDialog(),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.send, color: Colors.white),
-                              SizedBox(width: 10),
-                              Text(
-                                "Renvoyer le contrat",
-                                style: TextStyle(color: Colors.white, fontSize: 18),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
+                        //ElevatedButton(
+                          //onPressed: () => _showConfirmationDialog(),
+                          //style: ElevatedButton.styleFrom(
+                          //  backgroundColor: Colors.green,
+                          //  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                          //  shape: RoundedRectangleBorder(
+                          //    borderRadius: BorderRadius.circular(10),
+                          //  ),
+                          //),
+                          //child: const Row(
+                          //  mainAxisAlignment: MainAxisAlignment.center,
+                          //  children: [
+                          //    Icon(Icons.send, color: Colors.white),
+                          //    SizedBox(width: 10),
+                          //    Text(
+                          //      "Renvoyer le contrat",
+                          //      style: TextStyle(color: Colors.white, fontSize: 18),
+                          //    ),
+                          //  ],
+                          //),
+                        //),
+                          const SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: () => AffichageContratPdf.genererEtAfficherContratPdf(
                             context: context,
@@ -817,7 +817,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                             signatureRetourBase64: _signatureRetourBase64,
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
+                            backgroundColor: Colors.red,
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -835,19 +835,19 @@ class _ModifierScreenState extends State<ModifierScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: () => AffichageContratPdf.viderCachePdf(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            minimumSize: const Size(double.infinity, 50),
-                          ),
-                          child: const Text(
-                            "Vider le cache des PDF",
-                            style: TextStyle(color: Colors.white, fontSize: 18),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
+                       // const SizedBox(height: 20),
+                        //ElevatedButton(
+                          //onPressed: () => AffichageContratPdf.viderCachePdf(context),
+                          //style: ElevatedButton.styleFrom(
+                          //  backgroundColor: Colors.red,
+                          //  minimumSize: const Size(double.infinity, 50),
+                          //),
+                          //child: const Text(
+                          //  "Vider le cache des PDF",
+                          //  style: TextStyle(color: Colors.white, fontSize: 18),
+                          //),
+                        //),
+                        //const SizedBox(height: 20),
                         _buildPhotosEnEchecWidget(),
                       ],
                     ),
