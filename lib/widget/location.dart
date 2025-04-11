@@ -405,11 +405,25 @@ class _LocationPageState extends State<LocationPage> {
       }
       print('=== FIN DEBUG PERMIS PHOTOS ===');
 
+      // Afficher les photos existantes pour débogage
+      if (_photos.isNotEmpty) {
+        print('Photos existantes avant upload: ${_photos.length}');
+      } else {
+        print('Aucune photo à uploader');
+      }
+
       // Upload des autres photos
       for (var photo in _photos) {
         String url = await _compressAndUploadPhoto(photo, 'photos', contratId);
         vehiculeUrls.add(url);
       }
+
+      print('=== DEBUG PHOTOS VEHICULE ===');
+      print('Photos du véhicule téléchargées: ${vehiculeUrls.length}');
+      if (vehiculeUrls.isNotEmpty) {
+        print('Première URL de photo: ${vehiculeUrls.first}');
+      }
+      print('=== FIN DEBUG PHOTOS VEHICULE ===');
 
       // Récupérer les informations de l'entreprise
       print('Récupération des informations de l\'entreprise...');
@@ -485,20 +499,43 @@ class _LocationPageState extends State<LocationPage> {
       print('=== DEBUG CONTRAT MODEL ===');
       print('permisRectoUrl dans ContratModel: ${contratModel.permisRectoUrl}');
       print('permisVersoUrl dans ContratModel: ${contratModel.permisVersoUrl}');
+      print('photosUrls dans ContratModel: ${contratModel.photosUrls?.length ?? 0} photos');
+      print('Contenu de photosUrls: ${contratModel.photosUrls}');
       
       // Sauvegarder le contrat dans Firestore
       print('📝 Sauvegarde du contrat dans la collection de ${collaborateurStatus['isCollaborateur'] ? 'l\'administrateur' : 'l\'utilisateur'}');
       print('📝 Path: users/$targetId/locations/$contratId');
+      
+      // Convertir le modèle en Map pour Firestore
+      Map<String, dynamic> contratData = contratModel.toFirestore();
+      
+      // Vérifier si les photos sont présentes dans le modèle mais pas dans les données Firestore
+      if (contratModel.photosUrls != null && contratModel.photosUrls!.isNotEmpty && contratData['photos'] == null) {
+        print('⚠️ Photos présentes dans le modèle mais pas dans les données Firestore, correction...');
+        contratData['photos'] = contratModel.photosUrls;
+      }
+      
+      print('=== Début de la sauvegarde du contrat ===');
+      print('User ID: ${contratModel.userId}');
+      print('Admin ID: ${contratModel.adminId}');
+      print('Target ID: $targetId');
+      print('Contrat ID: $contratId');
+      print('=== Données du contrat ===');
+      print(contratData);
+      print('=== Structure de sauvegarde ===');
+      print('Collection: users/$targetId/locations/$contratId');
       
       await _firestore
           .collection('users')
           .doc(targetId)
           .collection('locations')
           .doc(contratId)
-          .set(contratModel.toFirestore(), SetOptions(merge: true));
+          .set(contratData, SetOptions(merge: true));
 
-      print('✅ Contrat sauvegardé avec succès');
-
+      print('=== Fin des logs ===');
+      print('=== Sauvegarde réussie ===');
+      print('Sauvegardé dans: users/$targetId/locations/$contratId');
+      
       // Générer et envoyer le PDF
       await GenerationContratPdf.genererEtEnvoyerPdf(
         context: context,
@@ -547,6 +584,7 @@ class _LocationPageState extends State<LocationPage> {
         adresseEntreprise: adresseEntreprise,
         telephoneEntreprise: telephoneEntreprise,
         siretEntreprise: siretEntreprise,
+        photosUrls: vehiculeUrls,
       );
 
       // Affichage du succès et navigation

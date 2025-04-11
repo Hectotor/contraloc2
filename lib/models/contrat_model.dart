@@ -228,6 +228,10 @@ class ContratModel {
   
   // Convertir l'instance en Map pour Firestore
   Map<String, dynamic> toFirestore() {
+    print('=== DEBUG CONTRATMODEL.TOFIRESTORE ===');
+    print('photosUrls: ${photosUrls?.length ?? 0} photos');
+    print('Contenu de photosUrls: $photosUrls');
+    
     final Map<String, dynamic> data = {
       'userId': userId,
       'adminId': adminId,
@@ -260,7 +264,7 @@ class ContratModel {
       'pourcentageEssence': pourcentageEssence,
       'commentaire': commentaireAller ?? '', // Utiliser le nom 'commentaire' pour l'écriture
       'commentaireRetour': commentaireRetour ?? '',
-      'photos': photosUrls,
+      'photos': photosUrls ?? [], // Toujours utiliser une liste vide plutu00f4t que null
       'signatureAller': signatureAller,
       'signatureRetour': signatureRetour,
       'methodePaiement': methodePaiement,
