@@ -657,13 +657,7 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   Future<void> _captureSignature() async {
-    // Si une signature existe déjà, on la conserve
-    if (_signatureAller.isNotEmpty) {
-      print('Signature déjà capturée en base64');
-      return;
-    }
-    
-    // Sinon, on affiche la popup de signature
+    // Afficher la popup de signature, qu'une signature existe déjà ou non
     print('Affichage de la popup de signature');
     final signature = await PopupSignature.showSignatureDialog(
       context,
@@ -671,6 +665,7 @@ class _LocationPageState extends State<LocationPage> {
       checkboxText: 'Je reconnais avoir pris connaissance des termes et conditions de location.',
       nom: widget.nom,
       prenom: widget.prenom,
+      existingSignature: _signatureAller.isNotEmpty ? _signatureAller : null,
     );
     
     if (signature != null && signature.isNotEmpty) {
@@ -680,7 +675,7 @@ class _LocationPageState extends State<LocationPage> {
       });
       print('Nouvelle signature capturée');
     } else {
-      print('Aucune signature capturée');
+      print('Aucune signature capturée ou modification annulée');
     }
   }
 
