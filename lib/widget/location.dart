@@ -18,6 +18,7 @@ import '../widget/CREATION DE CONTRAT/type_location_container.dart';
 import '../widget/CREATION DE CONTRAT/essence_container.dart';
 import '../widget/CREATION DE CONTRAT/etat_commentaire_container.dart';
 import '../services/access_condition.dart';
+import '../utils/contract_utils.dart';
 
 class LocationPage extends StatefulWidget {
   final String marque;
@@ -617,38 +618,7 @@ class _LocationPageState extends State<LocationPage> {
 
   // Méthode pour déterminer le statut du contrat
   String _determineContractStatus() {
-    String status = 'en_cours';
-    if (_dateDebutController.text.isNotEmpty) {
-      try {
-        final now = DateTime.now();
-        final parsedDate = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(_dateDebutController.text);
-        
-        final dateWithCurrentYear = DateTime(
-          now.year,
-          parsedDate.month,
-          parsedDate.day,
-          parsedDate.hour,
-          parsedDate.minute,
-        );
-        
-        final dateToCompare = dateWithCurrentYear.isBefore(now) && 
-                             parsedDate.month < now.month ? 
-                             DateTime(now.year + 1, parsedDate.month, parsedDate.day, 
-                                     parsedDate.hour, parsedDate.minute) : 
-                             dateWithCurrentYear;
-        
-        if (dateToCompare.isAfter(now) && 
-            !(dateToCompare.year == now.year && 
-              dateToCompare.month == now.month && 
-              dateToCompare.day == now.day)) {
-          status = 'réservé';
-        }
-      } catch (e) {
-        print('Erreur parsing: $e');
-      }
-    }
-    
-    return status;
+    return ContractUtils.determineContractStatus(_dateDebutController.text);
   }
 
   // Méthode pour calculer la date de réservation

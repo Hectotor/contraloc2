@@ -6,6 +6,7 @@ import '../widget/chargement.dart';
 import '../utils/affichage_contrat_pdf.dart';
 import '../widget/CREATION DE CONTRAT/mail.dart';
 import '../widget/CREATION DE CONTRAT/popup_felicitation.dart';
+import 'contract_utils.dart';
 
 class GenerationContratPdf {
   static Future<void> genererEtEnvoyerPdf({
@@ -106,12 +107,6 @@ class GenerationContratPdf {
         throw Exception('❌ Données administrateur non trouvées');
       }
 
-      // Logs détaillés pour comprendre les données brutes
-      print('=== Données brutes de l\'admin ===');
-      print('Document ID: ${adminAuthDoc.id}');
-      print('Données brutes: ${adminAuthDoc.data()}');
-      print('=== Fin des données brutes ===');
-
       final adminDataMap = adminAuthDoc.data()!;
       final nomEntreprise = adminDataMap['nomEntreprise'] ?? 'Non défini';
       final logoUrl = adminDataMap['logoUrl'] ?? 'Non défini';
@@ -119,14 +114,6 @@ class GenerationContratPdf {
       final telephoneEntreprise = adminDataMap['telephone'] ?? 'Non défini';
       final siretEntreprise = adminDataMap['siret'] ?? 'Non défini';
 
-      // Logs pour vérifier les données de l'entreprise
-      print('=== Données entreprise ===');
-      print('Nom: $nomEntreprise');
-      print('Logo: $logoUrl');
-      print('Adresse: $adresseEntreprise');
-      print('Téléphone: $telephoneEntreprise');
-      print('SIRET: $siretEntreprise');
-      print('=== Fin des données entreprise ===');
 
       // Récupérer les informations du collaborateur
       final collaborateurData = await FirebaseFirestore.instance
@@ -138,58 +125,13 @@ class GenerationContratPdf {
       final nomCollaborateur = collaborateurDataMap['nom'] ?? '';
       final prenomCollaborateur = collaborateurDataMap['prenom'] ?? '';
 
-      // Fonction pour convertir la date française en format ISO
-      DateTime parseFrenchDate(String dateStr) {
-        // Extraire les composants de la date française
-        final parts = dateStr.split(' ');
-        
-        // Les composants sont dans l'ordre: [jour, numéro, mois, année, à, heure]
-        final day = parts[1];  // Le numéro du jour
-        final month = parts[2]; // Le mois
-        final year = parts[3];  // L'année
-        final time = parts[5];  // L'heure
-        
-        // Tableau des mois en français
-        final months = {
-          'janvier': '01',
-          'février': '02',
-          'mars': '03',
-          'avril': '04',
-          'mai': '05',
-          'juin': '06',
-          'juillet': '07',
-          'août': '08',
-          'septembre': '09',
-          'octobre': '10',
-          'novembre': '11',
-          'décembre': '12'
-        };
-        
-        // Construire la date en format ISO
-        final isoDate = '$year-${months[month]}-$day $time';
-        
-        // Logs de débogage
-        print('=== Debug date parsing ===');
-        print('Date brute: $dateStr');
-        print('Jour: $day, Mois: $month, Année: $year, Heure: $time');
-        print('Date ISO: $isoDate');
-        
-        return DateTime.parse(isoDate);
-      }
-
       // Calculer le statut du contrat
-      final now = DateTime.now();
-      final dateDebutDateTime = dateDebut != null ? parseFrenchDate(dateDebut) : null;
+      final status = ContractUtils.determineContractStatus(dateDebut);
       
       // Logs pour déboguer
       print('=== Calcul du statut ===');
-      print('Date actuelle: $now');
-      print('Date de début: $dateDebutDateTime');
-      print('Différence en jours: ${dateDebutDateTime != null ? dateDebutDateTime.difference(now).inDays : null}');
-      
-      final status = dateDebutDateTime != null && dateDebutDateTime.difference(now).inDays > 1 
-          ? 'réservé'  // Si la date est dans plus de 24h
-          : 'en_cours'; // Sinon, en_cours
+      print('Date de début: $dateDebut');
+      print('Statut déterminé: $status');
 
       // Créer le contratModel avec le statut calculé
       final contratModel = ContratModel(
