@@ -66,7 +66,26 @@ class AffichageContratPdf {
       
       // Utiliser la signature de retour fournie ou celle du contrat
       if (signatureRetourBase64 == null || signatureRetourBase64.isEmpty) {
-        signatureRetourBase64 = data['signature_retour'] ?? data['signatureRetour'];
+        print('=== DEBUG SIGNATURE RETOUR PDF ===');
+        print('signatureRetourBase64 paramètre est null ou vide');
+        print('Tentative de récupération depuis data["signatureRetour"] ou data["signature_retour"]');
+        
+        // Vérifier les deux formats possibles de clé
+        if (data['signatureRetour'] != null) {
+          signatureRetourBase64 = data['signatureRetour'];
+          print('Signature trouvée dans data["signatureRetour"]');
+        } else if (data['signature_retour'] != null) {
+          signatureRetourBase64 = data['signature_retour'];
+          print('Signature trouvée dans data["signature_retour"]');
+        } else {
+          print('Aucune signature trouvée dans les données du contrat');
+        }
+        print('=== FIN DEBUG SIGNATURE RETOUR PDF ===');
+      } else {
+        print('=== DEBUG SIGNATURE RETOUR PDF ===');
+        print('signatureRetourBase64 paramètre est présent');
+        print('Longueur: ${signatureRetourBase64.length}');
+        print('=== FIN DEBUG SIGNATURE RETOUR PDF ===');
       }
       
       print(' Signature de retour récupérée : ${signatureRetourBase64 != null ? 'Présente' : 'Absente'}');

@@ -52,6 +52,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
   List<String> _photosRetourUrls = [];
   bool _isUpdatingContrat = false; 
   bool _signatureRetourAccepted = false;
+  // Variable pour stocker la signature de retour
   String? _signatureRetourBase64;
   final TextEditingController _nettoyageIntController = TextEditingController();
   final TextEditingController _nettoyageExtController = TextEditingController();
@@ -227,6 +228,11 @@ class _ModifierScreenState extends State<ModifierScreen> {
         print('Erreur lors de la capture de la signature: $e');
       }
 
+      // Utiliser la signature existante si disponible
+      if (signatureRetourBase64 == null && _signatureRetourBase64 != null) {
+        signatureRetourBase64 = _signatureRetourBase64;
+      }
+
       Map<String, dynamic> fraisFinaux = _fraisSupplementaires;
       
       print(' Sauvegarde des frais définitifs: $fraisFinaux');
@@ -262,7 +268,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
             ? _kilometrageRetourController.text
             : null,
         'pourcentageEssenceRetour': _pourcentageEssenceRetourController.text,
-        'signature_retour': signatureRetourBase64,
+        'signatureRetour': signatureRetourBase64, // Utiliser signatureRetour au lieu de signature_retour
         'photosRetourUrls': allPhotosUrls,
       };
 
@@ -285,6 +291,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         kilometrageRetour: _kilometrageRetourController.text,
         commentaireRetour: _commentaireRetourController.text,
         pourcentageEssenceRetour: _pourcentageEssenceRetourController.text,
+        signatureRetourBase64: signatureRetourBase64,
         dialogueDejaAffiche: true, // Nouveau paramètre pour indiquer que le dialogue est déjà affiché
       );
 
