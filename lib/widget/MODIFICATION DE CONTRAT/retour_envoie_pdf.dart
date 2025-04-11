@@ -44,10 +44,26 @@ class RetourEnvoiePdf {
     }
 
     try {
+      // Ajouter les informations de retour aux données du contrat
+      Map<String, dynamic> contratDataComplet = Map.from(contratData);
+      contratDataComplet['dateFinEffectif'] = dateFinEffectif;
+      contratDataComplet['kilometrageRetour'] = kilometrageRetour;
+      contratDataComplet['commentaireRetour'] = commentaireRetour;
+      contratDataComplet['pourcentageEssenceRetour'] = pourcentageEssenceRetour;
+      contratDataComplet['signatureRetour'] = signatureRetourBase64;
+      
+      print('=== DEBUG DONNEES RETOUR ===');
+      print('dateFinEffectif: $dateFinEffectif');
+      print('kilometrageRetour: $kilometrageRetour');
+      print('commentaireRetour: $commentaireRetour');
+      print('pourcentageEssenceRetour: $pourcentageEssenceRetour');
+      print('signatureRetour: ${signatureRetourBase64 != null ? "Présente" : "Absente"}');
+      print('=== FIN DEBUG DONNEES RETOUR ===');
+
       // Générer le PDF sans l'afficher
       final pdfPath = await AffichageContratPdf.genererEtAfficherContratPdf(
         context: context,
-        data: contratData,
+        data: contratDataComplet,
         contratId: contratId,
         signatureRetourBase64: signatureRetourBase64,
         afficherPdf: false, // Ne pas afficher le PDF
