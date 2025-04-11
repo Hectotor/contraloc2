@@ -1,17 +1,16 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
-import 'dart:convert'; // Ajout de l'import pour la fonction base64Encode
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:photo_view/photo_view.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart'; 
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:signature/signature.dart';
+import 'package:uuid/uuid.dart';
+import '../services/access_locations.dart';
 import '../utils/affichage_facture_pdf.dart';
 import '../utils/affichage_contrat_pdf.dart';
-import 'package:ContraLoc/services/collaborateur_util.dart';
-import 'package:ContraLoc/services/access_locations.dart';
+import '../utils/photo_upload_manager.dart';
 import 'MODIFICATION DE CONTRAT/supp_contrat.dart';
 import 'MODIFICATION DE CONTRAT/info_loc.dart';
 import 'MODIFICATION DE CONTRAT/info_loc_retour.dart';
@@ -24,7 +23,6 @@ import 'MODIFICATION DE CONTRAT/cloturer_location.dart';
 import 'MODIFICATION DE CONTRAT/facture.dart';
 import 'navigation.dart';
 import 'CREATION DE CONTRAT/client.dart';
-import 'package:uuid/uuid.dart';
 
 class ModifierScreen extends StatefulWidget {
   final String contratId;
@@ -48,7 +46,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
   );
   final TextEditingController _kilometrageRetourController = TextEditingController();
   final TextEditingController _pourcentageEssenceRetourController = TextEditingController();
-  final List<File> _photosRetour = [];
+  List<File> _photosRetour = [];
   List<String> _photosRetourUrls = [];
   bool _isUpdatingContrat = false; 
   bool _signatureRetourAccepted = false;
@@ -95,6 +93,10 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
   @override
   void dispose() {
+    // Vérifier s'il reste des photos à télécharger avant de fermer l'écran
+    _checkPendingUploads();
+    
+    // Liberer tous les contrôleurs
     _dateFinEffectifController.dispose();
     _commentaireRetourController.dispose();
     _kilometrageRetourController.dispose();
@@ -102,78 +104,88 @@ class _ModifierScreenState extends State<ModifierScreen> {
     _nettoyageIntController.dispose();
     _nettoyageExtController.dispose();
     _cautionController.dispose();
+    
     try {
       _signatureRetourController.dispose();
     } catch (e) {
       print('Erreur lors du dispose du SignatureController: $e');
     }
+    
     super.dispose();
+  }
+
+  // Méthode pour vérifier s'il y a des photos en attente de téléchargement
+  void _checkPendingUploads() {
+    if (_photosEnEchec.isNotEmpty || _photosUploadInfos.isNotEmpty) {
+      // Sauvegarder les informations pour une tentative ultérieure
+      print('Il reste ${_photosEnEchec.length} photos en échec et ${_photosUploadInfos.length} lots de photos à télécharger');
+      // Ici, on pourrait implanter un mécanisme pour sauvegarder ces informations
+      // dans un stockage persistant (SharedPreferences, Hive, etc.)
+    }
   }
 
   Future<void> _selectDateTime(TextEditingController controller) async {
   }
 
-  Future<List<String>> _uploadPhotos(List<File> photos) async {
-    List<String> urls = [];
-    int startIndex = _photosRetourUrls
-        .length; 
+  // Variable pour stocker les photos qui n'ont pas pu être téléchargées
+  List<File> _photosEnEchec = [];
 
-    try {
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
-      final userId = status['userId'];
+  // Variable pour stocker les PhotoUploadInfo
+  List<PhotoUploadInfo> _photosUploadInfos = [];
 
-      if (userId == null) {
-        print(" Erreur: Utilisateur non connecté");
-        throw Exception("Utilisateur non connecté");
-      }
-
-      final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
-
-      if (targetId == null) {
-        print(" Erreur: ID cible non disponible");
-        throw Exception("ID cible non disponible");
-      }
-
-      print(" Téléchargement de photos retour par ${status['isCollaborateur'] ? 'collaborateur' : 'admin'}");
-      print(" userId: $userId, targetId (adminId): $targetId");
-
-      for (var photo in photos) {
-        final compressedImage = await FlutterImageCompress.compressWithFile(
-          photo.absolute.path,
-          minWidth: 800,
-          minHeight: 800,
-          quality: 70, 
-        );
-
-        if (compressedImage == null) {
-          print(" Erreur: Échec de la compression de l'image");
-          continue;
-        }
-
-        String fileName =
-            'retour_${DateTime.now().millisecondsSinceEpoch}_${startIndex + urls.length}.jpg';
-
-        final String storagePath = 'users/${targetId}/locations/${widget.contratId}/photos_retour/$fileName';
-
-
-        Reference ref = FirebaseStorage.instance.ref().child(storagePath);
-
-        final tempDir = await getTemporaryDirectory();
-        final tempFile = File('${tempDir.path}/$fileName');
-        await tempFile.writeAsBytes(compressedImage);
-
-        await ref.putFile(tempFile);
-
-        String downloadUrl = await ref.getDownloadURL();
-        urls.add(downloadUrl);
-      }
-      return urls;
-    } catch (e) {
-      print(' Erreur lors du téléchargement des photos : $e');
-      if (e.toString().contains('unauthorized')) {
-        print(' Problème d\'autorisation: Vérifiez les règles de sécurité Firebase Storage');
-      }
-      rethrow;
+  // Méthode pour télécharger les photos en arrière-plan
+  Future<void> _uploadPhotosInBackground() async {
+    // Vérifier si nous avons des photos à télécharger directement
+    if (_photosRetour.isNotEmpty) {
+      PhotoUploadManager.uploadPhotosInBackground(
+        context: context, // Le contexte est toujours nécessaire pour certaines opérations internes
+        contratId: widget.contratId,
+        photos: _photosRetour,
+        existingUrls: _photosRetourUrls,
+        folder: 'photos_retour',
+        onFailure: (failedPhotos) {
+          if (mounted) {
+            setState(() {
+              _photosEnEchec = failedPhotos;
+            });
+          }
+        },
+        onSuccess: () {
+          if (mounted) {
+            setState(() {
+              _photosRetour = [];
+            });
+          }
+        },
+      );
+      return;
+    }
+    
+    // Vérifier si nous avons des PhotoUploadInfo en attente
+    if (_photosUploadInfos.isNotEmpty) {
+      // Prendre le premier élément de la liste
+      final uploadInfo = _photosUploadInfos.removeAt(0);
+      
+      PhotoUploadManager.uploadPhotosInBackground(
+        context: context, // Le contexte est toujours nécessaire pour certaines opérations internes
+        contratId: uploadInfo.contratId,
+        photos: uploadInfo.photos,
+        existingUrls: uploadInfo.existingUrls,
+        folder: uploadInfo.folder,
+        onFailure: (failedPhotos) {
+          if (mounted) {
+            setState(() {
+              _photosEnEchec = failedPhotos;
+            });
+          }
+        },
+        onSuccess: () {
+          // Si nous avons d'autres PhotoUploadInfo, traiter le suivant
+          if (_photosUploadInfos.isNotEmpty && mounted) {
+            _uploadPhotosInBackground();
+          }
+        },
+      );
     }
   }
 
@@ -211,11 +223,33 @@ class _ModifierScreenState extends State<ModifierScreen> {
     );
 
     try {
+      // Stocker les photos pour les télécharger en arrière-plan plus tard
+      List<File> photosToUploadLater = [];
+      if (_photosRetour.isNotEmpty) {
+        photosToUploadLater = List<File>.from(_photosRetour);
+        // Vider la liste des photos à télécharger immédiatement
+        _photosRetour = [];
+      }
+      
+      // Vérifier si on a des photos en échec de téléchargement précédent
+      if (_photosEnEchec.isNotEmpty) {
+        // Ajouter les photos en échec aux photos à télécharger
+        photosToUploadLater.addAll(_photosEnEchec);
+        // Vider la liste des photos en échec
+        _photosEnEchec = [];
+      }
+      
+      // Utiliser uniquement les URLs de photos déjà téléchargées
       List<String> allPhotosUrls = List<String>.from(_photosRetourUrls);
 
-      if (_photosRetour.isNotEmpty) {
-        List<String> newUrls = await _uploadPhotos(_photosRetour);
-        allPhotosUrls.addAll(newUrls);
+      // Créer un PhotoUploadInfo si nous avons des photos à télécharger
+      if (photosToUploadLater.isNotEmpty) {
+        _photosUploadInfos.add(PhotoUploadInfo(
+          contratId: widget.contratId,
+          folder: 'photos_retour',
+          photos: photosToUploadLater,
+          existingUrls: allPhotosUrls,
+        ));
       }
 
       String? signatureRetourBase64;
@@ -280,8 +314,13 @@ class _ModifierScreenState extends State<ModifierScreen> {
       // Utilisation de AccessLocations pour la mise à jour
       await AccessLocations.updateContract(widget.contratId, updateData);
 
-      // Ne pas fermer le dialogue de chargement ici
-      // Navigator.pop(context);
+      // Lancer le téléchargement des photos en arrière-plan après la mise à jour du contrat
+      if (photosToUploadLater.isNotEmpty) {
+        // Restaurer les photos pour le téléchargement en arrière-plan
+        _photosRetour = photosToUploadLater;
+        // Lancer le téléchargement en arrière-plan sans attendre
+        _uploadPhotosInBackground();
+      }
 
       await RetourEnvoiePdf.genererEtEnvoyerPdfCloture(
         context: context,
@@ -486,10 +525,36 @@ class _ModifierScreenState extends State<ModifierScreen> {
     );
   }
 
+  // Méthode pour afficher un widget avec les photos en échec
+  Widget _buildPhotosEnEchecWidget() {
+    if (_photosEnEchec.isEmpty) return const SizedBox.shrink();
+    
+    return PhotoUploadManager.buildPhotosEnEchecWidget(
+      context: context,
+      photosEnEchec: _photosEnEchec,
+      contratId: widget.contratId,
+      existingUrls: _photosRetourUrls,
+      folder: 'photos_retour',
+      onFailure: (failedPhotos) {
+        if (mounted) {
+          setState(() {
+            _photosEnEchec = failedPhotos;
+          });
+        }
+      },
+      onSuccess: () {
+        if (mounted) {
+          setState(() {
+            _photosEnEchec = [];
+          });
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-       
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -782,6 +847,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
                             style: TextStyle(color: Colors.white, fontSize: 18),
                           ),
                         ),
+                        const SizedBox(height: 20),
+                        _buildPhotosEnEchecWidget(),
                       ],
                     ),
                   ),
