@@ -88,12 +88,15 @@ class GenerationContratPdf {
       final userData = userDataDoc.data()!;
       final adminId = userData['adminId'];
       
+      // Déterminer si l'utilisateur est un admin ou un collaborateur
+      final String targetId;
       if (adminId == null) {
-        throw Exception('❌ ID administrateur non trouvé');
+        // L'utilisateur est un admin, utiliser son propre ID
+        targetId = user.uid;
+      } else {
+        // L'utilisateur est un collaborateur, utiliser l'ID de son admin
+        targetId = adminId;
       }
-
-      // Utiliser l'adminId comme cible
-      final targetId = adminId;
 
       // Récupérer les données de l'admin
       final adminAuthDoc = await FirebaseFirestore.instance
@@ -139,7 +142,7 @@ class GenerationContratPdf {
         userId: user.uid,
         adminId: targetId,
         createdBy: user.uid,
-        isCollaborateur: true,
+        isCollaborateur: adminId != null,
         entrepriseClient: entrepriseClient,
         nom: nom,
         prenom: prenom,
