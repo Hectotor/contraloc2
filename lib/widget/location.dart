@@ -278,9 +278,9 @@ class _LocationPageState extends State<LocationPage> {
           });
 
           // Charger la signature si elle existe
-          if (contractData['signature_aller'] != null) {
+          if (contractData['signatureAller'] != null) {
             setState(() {
-              _signatureAller = contractData['signature_aller'];
+              _signatureAller = contractData['signatureAller'];
               if (_signatureAller.isNotEmpty) {
                 _acceptedConditions = true; // Si une signature existe, les conditions ont été acceptées
               }
@@ -656,12 +656,31 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   Future<void> _captureSignature() async {
-    if (_signatureAller.isEmpty) {
-      print('Aucune signature disponible');
+    // Si une signature existe déjà, on la conserve
+    if (_signatureAller.isNotEmpty) {
+      print('Signature déjà capturée en base64');
       return;
     }
     
-    print('Signature déjà capturée en base64');
+    // Sinon, on affiche la popup de signature
+    print('Affichage de la popup de signature');
+    final signature = await PopupSignature.showSignatureDialog(
+      context,
+      title: 'Signature du contrat',
+      checkboxText: 'Je reconnais avoir pris connaissance des termes et conditions de location.',
+      nom: widget.nom,
+      prenom: widget.prenom,
+    );
+    
+    if (signature != null && signature.isNotEmpty) {
+      setState(() {
+        _signatureAller = signature;
+        _acceptedConditions = true;
+      });
+      print('Nouvelle signature capturée');
+    } else {
+      print('Aucune signature capturée');
+    }
   }
 
   Future<String> _compressAndUploadPhoto(
