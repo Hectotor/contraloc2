@@ -224,7 +224,9 @@ class _ClientPageState extends State<ClientPage> {
                 numeroPermis: _numeroPermisController.text,
                 immatriculationVehiculeClient: _immatriculationVehiculeClientController.text, // Immatriculation du véhicule du client
                 kilometrageVehiculeClient: _kilometrageVehiculeClientController.text,
-            ),
+                permisRecto: _permisRecto,
+                permisVerso: _permisVerso,
+              ),
             ),
           );
         }
