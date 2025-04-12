@@ -34,10 +34,10 @@ class SearchFiltre {
     if (data.containsKey('clientInfo') && data['clientInfo'] != null) {
       final client = data['clientInfo'] as Map<String, dynamic>?;
       if (client != null) {
-        clientInfo = '${client['nom'] ?? ''} ${client['prenom'] ?? ''}'.toLowerCase();
+        clientInfo = '${client['nom'] ?? ''} ${client['prenom'] ?? ''} ${client['entrepriseClient'] ?? ''}'.toLowerCase();
       }
     } else {
-      clientInfo = '${data['nom'] ?? ''} ${data['prenom'] ?? ''}'.toLowerCase();
+      clientInfo = '${data['nom'] ?? ''} ${data['prenom'] ?? ''} ${data['entrepriseClient'] ?? ''}'.toLowerCase();
     }
     
     if (clientInfo.contains(searchLower)) {

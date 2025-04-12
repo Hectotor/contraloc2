@@ -12,12 +12,12 @@ import 'MODIFICATION DE CONTRAT/supp_contrat.dart';
 import 'MODIFICATION DE CONTRAT/info_loc.dart';
 import 'MODIFICATION DE CONTRAT/info_loc_retour.dart';
 import 'MODIFICATION DE CONTRAT/retour_loc.dart';
-import 'MODIFICATION DE CONTRAT/retour_envoie_pdf.dart'; 
+import 'MODIFICATION DE CONTRAT/retour_envoie_pdf.dart';
 import 'MODIFICATION DE CONTRAT/info_client.dart';
 import 'MODIFICATION DE CONTRAT/etat_vehicule_retour.dart';
-import 'MODIFICATION DE CONTRAT/signature_retour.dart';
 import 'MODIFICATION DE CONTRAT/cloturer_location.dart';
 import 'MODIFICATION DE CONTRAT/facture.dart';
+import 'MODIFICATION DE CONTRAT/signature_retour.dart';
 import 'navigation.dart';
 import 'CREATION DE CONTRAT/client.dart';
 import 'package:uuid/uuid.dart';
@@ -74,6 +74,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
   @override
   void initState() {
     super.initState();
+    print('Status du contrat: ${widget.data['status']}'); // Ajouté pour le debug
     _dateFinEffectifController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR')
         .format(DateTime.now()); 
     _commentaireRetourController.text = widget.data['commentaireRetour'] ?? '';
@@ -445,8 +446,53 @@ class _ModifierScreenState extends State<ModifierScreen> {
     );
   }
 
+  // Fonction pour créer un bouton avec dégradé
+  Widget _buildGradientButton({
+    required Function()? onPressed,
+    required Widget child,
+    required List<Color> gradientColors,
+    double height = 50,
+    BorderRadius? borderRadius,
+  }) {
+    return Container(
+      width: double.infinity,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: borderRadius ?? BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: onPressed == null ? [Colors.grey.shade400, Colors.grey.shade600] : gradientColors,
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (onPressed == null ? Colors.grey : gradientColors.last).withOpacity(0.4),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: borderRadius ?? BorderRadius.circular(12),
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Debug pour vérifier le statut du contrat
+    print('Dans build - Status du contrat: ${widget.data['status']}');
+    print('Type du statut: ${widget.data['status'].runtimeType}');
+    print('Comparaison avec "restitue": ${widget.data['status'] == 'restitue'}');
+    
     return Scaffold(
       appBar: AppBar(
         title: Column(
@@ -537,7 +583,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                       },
                     ),
                     const SizedBox(height: 60),
-                    ElevatedButton(
+                    _buildGradientButton(
                       onPressed: _isUpdatingContrat
                           ? null
                           : () {
@@ -553,10 +599,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
                                 },
                               );
                             }, 
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black, 
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
                       child: _isUpdatingContrat
                           ? const CircularProgressIndicator(
                               color: Colors.white) 
@@ -571,21 +613,59 @@ class _ModifierScreenState extends State<ModifierScreen> {
                               ),
                             ],
                           ),
+                      gradientColors: [
+                        Colors.blue,
+                        Colors.blueAccent,
+                      ],
                     ),
+                    const SizedBox(height: 20),
                   ],
-                  const SizedBox(height: 20),
                   Padding(
                     padding: const EdgeInsets.only(
                         bottom: 30.0), 
                     child: Column(
                       children: [
-                        if (widget.data['status'] == 'reserve') ...[
-                          ElevatedButton(
+                        const SizedBox(height: 60),
+                        if (widget.data['status'] == 'restitue') ...[
+                          _buildGradientButton(
+                            onPressed: () async {
+                              // Afficher la page de la facture
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => FactureScreen(
+                                    data: {...widget.data, 'contratId': widget.contratId},
+                                    onFraisUpdated: (frais) {
+                                      // Mettre à jour les données locales avec les nouvelles valeurs
+                                      setState(() {
+                                        widget.data.addAll(frais);
+                                      });
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                            gradientColors: [Colors.teal.shade400, Colors.teal.shade700],
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.receipt_long, color: Colors.white),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Facturer la location",
+                                  style: TextStyle(color: Colors.white, fontSize: 18),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          _buildGradientButton(
                             onPressed: () => AffichageFacturePdf.genererEtAfficherFacturePdf(
                               context: context,
                               contratData: widget.data,
                               contratId: widget.contratId,
                             ),
+                            gradientColors: [Colors.blue.shade400, Colors.blue.shade700],
                             child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -597,9 +677,12 @@ class _ModifierScreenState extends State<ModifierScreen> {
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(height: 20),
-                          ElevatedButton(
+                          ),const SizedBox(height: 20),
+                        ],
+                        
+                        if (widget.data['status'] == 'réservé') ...[
+                        
+                          _buildGradientButton(
                             onPressed: () {
                               Navigator.push(
                                 context,
@@ -613,10 +696,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                                 ),
                               );
                             },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              minimumSize: const Size(double.infinity, 50),
-                            ),
+                            gradientColors: [Colors.green.shade400, Colors.green.shade700],
                             child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -631,67 +711,19 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           ),
                           const SizedBox(height: 20),
                         ],
-                        if (widget.data['status'] == 'restitue') ...[
-                          ElevatedButton(
-                            onPressed: () async {
-                              // Mettre à jour les données avec le kilométrage de retour actuel
-                              if (_kilometrageRetourController.text.isNotEmpty) {
-                                widget.data['kilometrageRetour'] = _kilometrageRetourController.text;
-                              }
-                              
-                              // Afficher la page de la facture
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => FactureScreen(
-                                    data: {...widget.data, 'contratId': widget.contratId},
-                                    onFraisUpdated: (frais) {
-                                      // Mettre à jour les données locales avec les nouvelles valeurs
-                                      setState(() {
-                                        widget.data.addAll(frais);
-                                      });
-                                    },
-
-                                  ),
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.teal, 
-                              minimumSize: const Size(double.infinity, 50),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.receipt_long, color: Colors.white),
-                                SizedBox(width: 10),
-                                Text(
-                                  "Facturer la location",
-                                  style: TextStyle(color: Colors.white, fontSize: 18),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                        ElevatedButton(
+                        
+                        _buildGradientButton(
                           onPressed: () => AffichageContratPdf.genererEtAfficherContratPdf(
                             context: context,
                             data: widget.data,
                             contratId: widget.contratId,
                             signatureRetourBase64: _signatureRetourBase64,
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
+                          gradientColors: [Colors.red.shade400, Colors.red.shade700],
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.visibility, color: Colors.white),
+                              Icon(Icons.picture_as_pdf, color: Colors.white),
                               SizedBox(width: 10),
                               Text(
                                 "Afficher le contrat",
@@ -700,7 +732,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                             ],
                           ),
                         ),
-                       // const SizedBox(height: 20),
+                       const SizedBox(height: 20),
                         //ElevatedButton(
                           //onPressed: () => AffichageContratPdf.viderCachePdf(context),
                           //style: ElevatedButton.styleFrom(
