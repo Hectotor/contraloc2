@@ -14,10 +14,10 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../widget/chargement.dart';
 import '../widget/popup_signature.dart';
 import '../widget/CREATION DE CONTRAT/date_container.dart';
-import '../widget/CREATION DE CONTRAT/kilometrage_container.dart';
-import '../widget/CREATION DE CONTRAT/type_location_container.dart';
-import '../widget/CREATION DE CONTRAT/essence_container.dart';
-import '../widget/CREATION DE CONTRAT/etat_commentaire_container.dart';
+import 'CREATION DE CONTRAT/Containers/kilometrage_container.dart';
+import 'CREATION DE CONTRAT/Containers/type_location_container.dart';
+import 'CREATION DE CONTRAT/Containers/essence_container.dart';
+import 'CREATION DE CONTRAT/Containers/etat_commentaire_container.dart';
 import '../services/access_condition.dart';
 import '../utils/contract_utils.dart';
 import '../widget/photo_upload_popup.dart';
@@ -651,9 +651,28 @@ class _LocationPageState extends State<LocationPage> {
       if (context.mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Contrat créé avec succès'),
+          SnackBar(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.email != null && widget.email!.isNotEmpty
+                    ? 'Contrat validé et envoyé au client'
+                    : 'Contrat validé et sauvegardé',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 4),
+                if (widget.email != null && widget.email!.isNotEmpty) Text('Client: ${widget.nom ?? ''} ${widget.prenom ?? ''}'),
+              ],
+            ),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
           ),
         );
       }

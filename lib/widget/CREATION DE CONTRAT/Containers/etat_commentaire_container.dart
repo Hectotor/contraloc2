@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
 import 'package:flutter/services.dart';
-import 'premium_dialog.dart';
+import '../premium_dialog.dart';
 
 class EtatCommentaireContainer extends StatefulWidget {
   final List<File> photos;

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:signature/signature.dart';
-import '../popup_signature.dart';
+import '../../popup_signature.dart';
 
 /// Widget pour afficher et capturer une signature
 class SignatureWidget extends StatefulWidget {

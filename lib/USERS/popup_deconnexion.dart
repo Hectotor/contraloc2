@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../SCREENS/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/collaborateur_util.dart';
-import '../utils/photo_upload_manager.dart'; // Import pour GlobalNotification
+import '../main.dart'; // Import pour accéder à navigatorKey
 
 class PopupDeconnexion {
   static Future<void> showLogoutConfirmationDialog(BuildContext context) async {
@@ -100,7 +100,7 @@ class PopupDeconnexion {
       await Future.delayed(const Duration(milliseconds: 500));
       
       // Utiliser le navigateur global pour la redirection
-      GlobalNotification.navigatorKey.currentState?.pushAndRemoveUntil(
+      navigatorKey.currentState?.pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginPage()),
         (route) => false, // Supprime toutes les routes précédentes
       );

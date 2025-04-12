@@ -6,8 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart'; // Import de l'utilitaire collaborateur
 import 'popup_vehicule_client.dart';
-import 'permis_info_container.dart'; // Import du nouveau composant
-import 'personal_info_container.dart'; // Import du nouveau composant
+import 'Containers/permis_info_container.dart'; // Import du nouveau composant
+import 'Containers/personal_info_container.dart'; // Import du nouveau composant
 
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override

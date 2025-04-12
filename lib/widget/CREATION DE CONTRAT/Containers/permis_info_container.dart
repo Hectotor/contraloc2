@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
-import 'image_picker_dialog.dart';
-import 'premium_dialog.dart';
+import '../image_picker_dialog.dart';
+import '../premium_dialog.dart';
 
 class PermisInfoContainer extends StatefulWidget {
   final TextEditingController numeroPermisController;
