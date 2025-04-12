@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
-import 'package:ContraLoc/services/access_admin.dart';
 import 'package:ContraLoc/utils/generation_contrat_pdf.dart';
 import 'package:ContraLoc/models/contrat_model.dart';
 import 'package:intl/intl.dart';
@@ -21,6 +20,7 @@ import 'CREATION DE CONTRAT/Containers/etat_commentaire_container.dart';
 import '../services/access_condition.dart';
 import '../utils/contract_utils.dart';
 import '../widget/photo_upload_popup.dart';
+import '../services/vehicle_data_service.dart';
 
 class LocationPage extends StatefulWidget {
   final String marque;
@@ -108,6 +108,8 @@ class _LocationPageState extends State<LocationPage> {
 
   Map<String, dynamic>? adminDataMap;
 
+  final VehicleDataService _vehicleDataService = VehicleDataService();
+
   @override
   void initState() {
     super.initState();
@@ -125,7 +127,6 @@ class _LocationPageState extends State<LocationPage> {
     
     // Initialiser les variables d'entreprise
     _loadAdminInfo();
-    _fetchVehicleData();
     
     // Charger les données du contrat si un ID est fourni
     if (widget.contratId != null && widget.contratId!.isNotEmpty) {
@@ -137,21 +138,26 @@ class _LocationPageState extends State<LocationPage> {
           });
         }
       });
+    } else {
+      _fetchVehicleData();
     }
   }
 
   Future<void> _loadAdminInfo() async {
-    try {
-      final adminInfo = await AccessAdmin.getAdminInfo();
-      setState(() {
-        nomEntreprise = adminInfo['nomEntreprise'];
-        logoUrl = adminInfo['logoUrl'];
-        adresseEntreprise = adminInfo['adresseEntreprise'];
-        telephoneEntreprise = adminInfo['telephoneEntreprise'];
-        siretEntreprise = adminInfo['siretEntreprise'];
-      });
-    } catch (e) {
-      print('❌ Erreur lors du chargement des informations admin: $e');
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final userData = userDoc.data();
+      
+      if (userData != null) {
+        setState(() {
+          nomEntreprise = userData['nomEntreprise'] ?? '';
+          logoUrl = userData['logoUrl'] ?? '';
+          adresseEntreprise = userData['adresseEntreprise'] ?? '';
+          telephoneEntreprise = userData['telephoneEntreprise'] ?? '';
+          siretEntreprise = userData['siretEntreprise'] ?? '';
+        });
+      }
     }
   }
 
@@ -197,53 +203,6 @@ class _LocationPageState extends State<LocationPage> {
     _entrepriseClientController.text = model.entrepriseClient ?? '';
     _selectedPaymentMethod = model.methodePaiement ?? 'Espèces';
     _conditionsController.text = model.conditions ?? '';
-  }
-
-  Future<void> _fetchVehicleData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      String adminId = user.uid; 
-      
-      final userDoc = await _firestore.collection('users').doc(user.uid).get();
-      final userData = userDoc.data();
-      
-      if (userData != null && userData['role'] == 'collaborateur' && userData['adminId'] != null) {
-        adminId = userData['adminId'];
-        print('Utilisateur collaborateur détecté, utilisation de l\'adminId: $adminId');
-      }
-      
-      final vehiculeDoc = await _firestore
-          .collection('users')
-          .doc(adminId)
-          .collection('vehicules')
-          .where('immatriculation', isEqualTo: widget.immatriculation)
-          .get();
-
-      if (vehiculeDoc.docs.isNotEmpty) {
-        final vehicleData = vehiculeDoc.docs.first.data();
-        setState(() {
-          // Récupérer l'URL de la photo du véhicule
-          _vehiclePhotoUrl = vehicleData['photoVehiculeUrl'];
-          _prixLocationController.text = vehicleData['prixLocation'] ?? '';
-          _nettoyageIntController.text = vehicleData['nettoyageInt'] ?? '';
-          _nettoyageExtController.text = vehicleData['nettoyageExt'] ?? '';
-          _carburantManquantController.text = vehicleData['carburantManquant'] ?? '';
-          _kilometrageSuppController.text = vehicleData['kilometrageSupp'] ?? '';
-          _vinController.text = vehicleData['vin'] ?? '';
-          _assuranceNomController.text = vehicleData['assuranceNom'] ?? '';
-          _assuranceNumeroController.text = vehicleData['assuranceNumero'] ?? '';
-          _franchiseController.text = vehicleData['franchise'] ?? '';
-          _rayuresController.text = vehicleData['rayures'] ?? '';
-          _typeCarburantController.text = vehicleData['typeCarburant'] ?? '';
-          _boiteVitessesController.text = vehicleData['boiteVitesses'] ?? '';
-          _cautionController.text = vehicleData['caution'] ?? '';
-          _carburantManquantController.text = vehicleData['carburantManquant'] ?? '';
-          _kilometrageSuppController.text = vehicleData['kilometrageSupp'] ?? '';
-        });
-      } else {
-        print('Aucun véhicule trouvé avec l\'immatriculation: ${widget.immatriculation}');
-      }
-    }
   }
 
   Future<ContratModel?> _loadContractData(String contratId) async {
@@ -319,6 +278,42 @@ class _LocationPageState extends State<LocationPage> {
     } catch (e) {
       print('Erreur lors du chargement des données du contrat: $e');
       return null;
+    }
+  }
+
+  Future<void> _fetchVehicleData() async {
+    try {
+      final Map<String, TextEditingController> controllers = {
+        'prixLocation': _prixLocationController,
+        'nettoyageInt': _nettoyageIntController,
+        'nettoyageExt': _nettoyageExtController,
+        'carburantManquant': _carburantManquantController,
+        'kilometrageSupp': _kilometrageSuppController,
+        'vin': _vinController,
+        'assuranceNom': _assuranceNomController,
+        'assuranceNumero': _assuranceNumeroController,
+        'franchise': _franchiseController,
+        'rayures': _rayuresController,
+        'typeCarburant': _typeCarburantController,
+        'boiteVitesses': _boiteVitessesController,
+        'caution': _cautionController,
+      };
+
+      final Map<String, dynamic> contractData = {
+        'photoVehiculeUrl': _vehiclePhotoUrl,
+      };
+
+      await _vehicleDataService.fillVehicleDataInContract(
+        contractData,
+        widget.immatriculation,
+        controllers,
+      );
+
+      setState(() {
+        _vehiclePhotoUrl = contractData['photoVehiculeUrl'];
+      });
+    } catch (e) {
+      print('Erreur lors du chargement des données du véhicule: $e');
     }
   }
 
