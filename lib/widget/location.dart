@@ -20,6 +20,7 @@ import '../widget/CREATION DE CONTRAT/essence_container.dart';
 import '../widget/CREATION DE CONTRAT/etat_commentaire_container.dart';
 import '../services/access_condition.dart';
 import '../utils/contract_utils.dart';
+import '../widget/photo_upload_popup.dart';
 
 class LocationPage extends StatefulWidget {
   final String marque;
@@ -120,7 +121,6 @@ class _LocationPageState extends State<LocationPage> {
     
     _dateDebutController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
     _typeLocationController.text = "Gratuite";
-    _conditionsController.text = "Conditions générales de location";
     _entrepriseClientController.text = widget.entrepriseClient ?? '';
     
     // Initialiser les variables d'entreprise
@@ -335,12 +335,12 @@ class _LocationPageState extends State<LocationPage> {
     // Récupérer les conditions du contrat depuis Firestore
     final conditions = await AccessCondition.getContractConditions();
     final conditionsText = conditions?['texte'] ?? 'Conditions générales de location';
-
+    
     if ((widget.nom != null &&
-          widget.nom!.isNotEmpty &&
-          widget.prenom != null &&
-          widget.prenom!.isNotEmpty) &&
-          !_acceptedConditions) {
+        widget.nom!.isNotEmpty &&
+        widget.prenom != null &&
+        widget.prenom!.isNotEmpty) &&
+        !_acceptedConditions) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Vous devez accepter les conditions de location")),
@@ -375,55 +375,115 @@ class _LocationPageState extends State<LocationPage> {
           .collection('locations')
           .doc()
           .id;
-
+      
+      // Préparer les photos à uploader
+      List<File> photosToUpload = [];
+      if (widget.permisRecto != null) {
+        photosToUpload.add(widget.permisRecto as File);
+      }
+      if (widget.permisVerso != null) {
+        photosToUpload.add(widget.permisVerso as File);
+      }
+      photosToUpload.addAll(_photos);
+      
+      // Afficher le popup de téléchargement des photos si des photos sont à uploader
+      if (photosToUpload.isNotEmpty) {
+        // Afficher le popup de téléchargement des photos
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => PhotoUploadPopup(
+            photos: photosToUpload,
+            contratId: contratId,
+            onUploadComplete: (List<String> urls) async {
+              // Continuer le processus de sauvegarde après l'upload des photos
+              await _finalizeContractSave(contratId, urls, userId, targetId, collaborateurStatus, conditionsText);
+            },
+          ),
+        );
+      } else {
+        // Pas de photos à uploader, continuer directement
+        await _finalizeContractSave(contratId, [], userId, targetId, collaborateurStatus, conditionsText);
+      }
+    } catch (e) {
+      print('Erreur lors de la validation du contrat: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e')),
+      );
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+  
+  // Méthode pour finaliser la sauvegarde du contrat après l'upload des photos
+  Future<void> _finalizeContractSave(String contratId, List<String> photoUrls, String userId, String targetId, Map<String, dynamic> collaborateurStatus, String conditionsText) async {
+    try {
       // Upload des photos
       String? permisRectoUrl;
       String? permisVersoUrl;
       List<String> vehiculeUrls = [];
 
-      print('=== DEBUG PERMIS PHOTOS ===');
-      print('permisRecto existe: ${widget.permisRecto != null}');
-      print('permisVerso existe: ${widget.permisVerso != null}');
-      if (widget.permisRecto != null) {
-        print('Uploading permisRecto...');
-        permisRectoUrl = await _compressAndUploadPhoto(
-          widget.permisRecto as File,
-          'permis/recto',
-          contratId
-        );
-        print('permisRectoUrl après upload: $permisRectoUrl');
-      }
-
-      if (widget.permisVerso != null) {
-        print('Uploading permisVerso...');
-        permisVersoUrl = await _compressAndUploadPhoto(
-          widget.permisVerso as File,
-          'permis/verso',
-          contratId
-        );
-        print('permisVersoUrl après upload: $permisVersoUrl');
-      }
-      print('=== FIN DEBUG PERMIS PHOTOS ===');
-
-      // Afficher les photos existantes pour débogage
-      if (_photos.isNotEmpty) {
-        print('Photos existantes avant upload: ${_photos.length}');
+      // Si des URLs de photos ont été retournées par le popup, les utiliser
+      if (photoUrls.isNotEmpty) {
+        // Attribuer les URLs aux bonnes variables
+        int index = 0;
+        if (widget.permisRecto != null) {
+          permisRectoUrl = photoUrls[index++];
+        }
+        if (widget.permisVerso != null) {
+          permisVersoUrl = photoUrls[index++];
+        }
+        // Le reste des URLs sont pour les photos du véhicule
+        if (index < photoUrls.length) {
+          vehiculeUrls = photoUrls.sublist(index);
+        }
       } else {
-        print('Aucune photo à uploader');
-      }
+        // Fallback au cas où le popup n'a pas été utilisé
+        print('=== DEBUG PERMIS PHOTOS ===');
+        print('permisRecto existe: ${widget.permisRecto != null}');
+        print('permisVerso existe: ${widget.permisVerso != null}');
+        if (widget.permisRecto != null) {
+          print('Uploading permisRecto...');
+          permisRectoUrl = await _compressAndUploadPhoto(
+            widget.permisRecto as File,
+            'permis/recto',
+            contratId
+          );
+          print('permisRectoUrl après upload: $permisRectoUrl');
+        }
 
-      // Upload des autres photos
-      for (var photo in _photos) {
-        String url = await _compressAndUploadPhoto(photo, 'photos', contratId);
-        vehiculeUrls.add(url);
-      }
+        if (widget.permisVerso != null) {
+          print('Uploading permisVerso...');
+          permisVersoUrl = await _compressAndUploadPhoto(
+            widget.permisVerso as File,
+            'permis/verso',
+            contratId
+          );
+          print('permisVersoUrl après upload: $permisVersoUrl');
+        }
+        print('=== FIN DEBUG PERMIS PHOTOS ===');
 
-      print('=== DEBUG PHOTOS VEHICULE ===');
-      print('Photos du véhicule téléchargées: ${vehiculeUrls.length}');
-      if (vehiculeUrls.isNotEmpty) {
-        print('Première URL de photo: ${vehiculeUrls.first}');
+        // Afficher les photos existantes pour débogage
+        if (_photos.isNotEmpty) {
+          print('Photos existantes avant upload: ${_photos.length}');
+        } else {
+          print('Aucune photo à uploader');
+        }
+
+        // Upload des autres photos
+        for (var photo in _photos) {
+          String url = await _compressAndUploadPhoto(photo, 'photos', contratId);
+          vehiculeUrls.add(url);
+        }
+
+        print('=== DEBUG PHOTOS VEHICULE ===');
+        print('Photos du véhicule téléchargées: ${vehiculeUrls.length}');
+        if (vehiculeUrls.isNotEmpty) {
+          print('Première URL de photo: ${vehiculeUrls.first}');
+        }
+        print('=== FIN DEBUG PHOTOS VEHICULE ===');
       }
-      print('=== FIN DEBUG PHOTOS VEHICULE ===');
 
       // Récupérer les informations de l'entreprise
       print('Récupération des informations de l\'entreprise...');
@@ -503,15 +563,15 @@ class _LocationPageState extends State<LocationPage> {
       print('Contenu de photosUrls: ${contratModel.photosUrls}');
       
       // Sauvegarder le contrat dans Firestore
-      print('📝 Sauvegarde du contrat dans la collection de ${collaborateurStatus['isCollaborateur'] ? 'l\'administrateur' : 'l\'utilisateur'}');
-      print('📝 Path: users/$targetId/locations/$contratId');
+      print(' Sauvegarde du contrat dans la collection de ${collaborateurStatus['isCollaborateur'] ? 'l\'administrateur' : 'l\'utilisateur'}');
+      print(' Path: users/$targetId/locations/$contratId');
       
       // Convertir le modèle en Map pour Firestore
       Map<String, dynamic> contratData = contratModel.toFirestore();
       
       // Vérifier si les photos sont présentes dans le modèle mais pas dans les données Firestore
       if (contratModel.photosUrls != null && contratModel.photosUrls!.isNotEmpty && contratData['photos'] == null) {
-        print('⚠️ Photos présentes dans le modèle mais pas dans les données Firestore, correction...');
+        print(' Photos présentes dans le modèle mais pas dans les données Firestore, correction...');
         contratData['photos'] = contratModel.photosUrls;
       }
       
