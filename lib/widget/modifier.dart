@@ -469,22 +469,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
             onPressed: () => SuppContrat.showDeleteConfirmationDialog(
                 context, widget.contratId),
           ),
-          IconButton(
-            icon: const Icon(Icons.photo_library),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => PhotoUploadPopup(
-                  photos: _photosRetour, // Utilise les photos existantes
-                  contratId: widget.contratId,
-                  onUploadComplete: (urls) {
-                    // On ne fait rien ici car c'est juste pour visualiser
-                  },
-                ),
-              );
-            },
-            tooltip: 'Visualiser les photos',
-          ),
         ],
         backgroundColor: const Color(0xFF08004D),
         elevation: 0,

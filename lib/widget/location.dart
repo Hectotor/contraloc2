@@ -323,8 +323,6 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   Future<void> _validerContrat() async {
-    await _captureSignature();
-
     if (_typeLocationController.text == "Payante" && _prixLocationController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
