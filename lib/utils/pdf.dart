@@ -11,6 +11,7 @@ import '../models/contrat_model.dart';
 import 'pdf_signa_cachet.dart';
 import 'pdf_voiture.dart';
 import 'pdf_info_contact.dart';
+import '../USERS/contrat_condition.dart';
 
 Future<pw.MemoryImage?> _loadImageFromFirebaseStorage(String logoUrl) async {
   // Vérifier si l'URL est valide
@@ -432,15 +433,15 @@ Future<String> generatePdf(
                 textAlign: pw.TextAlign.center,
               ),
             ),
-            // Conditions générales
-            ...contratModel.conditions?.split('\n').map((paragraph) {
+            // Utiliser les conditions de base si contratModel.conditions est vide
+            ...(contratModel.conditions ?? ContratModifier.defaultContract).split('\n').map((paragraph) {
               if (paragraph.trim().isEmpty) return pw.SizedBox(height: 10);
               return pw.Padding(
                 padding: const pw.EdgeInsets.only(bottom: 5),
                 child: pw.Text(paragraph.trim(),
                     style: pw.TextStyle(fontSize: 7, font: ttf)),
               );
-            }).toList() ?? [],
+            }),
             pw.SizedBox(height: 20), // Augmenté de 40 à 80
             SignaCachetWidget.build(
               logoImage: logoImage,
