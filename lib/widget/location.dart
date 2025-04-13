@@ -911,8 +911,8 @@ class _LocationPageState extends State<LocationPage> {
     _accompteController.dispose();
     _nettoyageIntController.dispose();
     _nettoyageExtController.dispose();
-    _locationCasqueController.dispose();
     _carburantManquantController.dispose();
+    _locationCasqueController.dispose();
     _kilometrageAutoriseController.dispose();
     _kilometrageSuppController.dispose();
     _vinController.dispose();
@@ -926,7 +926,7 @@ class _LocationPageState extends State<LocationPage> {
     _cautionController.dispose();
     _entrepriseClientController.dispose();
     _conditionsController.dispose();
-    _locationCasqueController.dispose();
+
     super.dispose();
   }
 
