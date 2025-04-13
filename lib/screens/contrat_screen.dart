@@ -53,43 +53,63 @@ class _ContratScreenState extends State<ContratScreen>
         toolbarHeight: kToolbarHeight,
         title: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorSize: TabBarIndicatorSize.label,
           isScrollable: true,
           tabs: [
-            const Tab(
-              child: Text(
-                'En cours',
-                style: TextStyle(fontWeight: FontWeight.bold),
+            Tab(
+              child: Container(
+                alignment: Alignment.center,
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'En cours',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                ),
               ),
             ),
-            const Tab(
-              child: Text(
-                'Restitués',
-                style: TextStyle(fontWeight: FontWeight.bold),
+            Tab(
+              child: Container(
+                alignment: Alignment.center,
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Restitués',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                ),
               ),
             ),
-            const Tab(
-              child: Text(
-                'Calendrier',
-                style: TextStyle(fontWeight: FontWeight.bold),
+            Tab(
+              child: Container(
+                alignment: Alignment.center,
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Calendrier',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                ),
               ),
             ),
-            const Tab(
-              child: Text(
-                'Supprimés',
-                style: TextStyle(fontWeight: FontWeight.bold),
+            Tab(
+              child: Container(
+                alignment: Alignment.center,
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Supprimés',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                ),
               ),
             ),
-            const Tab(
-              child: Text(
-                'Résumé',
-                style: TextStyle(fontWeight: FontWeight.bold),
+            Tab(
+              child: Container(
+                alignment: Alignment.center,
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Résumé',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                ),
               ),
             ),
           ],
+          indicatorSize: TabBarIndicatorSize.tab,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
         ),
       ),
       body: Column(

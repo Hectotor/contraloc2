@@ -7,6 +7,8 @@ import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class QuestionUser extends StatefulWidget {
   const QuestionUser({Key? key}) : super(key: key);
@@ -22,6 +24,7 @@ class _QuestionUserState extends State<QuestionUser> with SingleTickerProviderSt
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   bool _isFormVisible = false;
+  bool _isClearingCache = false;
 
   @override
   void initState() {
@@ -312,6 +315,69 @@ class _QuestionUserState extends State<QuestionUser> with SingleTickerProviderSt
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
         ),
       );
+    }
+  }
+
+  Future<void> _clearCache() async {
+    try {
+      setState(() {
+        _isClearingCache = true;
+      });
+
+      // 1. Vider le cache Firestore
+      await FirebaseFirestore.instance.terminate();
+      
+      // 2. Supprimer les fichiers temporaires
+      final tempDir = await getTemporaryDirectory();
+      final tempFiles = tempDir.listSync();
+      for (var file in tempFiles) {
+        if (file is File) {
+          await file.delete();
+        }
+      }
+      
+      // 3. Supprimer les fichiers de l'application
+      final appDir = await getApplicationDocumentsDirectory();
+      final appFiles = appDir.listSync();
+      for (var file in appFiles) {
+        if (file is File) {
+          // Ne supprimez pas les fichiers essentiels
+          if (!file.path.endsWith('.dart') && !file.path.endsWith('.json')) {
+            await file.delete();
+          }
+        }
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            "✅ Le cache a été vidé avec succès.\n"
+            "- Cache Firestore\n"
+            "- Fichiers temporaires\n"
+            "- Fichiers de l'application"
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+          duration: const Duration(seconds: 10),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("❌ Erreur lors du vidage du cache: ${e.toString()}"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } finally {
+      setState(() {
+        _isClearingCache = false;
+      });
     }
   }
 
@@ -684,6 +750,28 @@ class _QuestionUserState extends State<QuestionUser> with SingleTickerProviderSt
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 16),
+        TextButton(
+          onPressed: _isClearingCache ? null : _clearCache,
+          style: TextButton.styleFrom(
+            foregroundColor: _isClearingCache ? Colors.grey : const Color(0x800F056B),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: _isClearingCache
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : const Text(
+                  "Vider le cache",
+                  style: TextStyle(fontSize: 14),
+                ),
         ),
       ],
     );

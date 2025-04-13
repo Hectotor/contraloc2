@@ -43,6 +43,8 @@ dependencies:
   fl_chart: ^0.70.2
   lottie: ^3.1.0
   intl_translation: ^0.20.1
+  flutter_cache_manager: ^3.4.1
+  sqflite: ^2.3.0
   
 dev_dependencies:
   flutter_test:

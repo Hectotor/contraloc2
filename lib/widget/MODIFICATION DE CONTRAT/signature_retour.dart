@@ -148,12 +148,16 @@ class _SignatureRetourWidgetState extends State<SignatureRetourWidget> {
                         size: 20,
                       ),
                       SizedBox(width: 12),
-                      Text(
-                        'Client: ${widget.prenom ?? ''} ${widget.nom ?? ''}',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.green[700],
+                      Expanded(
+                        child: Text(
+                          'Client: ${widget.prenom ?? ''} ${widget.nom ?? ''}',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.green[700],
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

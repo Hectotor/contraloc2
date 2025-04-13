@@ -460,44 +460,68 @@ Future<String> generatePdf(
             pw.SizedBox(height: 10),
           ],
         ),
-
-        // Page 3: Photos et documents
-        // Page 4: Permis de conduire et photos du véhicule
-        if (photosAllerBytes.isNotEmpty || photosRetourBytes.isNotEmpty)
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              if (photosAllerBytes.isNotEmpty) ...[
-                pw.SizedBox(height: 20),
-                pw.Text('Photos du véhicule à l\'aller',
-                    style: pw.TextStyle(fontSize: 18, font: boldFont)),
-                pw.Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: photosAllerBytes.map((photoBytes) {
-                    return pw.Image(pw.MemoryImage(photoBytes),
-                        width: 200, height: 200);
-                  }).toList(),
-                ),
-              ],
-              if (photosRetourBytes.isNotEmpty) ...[
-                pw.SizedBox(height: 20),
-                pw.Text('Photos du véhicule au retour',
-                    style: pw.TextStyle(fontSize: 18, font: boldFont)),
-                pw.Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: photosRetourBytes.map((photoBytes) {
-                    return pw.Image(pw.MemoryImage(photoBytes),
-                        width: 200, height: 200);
-                  }).toList(),
-                ),
-              ],
-            ],
-          ),
       ],
     ),
   );
+
+  // Page 3: Photos et documents
+  // Page 4: Permis de conduire et photos du véhicule
+  if (photosAllerBytes.isNotEmpty || photosRetourBytes.isNotEmpty) {
+    // Créer une page pour chaque groupe de photos
+    final photosPerPage = 4; // Maximum 4 photos par page
+    
+    // Photos à l'aller
+    if (photosAllerBytes.isNotEmpty) {
+      for (var i = 0; i < photosAllerBytes.length; i += photosPerPage) {
+        final pagePhotos = photosAllerBytes.skip(i).take(photosPerPage).toList();
+        pdf.addPage(pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context context) {
+            return [
+              pw.SizedBox(height: 20),
+              pw.Text('Photos du véhicule à l\'aller',
+                  style: pw.TextStyle(fontSize: 18, font: boldFont)),
+              pw.Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: pagePhotos.map((photoBytes) {
+                  return pw.Image(pw.MemoryImage(photoBytes),
+                      width: 150, // Réduit la taille pour plus de photos par page
+                      height: 150);
+                }).toList(),
+              ),
+            ];
+          },
+        ));
+      }
+    }
+
+    // Photos au retour
+    if (photosRetourBytes.isNotEmpty) {
+      for (var i = 0; i < photosRetourBytes.length; i += photosPerPage) {
+        final pagePhotos = photosRetourBytes.skip(i).take(photosPerPage).toList();
+        pdf.addPage(pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context context) {
+            return [
+              pw.SizedBox(height: 20),
+              pw.Text('Photos du véhicule au retour',
+                  style: pw.TextStyle(fontSize: 18, font: boldFont)),
+              pw.Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: pagePhotos.map((photoBytes) {
+                  return pw.Image(pw.MemoryImage(photoBytes),
+                      width: 150, // Réduit la taille pour plus de photos par page
+                      height: 150);
+                }).toList(),
+              ),
+            ];
+          },
+        ));
+      }
+    }
+  }
 
   // Sauvegarder le PDF
   final directory = await getTemporaryDirectory();
