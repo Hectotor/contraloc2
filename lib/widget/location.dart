@@ -207,73 +207,70 @@ class _LocationPageState extends State<LocationPage> {
   Future<ContratModel?> _loadContractData(String contratId) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        String adminId = user.uid; 
-      
-        // Vérifier si l'utilisateur est un collaborateur
-        final userDoc = await _firestore.collection('users').doc(user.uid).get();
-        final userData = userDoc.data();
-      
-        if (userData != null && userData['role'] == 'collaborateur' && userData['adminId'] != null) {
-          adminId = userData['adminId'];
-        }
-      
-        // Récupérer les données du contrat
-        final contratDoc = await _firestore
-            .collection('users')
-            .doc(adminId)
-            .collection('locations')
-            .doc(contratId)
-            .get();
-      
-        if (contratDoc.exists && contratDoc.data() != null) {
-          // Créer un modèle de contrat à partir des données Firestore
-          final contractData = contratDoc.data()!;
-          final contratModel = ContratModel.fromFirestore(contractData, id: contratId);
-          
-          // Mettre à jour les contrôleurs avec les données du modèle
-          setState(() {
-            _updateControllersFromModel(contratModel);
-          });
+      if (user == null) {
+        print('❌ Aucun utilisateur connecté');
+        return null;
+      }
 
-          // Charger la signature si elle existe
-          if (contractData['signatureAller'] != null) {
-            setState(() {
-              _signatureAller = contractData['signatureAller'];
-              if (_signatureAller.isNotEmpty) {
-                _acceptedConditions = true; // Si une signature existe, les conditions ont été acceptées
+      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
+      final String adminId = collaborateurStatus['isCollaborateur'] 
+          ? collaborateurStatus['adminId'] ?? user.uid 
+          : user.uid;
+
+      // Récupérer les données du contrat
+      final contratDoc = await _firestore
+          .collection('users')
+          .doc(adminId)
+          .collection('locations')
+          .doc(contratId)
+          .get();
+
+      if (contratDoc.exists && contratDoc.data() != null) {
+        // Créer un modèle de contrat à partir des données Firestore
+        final contractData = contratDoc.data()!;
+        final contratModel = ContratModel.fromFirestore(contractData, id: contratId);
+
+        // Mettre à jour les contrôleurs avec les données du modèle
+        setState(() {
+          _updateControllersFromModel(contratModel);
+        });
+
+        // Charger la signature si elle existe
+        if (contractData['signatureAller'] != null) {
+          setState(() {
+            _signatureAller = contractData['signatureAller'];
+            if (_signatureAller.isNotEmpty) {
+              _acceptedConditions = true; // Si une signature existe, les conditions ont été acceptées
+            }
+          });
+        }
+
+        // Charger les photos si elles existent
+        if (contractData['photos'] != null && contractData['photos'] is List) {
+          List<dynamic> photoUrls = contractData['photos'];
+          print('Photos trouvées: ${photoUrls.length}');
+
+          // Télécharger les photos depuis les URLs et les ajouter à la liste _photos
+          for (String photoUrl in photoUrls) {
+            try {
+              print('Téléchargement de la photo: $photoUrl');
+              final photoFile = await _downloadImageFromUrl(photoUrl);
+              if (photoFile != null) {
+                setState(() {
+                  _photos.add(photoFile);
+                });
               }
-            });
-          }
-      
-          // Charger les photos si elles existent
-          if (contractData['photos'] != null && contractData['photos'] is List) {
-            List<dynamic> photoUrls = contractData['photos'];
-            print('Photos trouvées: ${photoUrls.length}');
-            
-            // Télécharger les photos depuis les URLs et les ajouter à la liste _photos
-            for (String photoUrl in photoUrls) {
-              try {
-                print('Téléchargement de la photo: $photoUrl');
-                final photoFile = await _downloadImageFromUrl(photoUrl);
-                if (photoFile != null) {
-                  setState(() {
-                    _photos.add(photoFile);
-                  });
-                }
-              } catch (e) {
-                print('Erreur lors du traitement de la photo: $e');
-              }
+            } catch (e) {
+              print('Erreur lors du traitement de la photo: $e');
             }
           }
-      
-          return contratModel;
-        } else {
-          print('Aucun contrat trouvé avec l\'ID: $contratId');
-          return null;
         }
+
+        return contratModel;
+      } else {
+        print('Aucun contrat trouvé avec l\'ID: $contratId');
+        return null;
       }
-      return null;
     } catch (e) {
       print('Erreur lors du chargement des données du contrat: $e');
       return null;
@@ -308,7 +305,7 @@ class _LocationPageState extends State<LocationPage> {
       }
 
       final vehicleData = vehicleDoc.docs.first.data();
-      
+
       // Mettre à jour les contrôleurs avec les données du véhicule
       final Map<String, TextEditingController> controllers = {
         'prixLocation': _prixLocationController,
@@ -356,7 +353,7 @@ class _LocationPageState extends State<LocationPage> {
     // Récupérer les conditions du contrat depuis Firestore
     final conditions = await AccessCondition.getContractConditions();
     final conditionsText = conditions?['texte'] ?? 'Conditions générales de location';
-    
+
     if ((widget.nom != null &&
         widget.nom!.isNotEmpty &&
         widget.prenom != null &&
@@ -396,7 +393,7 @@ class _LocationPageState extends State<LocationPage> {
           .collection('locations')
           .doc()
           .id;
-      
+
       // Préparer les photos à uploader
       List<File> photosToUpload = [];
       if (widget.permisRecto != null) {
@@ -406,7 +403,7 @@ class _LocationPageState extends State<LocationPage> {
         photosToUpload.add(widget.permisVerso as File);
       }
       photosToUpload.addAll(_photos);
-      
+
       // Afficher le popup de téléchargement des photos si des photos sont à uploader
       if (photosToUpload.isNotEmpty) {
         // Afficher le popup de téléchargement des photos
@@ -436,7 +433,7 @@ class _LocationPageState extends State<LocationPage> {
       });
     }
   }
-  
+
   // Méthode pour finaliser la sauvegarde du contrat après l'upload des photos
   Future<void> _finalizeContractSave(String contratId, List<String> photoUrls, String userId, String targetId, Map<String, dynamic> collaborateurStatus, String conditionsText) async {
     try {
@@ -508,17 +505,17 @@ class _LocationPageState extends State<LocationPage> {
 
       // Récupérer les informations de l'entreprise
       print('Récupération des informations de l\'entreprise...');
-      
+
       // Récupérer les données de l'entreprise depuis Firestore
       final adminData = await AccessAdmin.getAdminInfo();
-      
+
       // Utiliser les données de l'entreprise
       final nomEntreprise = adminData['nomEntreprise'] ?? '';
       final logoUrl = adminData['logoUrl'] ?? '';
       final adresseEntreprise = adminData['adresseEntreprise'] ?? '';
       final telephoneEntreprise = adminData['telephoneEntreprise'] ?? '';
       final siretEntreprise = adminData['siretEntreprise'] ?? '';
-      
+
       print('Informations entreprise récupérées:');
       print('Nom: $nomEntreprise');
       print('Logo: $logoUrl');
@@ -585,20 +582,20 @@ class _LocationPageState extends State<LocationPage> {
       print('permisVersoUrl dans ContratModel: ${contratModel.permisVersoUrl}');
       print('photosUrls dans ContratModel: ${contratModel.photosUrls?.length ?? 0} photos');
       print('Contenu de photosUrls: ${contratModel.photosUrls}');
-      
+
       // Sauvegarder le contrat dans Firestore
       print(' Sauvegarde du contrat dans la collection de ${collaborateurStatus['isCollaborateur'] ? 'l\'administrateur' : 'l\'utilisateur'}');
       print(' Path: users/$targetId/locations/$contratId');
-      
+
       // Convertir le modèle en Map pour Firestore
       Map<String, dynamic> contratData = contratModel.toFirestore();
-      
+
       // Vérifier si les photos sont présentes dans le modèle mais pas dans les données Firestore
       if (contratModel.photosUrls != null && contratModel.photosUrls!.isNotEmpty && contratData['photos'] == null) {
         print(' Photos présentes dans le modèle mais pas dans les données Firestore, correction...');
         contratData['photos'] = contratModel.photosUrls;
       }
-      
+
       print('=== Début de la sauvegarde du contrat ===');
       print('User ID: ${contratModel.userId}');
       print('Admin ID: ${contratModel.adminId}');
@@ -608,7 +605,7 @@ class _LocationPageState extends State<LocationPage> {
       print(contratData);
       print('=== Structure de sauvegarde ===');
       print('Collection: users/$targetId/locations/$contratId');
-      
+
       await _firestore
           .collection('users')
           .doc(targetId)
@@ -619,7 +616,7 @@ class _LocationPageState extends State<LocationPage> {
       print('=== Fin des logs ===');
       print('=== Sauvegarde réussie ===');
       print('Sauvegardé dans: users/$targetId/locations/$contratId');
-      
+
       // Générer et envoyer le PDF
       await GenerationContratPdf.genererEtEnvoyerPdf(
         context: context,
@@ -730,7 +727,7 @@ class _LocationPageState extends State<LocationPage> {
       try {
         final now = DateTime.now();
         final parsedDate = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(_dateDebutController.text);
-        
+
         final dateWithCurrentYear = DateTime(
           now.year,
           parsedDate.month,
@@ -738,13 +735,13 @@ class _LocationPageState extends State<LocationPage> {
           parsedDate.hour,
           parsedDate.minute,
         );
-        
+
         final dateToCompare = dateWithCurrentYear.isBefore(now) && 
                              parsedDate.month < now.month ? 
                              DateTime(now.year + 1, parsedDate.month, parsedDate.day, 
                                      parsedDate.hour, parsedDate.minute) : 
                              dateWithCurrentYear;
-        
+
         if (dateToCompare.isAfter(now) && 
             !(dateToCompare.year == now.year && 
               dateToCompare.month == now.month && 
@@ -769,7 +766,7 @@ class _LocationPageState extends State<LocationPage> {
       prenom: widget.prenom,
       existingSignature: _signatureAller.isNotEmpty ? _signatureAller : null,
     );
-    
+
     if (signature != null && signature.isNotEmpty) {
       setState(() {
         _signatureAller = signature;
@@ -786,7 +783,7 @@ class _LocationPageState extends State<LocationPage> {
   try {
     print(" Début de compression de l'image: ${photo.absolute.path}");
     print(" Taille de l'image avant compression: ${await photo.length()} octets");
-    
+
     final compressedImage = await FlutterImageCompress.compressWithFile(
       photo.absolute.path,
       minWidth: 800,
@@ -796,29 +793,29 @@ class _LocationPageState extends State<LocationPage> {
 
     if (compressedImage != null) {
       print(" Compression réussie, taille après compression: ${compressedImage.length} octets");
-      
+
       final status = await CollaborateurUtil.checkCollaborateurStatus();
       final userId = status['userId'];
-      
+
       if (userId == null) {
         print(" Erreur: Utilisateur non connecté");
         throw Exception("Utilisateur non connecté");
       }
-      
+
       final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
-      
+
       if (targetId == null) {
         print(" Erreur: ID cible non disponible");
         throw Exception("ID cible non disponible");
       }
-      
+
       print(" Téléchargement d'image par ${status['isCollaborateur'] ? 'collaborateur' : 'admin'}");
       print(" userId: $userId, targetId (adminId): $targetId");
 
       // Simplifier le nom de fichier pour éviter les problèmes de chemin
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       String fileName = folder.replaceAll('/', '_') + "_$timestamp.jpg";
-      
+
       final String storagePath = 'users/${targetId}/locations/$contratId/$folder/$fileName';
       print(" Chemin de stockage: $storagePath");
 
@@ -831,7 +828,7 @@ class _LocationPageState extends State<LocationPage> {
       } else {
         print(" Dossier temporaire de l'application existant: ${appTempDir.path}");
       }
-      
+
       final tempFile = File('${appTempDir.path}/$fileName');
       print(" Chemin du fichier temporaire: ${tempFile.path}");
       await tempFile.writeAsBytes(compressedImage);
@@ -843,11 +840,11 @@ class _LocationPageState extends State<LocationPage> {
       print(" Début du téléchargement...");
       await ref.putFile(tempFile);
       print(" Téléchargement terminé avec succès");
-      
+
       // Récupérer l'URL de téléchargement
       String downloadUrl = await ref.getDownloadURL();
       print(" URL de téléchargement: $downloadUrl");
-      
+
       // Supprimer le fichier temporaire après utilisation
       try {
         await tempFile.delete();
@@ -855,7 +852,7 @@ class _LocationPageState extends State<LocationPage> {
       } catch (e) {
         print(" Erreur lors de la suppression du fichier temporaire: $e");
       }
-      
+
       return downloadUrl;
     }
     throw Exception("Image compression failed");
@@ -875,11 +872,11 @@ class _LocationPageState extends State<LocationPage> {
       final tempDir = await getTemporaryDirectory();
       final fileName = 'photo_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final file = File('${tempDir.path}/$fileName');
-      
+
       // Télécharger l'image depuis l'URL
       final ref = FirebaseStorage.instance.refFromURL(imageUrl);
       final bytes = await ref.getData();
-      
+
       if (bytes != null) {
         // Écrire les données dans le fichier
         await file.writeAsBytes(bytes);
@@ -1071,124 +1068,124 @@ class _LocationPageState extends State<LocationPage> {
                   commentaireController: _commentaireController,
                 ),
                 const SizedBox(height: 15),
-                
+
                 // Afficher le conteneur de signature si au moins le nom OU le prénom est présent
                 // OU si une signature existe déjà OU si on est en mode modification (widget.contratId != null)
                 // Note: widget.nom et widget.prenom contiennent les valeurs du client déjà existant
-                if (((widget.nom != null && widget.nom!.isNotEmpty) || 
-                    (widget.prenom != null && widget.prenom!.isNotEmpty)) ||
+                if ((widget.nom != null && widget.nom!.isNotEmpty) || 
+                    (widget.prenom != null && widget.prenom!.isNotEmpty) ||
                     _signatureAller.isNotEmpty || 
                     widget.contratId != null) 
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Signature de Location',
-                        style: TextStyle(
-                          fontSize: 16, 
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF08004D),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Signature de Location',
+                          style: TextStyle(
+                            fontSize: 16, 
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF08004D),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: _acceptedConditions,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                _acceptedConditions = value ?? false;
-                              });
-                            },
-                            activeColor: const Color(0xFF08004D),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              "Je reconnais avoir pris connaissance des termes et conditions de location.",
-                              style: TextStyle(
-                                color: _acceptedConditions ? Colors.black87 : Colors.grey,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (_acceptedConditions) ...[  
                         const SizedBox(height: 10),
-                        if (_signatureAller.isNotEmpty) ...[  // Afficher la signature existante
-                          Container(
-                            width: double.infinity,
-                            height: 200,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(color: Colors.grey.shade300, width: 2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.shade200,
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(13),
-                              child: Image.memory(
-                                base64Decode(_signatureAller),
-                                fit: BoxFit.contain,
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: _acceptedConditions,
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  _acceptedConditions = value ?? false;
+                                });
+                              },
+                              activeColor: const Color(0xFF08004D),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5),
                               ),
                             ),
-                          ),
+                            Expanded(
+                              child: Text(
+                                "Je reconnais avoir pris connaissance des termes et conditions de location.",
+                                style: TextStyle(
+                                  color: _acceptedConditions ? Colors.black87 : Colors.grey,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_acceptedConditions) ...[  
                           const SizedBox(height: 10),
-                          Center(
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                await _captureSignature();
-                              },
-                              icon: const Icon(Icons.edit, color: Colors.white),
-                              label: const Text('Modifier la signature', style: TextStyle(color: Colors.white)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF08004D),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                          if (_signatureAller.isNotEmpty) ...[  // Afficher la signature existante
+                            Container(
+                              width: double.infinity,
+                              height: 200,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(color: Colors.grey.shade300, width: 2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.shade200,
+                                    blurRadius: 5,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(13),
+                                child: Image.memory(
+                                  base64Decode(_signatureAller),
+                                  fit: BoxFit.contain,
                                 ),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                               ),
                             ),
-                          ),
-                        ] else ...[  // Afficher le bouton pour ajouter une signature
-                          Center(
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                await _captureSignature();
-                              },
-                              icon: const Icon(Icons.draw, color: Colors.white),
-                              label: const Text('Ajouter une signature', style: TextStyle(color: Colors.white)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF08004D),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                            const SizedBox(height: 10),
+                            Center(
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  await _captureSignature();
+                                },
+                                icon: const Icon(Icons.edit, color: Colors.white),
+                                label: const Text('Modifier la signature', style: TextStyle(color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF08004D),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                                 ),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                               ),
                             ),
-                          ),
+                          ] else ...[  // Afficher le bouton pour ajouter une signature
+                            Center(
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  await _captureSignature();
+                                },
+                                icon: const Icon(Icons.draw, color: Colors.white),
+                                label: const Text('Ajouter une signature', style: TextStyle(color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF08004D),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
                 
                 const SizedBox(height: 50),
                 Padding(
