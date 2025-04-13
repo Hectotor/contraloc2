@@ -64,11 +64,12 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   final TextEditingController _assuranceNomController = TextEditingController();
   final TextEditingController _assuranceNumeroController = TextEditingController();
   final TextEditingController _entretienDateController = TextEditingController();
-  final TextEditingController _entretienKilometrageController = TextEditingController(); // Nouveau contrôleur pour le kilométrage d'entretien
-  final TextEditingController _entretienNotesController = TextEditingController(); // Nouveau contrôleur pour les notes d'entretien
+  final TextEditingController _entretienKilometrageController = TextEditingController(); 
+  final TextEditingController _entretienNotesController = TextEditingController(); 
   final TextEditingController _carburantManquantController = TextEditingController();
   final TextEditingController _nettoyageIntController = TextEditingController();
   final TextEditingController _nettoyageExtController = TextEditingController();
+  final TextEditingController _locationCasqueController = TextEditingController();
 
   String _typeCarburant = "Essence"; 
   String _boiteVitesses = "Manuelle"; 
@@ -106,13 +107,14 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     _assuranceNomController.text = data['assuranceNom'] ?? '';
     _assuranceNumeroController.text = data['assuranceNumero'] ?? '';
     _entretienDateController.text = data['entretienDate'] ?? '';
-    _entretienKilometrageController.text = data['entretienKilometrage'] ?? ''; // Initialiser avec les données existantes
-    _entretienNotesController.text = data['entretienNotes'] ?? ''; // Initialiser avec les données existantes
+    _entretienKilometrageController.text = data['entretienKilometrage'] ?? ''; 
+    _entretienNotesController.text = data['entretienNotes'] ?? ''; 
     _typeCarburant = data['typeCarburant'] ?? 'Essence';
     _boiteVitesses = data['boiteVitesses'] ?? 'Manuelle';
     _nettoyageIntController.text = data['nettoyageInt'] ?? '';
     _nettoyageExtController.text = data['nettoyageExt'] ?? '';
     _carburantManquantController.text = data['carburantManquant'] ?? '';
+    _locationCasqueController.text = data['locationCasque'] ?? '';
 
     if (data['photoVehiculeUrl'] != null && data['photoVehiculeUrl'].isNotEmpty) {
       _carPhoto = XFile(data['photoVehiculeUrl']);
@@ -148,7 +150,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       final userId = status['userId'];
       
       if (userId == null) {
-        print("🔴 Erreur: Utilisateur non connecté");
+        print(" Erreur: Utilisateur non connecté");
         throw Exception("Utilisateur non connecté");
       }
       
@@ -156,20 +158,20 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
       
       if (targetId == null) {
-        print("🔴 Erreur: ID cible non disponible");
+        print(" Erreur: ID cible non disponible");
         throw Exception("ID cible non disponible");
       }
       
-      print("📝 Téléchargement d'image par ${status['isCollaborateur'] ? 'collaborateur' : 'admin'}");
-      print("📝 userId: $userId, targetId (adminId): $targetId");
+      print(" Téléchargement d'image par ${status['isCollaborateur'] ? 'collaborateur' : 'admin'}");
+      print(" userId: $userId, targetId (adminId): $targetId");
       
       // Vérifier les permissions d'écriture pour les collaborateurs
       if (status['isCollaborateur'] == true) {
         final hasWritePermission = await CollaborateurUtil.checkCollaborateurPermission('ecriture');
-        print("🔑 Permission d'écriture pour le collaborateur: ${hasWritePermission ? 'OUI' : 'NON'}");
+        print(" Permission d'écriture pour le collaborateur: ${hasWritePermission ? 'OUI' : 'NON'}");
         
         if (!hasWritePermission) {
-          print("🔴 Erreur: Permission d'écriture refusée pour ce collaborateur");
+          print(" Erreur: Permission d'écriture refusée pour ce collaborateur");
           throw Exception("Permission d'écriture refusée pour ce collaborateur");
         }
       }
@@ -191,7 +193,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       // Toujours stocker dans le dossier de l'administrateur
       // Cela garantit que les collaborateurs peuvent accéder aux fichiers avec les bonnes permissions
       final String storagePath = 'users/${targetId}/vehicules/${immatriculation}/${fileName}';
-      print("📁 Chemin de stockage: $storagePath");
+      print(" Chemin de stockage: $storagePath");
           
       final storageRef = _storage.ref().child(storagePath);
       
@@ -205,28 +207,28 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
           'collaborator': status['isCollaborateur'] == true ? 'true' : 'false'
         }
       );
-      print("📋 Métadonnées: ${metadata.customMetadata}");
+      print(" Métadonnées: ${metadata.customMetadata}");
 
       // Télécharger les données compressées
-      print("⏳ Début du téléchargement...");
+      print(" Début du téléchargement...");
       final uploadTask = storageRef.putData(compressedBytes, metadata);
       
       // Surveiller la progression du téléchargement
       uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
         final progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        print("📊 Progression: ${progress.toStringAsFixed(1)}%");
+        print(" Progression: ${progress.toStringAsFixed(1)}%");
       });
       
       await uploadTask.timeout(const Duration(seconds: 60));
-      print("✅ Téléchargement terminé avec succès");
+      print(" Téléchargement terminé avec succès");
 
       // Obtenir l'URL de téléchargement
       return await storageRef.getDownloadURL();
     } catch (e) {
-      print('🔴 Erreur détaillée lors du téléchargement de l\'image: $e');
+      print(' Erreur détaillée lors du téléchargement de l\'image: $e');
       if (e.toString().contains('unauthorized')) {
-        print('🔐 Problème d\'autorisation: Vérifiez les règles de sécurité Firebase Storage');
-        print('🔐 Vérifiez que le collaborateur a la permission "ecriture" dans la collection "authentification"');
+        print(' Problème d\'autorisation: Vérifiez les règles de sécurité Firebase Storage');
+        print(' Vérifiez que le collaborateur a la permission "ecriture" dans la collection "authentification"');
       }
       rethrow;
     }
@@ -292,16 +294,16 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
         }
 
         // Vérifier la limite de véhicules pour les nouveaux véhicules uniquement
-        print("🚗 Vérification de la limite de véhicules...");
+        print(" Vérification de la limite de véhicules...");
         final vehicleLimitChecker = VehicleLimitChecker(context);
         final canAddVehicle = await vehicleLimitChecker.checkVehicleLimit();
         
         if (!canAddVehicle) {
-          print("⚠️ Limite de véhicules atteinte. Impossible d'ajouter un nouveau véhicule.");
+          print(" Limite de véhicules atteinte. Impossible d'ajouter un nouveau véhicule.");
           setState(() => _isLoading = false);
           return;
         }
-        print("👍 Limite de véhicules OK. Poursuite de l'enregistrement.");
+        print(" Limite de véhicules OK. Poursuite de l'enregistrement.");
 
         final docId = _immatriculationController.text;
         final vehicleRef = await _getVehicleDocRef(docId);
@@ -374,16 +376,17 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       'prixLocation': _prixLocationController.text,
       'caution': _cautionController.text,
       'franchise': _franchiseController.text,
-      'kilometrageSupp': _kilometrageSuppController.text,
+      'kilometrageSupplementaire': _kilometrageSuppController.text,
       'rayures': _rayuresController.text.isNotEmpty ? _rayuresController.text : null,
       'assuranceNom': _assuranceNomController.text,
       'assuranceNumero': _assuranceNumeroController.text,
       'entretienDate': _entretienDateController.text,
       'entretienKilometrage': _entretienKilometrageController.text,
-      'entretienNotes': _entretienNotesController.text, // Ajouter les notes d'entretien
-      'nettoyageInt': _nettoyageIntController.text,
-      'nettoyageExt': _nettoyageExtController.text,
+      'entretienNotes': _entretienNotesController.text, 
+      'nettoyageInterieur': _nettoyageIntController.text,
+      'nettoyageExterieur': _nettoyageExtController.text,
       'carburantManquant': _carburantManquantController.text,
+      'locationCasque': _locationCasqueController.text,
       'dateCreation': widget.vehicleData != null && widget.vehicleData!['dateCreation'] != null
           ? widget.vehicleData!['dateCreation']
           : FieldValue.serverTimestamp(),
@@ -438,6 +441,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     _carburantManquantController.dispose();
     _nettoyageIntController.dispose();
     _nettoyageExtController.dispose();
+    _locationCasqueController.dispose();
     super.dispose();
   }
 
@@ -588,6 +592,15 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                         _buildTextField(
                           "Rayures par élément (€)",
                           _rayuresController,
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                          ],
+                        ),
+                        _buildTextField(
+                          "Frais location de casque (€)",
+                          _locationCasqueController,
+                          isRequired: true,
                           keyboardType: TextInputType.numberWithOptions(decimal: true),
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
@@ -824,7 +837,8 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       "Carburant manquant (€)",
       "Frais de nettoyage intérieur (€)",
       "Frais de nettoyage extérieur (€)",
-      "Kilométrage du prochain entretien"
+      "Kilométrage du prochain entretien",
+      "Frais location de casque (€)"
     ].contains(label)) {
       keyboardType = keyboardType ?? TextInputType.number;
       suffixIcon = IconButton(

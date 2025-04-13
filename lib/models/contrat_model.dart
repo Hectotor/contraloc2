@@ -69,6 +69,7 @@ class ContratModel {
   final String? kilometrageAutorise;
   final String? kilometrageSupp;
   final String? rayures;
+  final String? locationCasque;
   
   // Informations entreprise
   final String? logoUrl;
@@ -144,6 +145,7 @@ class ContratModel {
     this.kilometrageAutorise,
     this.kilometrageSupp,
     this.rayures,
+    this.locationCasque,
     this.logoUrl,
     this.nomEntreprise,
     this.adresseEntreprise,
@@ -211,6 +213,7 @@ class ContratModel {
       kilometrageAutorise: data['kilometrageAutorise'],
       kilometrageSupp: data['kilometrageSupp'],
       rayures: data['rayures'],
+      locationCasque: data['locationCasque'],
       logoUrl: data['logoUrl'],
       nomEntreprise: data['nomEntreprise'],
       adresseEntreprise: data['adresse'],
@@ -280,6 +283,7 @@ class ContratModel {
       'kilometrageAutorise': kilometrageAutorise ?? '',
       'kilometrageSupp': kilometrageSupp ?? '',
       'rayures': rayures,
+      'locationCasque': locationCasque,
       'logoUrl': logoUrl,
       'nomEntreprise': nomEntreprise,
       'adresseEntreprise': adresseEntreprise,
@@ -353,6 +357,7 @@ class ContratModel {
       'commentaireRetour': commentaireRetour,
       'signatureRetour': signatureRetour,
       'methodePaiement': methodePaiement,
+      'locationCasque': locationCasque,
     };
   }
 
@@ -428,6 +433,7 @@ class ContratModel {
     String? kilometrageAutorise,
     String? kilometrageSupp,
     String? rayures,
+    String? locationCasque,
     String? logoUrl,
     String? nomEntreprise,
     String? adresseEntreprise,
@@ -495,6 +501,7 @@ class ContratModel {
       kilometrageAutorise: kilometrageAutorise ?? this.kilometrageAutorise,
       kilometrageSupp: kilometrageSupp ?? this.kilometrageSupp,
       rayures: rayures ?? this.rayures,
+      locationCasque: locationCasque ?? this.locationCasque,
       logoUrl: logoUrl ?? this.logoUrl,
       nomEntreprise: nomEntreprise ?? this.nomEntreprise,
       adresseEntreprise: adresseEntreprise ?? this.adresseEntreprise,

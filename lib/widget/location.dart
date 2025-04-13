@@ -98,6 +98,7 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _cautionController = TextEditingController();
   final TextEditingController _entrepriseClientController = TextEditingController();
   final TextEditingController _conditionsController = TextEditingController();
+  final TextEditingController _locationCasqueController = TextEditingController();
   String? _selectedPaymentMethod;
 
   String? nomEntreprise;
@@ -179,6 +180,7 @@ class _LocationPageState extends State<LocationPage> {
     if (model.kilometrageAutorise != null) _kilometrageAutoriseController.text = model.kilometrageAutorise ?? '';
     if (model.kilometrageSupp != null) _kilometrageSuppController.text = model.kilometrageSupp!;
     if (model.rayures != null) _rayuresController.text = model.rayures!;
+    if (model.locationCasque != null) _locationCasqueController.text = model.locationCasque!;
     
     // Informations véhicule
     if (model.vin != null) _vinController.text = model.vin!;
@@ -289,6 +291,7 @@ class _LocationPageState extends State<LocationPage> {
         'nettoyageExt': _nettoyageExtController,
         'carburantManquant': _carburantManquantController,
         'kilometrageSupp': _kilometrageSuppController,
+        'locationCasque': _locationCasqueController,
         'vin': _vinController,
         'assuranceNom': _assuranceNomController,
         'assuranceNumero': _assuranceNumeroController,
@@ -619,6 +622,7 @@ class _LocationPageState extends State<LocationPage> {
         caution: _cautionController.text.isNotEmpty ? _cautionController.text : '',
         nettoyageInt: _nettoyageIntController.text.isNotEmpty ? _nettoyageIntController.text : '',
         nettoyageExt: _nettoyageExtController.text.isNotEmpty ? _nettoyageExtController.text : '',
+        locationCasque: _locationCasqueController.text.isNotEmpty ? _locationCasqueController.text : '',
         carburantManquant: _carburantManquantController.text.isNotEmpty ? _carburantManquantController.text : '',
         kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : '',
         kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : '',
@@ -884,6 +888,7 @@ class _LocationPageState extends State<LocationPage> {
     _accompteController.dispose();
     _nettoyageIntController.dispose();
     _nettoyageExtController.dispose();
+    _locationCasqueController.dispose();
     _carburantManquantController.dispose();
     _kilometrageAutoriseController.dispose();
     _kilometrageSuppController.dispose();

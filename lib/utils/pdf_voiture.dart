@@ -449,7 +449,7 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Km de retour: $kilometrageRetour km',
+                  child: pw.Text('Km de retour: ${contrat.kilometrageRetour} km',
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
@@ -466,14 +466,14 @@ class PdfVoitureWidget {
             children: [
               pw.Expanded(
                 flex: 1,
-                child: pw.Text('Distance autorisée: $kilometrageAutorise km',
+                child: pw.Text('Distance autorisée: ${contrat.kilometrageAutorise} km',
                     style: pw.TextStyle(font: ttf, fontSize: 9, fontWeight: pw.FontWeight.bold)),
               ),
               pw.Expanded(
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.center,
-                  child: pw.Text('Prix Km supp: $kilometrageSupp €/km',
+                  child: pw.Text('Prix Km supp: ${contrat.kilometrageSupp} €/km',
                       textAlign: pw.TextAlign.center,
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
@@ -535,7 +535,7 @@ class PdfVoitureWidget {
             children: [
               pw.Expanded(
                 flex: 1,
-                child: pw.Text('Niveau d\'essence départ: $pourcentageEssence%',
+                child: pw.Text('Niveau d\'essence départ: ${contrat.pourcentageEssence}%',
                     style: pw.TextStyle(font: ttf, fontSize: 9)),
               ),
               if (contrat.pourcentageEssenceRetour != null )
@@ -614,7 +614,7 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.center,
-                  child: pw.Text('', 
+                  child: pw.Text('Frais de location casque: ${contrat.locationCasque ?? ''} €', 
                       textAlign: pw.TextAlign.center,
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
