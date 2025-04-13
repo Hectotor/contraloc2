@@ -362,9 +362,14 @@ class FacturePdfGenerator {
                 if (data['accompte'] != null) ...[
                   pw.Text('Acompte: ${data['accompte']}', 
                     style: pw.TextStyle(fontSize: 9)),
+                  // Afficher la méthode de paiement de l'acompte
+                  pw.Text('Méthode de paiement Accompte: ${data['methodePaiement'] ?? "Carte bancaire"}', 
+                    style: pw.TextStyle(fontSize: 9)),
+                  pw.SizedBox(height: 10),
                 ],
-                // Afficher la méthode de paiement, soit celle du contrat, soit celle de la facture
-                pw.Text('Méthode de paiement: ${data['methodePaiement'] ?? factureData['factureTypePaiement'] ?? "Carte bancaire"}', 
+
+                // Afficher la méthode de paiement finale
+                pw.Text('Méthode de paiement Finale: ${factureData['factureTypePaiement'] ?? "Carte bancaire"}', 
                   style: pw.TextStyle(fontSize: 9)),
               ],
             ),
