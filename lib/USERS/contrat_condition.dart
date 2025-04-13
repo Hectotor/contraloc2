@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ContraLoc/services/collaborateur_util.dart';
+import 'package:ContraLoc/services/access_premium.dart';
 
 import 'Subscription/abonnement_screen.dart';
 
@@ -93,15 +94,16 @@ class _ContratModifierState extends State<ContratModifier> {
         isLoading = true;
       });
       
-      // Utiliser la nouvelle méthode de CollaborateurUtil
-      final isPremium = await CollaborateurUtil.isPremiumUser();
-      
-      setState(() {
-        isPremiumUser = isPremium;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final isPremium = await AccessPremium.isPremiumUser();
+        setState(() {
+          isPremiumUser = isPremium;
+        });
         print('Status Premium: $isPremiumUser');
-      });
+      }
     } catch (e) {
-      print('Erreur lors de la vérification du statut Premium: $e');
+      print('Erreur lors de la vérification du statut premium: $e');
     } finally {
       setState(() {
         isLoading = false;

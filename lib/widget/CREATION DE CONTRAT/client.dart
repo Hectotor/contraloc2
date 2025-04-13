@@ -4,7 +4,7 @@ import '../location.dart'; // Import de la page location
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:ContraLoc/services/collaborateur_util.dart'; // Import de l'utilitaire collaborateur
+import 'package:ContraLoc/services/access_premium.dart'; // Import de l'utilitaire collaborateur
 import 'popup_vehicule_client.dart';
 import 'Containers/permis_info_container.dart'; // Import du nouveau composant
 import 'Containers/personal_info_container.dart'; // Import du nouveau composant
@@ -81,13 +81,16 @@ class _ClientPageState extends State<ClientPage> {
 
   // Méthode pour initialiser et vérifier le statut d'abonnement
   Future<void> _initializeSubscription() async {
-    // Vérifier le statut premium via CollaborateurUtil
-    final isPremium = await CollaborateurUtil.isPremiumUser();
-    
-    if (mounted) {
-      setState(() {
-        isPremiumUser = isPremium;
-      });
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final isPremium = await AccessPremium.isPremiumUser();
+        setState(() {
+          isPremiumUser = isPremium;
+        });
+      }
+    } catch (e) {
+      print('Erreur lors de l\'initialisation du statut premium: $e');
     }
   }
 

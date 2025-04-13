@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:ContraLoc/services/collaborateur_util.dart';
+import 'package:ContraLoc/services/access_premium.dart';
 import 'package:ContraLoc/widget/MODIFICATION DE CONTRAT/commentaire_retour.dart';
 import 'package:ContraLoc/widget/CREATION DE CONTRAT/premium_dialog.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EtatVehiculeRetour extends StatefulWidget {
   final List<File> photos;
@@ -51,13 +52,18 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
   }
 
   Future<void> _initializeSubscription() async {
-    // Vérifier le statut premium via CollaborateurUtil
-    final isPremium = await CollaborateurUtil.isPremiumUser();
-    
-    if (mounted) {
-      setState(() {
-        isPremiumUser = isPremium;
-      });
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final isPremium = await AccessPremium.isPremiumUser();
+        if (mounted) {
+          setState(() {
+            isPremiumUser = isPremium;
+          });
+        }
+      }
+    } catch (e) {
+      print('Erreur lors de l\'initialisation du statut premium: $e');
     }
   }
 

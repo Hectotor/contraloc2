@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'add_collab_screen.dart';
-import '../../services/collaborateur_util.dart';
+import '../../services/access_platinum.dart';
 import '../Subscription/abonnement_screen.dart';
 
 class CollaboratorPage extends StatelessWidget {
@@ -230,7 +230,7 @@ class CollaboratorPage extends StatelessWidget {
         child: FloatingActionButton.extended(
           onPressed: () async {
             // Vérifier si l'utilisateur a un compte Platinum
-            bool isPlatinum = await CollaborateurUtil.isPlatinumUser();
+            bool isPlatinum = await AccessPlatinum.isPlatinumUser();
             
             if (isPlatinum) {
               // Si l'utilisateur a un compte Platinum, lui permettre d'ajouter un collaborateur

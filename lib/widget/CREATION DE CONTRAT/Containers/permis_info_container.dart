@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
-import 'package:ContraLoc/services/collaborateur_util.dart';
+import 'package:ContraLoc/services/access_premium.dart';
 import '../image_picker_dialog.dart';
 import '../premium_dialog.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class PermisInfoContainer extends StatefulWidget {
   final TextEditingController numeroPermisController;
@@ -45,28 +46,34 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
 
   // Méthode pour initialiser et vérifier le statut d'abonnement
   Future<void> _initializeSubscription() async {
-    // Vérifier le statut premium via CollaborateurUtil
-    print("Début de la vérification du statut premium");
-    final isPremium = await CollaborateurUtil.isPremiumUser();
-    print("Statut premium: $isPremium");
-    
-    if (mounted) {
-      setState(() {
-        _isPremiumUser = isPremium;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final isPremium = await AccessPremium.isPremiumUser();
+        setState(() {
+          _isPremiumUser = isPremium;
+        });
         print("_isPremiumUser défini à: $_isPremiumUser");
-      });
+      }
+    } catch (e) {
+      print('Erreur lors de l\'initialisation du statut premium: $e');
     }
   }
 
   Future<bool> _checkPremiumStatus() async {
     try {
-      final isPremium = await CollaborateurUtil.isPremiumUser();
-      print("Vérification du statut premium: $isPremium");
-      return isPremium;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final isPremium = await AccessPremium.isPremiumUser();
+        setState(() {
+          _isPremiumUser = isPremium;
+        });
+        return isPremium;
+      }
     } catch (e) {
-      print("Erreur lors de la vérification du statut premium: $e");
-      return false;
+      print('Erreur lors de la vérification du statut premium: $e');
     }
+    return false;
   }
 
   void _handleHeaderTap() {

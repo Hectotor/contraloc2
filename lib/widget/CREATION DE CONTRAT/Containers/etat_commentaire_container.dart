@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:ContraLoc/services/collaborateur_util.dart';
+import 'package:ContraLoc/services/access_premium.dart';
 import 'package:flutter/services.dart';
 import '../premium_dialog.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EtatCommentaireContainer extends StatefulWidget {
   final List<File> photos;
@@ -60,16 +61,18 @@ class _EtatCommentaireContainerState extends State<EtatCommentaireContainer> {
 
   Future<void> _checkPremiumStatus() async {
     try {
-      final isPremium = await CollaborateurUtil.isPremiumUser();
-      
-      if (mounted) {
-        setState(() {
-          isPremiumUser = isPremium;
-          isLoading = false;
-        });
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final isPremium = await AccessPremium.isPremiumUser();
+        if (mounted) {
+          setState(() {
+            isPremiumUser = isPremium;
+            isLoading = false;
+          });
+        }
       }
     } catch (e) {
-      print('Erreur lors de la vérification du statut Premium: $e');
+      print('Erreur lors de la vérification du statut premium: $e');
       if (mounted) {
         setState(() {
           isLoading = false;

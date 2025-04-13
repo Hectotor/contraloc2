@@ -269,183 +269,38 @@ class CollaborateurUtil {
     }
   }
 
-  /// Vérifie si l'utilisateur (ou son administrateur) a un abonnement premium
-  static Future<bool> isPremiumUser() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return false;
-    
-    // Récupérer les données de l'utilisateur
-    final userData = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get(GetOptions(source: Source.server));
-
-    if (!userData.exists) {
-      return false;
-    }
-
-    final userDataMap = userData.data();
-    
-    // Vérifier si c'est un collaborateur
-    final isCollaborateur = userDataMap?['role'] == 'collaborateur';
-    
-    if (isCollaborateur) {
-      final adminId = userDataMap?['adminId'];
-      if (adminId != null) {
-        print('👥 Collaborateur trouvé, vérification admin: $adminId');
-        
-        // Récupérer les données de l'admin
-        final adminData = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(adminId)
-            .get(GetOptions(source: Source.server));
-
-        if (!adminData.exists) {
-          return false;
-        }
-        
-        // Vérifier si l'admin a un abonnement premium
-        final adminAuthDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(adminId)
-            .collection('authentification')
-            .doc(adminId)
-            .get(GetOptions(source: Source.server));
-
-        if (!adminAuthDoc.exists) {
-          print('❌ Admin auth document not found');
-          return false;
-        }
-
-        final adminAuthData = adminAuthDoc.data();
-
-        
-        // Vérifier tous les champs possibles
-        final subscriptionId = adminAuthData?['subscriptionId'] ?? 'free';
-        final cbSubscription = adminAuthData?['cb_subscription'] ?? 'free';
-        final stripePlanType = adminAuthData?['stripePlanType'] ?? 'free';
-        
-        return subscriptionId.toString().contains('monthly_access') ||
-               subscriptionId.toString().contains('yearly_access') ||
-               cbSubscription.toString().contains('monthly_access') ||
-               cbSubscription.toString().contains('yearly_access') ||
-               stripePlanType.toString().contains('monthly_access') ||
-               stripePlanType.toString().contains('yearly_access');
-      }
-    }
-
-    // Si ce n'est pas un collaborateur, vérifier sa propre souscription
-    print('👤 Utilisateur standard, vérification de sa propre souscription');
-    final authDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('authentification')
-        .doc(user.uid)
-        .get(GetOptions(source: Source.server));
-
-    if (!authDoc.exists) {
-      print('❌ Auth document not found');
-      return false;
-    }
-
-    final authData = authDoc.data();
-    //print('📊 Auth data: $authData');
-    
-    // Vérifier tous les champs possibles
-    final subscriptionId = authData?['subscriptionId'] ?? 'free';
-    final cbSubscription = authData?['cb_subscription'] ?? 'free';
-    final stripePlanType = authData?['stripePlanType'] ?? 'free';
-    
-    return subscriptionId.toString().contains('monthly_access') ||
-           subscriptionId.toString().contains('yearly_access') ||
-           cbSubscription.toString().contains('monthly_access') ||
-           cbSubscription.toString().contains('yearly_access') ||
-           stripePlanType.toString().contains('monthly_access') ||
-           stripePlanType.toString().contains('yearly_access');
-  }
-
-  /// Vérifie si l'utilisateur (ou son administrateur) a un abonnement platinum
-  static Future<bool> isPlatinumUser() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return false;
-    
-    // Récupérer les données de l'utilisateur
-    final userData = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get(GetOptions(source: Source.server));
-
-    if (!userData.exists) {
-      return false;
-    }
-
-    final userDataMap = userData.data();
-    
-    // Vérifier si c'est un collaborateur
-    final isCollaborateur = userDataMap?['role'] == 'collaborateur';
-    
-    if (isCollaborateur) {
-      final adminId = userDataMap?['adminId'];
-      if (adminId != null) {
-        // Récupérer les données de l'admin
-        final adminAuthDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(adminId)
-            .collection('authentification')
-            .doc(adminId)
-            .get(GetOptions(source: Source.server));
-
-        if (!adminAuthDoc.exists) {
-          return false;
-        }
-
-        final adminAuthData = adminAuthDoc.data();
-        
-        // Vérifier tous les champs possibles pour platinum
-        final subscriptionId = adminAuthData?['subscriptionId'] ?? 'free';
-        final cbSubscription = adminAuthData?['cb_subscription'] ?? 'free';
-        final stripePlanType = adminAuthData?['stripePlanType'] ?? 'free';
-        
-        return subscriptionId.toString().contains('platinum') ||
-               cbSubscription.toString().contains('platinum') ||
-               stripePlanType.toString().contains('platinum');
-      }
-    }
-
-    // Si ce n'est pas un collaborateur, vérifier sa propre souscription
-    final authDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('authentification')
-        .doc(user.uid)
-        .get(GetOptions(source: Source.server));
-
-    if (!authDoc.exists) {
-      print('❌ Auth document not found');
-      return false;
-    }
-
-    final authData = authDoc.data();
-    
-    // Vérifier tous les champs possibles pour platinum
-    final subscriptionId = authData?['subscriptionId'] ?? 'free';
-    final cbSubscription = authData?['cb_subscription'] ?? 'free';
-    final stripePlanType = authData?['stripePlanType'] ?? 'free';
-    
-    return subscriptionId.toString().contains('platinum') ||
-           cbSubscription.toString().contains('platinum') ||
-           stripePlanType.toString().contains('platinum');
-  }
-
   /// Récupère les contrats de l'administrateur avec un statut spécifique
-  /// Cette méthode est utilisée par les collaborateurs pour accéder aux contrats de leur admin
-  static Stream<QuerySnapshot> getAdminContrats(String adminId, String status) {
-    return _firestore
+  static Future<List<Map<String, dynamic>>> getAdminContracts(
+      String adminId, String status) async {
+    try {
+      final contracts = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(adminId)
+          .collection('locations')
+          .where('status', isEqualTo: status)
+          .get();
+
+      return contracts.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      print('Erreur lors de la récupération des contrats: $e');
+      return [];
+    }
+  }
+
+  /// Vérifie si un utilisateur a le rôle admin
+  static Future<bool> isAdmin() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+
+    final userDoc = await FirebaseFirestore.instance
         .collection('users')
-        .doc(adminId)
-        .collection('contrats')
-        .where('status', isEqualTo: status)
-        .snapshots();
+        .doc(user.uid)
+        .get(GetOptions(source: Source.server));
+    
+    if (!userDoc.exists) return false;
+    
+    final userData = userDoc.data();
+    return userData?['role'] == 'admin';
   }
 
   /// Vérifie si un collaborateur a une permission spécifique
@@ -693,21 +548,5 @@ class CollaborateurUtil {
       print('flutter: ❌ Stack trace: ${StackTrace.current.toString()}');
       return {};
     }
-  }
-
-  /// Vérifie si un utilisateur a le rôle admin
-  static Future<bool> isAdmin() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return false;
-
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get(GetOptions(source: Source.server));
-    
-    if (!userDoc.exists) return false;
-    
-    final userData = userDoc.data();
-    return userData?['role'] == 'admin';
   }
 }
