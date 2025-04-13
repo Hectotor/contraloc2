@@ -20,7 +20,7 @@ import 'CREATION DE CONTRAT/Containers/etat_commentaire_container.dart';
 import '../services/access_condition.dart';
 import '../utils/contract_utils.dart';
 import '../widget/photo_upload_popup.dart';
-import '../services/vehicle_data_service.dart';
+import '../services/access_admin.dart';
 
 class LocationPage extends StatefulWidget {
   final String marque;
@@ -69,16 +69,15 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _kilometrageDepartController =
       TextEditingController();
   final TextEditingController _commentaireController = TextEditingController();
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance; 
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final List<File> _photos = [];
-  int _pourcentageEssence = 50; 
-  bool _isLoading = false; 
-  bool _acceptedConditions = false; 
-  String _signatureAller = ''; 
+  int _pourcentageEssence = 50;
+  bool _isLoading = false;
+  bool _acceptedConditions = false;
+  String _signatureAller = '';
   bool _isSigning = false;
-  String? _vehiclePhotoUrl; 
+  String? _vehiclePhotoUrl;
 
   final TextEditingController _prixLocationController = TextEditingController();
   final TextEditingController _accompteController = TextEditingController();
@@ -108,8 +107,6 @@ class _LocationPageState extends State<LocationPage> {
   String? siretEntreprise;
 
   Map<String, dynamic>? adminDataMap;
-
-  final VehicleDataService _vehicleDataService = VehicleDataService();
 
   @override
   void initState() {
@@ -285,6 +282,34 @@ class _LocationPageState extends State<LocationPage> {
 
   Future<void> _fetchVehicleData() async {
     try {
+      // Récupérer les données du véhicule depuis la collection 'vehicules'
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('❌ Aucun utilisateur connecté');
+        return;
+      }
+
+      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
+      final String targetId = collaborateurStatus['isCollaborateur'] 
+          ? collaborateurStatus['adminId'] ?? user.uid 
+          : user.uid;
+
+      final vehicleDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(targetId)
+          .collection('vehicules')
+          .where('immatriculation', isEqualTo: widget.immatriculation)
+          .limit(1)
+          .get();
+
+      if (vehicleDoc.docs.isEmpty) {
+        print('❌ Véhicule non trouvé dans la collection vehicules');
+        return;
+      }
+
+      final vehicleData = vehicleDoc.docs.first.data();
+      
+      // Mettre à jour les contrôleurs avec les données du véhicule
       final Map<String, TextEditingController> controllers = {
         'prixLocation': _prixLocationController,
         'nettoyageInt': _nettoyageIntController,
@@ -302,21 +327,19 @@ class _LocationPageState extends State<LocationPage> {
         'caution': _cautionController,
       };
 
-      final Map<String, dynamic> contractData = {
-        'photoVehiculeUrl': _vehiclePhotoUrl,
-      };
-
-      await _vehicleDataService.fillVehicleDataInContract(
-        contractData,
-        widget.immatriculation,
-        controllers,
-      );
-
-      setState(() {
-        _vehiclePhotoUrl = contractData['photoVehiculeUrl'];
+      // Remplir les contrôleurs avec les données du véhicule
+      controllers.forEach((key, controller) {
+        if (vehicleData[key] != null) {
+          controller.text = vehicleData[key].toString();
+        }
       });
+
+      // Mettre à jour la photo du véhicule si elle existe
+      _vehiclePhotoUrl = vehicleData['photoUrl'] as String?;
+
+      print('✅ Données du véhicule récupérées avec succès');
     } catch (e) {
-      print('Erreur lors du chargement des données du véhicule: $e');
+      print('❌ Erreur lors de la récupération des données du véhicule: $e');
     }
   }
 
@@ -486,12 +509,15 @@ class _LocationPageState extends State<LocationPage> {
       // Récupérer les informations de l'entreprise
       print('Récupération des informations de l\'entreprise...');
       
-      // Utiliser les données de l'admin déjà récupérées
-      final nomEntreprise = adminDataMap?['nomEntreprise'] ?? '';
-      final logoUrl = adminDataMap?['logoUrl'] ?? '';
-      final adresseEntreprise = adminDataMap?['adresse'] ?? '';
-      final telephoneEntreprise = adminDataMap?['telephone'] ?? '';
-      final siretEntreprise = adminDataMap?['siret'] ?? '';
+      // Récupérer les données de l'entreprise depuis Firestore
+      final adminData = await AccessAdmin.getAdminInfo();
+      
+      // Utiliser les données de l'entreprise
+      final nomEntreprise = adminData['nomEntreprise'] ?? '';
+      final logoUrl = adminData['logoUrl'] ?? '';
+      final adresseEntreprise = adminData['adresseEntreprise'] ?? '';
+      final telephoneEntreprise = adminData['telephoneEntreprise'] ?? '';
+      final siretEntreprise = adminData['siretEntreprise'] ?? '';
       
       print('Informations entreprise récupérées:');
       print('Nom: $nomEntreprise');
@@ -903,6 +929,7 @@ class _LocationPageState extends State<LocationPage> {
     _cautionController.dispose();
     _entrepriseClientController.dispose();
     _conditionsController.dispose();
+    _locationCasqueController.dispose();
     super.dispose();
   }
 
