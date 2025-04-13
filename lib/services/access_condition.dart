@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../USERS/contrat_condition.dart';
 
 class AccessCondition {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -11,57 +12,91 @@ class AccessCondition {
       final user = _auth.currentUser;
       if (user == null) {
         print('❌ Aucun utilisateur connecté');
-        return null;
+        return {'texte': ContratModifier.defaultContract};
       }
 
-      // Récupérer les données de base de l'utilisateur
-      final userData = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .get(GetOptions(source: Source.server));
-
-      if (!userData.exists) {
-        print('❌ Données utilisateur non trouvées');
-        return null;
-      }
-
-      final userDataMap = userData.data();
+      final uid = user.uid;
       
-      // Vérifier si c'est un collaborateur
-      final isCollaborateur = userDataMap?['role'] == 'collaborateur';
-      String targetId = user.uid;
+      // Récupérer les données de l'utilisateur
+      final userDocRef = _firestore.collection('users').doc(uid);
+      final userDoc = await userDocRef.get(GetOptions(source: Source.server));
 
-      if (isCollaborateur) {
-        final adminId = userDataMap?['adminId'];
-        if (adminId != null) {
-          print('👥 Collaborateur trouvé, vérification admin: $adminId');
-          targetId = adminId;
-        }
+      if (!userDoc.exists) {
+        print('❌ Document utilisateur non trouvé');
+        return {'texte': ContratModifier.defaultContract};
       }
 
-      print('🔄 Vérification de l\'accès à la collection contrats pour: $targetId');
+      final userData = userDoc.data();
+      if (userData == null) {
+        print('❌ Données utilisateur null');
+        return {'texte': ContratModifier.defaultContract};
+      }
+
+      // Vérifier si c'est un collaborateur
+      if (userData['role'] == 'collaborateur') {
+        final adminId = userData['adminId'];
+        if (adminId == null) {
+          print('❌ AdminId non trouvé pour le collaborateur');
+          return {'texte': ContratModifier.defaultContract};
+        }
+
+        // Pour un collaborateur, récupérer les conditions de l'admin
+        final adminConditionsDoc = await _firestore
+            .collection('users')
+            .doc(adminId)
+            .collection('contrats')
+            .doc('userId')
+            .get(GetOptions(source: Source.server));
+
+        if (!adminConditionsDoc.exists) {
+          print('⚠️ Document conditions admin non trouvé, utilisation des conditions par défaut');
+          return {'texte': ContratModifier.defaultContract};
+        }
+
+        final adminConditionsData = adminConditionsDoc.data();
+        if (adminConditionsData == null) {
+          print('⚠️ Données conditions admin null, utilisation des conditions par défaut');
+          return {'texte': ContratModifier.defaultContract};
+        }
+
+        if (adminConditionsData['texte'] == null) {
+          print('⚠️ Champ texte non trouvé dans les conditions admin, utilisation des conditions par défaut');
+          return {'texte': ContratModifier.defaultContract};
+        }
+
+        print('✅ Conditions trouvées pour l\'admin');
+        return {'texte': adminConditionsData['texte']};
+      }
+
+      // Pour un utilisateur normal
       final conditionsDoc = await _firestore
           .collection('users')
-          .doc(targetId)
+          .doc(uid)
           .collection('contrats')
           .doc('userId')
           .get(GetOptions(source: Source.server));
 
-      print('Document conditions trouvé: ${conditionsDoc.exists}');
-      if (conditionsDoc.exists) {
-        final data = conditionsDoc.data();
-        print('Données du document: $data');
-        if (data != null && data['texte'] != null) {
-          print('✅ Conditions trouvées');
-          return {'texte': data['texte']};
-        }
+      if (!conditionsDoc.exists) {
+        print('⚠️ Document conditions non trouvé, utilisation des conditions par défaut');
+        return {'texte': ContratModifier.defaultContract};
       }
 
-      print('❌ Aucune condition trouvée');
-      return null;
+      final conditionsData = conditionsDoc.data();
+      if (conditionsData == null) {
+        print('⚠️ Données conditions null, utilisation des conditions par défaut');
+        return {'texte': ContratModifier.defaultContract};
+      }
+
+      if (conditionsData['texte'] == null) {
+        print('⚠️ Champ texte non trouvé dans les conditions, utilisation des conditions par défaut');
+        return {'texte': ContratModifier.defaultContract};
+      }
+
+      print('✅ Conditions trouvées');
+      return {'texte': conditionsData['texte']};
     } catch (e) {
       print('❌ Erreur lors de la récupération des conditions: $e');
-      return null;
+      return {'texte': ContratModifier.defaultContract};
     }
   }
 
