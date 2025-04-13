@@ -349,6 +349,7 @@ class _InscriptionPageState extends State<InscriptionPage> {
                 "Adresse",
                 _adresseController,
                 true,
+                maxLines: 2,
               ),
               const SizedBox(height: 16),
               _buildTextField(
@@ -496,12 +497,16 @@ class _InscriptionPageState extends State<InscriptionPage> {
       String label, TextEditingController controller, bool isEditable,
       {bool isReadOnly = false,
       TextInputType keyboardType = TextInputType.text,
-      List<TextInputFormatter>? inputFormatters}) {
+      List<TextInputFormatter>? inputFormatters,
+      int? maxLines,
+      int? minLines}) {
     return TextFormField(
       controller: controller,
       readOnly: isReadOnly,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
+      maxLines: maxLines ?? 1,
+      minLines: minLines ?? 1,
       onChanged: (value) {
         if (label == "Email") {
           setState(() {});
