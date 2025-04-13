@@ -9,6 +9,7 @@ import 'package:flutter/services.dart' show NetworkAssetBundle, rootBundle;
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'pdf_info_contact.dart';
+import '../../models/contrat_model.dart';
 
 /// Classe utilitaire pour générer des PDF de facture
 class FacturePdfGenerator {
@@ -180,10 +181,20 @@ class FacturePdfGenerator {
             adresse: adresse,
             telephone: telephone,
             siret: siret,
-            clientData: data,
+            contrat: ContratModel(
+              nom: data['nom'],
+              prenom: data['prenom'],
+              adresse: data['adresse'],
+              telephone: data['telephone'],
+              email: data['email'],
+              numeroPermis: data['numeroPermis'],
+              immatriculationVehiculeClient: data['immatriculationVehiculeClient'],
+              kilometrageVehiculeClient: data['kilometrageVehiculeClient'],
+              entrepriseClient: data['entrepriseClient'],
+            ),
             boldFont: boldFont,
             ttf: ttf,
-            logoImage: null, // Pas besoin de logo ici car on l'a déjà affiché en haut
+            logoImage: logoImage,
           ),
           
           pw.SizedBox(height: 6),  // Réduction de l'espacement

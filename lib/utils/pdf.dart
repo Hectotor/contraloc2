@@ -313,11 +313,11 @@ Future<String> generatePdf(
               adresse: contratModel.adresseEntreprise ?? '',
               telephone: contratModel.telephoneEntreprise ?? '',
               siret: contratModel.siretEntreprise ?? '',
-              clientData: data,
+              contrat: contratModel,
               boldFont: boldFont,
               ttf: ttf,
-              logoImage: logoImage, // Ajout du logoImage ici
-              nomCollaborateur: nomCollaborateur, // Ajout du nom du collaborateur
+              logoImage: logoImage,
+              nomCollaborateur: nomCollaborateur,
             ),
             pw.SizedBox(height: 20),
             PdfVoitureWidget.build(

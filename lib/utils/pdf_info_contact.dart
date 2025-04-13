@@ -1,5 +1,6 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import '../../models/contrat_model.dart';
 
 class PdfInfoContactWidget {
   static pw.Row build({
@@ -7,7 +8,7 @@ class PdfInfoContactWidget {
     required String adresse,
     required String telephone,
     required String siret,
-    required Map<String, dynamic> clientData,
+    required ContratModel contrat,
     required pw.Font boldFont,
     required pw.Font ttf,
     pw.ImageProvider? logoImage, // Ajout du paramètre logoImage
@@ -27,7 +28,7 @@ class PdfInfoContactWidget {
           nomCollaborateur: nomCollaborateur, // Passage du nom du collaborateur
         ),
         _buildClientInfo(
-          clientData: clientData,
+          contrat: contrat,
           boldFont: boldFont,
           ttf: ttf,
         ),
@@ -85,7 +86,7 @@ class PdfInfoContactWidget {
   }
 
   static pw.Widget _buildClientInfo({
-    required Map<String, dynamic> clientData,
+    required ContratModel contrat,
     required pw.Font boldFont,
     required pw.Font ttf,
   }) {
@@ -107,25 +108,25 @@ class PdfInfoContactWidget {
                 color: PdfColors.blue900,
               )),
           pw.Divider(color: PdfColors.black),
-          if (clientData['entrepriseClient'] != null && clientData['entrepriseClient'].toString().isNotEmpty)
-            pw.Text('Entreprise: ${clientData['entrepriseClient']}',
+          if (contrat.entrepriseClient != null && contrat.entrepriseClient!.isNotEmpty)
+            pw.Text('Entreprise: ${contrat.entrepriseClient}',
                 style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.Text('Nom: ${clientData['nom']}', style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.Text('Prénom: ${clientData['prenom']}',
+          pw.Text('Nom: ${contrat.nom}', style: pw.TextStyle(font: ttf, fontSize: 9)),
+          pw.Text('Prénom: ${contrat.prenom}',
               style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.Text('Adresse: ${clientData['adresse']}',
+          pw.Text('Adresse: ${contrat.adresse}',
               style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.Text('Téléphone: ${clientData['telephone']}',
+          pw.Text('Téléphone: ${contrat.telephone}',
               style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.Text('Email: ${clientData['email']}',
+          pw.Text('Email: ${contrat.email}',
               style: pw.TextStyle(font: ttf, fontSize: 9)),
-          pw.Text('Numéro de permis: ${clientData['numeroPermis']}',
+          pw.Text('Numéro de permis: ${contrat.numeroPermis}',
               style: pw.TextStyle(font: ttf, fontSize: 9)),
-          if (clientData['immatriculationVehiculeClient'] != null && clientData['immatriculationVehiculeClient'].toString().isNotEmpty)
-            pw.Text('Immatriculation véhicule: ${clientData['immatriculationVehiculeClient']}',
+          if (contrat.immatriculationVehiculeClient != null && contrat.immatriculationVehiculeClient!.isNotEmpty)
+            pw.Text('Immatriculation véhicule: ${contrat.immatriculationVehiculeClient}',
                 style: pw.TextStyle(font: ttf, fontSize: 9)),
-          if (clientData['kilometrageVehiculeClient'] != null && clientData['kilometrageVehiculeClient'].toString().isNotEmpty)
-            pw.Text('Kilométrage véhicule: ${clientData['kilometrageVehiculeClient']}',
+          if (contrat.kilometrageVehiculeClient != null && contrat.kilometrageVehiculeClient!.isNotEmpty)
+            pw.Text('Kilométrage véhicule: ${contrat.kilometrageVehiculeClient}',
                 style: pw.TextStyle(font: ttf, fontSize: 9)),
         ],
       ),
