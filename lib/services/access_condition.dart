@@ -17,81 +17,127 @@ class AccessCondition {
 
       final uid = user.uid;
       
-      // Récupérer les données de l'utilisateur
-      final userDocRef = _firestore.collection('users').doc(uid);
-      final userDoc = await userDocRef.get(GetOptions(source: Source.server));
-
-      if (!userDoc.exists) {
-        print('❌ Document utilisateur non trouvé');
-        return {'texte': ContratModifier.defaultContract};
-      }
-
-      final userData = userDoc.data();
-      if (userData == null) {
-        print('❌ Données utilisateur null');
-        return {'texte': ContratModifier.defaultContract};
-      }
-
-      // Vérifier si c'est un collaborateur
-      if (userData['role'] == 'collaborateur') {
-        final adminId = userData['adminId'];
-        if (adminId == null) {
-          print('❌ AdminId non trouvé pour le collaborateur');
-          return {'texte': ContratModifier.defaultContract};
-        }
-
-        // Pour un collaborateur, récupérer les conditions de l'admin
-        final adminConditionsDoc = await _firestore
+      // Récupérer les données d'authentification directement
+      print('🔍 Vérification des données authentification pour les conditions');
+      final authDocRef = _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('authentification')
+          .doc(uid);
+          
+      final authDoc = await authDocRef.get(GetOptions(source: Source.server));
+      
+      if (!authDoc.exists) {
+        print('🔍 Document auth non trouvé, vérification si collaborateur');
+        final userDoc = await _firestore
             .collection('users')
-            .doc(adminId)
-            .collection('contrats')
-            .doc('userId')
+            .doc(uid)
             .get(GetOptions(source: Source.server));
-
-        if (!adminConditionsDoc.exists) {
-          print('⚠️ Document conditions admin non trouvé, utilisation des conditions par défaut');
+            
+        if (!userDoc.exists) {
+          print('⚠️ Utilisateur non trouvé');
           return {'texte': ContratModifier.defaultContract};
         }
-
-        final adminConditionsData = adminConditionsDoc.data();
-        if (adminConditionsData == null) {
-          print('⚠️ Données conditions admin null, utilisation des conditions par défaut');
+        
+        final userData = userDoc.data();
+        if (userData == null) {
+          print('⚠️ Données utilisateur null');
           return {'texte': ContratModifier.defaultContract};
         }
-
-        if (adminConditionsData['texte'] == null) {
-          print('⚠️ Champ texte non trouvé dans les conditions admin, utilisation des conditions par défaut');
+        
+        // Vérifier si c'est un collaborateur
+        if (userData['role'] == 'collaborateur') {
+          final adminId = userData['adminId'];
+          if (adminId == null) {
+            print('❌ AdminId non trouvé pour le collaborateur');
+            return {'texte': ContratModifier.defaultContract};
+          }
+          
+          print('👤 Collaborateur détecté, utilisation de l\'ID admin: $adminId');
+          
+          // Pour un collaborateur, récupérer les conditions de l'admin
+          final adminConditionsDoc = await _firestore
+              .collection('users')
+              .doc(adminId)
+              .collection('contrats')
+              .doc('userId')
+              .get(GetOptions(source: Source.server));
+          
+          if (!adminConditionsDoc.exists) {
+            print('⚠️ Document conditions admin non trouvé, utilisation des conditions par défaut');
+            return {'texte': ContratModifier.defaultContract};
+          }
+          
+          final adminConditionsData = adminConditionsDoc.data();
+          if (adminConditionsData == null || adminConditionsData['texte'] == null) {
+            print('⚠️ Données conditions admin invalides, utilisation des conditions par défaut');
+            return {'texte': ContratModifier.defaultContract};
+          }
+          
+          print('✅ Conditions trouvées pour l\'admin');
+          return {'texte': adminConditionsData['texte']};
+        }
+      } else {
+        // Document d'authentification trouvé
+        final authData = authDoc.data();
+        if (authData == null) {
+          print('⚠️ Données auth null');
           return {'texte': ContratModifier.defaultContract};
         }
-
-        print('✅ Conditions trouvées pour l\'admin');
-        return {'texte': adminConditionsData['texte']};
+        
+        // Vérifier si c'est un collaborateur via les données d'auth
+        if (authData['role'] == 'collaborateur') {
+          final adminId = authData['adminId'];
+          if (adminId == null) {
+            print('❌ AdminId non trouvé dans les données d\'authentification');
+            return {'texte': ContratModifier.defaultContract};
+          }
+          
+          print('👤 Collaborateur détecté (auth), utilisation de l\'ID admin: $adminId');
+          
+          // Pour un collaborateur, récupérer les conditions de l'admin
+          final adminConditionsDoc = await _firestore
+              .collection('users')
+              .doc(adminId)
+              .collection('contrats')
+              .doc('userId')
+              .get(GetOptions(source: Source.server));
+          
+          if (!adminConditionsDoc.exists) {
+            print('⚠️ Document conditions admin non trouvé, utilisation des conditions par défaut');
+            return {'texte': ContratModifier.defaultContract};
+          }
+          
+          final adminConditionsData = adminConditionsDoc.data();
+          if (adminConditionsData == null || adminConditionsData['texte'] == null) {
+            print('⚠️ Données conditions admin invalides, utilisation des conditions par défaut');
+            return {'texte': ContratModifier.defaultContract};
+          }
+          
+          print('✅ Conditions trouvées pour l\'admin');
+          return {'texte': adminConditionsData['texte']};
+        }
       }
-
-      // Pour un utilisateur normal
+      
+      // Pour un utilisateur normal (non collaborateur)
       final conditionsDoc = await _firestore
           .collection('users')
           .doc(uid)
           .collection('contrats')
           .doc('userId')
           .get(GetOptions(source: Source.server));
-
+      
       if (!conditionsDoc.exists) {
         print('⚠️ Document conditions non trouvé, utilisation des conditions par défaut');
         return {'texte': ContratModifier.defaultContract};
       }
-
+      
       final conditionsData = conditionsDoc.data();
-      if (conditionsData == null) {
-        print('⚠️ Données conditions null, utilisation des conditions par défaut');
+      if (conditionsData == null || conditionsData['texte'] == null) {
+        print('⚠️ Données conditions invalides, utilisation des conditions par défaut');
         return {'texte': ContratModifier.defaultContract};
       }
-
-      if (conditionsData['texte'] == null) {
-        print('⚠️ Champ texte non trouvé dans les conditions, utilisation des conditions par défaut');
-        return {'texte': ContratModifier.defaultContract};
-      }
-
+      
       print('✅ Conditions trouvées');
       return {'texte': conditionsData['texte']};
     } catch (e) {
@@ -99,7 +145,7 @@ class AccessCondition {
       return {'texte': ContratModifier.defaultContract};
     }
   }
-
+  
   /// Met à jour les conditions du contrat pour un utilisateur (admin ou collaborateur)
   static Future<bool> updateContractConditions(Map<String, dynamic> conditions) async {
     try {
@@ -108,32 +154,73 @@ class AccessCondition {
         print('❌ Aucun utilisateur connecté');
         return false;
       }
-
-      // Récupérer les données de l'utilisateur
-      final authDataDoc = await _firestore
+      
+      String targetUserId = user.uid;
+      bool isCollaborateur = false;
+      
+      // Récupérer les données d'authentification directement
+      print('🔍 Vérification des données authentification pour la mise à jour');
+      final authDocRef = _firestore
           .collection('users')
           .doc(user.uid)
           .collection('authentification')
-          .doc(user.uid)
-          .get(GetOptions(source: Source.server));
-
-      if (!authDataDoc.exists) {
-        print('❌ Données authentification non trouvées');
-        return false;
-      }
-
-      final authData = authDataDoc.data();
-      final isCollaborateur = authData?['role'] == 'collaborateur';
-      String targetUserId = user.uid;
-
-      // Pour un collaborateur, utiliser l'ID de l'admin
-      if (isCollaborateur) {
-        final adminId = authData?['adminId'];
-        if (adminId != null) {
+          .doc(user.uid);
+          
+      final authDoc = await authDocRef.get(GetOptions(source: Source.server));
+      
+      if (!authDoc.exists) {
+        print('🔍 Document auth non trouvé, vérification si collaborateur');
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .get(GetOptions(source: Source.server));
+            
+        if (!userDoc.exists) {
+          print('⚠️ Utilisateur non trouvé');
+          return false;
+        }
+        
+        final userData = userDoc.data();
+        if (userData == null) {
+          print('⚠️ Données utilisateur null');
+          return false;
+        }
+        
+        // Vérifier si c'est un collaborateur
+        isCollaborateur = userData['role'] == 'collaborateur';
+        if (isCollaborateur) {
+          final adminId = userData['adminId'];
+          if (adminId == null) {
+            print('❌ AdminId non trouvé pour le collaborateur');
+            return false;
+          }
           targetUserId = adminId;
+          print('👤 Collaborateur détecté, utilisation de l\'ID admin: $targetUserId');
+        }
+      } else {
+        // Document d'authentification trouvé
+        final authData = authDoc.data();
+        if (authData == null) {
+          print('⚠️ Données auth null');
+          return false;
+        }
+        
+        // Vérifier si c'est un collaborateur via les données d'auth
+        isCollaborateur = authData['role'] == 'collaborateur';
+        if (isCollaborateur) {
+          final adminId = authData['adminId'];
+          if (adminId == null) {
+            print('❌ AdminId non trouvé dans les données d\'authentification');
+            return false;
+          }
+          targetUserId = adminId;
+          print('👤 Collaborateur détecté (auth), utilisation de l\'ID admin: $targetUserId');
         }
       }
-
+      
+      print('📝 Mise à jour des conditions pour l\'ID: $targetUserId');
+      print('📝 Chemin de mise à jour: users/$targetUserId/contrats/userId');
+      
       // Mettre à jour les conditions du contrat
       await _firestore
           .collection('users')
@@ -141,7 +228,8 @@ class AccessCondition {
           .collection('contrats')
           .doc('userId')
           .set(conditions, SetOptions(merge: true));
-
+      
+      print('✅ Conditions mises à jour avec succès');
       return true;
     } catch (e) {
       print('❌ Erreur lors de la mise à jour des conditions: $e');

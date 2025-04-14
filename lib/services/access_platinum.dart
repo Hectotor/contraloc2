@@ -37,7 +37,7 @@ class AccessPlatinum {
       final userDoc = await userDocRef.get(GetOptions(source: Source.server));
       
       if (!userDoc.exists) {
-        print('❌ Document utilisateur non trouvé');
+        print('🔍 Tentative d\'accès alternatif pour vérification platinum');
         return false;
       }
       

@@ -16,26 +16,62 @@ class AccessLocations {
     if (user == null) return null;
 
     try {
-      // Récupérer les données de l'utilisateur
-      final userDoc = await _firestore
+      // Récupérer les données d'authentification directement
+      print('📝 Vérification des données authentification pour le contrat');
+      final authDocRef = _firestore
           .collection('users')
           .doc(user.uid)
-          .get(GetOptions(source: Source.server));
+          .collection('authentification')
+          .doc(user.uid);
+          
+      final authDoc = await authDocRef.get(GetOptions(source: Source.server));
+      
+      String targetId = user.uid;
+      bool isCollaborateur = false;
+      
+      if (!authDoc.exists) {
+        print('📝 Document auth non trouvé, vérification si collaborateur');
+        // Essayer de récupérer depuis le document utilisateur principal
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .get(GetOptions(source: Source.server));
 
-      if (!userDoc.exists) {
-        print('❌ Document utilisateur non trouvé');
-        return null;
+        if (!userDoc.exists) {
+          print('⚠️ Utilisateur non trouvé');
+          return null;
+        }
+
+        final userData = userDoc.data() ?? {};
+        isCollaborateur = userData['role']?.toString() == 'collaborateur';
+        
+        if (isCollaborateur) {
+          final adminId = userData['adminId']?.toString();
+          if (adminId == null) {
+            print('❌ AdminId non trouvé pour le collaborateur');
+            return null;
+          }
+          targetId = adminId;
+          print('👥 Collaborateur détecté, utilisation de l\'ID admin: $targetId');
+        }
+      } else {
+        // Document d'authentification trouvé
+        final authData = authDoc.data() ?? {};
+        isCollaborateur = authData['role']?.toString() == 'collaborateur';
+        
+        if (isCollaborateur) {
+          final adminId = authData['adminId']?.toString();
+          if (adminId == null) {
+            print('❌ AdminId non trouvé dans les données d\'authentification');
+            return null;
+          }
+          targetId = adminId;
+          print('👥 Collaborateur détecté (auth), utilisation de l\'ID admin: $targetId');
+        }
       }
 
-      final userData = userDoc.data() ?? {};
-      final isCollaborateur = userData['role']?.toString() == 'collaborateur';
-      final targetId = isCollaborateur ? userData['adminId']?.toString() : user.uid;
-
-      if (targetId == null) {
-        print('❌ ID cible non trouvé');
-        return null;
-      }
-
+      print('📝 Chemin du contrat: users/$targetId/locations/$contratId');
+      
       // Récupérer le contrat
       final contratDoc = await _firestore
           .collection('users')
@@ -63,22 +99,58 @@ class AccessLocations {
     if (user == null) throw Exception('Aucun utilisateur connecté');
 
     try {
-      // Récupérer les données de l'utilisateur
-      final userDoc = await _firestore
+      // Récupérer les données d'authentification directement
+      print('📝 Vérification des données authentification pour la mise à jour');
+      final authDocRef = _firestore
           .collection('users')
           .doc(user.uid)
-          .get(GetOptions(source: Source.server));
+          .collection('authentification')
+          .doc(user.uid);
+          
+      final authDoc = await authDocRef.get(GetOptions(source: Source.server));
+      
+      String targetId = user.uid;
+      bool isCollaborateur = false;
+      
+      if (!authDoc.exists) {
+        print('📝 Document auth non trouvé, vérification si collaborateur');
+        // Essayer de récupérer depuis le document utilisateur principal
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .get(GetOptions(source: Source.server));
 
-      if (!userDoc.exists) {
-        throw Exception('Document utilisateur non trouvé');
-      }
+        if (!userDoc.exists) {
+          print('⚠️ Utilisateur non trouvé');
+          throw Exception('Impossible d\'accéder au document pour la mise à jour');
+        }
 
-      final userData = userDoc.data() ?? {};
-      final isCollaborateur = userData['role']?.toString() == 'collaborateur';
-      final targetId = isCollaborateur ? userData['adminId']?.toString() : user.uid;
-
-      if (targetId == null) {
-        throw Exception('ID cible non trouvé');
+        final userData = userDoc.data() ?? {};
+        isCollaborateur = userData['role']?.toString() == 'collaborateur';
+        
+        if (isCollaborateur) {
+          final adminId = userData['adminId']?.toString();
+          if (adminId == null) {
+            print('❌ AdminId non trouvé pour le collaborateur');
+            throw Exception('ID cible non trouvé');
+          }
+          targetId = adminId;
+          print('👥 Collaborateur détecté, utilisation de l\'ID admin: $targetId');
+        }
+      } else {
+        // Document d'authentification trouvé
+        final authData = authDoc.data() ?? {};
+        isCollaborateur = authData['role']?.toString() == 'collaborateur';
+        
+        if (isCollaborateur) {
+          final adminId = authData['adminId']?.toString();
+          if (adminId == null) {
+            print('❌ AdminId non trouvé dans les données d\'authentification');
+            throw Exception('ID cible non trouvé');
+          }
+          targetId = adminId;
+          print('👥 Collaborateur détecté (auth), utilisation de l\'ID admin: $targetId');
+        }
       }
 
       print('📝 Mise à jour du contrat - targetId: $targetId, isCollaborateur: $isCollaborateur');
@@ -111,24 +183,63 @@ class AccessLocations {
     if (user == null) throw Exception('Aucun utilisateur connecté');
 
     try {
-      // Récupérer les données de l'utilisateur
-      final userDoc = await _firestore
+      // Récupérer les données d'authentification directement
+      print('📝 Vérification des données authentification pour la création');
+      final authDocRef = _firestore
           .collection('users')
           .doc(user.uid)
-          .get(GetOptions(source: Source.server));
+          .collection('authentification')
+          .doc(user.uid);
+          
+      final authDoc = await authDocRef.get(GetOptions(source: Source.server));
+      
+      String targetId = user.uid;
+      bool isCollaborateur = false;
+      
+      if (!authDoc.exists) {
+        print('📝 Document auth non trouvé, vérification si collaborateur');
+        // Essayer de récupérer depuis le document utilisateur principal
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .get(GetOptions(source: Source.server));
 
-      if (!userDoc.exists) {
-        throw Exception('Document utilisateur non trouvé');
+        if (!userDoc.exists) {
+          print('⚠️ Utilisateur non trouvé');
+          throw Exception('Impossible d\'accéder au document pour la création');
+        }
+
+        final userData = userDoc.data() ?? {};
+        isCollaborateur = userData['role']?.toString() == 'collaborateur';
+        
+        if (isCollaborateur) {
+          final adminId = userData['adminId']?.toString();
+          if (adminId == null) {
+            print('❌ AdminId non trouvé pour le collaborateur');
+            throw Exception('ID cible non trouvé');
+          }
+          targetId = adminId;
+          print('👥 Collaborateur détecté, utilisation de l\'ID admin: $targetId');
+        }
+      } else {
+        // Document d'authentification trouvé
+        final authData = authDoc.data() ?? {};
+        isCollaborateur = authData['role']?.toString() == 'collaborateur';
+        
+        if (isCollaborateur) {
+          final adminId = authData['adminId']?.toString();
+          if (adminId == null) {
+            print('❌ AdminId non trouvé dans les données d\'authentification');
+            throw Exception('ID cible non trouvé');
+          }
+          targetId = adminId;
+          print('👥 Collaborateur détecté (auth), utilisation de l\'ID admin: $targetId');
+        }
       }
 
-      final userData = userDoc.data() ?? {};
-      final isCollaborateur = userData['role']?.toString() == 'collaborateur';
-      final targetId = isCollaborateur ? userData['adminId']?.toString() : user.uid;
-
-      if (targetId == null) {
-        throw Exception('ID cible non trouvé');
-      }
-
+      print('📝 Création d\'un contrat pour l\'ID: $targetId');
+      print('📝 Chemin de création: users/$targetId/locations');
+      
       // Créer le contrat
       final contratRef = _firestore
           .collection('users')
@@ -137,6 +248,7 @@ class AccessLocations {
           .doc();
 
       await contratRef.set(data, SetOptions(merge: true));
+      print('✅ Contrat créé avec succès: ${contratRef.id}');
       return contratRef.id;
     } catch (e) {
       print('❌ Erreur lors de la création du contrat: $e');
@@ -151,24 +263,63 @@ class AccessLocations {
     if (user == null) throw Exception('Aucun utilisateur connecté');
 
     try {
-      // Récupérer les données de l'utilisateur
-      final userDoc = await _firestore
+      // Récupérer les données d'authentification directement
+      print('📝 Vérification des données authentification pour la suppression');
+      final authDocRef = _firestore
           .collection('users')
           .doc(user.uid)
-          .get(GetOptions(source: Source.server));
+          .collection('authentification')
+          .doc(user.uid);
+          
+      final authDoc = await authDocRef.get(GetOptions(source: Source.server));
+      
+      String targetId = user.uid;
+      bool isCollaborateur = false;
+      
+      if (!authDoc.exists) {
+        print('📝 Document auth non trouvé, vérification si collaborateur');
+        // Essayer de récupérer depuis le document utilisateur principal
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .get(GetOptions(source: Source.server));
 
-      if (!userDoc.exists) {
-        throw Exception('Document utilisateur non trouvé');
+        if (!userDoc.exists) {
+          print('⚠️ Utilisateur non trouvé');
+          throw Exception('Impossible d\'accéder au document pour la suppression');
+        }
+
+        final userData = userDoc.data() ?? {};
+        isCollaborateur = userData['role']?.toString() == 'collaborateur';
+        
+        if (isCollaborateur) {
+          final adminId = userData['adminId']?.toString();
+          if (adminId == null) {
+            print('❌ AdminId non trouvé pour le collaborateur');
+            throw Exception('ID cible non trouvé');
+          }
+          targetId = adminId;
+          print('👥 Collaborateur détecté, utilisation de l\'ID admin: $targetId');
+        }
+      } else {
+        // Document d'authentification trouvé
+        final authData = authDoc.data() ?? {};
+        isCollaborateur = authData['role']?.toString() == 'collaborateur';
+        
+        if (isCollaborateur) {
+          final adminId = authData['adminId']?.toString();
+          if (adminId == null) {
+            print('❌ AdminId non trouvé dans les données d\'authentification');
+            throw Exception('ID cible non trouvé');
+          }
+          targetId = adminId;
+          print('👥 Collaborateur détecté (auth), utilisation de l\'ID admin: $targetId');
+        }
       }
 
-      final userData = userDoc.data() ?? {};
-      final isCollaborateur = userData['role']?.toString() == 'collaborateur';
-      final targetId = isCollaborateur ? userData['adminId']?.toString() : user.uid;
-
-      if (targetId == null) {
-        throw Exception('ID cible non trouvé');
-      }
-
+      print('📝 Suppression du contrat: $contratId pour l\'ID: $targetId');
+      print('📝 Chemin de suppression: users/$targetId/locations/$contratId');
+      
       // Supprimer le contrat
       await _firestore
           .collection('users')
@@ -176,6 +327,8 @@ class AccessLocations {
           .collection('locations')
           .doc(contratId)
           .delete();
+          
+      print('✅ Contrat supprimé avec succès');
     } catch (e) {
       print('❌ Erreur lors de la suppression du contrat: $e');
       rethrow;
@@ -188,45 +341,82 @@ class AccessLocations {
       final user = _auth.currentUser;
       if (user == null) return {};
 
-      // Récupérer les données de l'utilisateur
-      final userDoc = await _firestore
+      // Récupérer les données d'authentification directement
+      print('📝 Vérification des données authentification');
+      final authDocRef = _firestore
           .collection('users')
           .doc(user.uid)
-          .get(GetOptions(source: Source.server));
-
-      if (!userDoc.exists) {
-        print('❌ Document utilisateur non trouvé');
-        return {};
-      }
-
-      final userData = userDoc.data() ?? {};
-      print('✅ Données utilisateur: $userData');
+          .collection('authentification')
+          .doc(user.uid);
+          
+      final authDoc = await authDocRef.get(GetOptions(source: Source.server));
       
-      // Vérifier si c'est un collaborateur
-      final role = userData['role']?.toString();
-      final isCollaborateur = role == 'collaborateur';
-      print('👤 Role collaborateur: $isCollaborateur');
-
-      // Récupérer l'adminId
+      bool isCollaborateur = false;
       String? adminId;
-      if (isCollaborateur) {
-        adminId = userData['adminId']?.toString();
-        print('📝 AdminId trouvé: $adminId');
-        if (adminId == null) {
-          print('❌ AdminId non trouvé dans les données utilisateur');
+      Map<String, dynamic> userData = {};
+      
+      if (!authDoc.exists) {
+        print('📝 Document auth non trouvé, vérification si collaborateur');
+        // Essayer de récupérer depuis le document utilisateur principal
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .get(GetOptions(source: Source.server));
+
+        if (!userDoc.exists) {
+          print('⚠️ Utilisateur non trouvé');
           return {};
         }
+
+        userData = userDoc.data() ?? {};
+        print('✅ Données utilisateur: $userData');
+        
+        // Vérifier si c'est un collaborateur
+        final role = userData['role']?.toString();
+        isCollaborateur = role == 'collaborateur';
+        print('👥 Role collaborateur: $isCollaborateur');
+
+        // Récupérer l'adminId
+        if (isCollaborateur) {
+          adminId = userData['adminId']?.toString();
+          print('📝 AdminId trouvé: $adminId');
+          if (adminId == null) {
+            print('❌ AdminId non trouvé dans les données utilisateur');
+            return {};
+          }
+        } else {
+          adminId = user.uid;
+        }
       } else {
-        adminId = user.uid;
+        // Document d'authentification trouvé
+        userData = authDoc.data() ?? {};
+        print('✅ Données authentification: $userData');
+        
+        // Vérifier si c'est un collaborateur
+        final role = userData['role']?.toString();
+        isCollaborateur = role == 'collaborateur';
+        print('👥 Role collaborateur (auth): $isCollaborateur');
+
+        // Récupérer l'adminId
+        if (isCollaborateur) {
+          adminId = userData['adminId']?.toString();
+          print('📝 AdminId trouvé (auth): $adminId');
+          if (adminId == null) {
+            print('❌ AdminId non trouvé dans les données d\'authentification');
+            return {};
+          }
+        } else {
+          adminId = user.uid;
+        }
       }
 
-      print('👤 Admin ID final: $adminId');
+      print('📝 Admin ID final: $adminId');
       
       return {
         'isCollaborateur': isCollaborateur,
         'adminId': adminId,
         'userId': user.uid,
-        'role': role,
+        'role': userData['role'],
         'userData': userData
       };
     } catch (e) {
