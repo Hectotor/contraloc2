@@ -137,9 +137,11 @@ class _ModifierScreenState extends State<ModifierScreen> {
     }
   }
 
+  /// Clôture le contrat avec une approche transactionnelle robuste
   Future<void> _updateContrat() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Vérification de la cohérence du kilométrage
     if (_kilometrageRetourController.text.isNotEmpty &&
         int.tryParse(_kilometrageRetourController.text) != null &&
         widget.data['kilometrageDepart'] != null &&
@@ -162,6 +164,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
       });
     }
 
+    // Afficher un dialogue de chargement
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -171,6 +174,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
     );
 
     try {
+      // Préparer les photos
       List<String> allPhotosUrls = List<String>.from(_photosRetourUrls);
 
       if (_photosRetour.isNotEmpty) {
@@ -178,6 +182,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         allPhotosUrls.addAll(newUrls);
       }
 
+      // Gérer la signature
       String? signatureRetourBase64;
       try {
         final signatureBytes = await _signatureRetourController.toPngBytes();
@@ -195,7 +200,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
 
       Map<String, dynamic> fraisFinaux = _fraisSupplementaires;
       
-      print(' Sauvegarde des frais définitifs: $fraisFinaux');
+      print('💰 Sauvegarde des frais définitifs: $fraisFinaux');
 
       // Récupérer les données de facture existantes
       Map<String, dynamic> factureData = {
@@ -221,6 +226,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         factureData['factureId'] = const Uuid().v4();
       }
 
+      // Préparer les données de mise à jour
       final updateData = {
         'status': 'restitue',
         'dateFinEffectif': _dateFinEffectifController.text,
@@ -229,7 +235,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
             ? _kilometrageRetourController.text
             : null,
         'pourcentageEssenceRetour': _pourcentageEssenceRetourController.text,
-        'signatureRetour': signatureRetourBase64, // Utiliser signatureRetour au lieu de signature_retour
+        'signatureRetour': signatureRetourBase64,
         'photosRetourUrls': allPhotosUrls,
       };
 
@@ -238,47 +244,90 @@ class _ModifierScreenState extends State<ModifierScreen> {
         updateData['facture'] = factureData;
       }
 
-      // Utilisation de AccessLocations pour la mise à jour
-      await AccessLocations.updateContract(widget.contratId, updateData);
+      // Utiliser la nouvelle méthode avec transactions pour clôturer le contrat
+      final bool success = await AccessLocations.clotureContract(widget.contratId, updateData);
 
-      // Ne pas fermer le dialogue de chargement ici
-      // Navigator.pop(context);
-
-      await RetourEnvoiePdf.genererEtEnvoyerPdfCloture(
-        context: context,
-        contratData: widget.data,
-        contratId: widget.contratId,
-        dateFinEffectif: _dateFinEffectifController.text,
-        kilometrageRetour: _kilometrageRetourController.text,
-        commentaireRetour: _commentaireRetourController.text,
-        pourcentageEssenceRetour: _pourcentageEssenceRetourController.text,
-        signatureRetourBase64: signatureRetourBase64,
-        dialogueDejaAffiche: true, // Nouveau paramètre pour indiquer que le dialogue est déjà affiché
-      );
-
-      // Fermer le dialogue de chargement après l'opération complète
-      if (mounted) {
-        Navigator.pop(context);
-      }
-
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const NavigationPage(initialTab: 1),
+      print('📊 Résultat de la clôture: ${success ? "Succès" : "En attente - ajouté à la file"} - contratId: ${widget.contratId}');
+      
+      // Vérifier le statut de l'opération
+      if (success) {
+        // Générer le PDF si la clôture a réussi
+        await RetourEnvoiePdf.genererEtEnvoyerPdfCloture(
+          context: context,
+          contratData: widget.data,
+          contratId: widget.contratId,
+          dateFinEffectif: _dateFinEffectifController.text,
+          kilometrageRetour: _kilometrageRetourController.text,
+          commentaireRetour: _commentaireRetourController.text,
+          pourcentageEssenceRetour: _pourcentageEssenceRetourController.text,
+          signatureRetourBase64: signatureRetourBase64,
+          dialogueDejaAffiche: true,
+        );
+        
+        // Fermer le dialogue de chargement
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+        
+        // Afficher un message de succès
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Contrat clôturé avec succès. Le contrat est maintenant disponible dans la section 'Contrats restitués'"),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 5),
           ),
         );
+        
+        // Naviguer vers l'écran principal après une clôture réussie
+        if (mounted) {
+          Navigator.pushReplacement(
+            context, 
+            MaterialPageRoute(
+              builder: (context) => const NavigationPage(initialTab: 1)
+            )
+          );
+        }
+      } else {
+        // Fermer le dialogue de chargement
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+        
+        // Afficher un message indiquant que l'opération sera complétée plus tard
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("La connexion est instable. Votre contrat sera clôturé automatiquement dès que la connexion sera rétablie."),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 5),
+          ),
+        );
+        
+        // Naviguer vers l'écran principal même en cas d'échec
+        if (mounted) {
+          Navigator.pushReplacement(
+            context, 
+            MaterialPageRoute(
+              builder: (context) => const NavigationPage(initialTab: 0)
+            )
+          );
+        }
       }
     } catch (e) {
-      Navigator.pop(context);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Erreur : $e"),
-            backgroundColor: Colors.red,
-          ),
-        );
+      print('❌ Erreur majeure lors de la clôture du contrat: $e');
+      
+      // Fermer le dialogue de chargement en cas d'erreur
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
       }
+      
+      // Afficher un message d'erreur
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Une erreur s'est produite lors de la clôture: $e"),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {

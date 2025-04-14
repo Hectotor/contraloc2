@@ -1,14 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:async'; // Import Timer
-import '../HOME/delete_vehicule.dart';
-import '../widget/CREATION DE CONTRAT/client.dart'; // Assurez-vous que ce fichier est correctement importé
-import '../services/collaborateur_util.dart'; // Import du nouveau fichier
-import '../widget/MES CONTRATS/vehicle_access_manager.dart'; // Import du gestionnaire d'accès aux véhicules
-import '../services/connectivity_service.dart'; // Import du service de connectivité
-import 'add_vehicule.dart'; // Import pour la redirection vers AddVehiculeScreen
-import '../HOME/button_add_vehicle.dart'; // Import pour le bouton personnalisé
+import 'package:ContraLoc/widget/MES CONTRATS/vehicle_access_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:ContraLoc/services/sync_queue_service.dart';
+import '../HOME/delete_vehicule.dart';
+import '../widget/CREATION DE CONTRAT/client.dart'; 
+import '../services/collaborateur_util.dart'; 
+import '../services/connectivity_service.dart'; 
+import 'add_vehicule.dart'; 
+import '../HOME/button_add_vehicle.dart'; 
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -20,14 +21,14 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late DeleteVehicule _deleteVehicule;
   String _prenom = '';
-  String _nomEntreprise = ''; // Ajout du nom de l'entreprise
-  String _searchQuery = ''; // Variable pour stocker le texte de recherche
-  bool _isSearching = false; // Variable pour indiquer si la recherche est active
-  bool _showSearchBar = false; // Variable pour afficher/masquer la barre de recherche
-  final TextEditingController _searchController = TextEditingController(); // Contrôleur pour le TextField
-  bool _isUserDataLoaded = false; // Variable pour suivre si les données utilisateur sont chargées
-  late VehicleAccessManager _vehicleAccessManager; // Instance de notre gestionnaire d'accès aux véhicules
-  bool _isVehicleManagerInitialized = false; // Variable pour suivre si le gestionnaire est initialisé
+  String _nomEntreprise = ''; 
+  String _searchQuery = ''; 
+  bool _isSearching = false; 
+  bool _showSearchBar = false; 
+  final TextEditingController _searchController = TextEditingController(); 
+  bool _isUserDataLoaded = false; 
+  late VehicleAccessManager _vehicleAccessManager; 
+  bool _isVehicleManagerInitialized = false; 
   
   // Service de connectivité
   final ConnectivityService _connectivityService = ConnectivityService();
@@ -43,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Charger les données utilisateur et initialiser le gestionnaire de véhicules
     _initializeData();
     _setupSubscriptionCheck();
+    _setupSyncQueue();
     
     // Initialiser le service de connectivité
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -76,11 +78,11 @@ class _HomeScreenState extends State<HomeScreen> {
               final userData = userDoc.data()!;
               if (userData.containsKey('prenom') && userData['prenom'] != null) {
                 prenom = userData['prenom'];
-                print('✅ Prénom du collaborateur récupéré: $prenom');
+                print(' Prénom du collaborateur récupéré: $prenom');
               }
             }
           } catch (error) {
-            print('❌ Erreur lors de la récupération des données du collaborateur: $error');
+            print(' Erreur lors de la récupération des données du collaborateur: $error');
           }
         }
       }
@@ -93,12 +95,12 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      print('❌ Erreur lors du chargement des données utilisateur: $e');
+      print(' Erreur lors du chargement des données utilisateur: $e');
       if (mounted) {
         setState(() {
           _prenom = '';
           _nomEntreprise = '';
-          _isUserDataLoaded = true; // Marquer comme chargé même en cas d'erreur pour éviter un écran de chargement infini
+          _isUserDataLoaded = true; 
         });
       }
     }
@@ -123,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
       print(' Erreur lors de l\'initialisation des données: $e');
       if (mounted) {
         setState(() {
-          _isUserDataLoaded = true; // Marquer comme chargé même en cas d'erreur
+          _isUserDataLoaded = true; 
           _isVehicleManagerInitialized = true;
         });
       }
@@ -133,19 +135,19 @@ class _HomeScreenState extends State<HomeScreen> {
   // Méthode pour initialiser le gestionnaire d'accès aux véhicules
   Future<void> _initializeVehicleAccess() async {
     try {
-      print('🔄 Réinitialisation du gestionnaire d\'accès aux véhicules si nécessaire');
+      print(' Réinitialisation du gestionnaire d\'accès aux véhicules si nécessaire');
       // Réinitialiser le gestionnaire s'il a été fermé précédemment
       // Cela permet de réutiliser le gestionnaire après une déconnexion/reconnexion
       await _vehicleAccessManager.reset();
       
-      print('✅ Gestionnaire d\'accès aux véhicules réinitialisé avec succès');
+      print(' Gestionnaire d\'accès aux véhicules réinitialisé avec succès');
       
       // Forcer une mise à jour de l'interface après l'initialisation
       if (mounted) {
         setState(() {});
       }
     } catch (e) {
-      print('❌ Erreur lors de la réinitialisation du gestionnaire d\'accès aux véhicules: $e');
+      print(' Erreur lors de la réinitialisation du gestionnaire d\'accès aux véhicules: $e');
       // Même en cas d'erreur, on marque comme initialisé pour éviter un écran de chargement infini
       if (mounted) {
         setState(() {
@@ -170,10 +172,43 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Variable pour suivre si le traitement de la file d'attente est configuré
+  static bool _syncQueueSetup = false;
+  
+  // Méthode pour initialiser le traitement de la file d'attente
+  void _setupSyncQueue() {
+    // Ne configurer le traitement qu'une seule fois
+    if (!_syncQueueSetup) {
+      print('uD83DuDD04 Configuration du traitement de la file d\'attente');
+      
+      // Traiter la file au démarrage
+      SyncQueueService().processQueue();
+      
+      // Traiter la file périodiquement toutes les 15 minutes
+      Timer.periodic(const Duration(minutes: 15), (_) {
+        print('uD83DuDD04 Vérification périodique de la file d\'attente');
+        SyncQueueService().processQueue();
+      });
+      
+      // Vérifier la connectivité périodiquement toutes les 30 secondes
+      // et traiter la file si la connexion est disponible
+      Timer.periodic(const Duration(seconds: 30), (_) async {
+        bool isConnected = await _connectivityService.checkConnectivity();
+        if (isConnected) {
+          print('uD83DuDD04 Connectivité vérifiée et disponible, traitement de la file d\'attente');
+          SyncQueueService().processQueue();
+        }
+      });
+      
+      _syncQueueSetup = true;
+      print('u2705 Traitement de la file d\'attente configuré');
+    }
+  }
+
   @override
   void dispose() {
-    _searchController.dispose(); // Libérer les ressources du contrôleur
-    _connectivityService.dispose(); // Arrêter le service de connectivité
+    _searchController.dispose(); 
+    _connectivityService.dispose(); 
     super.dispose();
   }
 
@@ -182,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white, 
       appBar: AppBar(
-        automaticallyImplyLeading: false, // Désactive le bouton de retour automatique
+        automaticallyImplyLeading: false, 
         title: _showSearchBar
             ? TextField(
                 controller: _searchController,

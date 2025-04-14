@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:ContraLoc/services/sync_queue_service.dart';
 
 /// Utilitaire pour gérer l'accès aux locations pour les collaborateurs et admins
 /// Permet de s'assurer que les locations sont toujours accédées via l'ID admin
@@ -351,5 +352,98 @@ class AccessLocations {
       print('❌ Erreur lors de la récupération des données: $e');
       return {};
     }
+  }
+
+  /// Clôture un contrat en utilisant une transaction pour garantir l'atomicité
+  /// et ajoute l'opération à une file d'attente en cas d'échec
+  static Future<bool> clotureContract(String contratId, Map<String, dynamic> updateData) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('Aucun utilisateur connecté');
+
+    bool success = false;
+    
+    try {
+      // Déterminer l'ID cible (collaborateur ou admin)
+      String targetId = user.uid;
+      
+      try {
+        // Récupérer les informations sur l'utilisateur pour savoir s'il est collaborateur
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .get(const GetOptions(source: Source.server));
+
+        if (userDoc.exists && userDoc.data() != null) {
+          final userData = userDoc.data()!;
+          final bool isCollaborateur = userData['role']?.toString() == 'collaborateur';
+          
+          if (isCollaborateur) {
+            final adminId = userData['adminId']?.toString();
+            if (adminId != null) {
+              targetId = adminId;
+              print('👥 Collaborateur détecté, utilisation de l\'ID admin: $targetId');
+            }
+          }
+        } else {
+          print('⚠️ Utilisateur non trouvé, utilisera ID par défaut: $targetId');
+        }
+      } catch (e) {
+        print('⚠️ Erreur lors de la vérification du statut utilisateur: $e');
+        print('⚠️ Utilisation de l\'ID utilisateur par défaut: $targetId');
+      }
+      
+      // Créer une référence au document du contrat
+      final docRef = _firestore
+          .collection('users')
+          .doc(targetId)
+          .collection('locations')
+          .doc(contratId);
+      
+      // Log de recherche du contrat spécifique
+      print('🔍 Tentative de clôture du contrat: $contratId');
+      print('🔍 Recherche du contrat dans: users/$targetId/locations/$contratId');
+      
+      // Exécuter la transaction
+      await _firestore.runTransaction((transaction) async {
+        // Vérifier que le contrat existe et récupérer son état actuel
+        final snapshot = await transaction.get(docRef);
+        if (!snapshot.exists) {
+          throw Exception('Contrat non trouvé: $contratId');
+        }
+        
+        // S'assurer que le contrat n'est pas déjà clôturé
+        final data = snapshot.data()!;
+        print('📊 État actuel du contrat ${contratId}: status=${data['status']}');
+        
+        if (data['status'] == 'restitue') {
+          print('⚠️ Ce contrat est déjà clôturé: $contratId');
+          return; // Ne pas lever d'exception, simplement sortir de la transaction
+        }
+        
+        // S'assurer que le champ 'status' est inclus dans les données de mise à jour
+        if (!updateData.containsKey('status')) {
+          updateData['status'] = 'restitue';
+        }
+        
+        // Appliquer les modifications dans la transaction
+        transaction.update(docRef, updateData);
+      });
+      
+      // Si on arrive ici, la transaction a réussi
+      print('✅ Contrat clôturé avec succès: $contratId');
+      success = true;
+    } catch (e) {
+      print('❌ Erreur lors de la clôture du contrat: $e');
+      // Ajouter le contrat à la file d'attente pour réessayer plus tard
+      await addToSyncQueue(contratId, updateData);
+      success = false;
+    }
+    
+    return success;
+  }
+  
+  /// Ajoute une opération à la file d'attente de synchronisation
+  static Future<void> addToSyncQueue(String contratId, Map<String, dynamic> updateData) async {
+    await SyncQueueService().addToQueue(contratId, updateData);
   }
 }
