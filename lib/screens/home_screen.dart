@@ -185,10 +185,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 controller: _searchController,
                 autofocus: true,
                 cursorColor: Colors.white, 
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                 decoration: InputDecoration(
                   hintText: 'Rechercher un véhicule...',
-                  hintStyle: const TextStyle(color: Colors.white),
+                  hintStyle: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.normal),
                   border: InputBorder.none,
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
