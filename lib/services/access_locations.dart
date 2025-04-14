@@ -20,11 +20,32 @@ class AccessLocations {
       final userDoc = await _firestore
           .collection('users')
           .doc(user.uid)
-          .get();
+          .get(const GetOptions(source: Source.server));
 
       if (!userDoc.exists || userDoc.data() == null) {
         print('⚠️ Utilisateur non trouvé');
-        return null;
+        print('👀 Traitement comme administrateur par défaut pour la récupération');
+        
+        // Si les données utilisateur ne sont pas trouvées, on utilise l'ID de l'utilisateur connecté
+        String targetId = user.uid;
+        
+        print('📝 Chemin du contrat par défaut: users/$targetId/locations/$contratId');
+        
+        // Récupérer le contrat avec l'ID de l'utilisateur par défaut
+        final contratDoc = await _firestore
+            .collection('users')
+            .doc(targetId)
+            .collection('locations')
+            .doc(contratId)
+            .get(const GetOptions(source: Source.server));
+
+        if (!contratDoc.exists) {
+          print('❌ Contrat non trouvé dans le chemin par défaut');
+          return null;
+        }
+
+        print('✅ Contrat récupéré avec succès (mode par défaut)');
+        return contratDoc.data() ?? {};
       }
 
       final userData = userDoc.data()!;
@@ -49,7 +70,7 @@ class AccessLocations {
           .doc(targetId)
           .collection('locations')
           .doc(contratId)
-          .get();
+          .get(const GetOptions(source: Source.server));
 
       if (!contratDoc.exists) {
         print('❌ Contrat non trouvé');
@@ -74,11 +95,29 @@ class AccessLocations {
       final userDoc = await _firestore
           .collection('users')
           .doc(user.uid)
-          .get();
+          .get(const GetOptions(source: Source.server));
 
       if (!userDoc.exists || userDoc.data() == null) {
         print('⚠️ Utilisateur non trouvé');
-        throw Exception('Impossible d\'accéder au document pour la mise à jour');
+        print('👀 Traitement comme administrateur par défaut pour la mise à jour');
+        
+        // Si les données utilisateur ne sont pas trouvées, on utilise l'ID de l'utilisateur connecté
+        // comme cible pour la mise à jour (comportement par défaut pour un administrateur)
+        String targetId = user.uid;
+        
+        print('📝 Mise à jour du contrat: $contratId pour l\'ID par défaut: $targetId');
+        print('📝 Chemin de mise à jour: users/$targetId/locations/$contratId');
+        
+        // Mettre à jour le contrat avec l'ID de l'utilisateur par défaut
+        await _firestore
+            .collection('users')
+            .doc(targetId)
+            .collection('locations')
+            .doc(contratId)
+            .set(data, SetOptions(merge: true));
+            
+        print('✅ Contrat mis à jour avec succès (mode par défaut)');
+        return; // Sortir de la fonction après la mise à jour réussie
       }
 
       final userData = userDoc.data()!;
@@ -124,11 +163,33 @@ class AccessLocations {
       final userDoc = await _firestore
           .collection('users')
           .doc(user.uid)
-          .get();
+          .get(const GetOptions(source: Source.server));
 
       if (!userDoc.exists || userDoc.data() == null) {
         print('⚠️ Utilisateur non trouvé');
-        throw Exception('Impossible d\'accéder au document pour la création');
+        print('👀 Traitement comme administrateur par défaut pour la création');
+        
+        // Si les données utilisateur ne sont pas trouvées, on utilise l'ID de l'utilisateur connecté
+        String targetId = user.uid;
+        
+        print('📝 Création d\'un contrat pour l\'ID par défaut: $targetId');
+        
+        // Créer le contrat avec un ID automatique
+        final docRef = _firestore
+            .collection('users')
+            .doc(targetId)
+            .collection('locations')
+            .doc();
+        
+        // Ajouter l'ID du document aux données
+        final updatedData = Map<String, dynamic>.from(data);
+        updatedData['id'] = docRef.id;
+        
+        // Enregistrer les données
+        await docRef.set(updatedData);
+        
+        print('✅ Contrat créé avec succès en mode par défaut, ID: ${docRef.id}');
+        return docRef.id;
       }
 
       final userData = userDoc.data()!;
@@ -181,11 +242,28 @@ class AccessLocations {
       final userDoc = await _firestore
           .collection('users')
           .doc(user.uid)
-          .get();
+          .get(const GetOptions(source: Source.server));
 
       if (!userDoc.exists || userDoc.data() == null) {
         print('⚠️ Utilisateur non trouvé');
-        throw Exception('Impossible d\'accéder au document pour la suppression');
+        print('👀 Traitement comme administrateur par défaut pour la suppression');
+        
+        // Si les données utilisateur ne sont pas trouvées, on utilise l'ID de l'utilisateur connecté
+        String targetId = user.uid;
+        
+        print('📝 Suppression du contrat: $contratId pour l\'ID par défaut: $targetId');
+        print('📝 Chemin de suppression: users/$targetId/locations/$contratId');
+        
+        // Supprimer le contrat avec l'ID de l'utilisateur par défaut
+        await _firestore
+            .collection('users')
+            .doc(targetId)
+            .collection('locations')
+            .doc(contratId)
+            .delete();
+            
+        print('✅ Contrat supprimé avec succès (mode par défaut)');
+        return; // Sortir de la fonction après la suppression réussie
       }
 
       final userData = userDoc.data()!;
@@ -230,7 +308,7 @@ class AccessLocations {
       final userDoc = await _firestore
           .collection('users')
           .doc(user.uid)
-          .get();
+          .get(const GetOptions(source: Source.server));
 
       if (!userDoc.exists || userDoc.data() == null) {
         print('⚠️ Utilisateur non trouvé');
