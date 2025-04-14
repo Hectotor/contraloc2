@@ -106,7 +106,8 @@ class _ContratScreenState extends State<ContratScreen>
               ),
             ),
           ],
-          indicatorSize: TabBarIndicatorSize.tab,
+          indicatorSize: TabBarIndicatorSize.label,
+          indicatorWeight: 4.0,
           indicatorColor: Colors.white,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
@@ -114,6 +115,11 @@ class _ContratScreenState extends State<ContratScreen>
       ),
       body: Column(
         children: [
+          // Ajout du trait sous l'appBar
+          Container(
+            height: 1,
+            color: Colors.grey[200],
+          ),
           // TabBar pour la navigation entre les onglets
           Expanded(
             child: TabBarView(
