@@ -19,7 +19,7 @@ class NavigationPage extends StatefulWidget {
 class _NavigationPageState extends State<NavigationPage> {
   int _currentIndex = 0;
 
-  // Liste des écrans
+  // Liste des écrans - initialisée une seule fois
   late final List<Widget> _screens;
 
   @override
@@ -53,8 +53,12 @@ class _NavigationPageState extends State<NavigationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Ajout de cette ligne
-      body: _screens[_currentIndex], // Affiche l'écran sélectionné
+      backgroundColor: Colors.white,
+      // Utilisation d'IndexedStack pour préserver l'état des écrans
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
