@@ -133,16 +133,19 @@ class _HomeScreenState extends State<HomeScreen> {
   // Méthode pour initialiser le gestionnaire d'accès aux véhicules
   Future<void> _initializeVehicleAccess() async {
     try {
-      print('🔄 Initialisation du gestionnaire d\'accès aux véhicules...');
-      await _vehicleAccessManager.initialize();
-      print('✅ Gestionnaire d\'accès aux véhicules initialisé avec succès');
+      print('🔄 Réinitialisation du gestionnaire d\'accès aux véhicules si nécessaire');
+      // Réinitialiser le gestionnaire s'il a été fermé précédemment
+      // Cela permet de réutiliser le gestionnaire après une déconnexion/reconnexion
+      await _vehicleAccessManager.reset();
+      
+      print('✅ Gestionnaire d\'accès aux véhicules réinitialisé avec succès');
       
       // Forcer une mise à jour de l'interface après l'initialisation
       if (mounted) {
         setState(() {});
       }
     } catch (e) {
-      print('❌ Erreur lors de l\'initialisation du gestionnaire d\'accès aux véhicules: $e');
+      print('❌ Erreur lors de la réinitialisation du gestionnaire d\'accès aux véhicules: $e');
       // Même en cas d'erreur, on marque comme initialisé pour éviter un écran de chargement infini
       if (mounted) {
         setState(() {
