@@ -70,14 +70,20 @@ class CollaborateurUtil {
       throw Exception('Utilisateur non connecté');
     }
 
-    // Récupérer les données de l'utilisateur
-    final userData = await getUserData();
+    // Récupérer les données de l'utilisateur directement
+    final userDoc = await _firestore.collection('users').doc(user.uid).get(GetOptions(source: Source.server));
+    
+    if (!userDoc.exists) {
+      print('❌ Document utilisateur non trouvé');
+      throw Exception('Document utilisateur non trouvé');
+    }
+    
+    final userData = userDoc.data() ?? {};
     final userRole = userData['role'];
     final userAdminId = userData['adminId'];
     
     print('🔍 Récupération du document');
     print('📝 Rôle: $userRole, AdminId: $userAdminId');
-    print('📊 Données utilisateur: $userData');
     
     String finalAdminId = userRole == 'collaborateur' && userAdminId != null 
         ? userAdminId 
@@ -119,49 +125,38 @@ class CollaborateurUtil {
       throw Exception('Utilisateur non connecté');
     }
 
-    // Vérifier si l'utilisateur a la permission d'écriture
-    final canWrite = await checkCollaborateurPermission(AccessPermission.PERMISSION_WRITE);
-    if (!canWrite) {
-      print('⛔️ Permission refusée: écriture non autorisée');
-      throw Exception('Vous n\'avez pas la permission d\'écriture');
+    // Vérifier les permissions du collaborateur
+    final status = await checkCollaborateurStatus();
+    final isCollaborateur = status['isCollaborateur'] == true;
+    final adminId = status['adminId'];
+
+    if (isCollaborateur) {
+      final hasPermission = await AccessPermission.checkPermission('écriture');
+      if (!hasPermission) {
+        print('❌ Collaborateur sans permission d\'écriture');
+        throw Exception('Vous n\'avez pas la permission de modifier ce document');
+      }
     }
 
-    // Récupérer les données de l'utilisateur
-    final userData = await getUserData();
-    final userRole = userData['role'];
-    final userAdminId = userData['adminId'];
-    
-    print('📝 Mise à jour du document');
-    print('📝 Rôle: $userRole, AdminId: $userAdminId');
-    print('📊 Données utilisateur: $userData');
-    print('📊 Données à mettre à jour: $data');
-    
-    String finalAdminId = userRole == 'collaborateur' && userAdminId != null 
-        ? userAdminId 
-        : user.uid;
+    String targetId = isCollaborateur && adminId != null && useAdminId
+      ? adminId
+      : docId;
 
-    print('🔄 Utilisation de l\'ID: $finalAdminId pour la requête');
-    print('📁 Chemin de la requête: $collection/$finalAdminId/${subCollection ?? ''}/${subDocId ?? ''}');
+    print('📝 Mise à jour du document - targetId: $targetId, isCollaborateur: $isCollaborateur');
+    print('📁 Chemin de la mise à jour: $collection/$targetId/${subCollection ?? ''}/${subDocId ?? ''}');
 
+    // Construire le chemin du document
+    DocumentReference docRef = _firestore.collection(collection).doc(targetId);
+    if (subCollection != null && subCollection.isNotEmpty) {
+      docRef = docRef.collection(subCollection).doc(subDocId ?? docId);
+    }
+
+    // Mettre à jour le document en utilisant set avec merge: true pour éviter d'écraser
     try {
-      if (useAdminId) {
-        print('📝 Mise à jour avec ID admin');
-        await _firestore.collection(collection)
-            .doc(finalAdminId)
-            .collection(subCollection ?? '')
-            .doc(subDocId ?? '')
-            .set(data, SetOptions(merge: true));
-      } else {
-        print('📝 Mise à jour avec ID document');
-        await _firestore.collection(collection)
-            .doc(docId)
-            .collection(subCollection ?? '')
-            .doc(subDocId ?? '')
-            .set(data, SetOptions(merge: true));
-      }
+      await docRef.set(data, SetOptions(merge: true));
       print('✔️ Document mis à jour avec succès');
     } catch (e) {
-      print('❌ Erreur lors de la mise à jour du document: $e');
+      print('❌ Erreur lors de la mise à jour: $e');
       throw Exception('Erreur lors de la mise à jour du document: $e');
     }
   }
@@ -181,95 +176,56 @@ class CollaborateurUtil {
       throw Exception('Utilisateur non connecté');
     }
 
-    // Vérifier si l'utilisateur a la permission de lecture
-    final canRead = await checkCollaborateurPermission(AccessPermission.PERMISSION_READ);
-    if (!canRead) {
-      print('⛔️ Permission refusée: lecture non autorisée');
-      throw Exception('Vous n\'avez pas la permission de lecture');
-    }
-
     // Récupérer les données de l'utilisateur
-    final userData = await getUserData();
-    final userRole = userData['role'];
-    final userAdminId = userData['adminId'];
-    
-    print('🔍 Récupération des documents de la collection');
-    print('📝 Rôle: $userRole, AdminId: $userAdminId');
-    print('📊 Données utilisateur: $userData');
-    
-    String finalAdminId = userRole == 'collaborateur' && userAdminId != null 
-        ? userAdminId 
-        : user.uid;
+    final status = await checkCollaborateurStatus();
+    final isCollaborateur = status['isCollaborateur'] == true;
+    final adminId = status['adminId'];
 
-    print('🔄 Utilisation de l\'ID: $finalAdminId pour la requête');
-    print('📁 Chemin de la requête: $collection/$finalAdminId/$subCollection');
-
-    try {
-      Query query;
-      if (useAdminId) {
-        print('🔍 Récupération avec ID admin');
-        query = _firestore.collection(collection)
-            .doc(finalAdminId)
-            .collection(subCollection);
-      } else {
-        print('🔍 Récupération avec ID document');
-        query = _firestore.collection(collection)
-            .doc(docId)
-            .collection(subCollection);
-      }
-
-      if (queryBuilder != null) {
-        query = queryBuilder(query);
-      }
-
-      final result = await query.get(GetOptions(source: Source.server));
-      print('✔️ ${result.docs.length} documents récupérés');
-      return result;
-    } catch (e) {
-      print('❌ Erreur lors de la récupération des documents: $e');
-      throw Exception('Erreur lors de la récupération des documents: $e');
+    String targetId = docId;
+    if (isCollaborateur && adminId != null && useAdminId) {
+      targetId = adminId;
+      print('👥 Collaborateur détecté, utilisation de l\'ID admin: $targetId');
     }
+
+    print('🔍 Récupération de la collection');
+    print('📁 Chemin de la requête: $collection/$targetId/$subCollection');
+
+    Query query = _firestore
+        .collection(collection)
+        .doc(targetId)
+        .collection(subCollection);
+
+    // Appliquer le queryBuilder si fourni
+    if (queryBuilder != null) {
+      query = queryBuilder(query);
+    }
+
+    return await query.get(GetOptions(source: Source.server));
   }
 
   /// Récupère les données d'un utilisateur
   static Future<Map<String, dynamic>> getUserData() async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = _auth.currentUser;
     if (user == null) {
       print('❌ Aucun utilisateur connecté');
       return {};
     }
 
-    print('🔍 Récupération des données utilisateur depuis Firestore (ID: ${user.uid})');
-    
     try {
-      // Récupérer les données de l'utilisateur directement depuis la collection users
-      final userData = await FirebaseFirestore.instance
+      print('🔄 Forçage de la récupération des données depuis Firestore');
+      final userDoc = await _firestore
           .collection('users')
           .doc(user.uid)
           .get(GetOptions(source: Source.server));
 
-      print('📄 Document utilisateur trouvé: ${userData.exists}');
-      print('📊 Type de données: ${userData.data()?.runtimeType}');
-      print('📊 Données brutes: ${userData.data()}');
-      
-      if (!userData.exists) {
-        print('❌ Document utilisateur non trouvé pour l\'ID: ${user.uid}');
+      if (!userDoc.exists) {
+        print('❌ Document utilisateur non trouvé');
         return {};
       }
 
-      final userDataMap = userData.data() ?? {};
-      print('📊 Données utilisateur: $userDataMap');
-      print('📊 Clés disponibles: ${userDataMap.keys}');
-      
-      final userRole = userDataMap['role'];
-      final userAdminId = userDataMap['adminId'];
-      
-      print('📝 Rôle: $userRole, AdminId: $userAdminId');
-      
-      return userDataMap;
+      return userDoc.data() ?? {};
     } catch (e) {
-      print('❌ Erreur lors de la récupération des données utilisateur: $e');
-      print('❌ Stack trace: ${StackTrace.current.toString()}');
+      print('❌ Erreur lors de la récupération des données: $e');
       return {};
     }
   }
@@ -278,17 +234,14 @@ class CollaborateurUtil {
   /// Pour un collaborateur, récupère les données de son administrateur
   static Future<Map<String, dynamic>> getAuthData() async {
     try {
-      print('🔄 Forçage de la récupération des données depuis Firestore');
-      
-      // Récupérer l'ID de l'utilisateur actuel
-      final user = FirebaseAuth.instance.currentUser;
+      final user = _auth.currentUser;
       if (user == null) {
         print('❌ Aucun utilisateur connecté');
         return {};
       }
 
-      // Vérifier d'abord si l'utilisateur est un collaborateur
-      final userDoc = await FirebaseFirestore.instance
+      print('🔄 Chargement des données utilisateur...');
+      final userDoc = await _firestore
           .collection('users')
           .doc(user.uid)
           .get(GetOptions(source: Source.server));
@@ -312,7 +265,7 @@ class CollaborateurUtil {
       }
 
       // Récupérer les données depuis la sous-collection authentification
-      final authDoc = await FirebaseFirestore.instance
+      final authDoc = await _firestore
           .collection('users')
           .doc(adminId) // Utiliser l'ID de l'admin pour un collaborateur
           .collection('authentification')
@@ -335,7 +288,7 @@ class CollaborateurUtil {
   /// Récupère les données d'abonnement depuis Firestore
   static Future<Map<String, dynamic>> getSubscriptionData(String userId) async {
     try {
-      final doc = await FirebaseFirestore.instance
+      final doc = await _firestore
           .collection('users')
           .doc(userId)
           .collection('authentification')
@@ -370,7 +323,7 @@ class CollaborateurUtil {
   static Future<List<Map<String, dynamic>>> getAdminContracts(
       String adminId, String status) async {
     try {
-      final contracts = await FirebaseFirestore.instance
+      final contracts = await _firestore
           .collection('users')
           .doc(adminId)
           .collection('locations')
@@ -386,10 +339,10 @@ class CollaborateurUtil {
 
   /// Vérifie si un utilisateur a le rôle admin
   static Future<bool> isAdmin() async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = _auth.currentUser;
     if (user == null) return false;
 
-    final userDoc = await FirebaseFirestore.instance
+    final userDoc = await _firestore
         .collection('users')
         .doc(user.uid)
         .get(GetOptions(source: Source.server));
@@ -402,7 +355,7 @@ class CollaborateurUtil {
 
   /// Vérifie si un collaborateur a une permission spécifique
   /// Paramètres:
-  /// - permissionType: 'lecture', 'ecriture', ou 'suppression'
+  /// - permissionType: 'lecture', 'écriture', ou 'suppression'
   static Future<bool> checkCollaborateurPermission(String permissionType) async {
     return await AccessPermission.checkPermission(permissionType);
   }
@@ -416,5 +369,10 @@ class CollaborateurUtil {
     } catch (e) {
       print('❌ Erreur lors du nettoyage: $e');
     }
+  }
+
+  /// Forçage de l'utilisation du serveur pour toutes les requêtes
+  static GetOptions serverOnly() {
+    return GetOptions(source: Source.server);
   }
 }

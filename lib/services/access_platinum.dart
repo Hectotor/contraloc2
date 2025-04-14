@@ -17,39 +17,16 @@ class AccessPlatinum {
       final uid = user.uid;
       print('📝 Utilisateur connecté: $uid');
 
-      // Essayer directement la collection authentification de l'utilisateur
-      final authDocRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('authentification')
-          .doc(uid);
-      
-      final authDoc = await authDocRef.get(GetOptions(source: Source.server));
-      
-      if (authDoc.exists) {
-        return _checkPlatinumStatus(authDoc.data());
-      }
-      
-      print('❌ Document auth non trouvé pour l\'utilisateur, vérification si collaborateur');
-      
-      // Si l'authentification directe ne fonctionne pas, vérifier si c'est un collaborateur
+      // Récupérer d'abord les informations sur l'utilisateur pour savoir s'il est collaborateur
       final userDocRef = FirebaseFirestore.instance.collection('users').doc(uid);
       final userDoc = await userDocRef.get(GetOptions(source: Source.server));
       
-      if (!userDoc.exists) {
-        print('🔍 Tentative d\'accès alternatif pour vérification platinum');
+      if (!userDoc.exists || userDoc.data() == null) {
+        print('❌ Document utilisateur non trouvé');
         return false;
       }
       
-      final userData = userDoc.data();
-      if (userData == null) {
-        print('❌ Données utilisateur null');
-        return false;
-      }
-      
-      // Log détaillé de toutes les données du collaborateur
-      print('📁 Détails complets du collaborateur: ${userData.toString()}');
-      print('📝 Données utilisateur récupérées: role=${userData['role']}, adminId=${userData['adminId']}');
+      final userData = userDoc.data()!;
       
       // Vérifier si c'est un collaborateur
       if (userData['role'] == 'collaborateur') {
@@ -68,6 +45,7 @@ class AccessPlatinum {
             .collection('authentification')
             .doc(adminId);
         
+        // Utiliser Source.server pour éviter les problèmes de cache
         final adminAuthDoc = await adminAuthDocRef.get(GetOptions(source: Source.server));
         
         if (!adminAuthDoc.exists) {
@@ -76,6 +54,19 @@ class AccessPlatinum {
         }
         
         return _checkPlatinumStatus(adminAuthDoc.data());
+      } else {
+        // C'est un administrateur, vérifier directement son statut platinum
+        final authDocRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('authentification')
+            .doc(uid);
+        
+        final authDoc = await authDocRef.get(GetOptions(source: Source.server));
+        
+        if (authDoc.exists) {
+          return _checkPlatinumStatus(authDoc.data());
+        }
       }
       
       print('❌ Aucun statut platinum trouvé');
