@@ -19,6 +19,7 @@ class VehicleAccessManager {
   // (soit l'ID de l'utilisateur actuel, soit l'ID de l'admin associé)
   String? _targetUserId;
   bool _isInitialized = false;
+  bool _isDisposed = false; // Nouvel état pour savoir si le manager a été fermé
   
   // Map pour stocker les timestamps de dernière mise à jour des véhicules
   final Map<String, DateTime> _lastVehicleUpdate = {};
@@ -74,6 +75,12 @@ class VehicleAccessManager {
   
   // Méthode pour obtenir le stream des véhicules
   Stream<QuerySnapshot> getVehiclesStream() {
+    // Si le manager a été fermé, retourner un stream vide
+    if (_isDisposed) {
+      print('🚫 Tentative d\'accès au stream après dispose');
+      return Stream.empty();
+    }
+    
     if (!_isInitialized) {
       // Si le gestionnaire n'est pas encore initialisé, initialiser de manière synchrone
       // et retourner un stream qui attend l'initialisation
@@ -90,64 +97,66 @@ class VehicleAccessManager {
           // Une fois initialisé, récupérer les données
           print('Récupération initiale des véhicules pour $effectiveUserId');
           try {
+            // Récupérer directement depuis le serveur sans utiliser le cache
             final snapshot = await _firestore
                 .collection('users')
                 .doc(effectiveUserId)
                 .collection('vehicules')
-                .get(GetOptions(source: Source.cache))
-                .timeout(Duration(seconds: 2), onTimeout: () {
-                  print('Cache timeout, récupération depuis le serveur');
-                  return _firestore
-                      .collection('users')
-                      .doc(effectiveUserId)
-                      .collection('vehicules')
-                      .get();
-                });
-            print('Données initiales récupérées avec succès: ${snapshot.docs.length} véhicules');
+                .get(const GetOptions(source: Source.server));
+                
             return snapshot;
           } catch (e) {
-            print('Erreur lors de la récupération initiale: $e');
-            // En cas d'erreur, essayer directement depuis le serveur
-            return _firestore
-                .collection('users')
-                .doc(effectiveUserId)
-                .collection('vehicules')
-                .get();
+            print('Récupération initiale échouée, retour d\'un snapshot vide');
+            // En cas d'erreur, retourner un snapshot vide
+            return FirebaseFirestore.instance.collection('empty').limit(0).get();
           }
         })
-      ).asyncExpand((snapshot) {
-        // Une fois que nous avons les données initiales, retourner le stream continu
-        final effectiveUserId = _targetUserId ?? _auth.currentUser?.uid;
-        if (effectiveUserId == null) {
-          return Stream.empty();
-        }
-        
-        print('Configuration du stream continu pour $effectiveUserId');
-        return _firestore
-            .collection('users')
-            .doc(effectiveUserId)
-            .collection('vehicules')
-            .snapshots();
+      ).handleError((error) {
+        // Silence les erreurs de permission dans le stream initial
+        print('Gestion silencieuse d\'une erreur de stream initial');
+        return FirebaseFirestore.instance.collection('empty').limit(0).get();
       });
     }
     
-    // Si déjà initialisé, utiliser l'ID cible (admin ou utilisateur actuel)
     final effectiveUserId = _targetUserId ?? _auth.currentUser?.uid;
     if (effectiveUserId == null) {
-      // Retourner un stream vide si aucun utilisateur n'est connecté
+      print('Aucun utilisateur connecté, retour d\'un stream vide');
       return Stream.empty();
     }
     
-    return _firestore
+    // Récupérer le stream de la collection des véhicules
+    final Stream<QuerySnapshot> stream = _firestore
         .collection('users')
         .doc(effectiveUserId)
         .collection('vehicules')
-        .snapshots();
+        // Utiliser un snapshotsOptions pour forcer Source.server pour chaque événement du stream
+        .snapshots(includeMetadataChanges: true)
+        // Filtrer pour ne garder que les événements qui viennent du serveur
+        .where((snapshot) => snapshot.metadata.isFromCache == false);
+    
+    // Transformer le stream pour capturer les erreurs sans les afficher
+    return stream.handleError((error) {
+      // Ignorer les erreurs de permission sans les afficher
+      if (error.toString().contains('permission-denied')) {
+        print('🚫 Stream des véhicules interrompu silencieusement');
+      }
+      // Retourner un stream vide pour remplacer le stream en erreur
+      return Stream.empty();
+    }, test: (error) {
+      // Ne capturer que les erreurs de permission
+      return error.toString().contains('permission-denied');
+    });
   }
   
   // Méthode pour récupérer un document de véhicule spécifique
   // Utilise le cache en priorité pour réduire les coûts Firebase
   Future<DocumentSnapshot> getVehicleDocument(String vehicleId) async {
+    // Si le manager a été fermé, lancer une exception
+    if (_isDisposed) {
+      print('🚮 Tentative d\'accès au véhicule $vehicleId après dispose');
+      throw Exception('Le gestionnaire d\'accès aux véhicules a été fermé');
+    }
+    
     if (!_isInitialized) {
       await initialize();
     }
@@ -180,6 +189,12 @@ class VehicleAccessManager {
   
   // Méthode pour forcer la mise à jour d'un véhicule depuis le serveur
   Future<DocumentSnapshot> refreshVehicleFromServer(String vehicleId) async {
+    // Si le manager a été fermé, lancer une exception
+    if (_isDisposed) {
+      print('🚮 Tentative de rafraichissement du véhicule $vehicleId après dispose');
+      throw Exception('Le gestionnaire d\'accès aux véhicules a été fermé');
+    }
+    
     if (!_isInitialized) {
       await initialize();
     }
@@ -204,6 +219,12 @@ class VehicleAccessManager {
   
   // Méthode pour récupérer un véhicule par immatriculation
   Future<QuerySnapshot> getVehicleByImmatriculation(String immatriculation) async {
+    // Si le manager a été fermé, lancer une exception
+    if (_isDisposed) {
+      print('🚮 Tentative d\'accès à l\'immatriculation $immatriculation après dispose');
+      throw Exception('Le gestionnaire d\'accès aux véhicules a été fermé');
+    }
+    
     // S'assurer que le gestionnaire est initialisé
     if (!_isInitialized) {
       await initialize();
@@ -234,5 +255,21 @@ class VehicleAccessManager {
   // Méthode pour récupérer l'ID cible (utilisateur actuel ou admin)
   String? getTargetUserId() {
     return _targetUserId ?? _auth.currentUser?.uid;
+  }
+  
+  // Méthode pour nettoyer le manager et fermer les streams
+  void dispose() {
+    print('🚮 Nettoyage du gestionnaire d\'accès aux véhicules');
+    _isDisposed = true;
+    _isInitialized = false;
+    _targetUserId = null;
+    _lastVehicleUpdate.clear();
+  }
+  
+  // Méthode pour réinitialiser le manager après un dispose
+  Future<void> reset() async {
+    _isDisposed = false;
+    _isInitialized = false;
+    await initialize();
   }
 }

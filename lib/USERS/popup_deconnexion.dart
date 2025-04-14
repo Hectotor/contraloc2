@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../SCREENS/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart'; // Import pour accéder à navigatorKey
+import '../widget/MES CONTRATS/vehicle_access_manager.dart'; // Import pour nettoyer le manager des véhicules
 
 class PopupDeconnexion {
   static Future<void> showLogoutConfirmationDialog(BuildContext context) async {
@@ -66,6 +67,11 @@ class PopupDeconnexion {
   // Méthode pour déconnecter l'utilisateur complètement
   static Future<void> _logout(BuildContext context) async {
     try {
+      // Disposer de tous les gestionnaires qui pourraient causer des erreurs de permission
+      // IMPORTANT: Nettoyer les streams AVANT de naviguer ou de déconnecter
+      print('🔄 Nettoyage des gestionnaires avant déconnexion');
+      VehicleAccessManager.instance.dispose();
+      
       // Navigation immédiate vers la page de connexion pour éviter les erreurs de permission
       // dues aux streams actifs
       navigatorKey.currentState?.pushAndRemoveUntil(
