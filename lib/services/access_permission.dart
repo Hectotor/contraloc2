@@ -11,22 +11,24 @@ class AccessPermission {
   /// - permissionType: 'lecture', 'ecriture', ou 'suppression'
   static Future<bool> checkPermission(String permissionType) async {
     try {
-      print("🔍 Vérification de la permission '$permissionType'");
+      print('🔍 Vérification de la permission \'$permissionType\'');
       
       // Vérifier le statut de l'utilisateur
       final status = await _checkUserStatus();
       
       // Si l'utilisateur n'est pas un collaborateur, il a toutes les permissions
       if (status['isCollaborateur'] != true) {
-        print("👑 Utilisateur admin: toutes les permissions accordées");
+        print('👑 Utilisateur admin: toutes les permissions accordées');
         return true;
       }
       
       final userId = status['userId'];
       final adminId = status['adminId'];
       
+      print('👥 Collaborateur détecté - Vérification des permissions: userId=$userId, adminId=$adminId');
+      
       if (userId == null || adminId == null) {
-        print("❌ Erreur: ID utilisateur ou adminId manquant");
+        print('❌ Erreur: ID utilisateur ou adminId manquant');
         return false;
       }
       
@@ -34,23 +36,28 @@ class AccessPermission {
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
-          .get();
+          .get(GetOptions(source: Source.server));
       
       final userData = userDoc.data();
       
       if (userData == null) {
-        print("❌ Erreur: Données utilisateur non trouvées");
+        print('❌ Erreur: Données utilisateur non trouvées');
         return false;
       }
       
+      // Log détaillé de toutes les données du collaborateur
+      print('📝 Détails complets du collaborateur: ${userData.toString()}');
+      
       // Vérifier si l'utilisateur a la permission demandée
       final permissions = userData['permissions'] ?? {};
+      print('📝 Permissions disponibles: ${permissions.toString()}');
+      
       final hasPermission = permissions[permissionType] ?? false;
       
-      print("✅ Permission '$permissionType': ${hasPermission ? 'accordée' : 'refusée'}");
+      print('${hasPermission ? '✔️' : '❌'} Permission \'$permissionType\': ${hasPermission ? 'accordée' : 'refusée'}');
       return hasPermission;
     } catch (e) {
-      print("❌ Erreur lors de la vérification de la permission: $e");
+      print('❌ Erreur lors de la vérification de la permission: $e');
       return false;
     }
   }
@@ -59,23 +66,30 @@ class AccessPermission {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        print("❌ Aucun utilisateur connecté");
+        print('❌ Aucun utilisateur connecté');
         return {'isCollaborateur': false, 'userId': null, 'adminId': null};
       }
+      
+      print('✔️ Utilisateur connecté: ${user.uid}');
       
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .get();
+          .get(GetOptions(source: Source.server));
       
       final userData = userDoc.data();
       if (userData == null) {
-        print("❌ Données utilisateur non trouvées");
+        print('❌ Données utilisateur non trouvées');
         return {'isCollaborateur': false, 'userId': user.uid, 'adminId': null};
       }
       
+      // Log détaillé des données utilisateur
+      print('📝 Détails complets de l\'utilisateur: ${userData.toString()}');
+      
       final isCollaborateur = userData['role'] == 'collaborateur';
       final adminId = isCollaborateur ? userData['adminId'] : user.uid;
+      
+      print('📝 Statut utilisateur: ${isCollaborateur ? 'Collaborateur' : 'Admin'}, adminId: $adminId');
       
       return {
         'isCollaborateur': isCollaborateur,
@@ -83,7 +97,7 @@ class AccessPermission {
         'adminId': adminId,
       };
     } catch (e) {
-      print("❌ Erreur lors de la vérification du statut: $e");
+      print('❌ Erreur lors de la vérification du statut: $e');
       rethrow;
     }
   }
