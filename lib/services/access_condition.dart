@@ -17,73 +17,85 @@ class AccessCondition {
 
       final uid = user.uid;
       
-      // Récupérer d'abord les informations sur l'utilisateur pour savoir s'il est collaborateur
-      final userDocRef = _firestore.collection('users').doc(uid);
-      final userDoc = await userDocRef.get(GetOptions(source: Source.server));
-            
-      if (!userDoc.exists || userDoc.data() == null) {
-        print('⚠️ Utilisateur non trouvé ou données null');
-        return {'texte': ContratModifier.defaultContract};
-      }
-      
-      final userData = userDoc.data()!;
-      
-      // Vérifier si c'est un collaborateur
-      if (userData['role'] == 'collaborateur') {
-        final adminId = userData['adminId'];
-        if (adminId == null) {
-          print('❌ AdminId non trouvé pour le collaborateur');
-          return {'texte': ContratModifier.defaultContract};
-        }
-        
-        print('👤 Collaborateur détecté, utilisation de l\'ID admin: $adminId');
-        
-        // Pour un collaborateur, récupérer les conditions de l'admin
-        final adminConditionsDoc = await _firestore
-            .collection('users')
-            .doc(adminId)
-            .collection('contrats')
-            .doc('userId')
-            .get(GetOptions(source: Source.server));
-        
-        if (!adminConditionsDoc.exists || adminConditionsDoc.data() == null) {
-          print('⚠️ Document conditions admin non trouvé, utilisation des conditions par défaut');
-          return {'texte': ContratModifier.defaultContract};
-        }
-        
-        final adminConditionsData = adminConditionsDoc.data()!;
-        if (adminConditionsData['texte'] == null) {
-          print('⚠️ Données conditions admin invalides, utilisation des conditions par défaut');
-          return {'texte': ContratModifier.defaultContract};
-        }
-        
-        print('✅ Conditions trouvées pour l\'admin');
-        return {'texte': adminConditionsData['texte']};
-      } else {
-        // Pour un administrateur, récupérer ses propres conditions
-        final conditionsDoc = await _firestore
-            .collection('users')
-            .doc(uid)
-            .collection('contrats')
-            .doc('userId')
-            .get(GetOptions(source: Source.server));
-      
-        if (!conditionsDoc.exists || conditionsDoc.data() == null) {
+      try {
+        // Récupérer d'abord les informations sur l'utilisateur pour savoir s'il est collaborateur
+        final userDocRef = _firestore.collection('users').doc(uid);
+        final userDoc = await userDocRef.get(const GetOptions(source: Source.server));
+              
+        final userData = userDoc.data();
+        if (userData == null) {
+          // Essayer d'accéder directement aux conditions par défaut
+          print('👀 Essai d\'accès direct aux conditions comme admin');
+          
+          // Pour un administrateur, récupérer ses propres conditions
+          final conditionsDoc = await _firestore
+              .collection('users')
+              .doc(uid)
+              .collection('contrats')
+              .doc('userId')
+              .get(const GetOptions(source: Source.server));
+          
+          final conditionsData = conditionsDoc.data();
+          if (conditionsData != null && conditionsData['texte'] != null) {
+            print('✅ Conditions trouvées directement');
+            return {'texte': conditionsData['texte']};
+          }
+          
           print('⚠️ Document conditions non trouvé, utilisation des conditions par défaut');
           return {'texte': ContratModifier.defaultContract};
         }
         
-        final conditionsData = conditionsDoc.data()!;
-        if (conditionsData['texte'] == null) {
-          print('⚠️ Données conditions invalides, utilisation des conditions par défaut');
-          return {'texte': ContratModifier.defaultContract};
-        }
+        // Vérifier si c'est un collaborateur
+        if (userData['role'] == 'collaborateur') {
+          final adminId = userData['adminId'];
+          if (adminId == null) {
+            print('❌ AdminId non trouvé pour le collaborateur');
+            return {'texte': ContratModifier.defaultContract};
+          }
+          
+          print('👤 Collaborateur détecté, utilisation de l\'ID admin: $adminId');
+          
+          // Pour un collaborateur, récupérer les conditions de l'admin
+          final adminConditionsDoc = await _firestore
+              .collection('users')
+              .doc(adminId)
+              .collection('contrats')
+              .doc('userId')
+              .get(const GetOptions(source: Source.server));
+          
+          final adminConditionsData = adminConditionsDoc.data();
+          if (adminConditionsData == null || adminConditionsData['texte'] == null) {
+            print('⚠️ Document conditions admin non trouvé, utilisation des conditions par défaut');
+            return {'texte': ContratModifier.defaultContract};
+          }
+          
+          print('✅ Conditions trouvées pour l\'admin');
+          return {'texte': adminConditionsData['texte']};
+        } else {
+          // Pour un administrateur, récupérer ses propres conditions
+          print('👤 Administrateur détecté, récupération de ses propres conditions');
+          final conditionsDoc = await _firestore
+              .collection('users')
+              .doc(uid)
+              .collection('contrats')
+              .doc('userId')
+              .get(const GetOptions(source: Source.server));
         
-        print('✅ Conditions trouvées');
-        return {'texte': conditionsData['texte']};
+          final conditionsData = conditionsDoc.data();
+          if (conditionsData == null || conditionsData['texte'] == null) {
+            print('⚠️ Document conditions non trouvé, utilisation des conditions par défaut');
+            return {'texte': ContratModifier.defaultContract};
+          }
+          
+          print('✅ Conditions trouvées');
+          return {'texte': conditionsData['texte']};
+        }
+      } catch (e) {
+        print('❌ Erreur pendant la récupération des données: $e');
+        return {'texte': ContratModifier.defaultContract};
       }
     } catch (e) {
-      print('❌ Erreur lors de la récupération des conditions: $e');
+      print('❌ Erreur globale lors de la récupération des conditions: $e');
       return {'texte': ContratModifier.defaultContract};
     }
   }
@@ -97,45 +109,63 @@ class AccessCondition {
         return false;
       }
       
-      // Récupérer d'abord les informations sur l'utilisateur pour savoir s'il est collaborateur
-      final userDocRef = _firestore.collection('users').doc(user.uid);
-      final userDoc = await userDocRef.get(GetOptions(source: Source.server));
-            
-      if (!userDoc.exists || userDoc.data() == null) {
-        print('⚠️ Utilisateur non trouvé ou données null');
+      try {
+        // Récupérer d'abord les informations sur l'utilisateur pour savoir s'il est collaborateur
+        final userDocRef = _firestore.collection('users').doc(user.uid);
+        final userDoc = await userDocRef.get(const GetOptions(source: Source.server));
+        
+        final userData = userDoc.data();
+        String targetUserId = user.uid;
+        
+        // Si pas de données utilisateur, utiliser l'ID de l'utilisateur actuel
+        if (userData == null) {
+          print('⚠️ Utilisateur non trouvé, mais tentative de mise à jour quand même');
+          
+          // Mise à jour quand même pour un admin
+          await _firestore
+              .collection('users')
+              .doc(targetUserId)
+              .collection('contrats')
+              .doc('userId')
+              .set(conditions, SetOptions(merge: true));
+          
+          print('✅ Conditions mises à jour avec succès');
+          return true;
+        }
+        
+        // Vérifier si c'est un collaborateur
+        final bool isCollaborateur = userData['role'] == 'collaborateur';
+        if (isCollaborateur) {
+          final adminId = userData['adminId'];
+          if (adminId == null) {
+            print('❌ AdminId non trouvé pour le collaborateur');
+            return false;
+          }
+          targetUserId = adminId;
+          print('👤 Collaborateur détecté, utilisation de l\'ID admin: $targetUserId');
+        } else {
+          print('👤 Administrateur détecté, utilisation de son propre ID');
+        }
+        
+        print('📝 Mise à jour des conditions pour l\'ID: $targetUserId');
+        print('📝 Chemin de mise à jour: users/$targetUserId/contrats/userId');
+        
+        // Mettre à jour les conditions du contrat
+        await _firestore
+            .collection('users')
+            .doc(targetUserId)
+            .collection('contrats')
+            .doc('userId')
+            .set(conditions, SetOptions(merge: true));
+        
+        print('✅ Conditions mises à jour avec succès');
+        return true;
+      } catch (e) {
+        print('❌ Erreur pendant la mise à jour des données: $e');
         return false;
       }
-      
-      final userData = userDoc.data()!;
-      String targetUserId = user.uid;
-      
-      // Vérifier si c'est un collaborateur
-      final bool isCollaborateur = userData['role'] == 'collaborateur';
-      if (isCollaborateur) {
-        final adminId = userData['adminId'];
-        if (adminId == null) {
-          print('❌ AdminId non trouvé pour le collaborateur');
-          return false;
-        }
-        targetUserId = adminId;
-        print('👤 Collaborateur détecté, utilisation de l\'ID admin: $targetUserId');
-      }
-      
-      print('📝 Mise à jour des conditions pour l\'ID: $targetUserId');
-      print('📝 Chemin de mise à jour: users/$targetUserId/contrats/userId');
-      
-      // Mettre à jour les conditions du contrat
-      await _firestore
-          .collection('users')
-          .doc(targetUserId)
-          .collection('contrats')
-          .doc('userId')
-          .set(conditions, SetOptions(merge: true));
-      
-      print('✅ Conditions mises à jour avec succès');
-      return true;
     } catch (e) {
-      print('❌ Erreur lors de la mise à jour des conditions: $e');
+      print('❌ Erreur globale lors de la mise à jour des conditions: $e');
       return false;
     }
   }

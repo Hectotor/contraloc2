@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../SCREENS/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/collaborateur_util.dart';
 import '../main.dart'; // Import pour accéder à navigatorKey
 
 class PopupDeconnexion {
@@ -67,52 +66,33 @@ class PopupDeconnexion {
   // Méthode pour déconnecter l'utilisateur complètement
   static Future<void> _logout(BuildContext context) async {
     try {
-      // Afficher un indicateur de chargement pendant la déconnexion
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF08004D)),
-          ),
-        ),
-      );
-
-      // 1. Déconnecter Firebase Auth d'abord pour éviter les problèmes d'authentification
-      await FirebaseAuth.instance.signOut();
-      
-      // 2. Effacer le cache du collaborateur
-      await CollaborateurUtil.clearCache();
-      
-      // 3. Effacer les préférences partagées
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
-      
-      print('👋 Déconnexion complète effectuée avec succès');
-      
-      // 4. Fermer la boîte de dialogue de chargement
-      if (context.mounted) {
-        Navigator.pop(context);
-      }
-      
-      // 5. Rediriger vers la page de connexion et effacer la pile de navigation
-      // Utiliser un délai plus long pour s'assurer que le contexte est stable
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      // Utiliser le navigateur global pour la redirection
+      // Navigation immédiate vers la page de connexion pour éviter les erreurs de permission
+      // dues aux streams actifs
       navigatorKey.currentState?.pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginPage()),
         (route) => false, // Supprime toutes les routes précédentes
       );
+      
+      // Attendre un court instant pour que l'écran de login soit affiché
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      // Déconnecter Firebase Auth après la navigation pour éviter les erreurs de permission
+      await FirebaseAuth.instance.signOut();
+      
+      // Effacer les préférences partagées
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      
+      print('👋 Déconnexion complète effectuée avec succès');
     } catch (e) {
-      // Fermer la boîte de dialogue de chargement en cas d'erreur
-      if (context.mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de la déconnexion: $e')),
+      print('→ Erreur lors de la déconnexion: $e');
+      // Même en cas d'erreur, s'assurer que l'utilisateur est redirigé vers login
+      if (navigatorKey.currentState?.context != null) {
+        navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (route) => false,
         );
       }
-      print('→ Erreur lors de la déconnexion: $e');
     }
   }
 }

@@ -338,16 +338,11 @@ class CollaborateurUtil {
     return await AccessPermission.checkPermission(permissionType);
   }
 
-  /// Efface les données de session lors de la déconnexion
+  /// Méthode conservée pour compatibilité (le cache est maintenant désactivé globalement)
+  /// Cette méthode ne fait plus rien car nous utilisons Source.server partout
   static Future<void> clearCache() async {
-    try {
-      print('🧹 Nettoyage des données...');
-      
-      print('✔️ Données effacées avec succès');
-    } catch (e) {
-      print('❌ Erreur lors du nettoyage: $e');
-      rethrow;
-    }
+    print('🧹 Nettoyage non nécessaire - cache désactivé');
+    // Ne fait rien car le cache est désactivé dans main.dart
   }
 
   /// Forçage de l'utilisation du serveur pour toutes les requêtes
