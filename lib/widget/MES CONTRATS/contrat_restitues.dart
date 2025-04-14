@@ -61,7 +61,7 @@ class _ContratRestituesState extends State<ContratRestitues> {
               .collection('locations')
               .where('status', isEqualTo: 'restitue')
               .orderBy('dateRestitution', descending: true)
-              .get(const GetOptions(source: Source.serverAndCache));
+              .get(const GetOptions(source: Source.server));
 
           return snapshot;
         })
@@ -115,7 +115,7 @@ class _ContratRestituesState extends State<ContratRestitues> {
           .collection('vehicules')
           .where('immatriculation', isEqualTo: immatriculation);
       
-      final QuerySnapshot snapshot = await query.get(const GetOptions(source: Source.serverAndCache));
+      final QuerySnapshot snapshot = await query.get(const GetOptions(source: Source.server));
       
       if (snapshot.docs.isNotEmpty) {
         final data = snapshot.docs.first.data() as Map<String, dynamic>?;

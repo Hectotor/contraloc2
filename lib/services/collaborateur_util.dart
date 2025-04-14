@@ -26,33 +26,34 @@ class CollaborateurUtil {
     print('👥 Utilisateur connecté: ${user.uid}');
 
     try {
-      // Récupérer l'ID de l'utilisateur actuel
-      final userDoc = await _firestore.collection('users').doc(user.uid).get(GetOptions(source: Source.server));
+      // Récupérer l'ID de l'utilisateur actuel avec Source.server
+      final userDoc = await _firestore.collection('users').doc(user.uid).get(
+        const GetOptions(source: Source.server)
+      );
       
-      print('📄 Détails document utilisateur: ${userDoc.data()}');
+      final userData = userDoc.data() ?? {};
+      final userRole = userData['role'] ?? '';
+      final adminId = userData['adminId'];
       
-      if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
-        final adminId = userDoc.data()?['adminId'];
+      if (userRole == 'collaborateur') {
         print('👥 Collaborateur détecté, administrateur associé: $adminId');
-        
         return {
           'isCollaborateur': true,
           'adminId': adminId,
           'userId': user.uid,
         };
       }
+      
+      print('👋 Utilisateur standard (non collaborateur) détecté');
+      return {
+        'isCollaborateur': false,
+        'adminId': null,
+        'userId': user.uid,
+      };
     } catch (e) {
-      print('❌ Erreur lors de la vérification du statut collaborateur: $e');      
-      // En cas d'erreur, supposer que l'utilisateur n'est pas un collaborateur
-      // mais renvoyer quand même son ID pour permettre l'accès à ses propres données
+      print('❌ Erreur lors de la vérification du statut collaborateur: $e');
+      rethrow; // Lancer l'exception pour la traiter au niveau supérieur
     }
-    
-    print('👋 Utilisateur standard (non collaborateur) détecté');
-    return {
-      'isCollaborateur': false,
-      'adminId': null,
-      'userId': user.uid,
-    };
   }
 
   /// Récupère les données d'un document dans une collection spécifique
@@ -70,43 +71,36 @@ class CollaborateurUtil {
       throw Exception('Utilisateur non connecté');
     }
 
-    // Récupérer les données de l'utilisateur directement
-    final userDoc = await _firestore.collection('users').doc(user.uid).get(GetOptions(source: Source.server));
-    
-    if (!userDoc.exists) {
-      print('❌ Document utilisateur non trouvé');
-      throw Exception('Document utilisateur non trouvé');
+    try {
+      // Vérifier si l'utilisateur est un collaborateur
+      final status = await checkCollaborateurStatus();
+      final isCollaborateur = status['isCollaborateur'] ?? false;
+      final adminId = status['adminId'];
+      
+      // Déterminer l'ID à utiliser (admin ou utilisateur)
+      String effectiveUserId = isCollaborateur && adminId != null && useAdminId
+          ? adminId
+          : user.uid;
+      
+      print('🔍 Accès au document avec ID: $effectiveUserId');
+      print('📁 Chemin: $collection/${useAdminId ? effectiveUserId : docId}/${subCollection ?? ''}/${subDocId ?? ''}');
+      
+      // Récupérer le document avec Source.server
+      if (subCollection != null && subDocId != null) {
+        return await _firestore.collection(collection)
+            .doc(useAdminId ? effectiveUserId : docId)
+            .collection(subCollection)
+            .doc(subDocId)
+            .get(const GetOptions(source: Source.server));
+      } else {
+        return await _firestore.collection(collection)
+            .doc(useAdminId ? effectiveUserId : docId)
+            .get(const GetOptions(source: Source.server));
+      }
+    } catch (e) {
+      print('❌ Erreur lors de la récupération du document: $e');
+      rethrow;
     }
-    
-    final userData = userDoc.data() ?? {};
-    final userRole = userData['role'];
-    final userAdminId = userData['adminId'];
-    
-    print('🔍 Récupération du document');
-    print('📝 Rôle: $userRole, AdminId: $userAdminId');
-    
-    String finalAdminId = userRole == 'collaborateur' && userAdminId != null 
-        ? userAdminId 
-        : user.uid;
-
-    print('🔄 Utilisation de l\'ID: $finalAdminId pour la requête');
-    print('📁 Chemin de la requête: $collection/$finalAdminId/${subCollection ?? ''}/${subDocId ?? ''}');
-
-    if (useAdminId) {
-      print('🔍 Récupération avec ID admin');
-      return await _firestore.collection(collection)
-          .doc(finalAdminId)
-          .collection(subCollection ?? '')
-          .doc(subDocId ?? '')
-          .get(GetOptions(source: Source.server));
-    }
-
-    print('🔍 Récupération avec ID document');
-    return await _firestore.collection(collection)
-        .doc(docId)
-        .collection(subCollection ?? '')
-        .doc(subDocId ?? '')
-        .get(GetOptions(source: Source.server));
   }
 
   /// Met à jour un document dans une collection spécifique
@@ -218,15 +212,10 @@ class CollaborateurUtil {
           .doc(user.uid)
           .get(GetOptions(source: Source.server));
 
-      if (!userDoc.exists) {
-        print('❌ Document utilisateur non trouvé');
-        return {};
-      }
-
       return userDoc.data() ?? {};
     } catch (e) {
       print('❌ Erreur lors de la récupération des données: $e');
-      return {};
+      rethrow;
     }
   }
 
@@ -245,11 +234,6 @@ class CollaborateurUtil {
           .collection('users')
           .doc(user.uid)
           .get(GetOptions(source: Source.server));
-
-      if (!userDoc.exists) {
-        print('❌ Document utilisateur non trouvé');
-        return {};
-      }
 
       final userData = userDoc.data() ?? {};
       final isCollaborateur = userData['role'] == 'collaborateur';
@@ -281,7 +265,7 @@ class CollaborateurUtil {
       return authDoc.data() ?? {};
     } catch (e) {
       print('❌ Erreur lors de la récupération des données: $e');
-      return {};
+      rethrow;
     }
   }
 
@@ -311,11 +295,7 @@ class CollaborateurUtil {
       };
     } catch (e) {
       print('⚠️ Error: $e');
-      return {
-        'subscriptionId': 'free',
-        'cb_subscription': 'free',
-        'stripePlanType': 'free',
-      };
+      rethrow;
     }
   }
 
@@ -333,7 +313,7 @@ class CollaborateurUtil {
       return contracts.docs.map((doc) => doc.data()).toList();
     } catch (e) {
       print('Erreur lors de la récupération des contrats: $e');
-      return [];
+      rethrow;
     }
   }
 
@@ -346,8 +326,6 @@ class CollaborateurUtil {
         .collection('users')
         .doc(user.uid)
         .get(GetOptions(source: Source.server));
-    
-    if (!userDoc.exists) return false;
     
     final userData = userDoc.data();
     return userData?['role'] == 'admin';
@@ -368,11 +346,12 @@ class CollaborateurUtil {
       print('✔️ Données effacées avec succès');
     } catch (e) {
       print('❌ Erreur lors du nettoyage: $e');
+      rethrow;
     }
   }
 
   /// Forçage de l'utilisation du serveur pour toutes les requêtes
   static GetOptions serverOnly() {
-    return GetOptions(source: Source.server);
+    return const GetOptions(source: Source.server);
   }
 }

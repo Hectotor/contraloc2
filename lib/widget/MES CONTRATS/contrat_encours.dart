@@ -59,7 +59,7 @@ class _ContratEnCoursState extends State<ContratEnCours> {
               .where('status', isEqualTo: 'en_cours')
               // Ne pas filtrer par statussupprime car le champ peut ne pas exister
               .orderBy('dateCreation', descending: true)
-              .get(const GetOptions(source: Source.serverAndCache));
+              .get(const GetOptions(source: Source.server));
               
           return snapshot;
         })
@@ -169,7 +169,7 @@ class _ContratEnCoursState extends State<ContratEnCours> {
           .collection('vehicules')
           .where('immatriculation', isEqualTo: immatriculation);
       
-      final QuerySnapshot snapshot = await query.get(const GetOptions(source: Source.serverAndCache));
+      final QuerySnapshot snapshot = await query.get(const GetOptions(source: Source.server));
       
       if (snapshot.docs.isNotEmpty) {
         final data = snapshot.docs.first.data() as Map<String, dynamic>?;

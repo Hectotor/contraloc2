@@ -92,7 +92,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .get(const GetOptions(source: Source.serverAndCache));
+          .get(const GetOptions(source: Source.server));
       
       final userData = userDoc.data();
       final bool isCollaborateur = userData != null && userData['role'] == 'collaborateur';
@@ -108,7 +108,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
           .collection('locations')
           .where('dateFacture', isNull: false)
           .orderBy('dateFacture', descending: true)
-          .get(const GetOptions(source: Source.serverAndCache));
+          .get(const GetOptions(source: Source.server));
 
       print('Nombre de contrats trouvés: ${contratsSnapshot.docs.length}');
 
@@ -138,7 +138,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       if (vehiculesIds.isNotEmpty) {
         final vehiculesSnapshot = await vehiculesRef
             .where(FieldPath.documentId, whereIn: vehiculesIds.toList())
-            .get(const GetOptions(source: Source.serverAndCache));
+            .get(const GetOptions(source: Source.server));
 
         // Créer un mapping des véhicules par ID
         for (var doc in vehiculesSnapshot.docs) {

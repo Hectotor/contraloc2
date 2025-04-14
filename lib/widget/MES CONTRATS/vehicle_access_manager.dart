@@ -39,7 +39,7 @@ class VehicleAccessManager {
       final userDoc = await _firestore
           .collection('users')
           .doc(user.uid)
-          .get(GetOptions(source: Source.serverAndCache));
+          .get(const GetOptions(source: Source.server));
       
       _processUserDocument(userDoc, user);
       _isInitialized = true;
@@ -164,13 +164,13 @@ class VehicleAccessManager {
         .doc(vehicleId);
     
     try {
-      // Récupérer directement depuis le serveur et mettre à jour le cache en même temps
-      final DocumentSnapshot snapshot = await docRef.get(GetOptions(source: Source.serverAndCache));
+      // Récupérer directement depuis le serveur
+      final DocumentSnapshot snapshot = await docRef.get(const GetOptions(source: Source.server));
       
       // Mettre à jour le timestamp de dernière mise à jour
       _lastVehicleUpdate[vehicleId] = DateTime.now();
       
-      print('🔄 Véhicule $vehicleId récupéré depuis le serveur et mise à jour du cache');
+      print('🔄 Véhicule $vehicleId récupéré depuis le serveur');
       return snapshot;
     } catch (e) {
       print('❌ Erreur récupération véhicule: $e');
@@ -221,9 +221,9 @@ class VehicleAccessManager {
         .where('immatriculation', isEqualTo: immatriculation);
     
     try {
-      // Récupérer directement depuis le serveur et le cache en même temps
-      final QuerySnapshot snapshot = await query.get(GetOptions(source: Source.serverAndCache));
-      print('📊 Véhicule avec immatriculation $immatriculation récupéré depuis le serveur et mise à jour du cache');
+      // Récupérer directement depuis le serveur
+      final QuerySnapshot snapshot = await query.get(const GetOptions(source: Source.server));
+      print('📊 Véhicule avec immatriculation $immatriculation récupéré depuis le serveur');
       return snapshot;
     } catch (e) {
       print('❌ Erreur récupération véhicule: $e');

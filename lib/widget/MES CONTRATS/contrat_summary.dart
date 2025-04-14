@@ -180,7 +180,7 @@ class _ContratSummaryState extends State<ContratSummary> {
       // Active contracts
       final activeSnapshot = await locationQuery
           .where('status', isEqualTo: 'en_cours')
-          .get(const GetOptions(source: Source.serverAndCache));
+          .get(const GetOptions(source: Source.server));
       print('ContratSummary: Nombre total de contrats en cours: ${activeSnapshot.docs.length}');
       
       if (mounted) {
@@ -194,7 +194,7 @@ class _ContratSummaryState extends State<ContratSummary> {
       final deletedActiveSnapshot = await locationQuery
           .where('status', isEqualTo: 'en_cours')
           .where('statussupprime', isEqualTo: 'supprimé')
-          .get(const GetOptions(source: Source.serverAndCache));
+          .get(const GetOptions(source: Source.server));
       print('ContratSummary: Nombre de contrats en cours supprimés: ${deletedActiveSnapshot.docs.length}');
       
       if (mounted) {
@@ -211,7 +211,7 @@ class _ContratSummaryState extends State<ContratSummary> {
       // Returned contracts
       final returnedSnapshot = await locationQuery
           .where('status', isEqualTo: 'restitue')
-          .get(const GetOptions(source: Source.serverAndCache));
+          .get(const GetOptions(source: Source.server));
       print('ContratSummary: Nombre total de contrats restitués: ${returnedSnapshot.docs.length}');
       
       if (mounted) {
@@ -225,7 +225,7 @@ class _ContratSummaryState extends State<ContratSummary> {
       final deletedReturnedSnapshot = await locationQuery
           .where('status', isEqualTo: 'restitue')
           .where('statussupprime', isEqualTo: 'supprimé')
-          .get(const GetOptions(source: Source.serverAndCache));
+          .get(const GetOptions(source: Source.server));
       print('ContratSummary: Nombre de contrats restitués supprimés: ${deletedReturnedSnapshot.docs.length}');
       
       if (mounted) {
@@ -242,7 +242,7 @@ class _ContratSummaryState extends State<ContratSummary> {
       // Reserved contracts
       final reservedSnapshot = await locationQuery
           .where('status', isEqualTo: 'réservé')
-          .get(const GetOptions(source: Source.serverAndCache));
+          .get(const GetOptions(source: Source.server));
       print('ContratSummary: Nombre total de contrats réservés: ${reservedSnapshot.docs.length}');
       
       if (mounted) {
@@ -256,7 +256,7 @@ class _ContratSummaryState extends State<ContratSummary> {
       final deletedReservedSnapshot = await locationQuery
           .where('status', isEqualTo: 'réservé')
           .where('statussupprime', isEqualTo: 'supprimé')
-          .get(const GetOptions(source: Source.serverAndCache));
+          .get(const GetOptions(source: Source.server));
       print('ContratSummary: Nombre de contrats réservés supprimés: ${deletedReservedSnapshot.docs.length}');
       
       if (mounted) {

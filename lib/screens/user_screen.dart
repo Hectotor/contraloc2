@@ -52,34 +52,17 @@ class _UserScreenState extends State<UserScreen> {
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
           try {
-            // Essayer d'abord depuis le cache
-            try {
-              final userDoc = await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user.uid)
-                  .get(const GetOptions(source: Source.cache));
-              
-              if (userDoc.exists && userDoc.data() != null) {
-                final userData = userDoc.data()!;
-                if (userData.containsKey('prenom') && userData['prenom'] != null) {
-                  prenom = userData['prenom'];
-                  print('✅ Prénom du collaborateur récupéré depuis le cache: $prenom');
-                }
-              }
-            } catch (cacheError) {
-              print('⚠️ Tentative de cache échouée, nouvelle tentative avec le serveur: $cacheError');
-              // Si la cache échoue, essayer le serveur
-              final userDoc = await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user.uid)
-                  .get(const GetOptions(source: Source.server));
-              
-              if (userDoc.exists && userDoc.data() != null) {
-                final userData = userDoc.data()!;
-                if (userData.containsKey('prenom') && userData['prenom'] != null) {
-                  prenom = userData['prenom'];
-                  print('✅ Prénom du collaborateur récupéré depuis le serveur: $prenom');
-                }
+            // Essayer d'abord depuis le serveur
+            final userDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get(const GetOptions(source: Source.server));
+            
+            if (userDoc.exists && userDoc.data() != null) {
+              final userData = userDoc.data()!;
+              if (userData.containsKey('prenom') && userData['prenom'] != null) {
+                prenom = userData['prenom'];
+                print('✅ Prénom du collaborateur récupéré depuis le serveur: $prenom');
               }
             }
           } catch (e) {

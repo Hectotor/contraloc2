@@ -70,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final userDoc = await FirebaseFirestore.instance
                 .collection('users')
                 .doc(user.uid)
-                .get(const GetOptions(source: Source.serverAndCache));
+                .get(const GetOptions(source: Source.server));
             
             if (userDoc.exists && userDoc.data() != null) {
               final userData = userDoc.data()!;

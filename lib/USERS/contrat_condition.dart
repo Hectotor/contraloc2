@@ -125,7 +125,7 @@ class _ContratModifierState extends State<ContratModifier> {
       
       if (targetId.isNotEmpty) {
         try {
-          // Essayer de récupérer le document avec un timeout
+          // Essayer de récupérer le document depuis le serveur
           final doc = await FirebaseFirestore.instance
               .collection('users')
               .doc(targetId)
@@ -135,7 +135,7 @@ class _ContratModifierState extends State<ContratModifier> {
                 fromFirestore: (snapshot, _) => snapshot.data(),
                 toFirestore: (data, _) => data as Map<String, dynamic>,
               )
-              .get(const GetOptions(source: Source.cache)); // Priorité à la cache
+              .get(const GetOptions(source: Source.server)); // Toujours depuis le serveur
           
           if (mounted) {
             setState(() {
@@ -143,32 +143,11 @@ class _ContratModifierState extends State<ContratModifier> {
             });
           }
         } catch (e) {
-          print('⚠️ Tentative de cache échouée, nouvelle tentative avec le serveur: $e');
-          try {
-            // Si la cache échoue, essayer le serveur avec timeout
-            final doc = await FirebaseFirestore.instance
-                .collection('users')
-                .doc(targetId)
-                .collection('contrats')
-                .doc('userId')
-                .withConverter(
-                  fromFirestore: (snapshot, _) => snapshot.data(),
-                  toFirestore: (data, _) => data as Map<String, dynamic>,
-                )
-                .get(const GetOptions(source: Source.server));
-            
-            if (mounted) {
-              setState(() {
-                _controller.text = doc.data()?['texte'] ?? ContratModifier.defaultContract;
-              });
-            }
-          } catch (e) {
-            print('❌ Erreur après 2 tentatives: $e');
-            if (mounted) {
-              setState(() {
-                _controller.text = ContratModifier.defaultContract;
-              });
-            }
+          print('❌ Erreur récupération document: $e');
+          if (mounted) {
+            setState(() {
+              _controller.text = ContratModifier.defaultContract;
+            });
           }
         }
       } else {
