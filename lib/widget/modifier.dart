@@ -210,6 +210,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'factureRemise': widget.data['facture']?['factureRemise'] ?? 0.0,
         'factureTotalFrais': widget.data['facture']?['factureTotalFrais'] ?? 0.0,
         'factureTypePaiement': widget.data['facture']?['factureTypePaiement'] ?? 'Carte bancaire',
+        'factureFraisCasque': widget.data['facture']?['factureFraisCasque'] ?? 0.0,
         'dateFacture': widget.data['facture']?['dateFacture'],
         'factureId': widget.data['facture']?['factureId'] ?? '',
         'factureGeneree': widget.data['facture']?['factureGeneree'] ?? true,

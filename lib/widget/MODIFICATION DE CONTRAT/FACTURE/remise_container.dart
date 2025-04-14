@@ -93,7 +93,7 @@ class _RemiseContainerState extends State<RemiseContainer> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        prefixText: '€',
+                        suffixText: '€',
                         suffixIcon: const Icon(Icons.discount, color: Colors.purple),
                       ),
                       keyboardType: TextInputType.number,

@@ -7,6 +7,7 @@ class TotalFraisContainer extends StatelessWidget {
   final TextEditingController fraisNettoyageExtController;
   final TextEditingController fraisCarburantController;
   final TextEditingController fraisRayuresController;
+  final TextEditingController fraisCasqueController;
   final TextEditingController fraisAutreController;
   final TextEditingController cautionController;
   final TextEditingController remiseController;
@@ -19,6 +20,7 @@ class TotalFraisContainer extends StatelessWidget {
     required this.fraisNettoyageExtController,
     required this.fraisCarburantController,
     required this.fraisRayuresController,
+    required this.fraisCasqueController,
     required this.fraisAutreController,
     required this.cautionController,
     required this.remiseController,
@@ -107,6 +109,7 @@ class TotalFraisContainer extends StatelessWidget {
         _parseDouble(fraisNettoyageExtController.text) +
         _parseDouble(fraisCarburantController.text) +
         _parseDouble(fraisRayuresController.text) +
+        _parseDouble(fraisCasqueController.text) +
         _parseDouble(fraisAutreController.text) +
         _parseDouble(cautionController.text);
   }
@@ -130,7 +133,7 @@ class TotalFraisContainer extends StatelessWidget {
           ),
         ),
         Text(
-          '€${amount.toStringAsFixed(2)}',
+          '${amount.toStringAsFixed(2)} €',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,

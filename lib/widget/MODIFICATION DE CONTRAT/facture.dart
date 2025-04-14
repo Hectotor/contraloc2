@@ -33,6 +33,7 @@ class _FactureScreenState extends State<FactureScreen> {
   late TextEditingController _fraisNettoyageExtController;
   late TextEditingController _fraisCarburantController;
   late TextEditingController _fraisRayuresController;
+  late TextEditingController _fraisCasqueController;
   late TextEditingController _fraisAutreController;
   late TextEditingController _cautionController;
   late TextEditingController _remiseController;
@@ -52,6 +53,7 @@ class _FactureScreenState extends State<FactureScreen> {
     _fraisNettoyageExtController = TextEditingController(text: widget.data['factureFraisNettoyageExterieur']?.toString() ?? "0");
     _fraisCarburantController = TextEditingController(text: widget.data['factureFraisCarburantManquant']?.toString() ?? "0");
     _fraisRayuresController = TextEditingController(text: widget.data['factureFraisRayuresDommages']?.toString() ?? "0");
+    _fraisCasqueController = TextEditingController(text: widget.data['factureFraisCasque']?.toString() ?? "0");
     _fraisAutreController = TextEditingController(text: widget.data['factureFraisAutre']?.toString() ?? "0");
     _cautionController = TextEditingController(text: widget.data['factureCaution']?.toString() ?? "0");
     _remiseController = TextEditingController(text: widget.data['factureRemise']?.toString() ?? "0");
@@ -94,6 +96,7 @@ class _FactureScreenState extends State<FactureScreen> {
         _parseDouble(_fraisNettoyageExtController.text) +
         _parseDouble(_fraisCarburantController.text) +
         _parseDouble(_fraisRayuresController.text) +
+        _parseDouble(_fraisCasqueController.text) +
         _parseDouble(_fraisAutreController.text) +
         _parseDouble(_cautionController.text);
   }
@@ -145,6 +148,7 @@ class _FactureScreenState extends State<FactureScreen> {
                 fraisNettoyageExtController: _fraisNettoyageExtController,
                 fraisCarburantController: _fraisCarburantController,
                 fraisRayuresController: _fraisRayuresController,
+                fraisCasqueController: _fraisCasqueController,
                 fraisAutreController: _fraisAutreController,
                 onFraisChanged: () {
                   setState(() {
@@ -187,6 +191,7 @@ class _FactureScreenState extends State<FactureScreen> {
                 fraisNettoyageExtController: _fraisNettoyageExtController,
                 fraisCarburantController: _fraisCarburantController,
                 fraisRayuresController: _fraisRayuresController,
+                fraisCasqueController: _fraisCasqueController,
                 fraisAutreController: _fraisAutreController,
                 cautionController: _cautionController,
                 remiseController: _remiseController,
@@ -223,6 +228,7 @@ class _FactureScreenState extends State<FactureScreen> {
                             'factureFraisNettoyageExterieur': double.tryParse(_fraisNettoyageExtController.text) ?? 0.0,
                             'factureFraisCarburantManquant': double.tryParse(_fraisCarburantController.text) ?? 0.0,
                             'factureFraisRayuresDommages': double.tryParse(_fraisRayuresController.text) ?? 0.0,
+                            'factureFraisCasque': double.tryParse(_fraisCasqueController.text) ?? 0.0,
                             'factureFraisAutre': double.tryParse(_fraisAutreController.text) ?? 0.0,
                             'factureCoutKmSupplementaires': double.tryParse(_fraisKilometriqueController.text) ?? 0.0,
                             'factureRemise': double.tryParse(_remiseController.text) ?? 0.0,
@@ -258,6 +264,7 @@ class _FactureScreenState extends State<FactureScreen> {
                             'factureFraisNettoyageExterieur': _fraisNettoyageExtController.text,
                             'factureFraisCarburantManquant': _fraisCarburantController.text,
                             'factureFraisRayuresDommages': _fraisRayuresController.text,
+                            'factureFraisCasque': _fraisCasqueController.text,
                             'factureFraisAutre': _fraisAutreController.text,
                             'factureCoutKmSupplementaires': _fraisKilometriqueController.text,
                             'factureRemise': _remiseController.text,

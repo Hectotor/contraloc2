@@ -90,7 +90,7 @@ class _FraisKilometrageSuppContainerState extends State<FraisKilometrageSuppCont
                           borderRadius: BorderRadius.all(Radius.circular(12)),
                         ),
                         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        prefixText: '€',
+                        suffixText: '€',
                       ),
                       keyboardType: TextInputType.number,
                       inputFormatters: [

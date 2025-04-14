@@ -93,7 +93,7 @@ class _CautionContainerState extends State<CautionContainer> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        prefixText: '€',
+                        suffixText: '€',
                         suffixIcon: const Icon(Icons.security, color: Colors.blue),
                       ),
                       keyboardType: TextInputType.number,

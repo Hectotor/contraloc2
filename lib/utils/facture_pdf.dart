@@ -93,6 +93,7 @@ class FacturePdfGenerator {
     final fraisRayures = _parseDouble(factureData['factureFraisRayuresDommages']);
     final fraisAutre = _parseDouble(factureData['factureFraisAutre']);
     final fraisKilometrique = _parseDouble(factureData['factureCoutKmSupplementaires']);
+    final fraisCasque = _parseDouble(factureData['factureFraisCasque']);
     final remise = _parseDouble(factureData['factureRemise']);
     final caution = _parseDouble(factureData['factureCaution']);
     
@@ -101,7 +102,7 @@ class FacturePdfGenerator {
     
     // Calculer le total brut (tous les frais)
     final totalBrut = prixLocation + fraisNettoyageInt + fraisNettoyageExt + 
-                   fraisCarburant + fraisRayures + fraisAutre + fraisKilometrique + caution;
+                   fraisCarburant + fraisRayures + fraisCasque + fraisAutre + fraisKilometrique + caution;
     
     // Calculer le total HT et la TVA
     final double totalHT;
@@ -293,6 +294,11 @@ class FacturePdfGenerator {
                 _tableRow(
                   'Frais pour rayures/dommages',
                   isTVAApplicable ? formatMonetaire.format(fraisRayures / 1.20) : formatMonetaire.format(fraisRayures),
+                ),
+              if (fraisCasque > 0)
+                _tableRow(
+                  'Frais de casque',
+                  isTVAApplicable ? formatMonetaire.format(fraisCasque / 1.20) : formatMonetaire.format(fraisCasque),
                 ),
               if (fraisAutre > 0)
                 _tableRow(

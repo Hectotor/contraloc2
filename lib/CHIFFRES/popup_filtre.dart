@@ -29,6 +29,7 @@ class PopupFiltre extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 _buildFilterCheckbox('Prix de location', 'facturePrixLocation', setState),
+                _buildFilterCheckbox('Frais de casque', 'factureFraisCasque', setState),
                 _buildFilterCheckbox('Coût km supplémentaires', 'factureCoutKmSupplementaires', setState),
                 _buildFilterCheckbox('Frais nettoyage intérieur', 'factureFraisNettoyageInterieur', setState),
                 _buildFilterCheckbox('Frais nettoyage extérieur', 'factureFraisNettoyageExterieur', setState),

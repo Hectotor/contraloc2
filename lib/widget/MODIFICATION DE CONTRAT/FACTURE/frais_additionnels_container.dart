@@ -6,6 +6,7 @@ class FraisAdditionnelsContainer extends StatefulWidget {
   final TextEditingController fraisNettoyageExtController;
   final TextEditingController fraisCarburantController;
   final TextEditingController fraisRayuresController;
+  final TextEditingController fraisCasqueController;
   final TextEditingController fraisAutreController;
   final VoidCallback onFraisChanged;
 
@@ -15,6 +16,7 @@ class FraisAdditionnelsContainer extends StatefulWidget {
     required this.fraisNettoyageExtController,
     required this.fraisCarburantController,
     required this.fraisRayuresController,
+    required this.fraisCasqueController,
     required this.fraisAutreController,
     required this.onFraisChanged,
   });
@@ -97,6 +99,8 @@ class _FraisAdditionnelsContainerState extends State<FraisAdditionnelsContainer>
                     const SizedBox(height: 15),
                     _buildTextField("Frais rayures/dommages", widget.fraisRayuresController),
                     const SizedBox(height: 15),
+                    _buildTextField("Frais location casque", widget.fraisCasqueController),
+                    const SizedBox(height: 15),
                     _buildTextField("Frais autres", widget.fraisAutreController),
                   ],
                 ),
@@ -117,7 +121,7 @@ class _FraisAdditionnelsContainerState extends State<FraisAdditionnelsContainer>
           borderRadius: BorderRadius.circular(12),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        prefixText: '€',
+        suffixText: '€',  
       ),
       keyboardType: TextInputType.number,
       inputFormatters: [

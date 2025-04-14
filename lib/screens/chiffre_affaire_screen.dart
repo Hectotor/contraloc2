@@ -32,6 +32,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
     'factureFraisRayuresDommages': true,
     'factureFraisAutre': true,
     'factureCaution': true,
+    'factureFraisCasque': true,
     'factureRemise': true,
   };
   
@@ -176,6 +177,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
         double fraisNettoyageExterieur = _convertToDouble(data['factureFraisNettoyageExterieur'] ?? '0');
         double fraisCarburantManquant = _convertToDouble(data['factureFraisCarburantManquant'] ?? '0');
         double fraisRayuresDommages = _convertToDouble(data['factureFraisRayuresDommages'] ?? '0');
+        double fraisCasque = _convertToDouble(data['factureFraisCasque'] ?? '0');
         double fraisAutre = _convertToDouble(data['factureFraisAutre'] ?? '0');
         double remise = _convertToDouble(data['factureRemise'] ?? '0');
         String typePaiement = data['factureTypePaiement'] ?? '';
@@ -191,7 +193,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
           double totalBrut = prixLocation + caution + coutKmSupplementaires + 
                           fraisNettoyageInterieur + fraisNettoyageExterieur + 
                           fraisCarburantManquant + fraisRayuresDommages + 
-                          fraisAutre;
+                          fraisCasque + fraisAutre;
           
           if (isTTC) {
             montantTotal = totalBrut - remise;
@@ -217,6 +219,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
           'factureFraisNettoyageExterieur': fraisNettoyageExterieur,
           'factureFraisCarburantManquant': fraisCarburantManquant,
           'factureFraisRayuresDommages': fraisRayuresDommages,
+          'factureFraisCasque': fraisCasque,
           'factureFraisAutre': fraisAutre,
           'factureRemise': remise,
           'factureTypePaiement': typePaiement,
@@ -281,6 +284,7 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       DateTime dateCloture = contrat['dateCloture']; // On utilise la date de facture stockée dans dateCloture
       double montant = 0;
       if (_filtresCalcul['facturePrixLocation']!) montant += contrat['facturePrixLocation'];
+      if (_filtresCalcul['factureFraisCasque']!) montant += contrat['factureFraisCasque'];
       if (_filtresCalcul['factureCoutKmSupplementaires']!) montant += contrat['factureCoutKmSupplementaires'];
       if (_filtresCalcul['factureFraisNettoyageInterieur']!) montant += contrat['factureFraisNettoyageInterieur'];
       if (_filtresCalcul['factureFraisNettoyageExterieur']!) montant += contrat['factureFraisNettoyageExterieur'];
@@ -369,6 +373,9 @@ class _ChiffreAffaireScreenState extends State<ChiffreAffaireScreen> with Single
       double montant = 0;
       if (_filtresCalcul['facturePrixLocation'] == true) {
         montant += contrat['facturePrixLocation'] ?? 0;
+      }
+      if (_filtresCalcul['factureFraisCasque'] == true) {
+        montant += contrat['factureFraisCasque'] ?? 0;
       }
       if (_filtresCalcul['factureCoutKmSupplementaires'] == true) {
         montant += contrat['factureCoutKmSupplementaires'] ?? 0;

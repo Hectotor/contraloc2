@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
+import '../widget/chargement.dart';
 import 'facture_pdf.dart';
 
 class AffichageFacturePdf {
@@ -10,6 +11,15 @@ class AffichageFacturePdf {
     required String contratId,
     required Map<String, dynamic> contratData,
   }) async {
+    // Afficher l'écran de chargement
+    final overlay = OverlayEntry(
+      builder: (context) => const Chargement(
+        message: "Génération de la facture en cours...",
+      ),
+    );
+    
+    Overlay.of(context).insert(overlay);
+    
     try {
       // Récupérer les données de facture
       Map<String, dynamic> factureData = {
@@ -24,6 +34,7 @@ class AffichageFacturePdf {
         'factureRemise': contratData['factureRemise'] ?? 0.0,
         'factureTotalFrais': contratData['factureTotalFrais'] ?? 0.0,
         'factureTypePaiement': contratData['factureTypePaiement'] ?? 'Carte bancaire',
+        'factureFraisCasque': contratData['factureFraisCasque'] ?? 0.0,
         'dateFacture': contratData['dateFacture']?.toDate() ?? DateTime.now(),
         'factureId': contratData['factureId'] ?? '',
         'factureTVA': contratData['factureTVA'] ?? 'applicable',
@@ -61,6 +72,9 @@ class AffichageFacturePdf {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur lors de la génération du PDF: $e')),
       );
+    } finally {
+      // Supprimer l'écran de chargement
+      overlay.remove();
     }
   }
 }
