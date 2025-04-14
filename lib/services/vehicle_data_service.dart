@@ -88,6 +88,9 @@ class VehicleDataService {
         if (contractData['typeCarburant'] == null) {
           contractData['typeCarburant'] = vehicleData['typeCarburant'] ?? '';
         }
+        if (contractData['locationCasque'] == null) {
+          contractData['locationCasque'] = vehicleData['locationCasque'] ?? '';
+        }
         if (contractData['boiteVitesses'] == null) {
           contractData['boiteVitesses'] = vehicleData['boiteVitesses'] ?? '';
         }
