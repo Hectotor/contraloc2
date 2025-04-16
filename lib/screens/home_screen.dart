@@ -195,7 +195,6 @@ class _HomeScreenState extends State<HomeScreen> {
       Timer.periodic(const Duration(seconds: 30), (_) async {
         bool isConnected = await _connectivityService.checkConnectivity();
         if (isConnected) {
-          print('uD83DuDD04 Connectivité vérifiée et disponible, traitement de la file d\'attente');
           SyncQueueService().processQueue();
         }
       });
