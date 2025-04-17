@@ -179,14 +179,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void _setupSyncQueue() {
     // Ne configurer le traitement qu'une seule fois
     if (!_syncQueueSetup) {
-      print('uD83DuDD04 Configuration du traitement de la file d\'attente');
-      
       // Traiter la file au démarrage
       SyncQueueService().processQueue();
       
       // Traiter la file périodiquement toutes les 15 minutes
       Timer.periodic(const Duration(minutes: 15), (_) {
-        print('uD83DuDD04 Vérification périodique de la file d\'attente');
         SyncQueueService().processQueue();
       });
       
