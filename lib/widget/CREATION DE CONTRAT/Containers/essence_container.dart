@@ -16,29 +16,17 @@ class EssenceContainer extends StatefulWidget {
 
 class _EssenceContainerState extends State<EssenceContainer> {
   bool _showContent = false;
+  double _pourcentage = 0.0;
 
-  String _getCurrentValue(int percentage) {
-    if (percentage <= 0) return "0";
-    if (percentage <= 25) return "1/4";
-    if (percentage <= 50) return "1/2";
-    if (percentage <= 75) return "3/4";
-    return "1";
-  }
-
-  int _getPercentage(String value) {
-    switch (value) {
-      case "0": return 0;
-      case "1/4": return 25;
-      case "1/2": return 50;
-      case "3/4": return 75;
-      case "1": return 100;
-      default: return 0;
-    }
+  @override
+  void initState() {
+    super.initState();
+    _pourcentage = widget.pourcentageEssence.toDouble();
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentValue = _getCurrentValue(widget.pourcentageEssence);
+
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
@@ -99,57 +87,51 @@ class _EssenceContainerState extends State<EssenceContainer> {
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Niveau d'essence au départ :",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    // Titre et valeur actuelle
+                    Row(
+                      children: [
+                        Text(
+                          "Niveau d'essence",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF08004D),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          "${widget.pourcentageEssence}%",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF08004D),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildEssenceButton("0", currentValue),
-                        _buildEssenceButton("1/4", currentValue),
-                        _buildEssenceButton("1/2", currentValue),
-                        _buildEssenceButton("3/4", currentValue),
-                        _buildEssenceButton("1", currentValue),
-                      ],
+                    // Slider pour sélectionner le niveau
+                    Slider(
+                      value: _pourcentage,
+                      min: 0,
+                      max: 100,
+                      divisions: 10, // 10 divisions pour des valeurs de 10 en 10
+                      activeColor: const Color(0xFF08004D),
+                      inactiveColor: const Color(0xFF08004D).withOpacity(0.3),
+                      label: '${_pourcentage.toInt()}%',
+                      onChanged: (double value) {
+                        setState(() {
+                          // Arrondir à la dizaine la plus proche
+                          final roundedValue = ((value / 10).round() * 10).toDouble();
+                          _pourcentage = roundedValue;
+                          widget.onPourcentageChanged(roundedValue.toInt());
+                        });
+                      },
                     ),
                   ],
                 ),
               ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEssenceButton(String value, String currentValue) {
-    final isSelected = value == currentValue;
-    
-    return Container(
-      width: 40,
-      child: ElevatedButton(
-        onPressed: () {
-          widget.onPourcentageChanged(_getPercentage(value));
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: isSelected ? const Color(0xFF08004D) : Colors.grey[200],
-          foregroundColor: isSelected ? Colors.white : const Color(0xFF08004D),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          minimumSize: const Size(0, 0),
-        ),
-        child: Text(
-          value,
-          style: const TextStyle(fontSize: 14),
-          textAlign: TextAlign.center,
         ),
       ),
     );

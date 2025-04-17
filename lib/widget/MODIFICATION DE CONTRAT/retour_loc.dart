@@ -355,16 +355,41 @@ class _RetourLocState extends State<RetourLoc> {
                   ),
                 ],
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 16),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildEssenceOption("0", "Vide"),
-                  _buildEssenceOption("1/4", "1/4"),
-                  _buildEssenceOption("1/2", "1/2"),
-                  _buildEssenceOption("3/4", "3/4"),
-                  _buildEssenceOption("1", "Plein"),
+                  Expanded(
+                    child: Text(
+                      "${widget.pourcentageEssenceRetourController.text}%",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[800],
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ],
+              ),
+              const SizedBox(height: 16),
+              Slider(
+                value: double.tryParse(widget.pourcentageEssenceRetourController.text) ?? 0,
+                min: 0,
+                max: 100,
+                divisions: 10, // 10 divisions pour des valeurs de 10 en 10
+                activeColor: Colors.orange[700],
+                inactiveColor: Colors.orange[700]!.withOpacity(0.3),
+                label: '${(double.tryParse(widget.pourcentageEssenceRetourController.text) ?? 0).toInt()}%',
+                onChanged: (double value) {
+                  setState(() {
+                    // Arrondir à la dizaine la plus proche
+                    final roundedValue = (value / 10).round() * 10;
+                    widget.pourcentageEssenceRetourController.text = roundedValue.toInt().toString();
+                    if (widget.onFraisUpdated != null) {
+                      widget.onFraisUpdated!({'pourcentageEssenceRetour': roundedValue.toInt().toString()});
+                    }
+                  });
+                },
               ),
             ],
           ),
@@ -373,65 +398,5 @@ class _RetourLocState extends State<RetourLoc> {
     );
   }
 
-  Widget _buildEssenceOption(String value, String label) {
-    // Convertir la valeur du contrôleur en format comparable
-    String currentValue = widget.pourcentageEssenceRetourController.text;
-    String valueAsPercentage;
-    
-    switch (value) {
-      case "0": valueAsPercentage = "0"; break;
-      case "1/4": valueAsPercentage = "25"; break;
-      case "1/2": valueAsPercentage = "50"; break;
-      case "3/4": valueAsPercentage = "75"; break;
-      case "1": valueAsPercentage = "100"; break;
-      default: valueAsPercentage = "0";
-    }
-    
-    bool isSelected = currentValue == valueAsPercentage;
-    
-    return InkWell(
-      onTap: () {
-        setState(() {
-          // Convertir la valeur sélectionnée en pourcentage
-          String percentage;
-          switch (value) {
-            case "0": percentage = "0"; break;
-            case "1/4": percentage = "25"; break;
-            case "1/2": percentage = "50"; break;
-            case "3/4": percentage = "75"; break;
-            case "1": percentage = "100"; break;
-            default: percentage = "0";
-          }
-          
-          widget.pourcentageEssenceRetourController.text = percentage;
-          // Mettre à jour les données
-          if (widget.onFraisUpdated != null) {
-            widget.onFraisUpdated!({'pourcentageEssenceRetour': percentage});
-          }
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.orange.withOpacity(0.2) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? Colors.orange : Colors.grey[300]!,
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.orange[700] : Colors.grey[700],
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 }
