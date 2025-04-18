@@ -142,20 +142,28 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   Future<void> _loadAdminInfo() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final userDoc = await _firestore.collection('users').doc(user.uid).get();
-      final userData = userDoc.data();
+    try {
+      print('Chargement des informations administrateur...');
+      final adminInfo = await AccessAdmin.getAdminInfo();
       
-      if (userData != null) {
+      if (adminInfo.isNotEmpty) {
         setState(() {
-          nomEntreprise = userData['nomEntreprise'] ?? '';
-          logoUrl = userData['logoUrl'] ?? '';
-          adresseEntreprise = userData['adresseEntreprise'] ?? '';
-          telephoneEntreprise = userData['telephoneEntreprise'] ?? '';
-          siretEntreprise = userData['siretEntreprise'] ?? '';
+          nomEntreprise = adminInfo['nomEntreprise'] ?? '';
+          logoUrl = adminInfo['logoUrl'] ?? '';
+          adresseEntreprise = adminInfo['adresseEntreprise'] ?? '';
+          telephoneEntreprise = adminInfo['telephoneEntreprise'] ?? '';
+          siretEntreprise = adminInfo['siretEntreprise'] ?? '';
         });
+        
+        print('Informations administrateur chargées avec succès:');
+        print('Nom entreprise: $nomEntreprise');
+        print('Adresse: $adresseEntreprise');
+        print('SIRET: $siretEntreprise');
+      } else {
+        print('❌ Aucune information administrateur trouvée');
       }
+    } catch (e) {
+      print('❌ Erreur lors du chargement des informations administrateur: $e');
     }
   }
 

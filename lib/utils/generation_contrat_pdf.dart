@@ -6,6 +6,7 @@ import '../widget/chargement.dart';
 import '../utils/affichage_contrat_pdf.dart';
 import '../widget/CREATION DE CONTRAT/mail.dart';
 import '../widget/CREATION DE CONTRAT/popup_felicitation.dart';
+import '../services/access_admin.dart';
 import 'contract_utils.dart';
 
 class GenerationContratPdf {
@@ -76,58 +77,84 @@ class GenerationContratPdf {
         throw Exception('Utilisateur non connecté');
       }
 
-      // Récupérer les données principales de l'utilisateur
+      // Récupérer les informations de l'entreprise via AccessAdmin
+      print('Récupération des informations entreprise pour la génération du contrat PDF');
+      final adminInfo = await AccessAdmin.getAdminInfo();
+      
+      if (adminInfo.isEmpty) {
+        throw Exception(' Informations d\'entreprise non trouvées');
+      }
+      
+      // Assigner les valeurs récupérées
+      final nomEntrepriseInfo = adminInfo['nomEntreprise'] ?? 'Non défini';
+      final logoUrlInfo = adminInfo['logoUrl'] ?? '';
+      final adresseEntrepriseInfo = adminInfo['adresseEntreprise'] ?? 'Non défini';
+      final telephoneEntrepriseInfo = adminInfo['telephoneEntreprise'] ?? 'Non défini';
+      final siretEntrepriseInfo = adminInfo['siretEntreprise'] ?? 'Non défini';
+      
+      // Utiliser les valeurs fournies en paramètre si elles existent, sinon utiliser les valeurs récupérées
+      final nomEntrepriseFinal = nomEntreprise ?? nomEntrepriseInfo;
+      final logoUrlFinal = logoUrl ?? logoUrlInfo;
+      final adresseEntrepriseFinal = adresseEntreprise ?? adresseEntrepriseInfo;
+      final telephoneEntrepriseFinal = telephoneEntreprise ?? telephoneEntrepriseInfo;
+      final siretEntrepriseFinal = siretEntreprise ?? siretEntrepriseInfo;
+      
+      print(' Informations entreprise récupérées avec succès:');
+      print('Nom entreprise: $nomEntrepriseFinal');
+      print('Adresse: $adresseEntrepriseFinal');
+      print('Téléphone: $telephoneEntrepriseFinal');
+      print('SIRET: $siretEntrepriseFinal');
+
+      // Récupérer les données de l'utilisateur pour vérifier s'il est collaborateur
       final userDataDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .get(GetOptions(source: Source.server));
 
-      if (!userDataDoc.exists) {
-        throw Exception('❌ Données utilisateur non trouvées');
-      }
-
-      final userData = userDataDoc.data()!;
-      final adminId = userData['adminId'];
-      
-      // Déterminer si l'utilisateur est un admin ou un collaborateur
       final String targetId;
-      if (adminId == null) {
-        // L'utilisateur est un admin, utiliser son propre ID
-        targetId = user.uid;
+      String? nomCollaborateurFinal = nomCollaborateur;
+      String? prenomCollaborateurFinal = prenomCollaborateur;
+      
+      // Vérifier si le document existe avant d'accéder aux données
+      if (userDataDoc.exists) {
+        final userData = userDataDoc.data()!;
+        final adminId = userData['adminId'];
+        
+        // Déterminer si l'utilisateur est un admin ou un collaborateur
+        if (adminId == null) {
+          // L'utilisateur est un admin, utiliser son propre ID
+          targetId = user.uid;
+          print(' Utilisateur administrateur détecté, utilisation de son propre ID: $targetId');
+        } else {
+          // L'utilisateur est un collaborateur, utiliser l'ID de son admin
+          targetId = adminId;
+          print(' Utilisateur collaborateur détecté, utilisation de l\'ID admin: $targetId');
+        }
+
+        // Récupérer les informations du collaborateur si ce n'est pas un admin
+        if (adminId != null && (nomCollaborateur == null || prenomCollaborateur == null)) {
+          try {
+            print('Récupération des informations du collaborateur...');
+            final collaborateurDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get(GetOptions(source: Source.server));
+
+            if (collaborateurDoc.exists) {
+              final collaborateurData = collaborateurDoc.data()!;
+              nomCollaborateurFinal = collaborateurData['nom'] ?? nomCollaborateur;
+              prenomCollaborateurFinal = collaborateurData['prenom'] ?? prenomCollaborateur;
+              print(' Informations collaborateur récupérées: $prenomCollaborateurFinal $nomCollaborateurFinal');
+            }
+          } catch (e) {
+            print(' Erreur lors de la récupération des données collaborateur: $e');
+          }
+        }
       } else {
-        // L'utilisateur est un collaborateur, utiliser l'ID de son admin
-        targetId = adminId;
+        // Document utilisateur non trouvé, mais nous avons déjà les informations d'entreprise via AccessAdmin
+        print(' Document utilisateur non trouvé, utilisation de l\'ID utilisateur actuel');
+        targetId = user.uid;
       }
-
-      // Récupérer les données de l'admin
-      final adminAuthDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(targetId)
-          .collection('authentification')
-          .doc(targetId)
-          .get(GetOptions(source: Source.server));
-
-      if (!adminAuthDoc.exists) {
-        throw Exception('❌ Données administrateur non trouvées');
-      }
-
-      final adminDataMap = adminAuthDoc.data()!;
-      final nomEntreprise = adminDataMap['nomEntreprise'] ?? 'Non défini';
-      final logoUrl = adminDataMap['logoUrl'] ?? 'Non défini';
-      final adresseEntreprise = adminDataMap['adresse'] ?? 'Non défini';
-      final telephoneEntreprise = adminDataMap['telephone'] ?? 'Non défini';
-      final siretEntreprise = adminDataMap['siret'] ?? 'Non défini';
-
-
-      // Récupérer les informations du collaborateur
-      final collaborateurData = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get(GetOptions(source: Source.server));
-
-      final collaborateurDataMap = collaborateurData.data()!;
-      final nomCollaborateur = collaborateurDataMap['nom'] ?? '';
-      final prenomCollaborateur = collaborateurDataMap['prenom'] ?? '';
 
       // Calculer le statut du contrat
       final status = ContractUtils.determineContractStatus(dateDebut);
@@ -143,7 +170,7 @@ class GenerationContratPdf {
         userId: user.uid,
         adminId: targetId,
         createdBy: user.uid,
-        isCollaborateur: adminId != null,
+        isCollaborateur: nomCollaborateurFinal != null,
         entrepriseClient: entrepriseClient,
         nom: nom,
         prenom: prenom,
@@ -183,13 +210,13 @@ class GenerationContratPdf {
         nettoyageExt: nettoyageExt,
         locationCasque: locationCasque,
         methodePaiement: methodePaiement,
-        nomEntreprise: nomEntreprise,
-        logoUrl: logoUrl,
-        adresseEntreprise: adresseEntreprise,
-        telephoneEntreprise: telephoneEntreprise,
-        siretEntreprise: siretEntreprise,
-        nomCollaborateur: nomCollaborateur,
-        prenomCollaborateur: prenomCollaborateur,
+        nomEntreprise: nomEntrepriseFinal,
+        logoUrl: logoUrlFinal,
+        adresseEntreprise: adresseEntrepriseFinal,
+        telephoneEntreprise: telephoneEntrepriseFinal,
+        siretEntreprise: siretEntrepriseFinal,
+        nomCollaborateur: nomCollaborateurFinal,
+        prenomCollaborateur: prenomCollaborateurFinal,
         conditions: conditions,
         dateRetour: dateRetour,
         signatureRetour: signatureRetour,
@@ -226,8 +253,7 @@ class GenerationContratPdf {
       // Logs pour déboguer
       print('=== Début de la sauvegarde du contrat ===');
       print('User ID: ${user.uid}');
-      print('Admin ID: $adminId');
-      print('Target ID: $targetId');
+      print('Admin ID: $targetId');
       print('Contrat ID: $contratId');
       print('=== Données du contrat ===');
       print(contratData);
@@ -252,7 +278,7 @@ class GenerationContratPdf {
         print('Erreur: $e');
         print('Type de l\'erreur: ${e.runtimeType}');
         print('Message: ${e.toString()}');
-        throw Exception('❌ Erreur lors de la sauvegarde du contrat: $e');
+        throw Exception(' Erreur lors de la sauvegarde du contrat: $e');
       }
 
       // Si un email est fourni, envoyer le PDF
@@ -271,13 +297,13 @@ class GenerationContratPdf {
           immatriculation: immatriculation ?? '',
           prenom: prenom ?? '',
           nom: nom ?? '',
-          nomEntreprise: nomEntreprise ?? '',
-          adresse: adresseEntreprise,
-          telephone: telephoneEntreprise,
-          logoUrl: logoUrl ?? '',
+          nomEntreprise: nomEntrepriseFinal ?? '',
+          adresse: adresseEntrepriseFinal,
+          telephone: telephoneEntrepriseFinal,
+          logoUrl: logoUrlFinal ?? '',
           sendCopyToAdmin: true,
-          nomCollaborateur: nomCollaborateur,
-          prenomCollaborateur: prenomCollaborateur,
+          nomCollaborateur: nomCollaborateurFinal,
+          prenomCollaborateur: prenomCollaborateurFinal,
         );
       }
 
