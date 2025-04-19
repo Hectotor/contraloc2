@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/auth_util.dart';
 import 'package:intl/intl.dart'; // Importer la bibliothèque Intl pour la mise en forme des dates
 
@@ -37,16 +38,36 @@ class SuppContrat {
     try {
       // Vérifier le statut de l'utilisateur
       final authData = await AuthUtil.getAuthData();
-      final userId = authData['userId'];
       final isCollaborateur = authData['isCollaborateur'] == true;
       final adminId = authData['adminId'];
       
-      if (userId == null) throw Exception("Utilisateur non connecté");
+      // Les collaborateurs ne peuvent pas supprimer les contrats
+      if (isCollaborateur) {
+        if (dialogContext != null && dialogContext!.mounted) {
+          Navigator.pop(dialogContext!);
+        }
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Les collaborateurs ne peuvent pas supprimer les contrats.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+      
+      // Récupérer l'ID de l'utilisateur actuel
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception("Utilisateur non connecté");
+      final userId = user.uid;
       
       // Vérifier les permissions de suppression pour les collaborateurs
       if (isCollaborateur) {
-        final hasDeletePermission = authData['permissions']?['delete'] ?? false;
-        if (!hasDeletePermission) {
+        // Les collaborateurs ne peuvent pas supprimer les contrats
+        if (true) {
           // Fermer le dialogue de chargement
           if (dialogContext != null && dialogContext!.mounted) {
             Navigator.pop(dialogContext!);
@@ -74,9 +95,9 @@ class SuppContrat {
       try {
         // Récupérer le document de l'utilisateur actuel
         final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .get();
+          .collection('users')
+          .doc(FirebaseAuth.instance.currentUser!.uid)
+          .get();
             
         if (userDoc.exists && userDoc.data() != null) {
           final userData = userDoc.data()!;
@@ -98,7 +119,7 @@ class SuppContrat {
       // Récupérer les données du contrat
       final contratDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(targetId)
+          .doc(userId)
           .collection('locations')
           .doc(contratId)
           .get();

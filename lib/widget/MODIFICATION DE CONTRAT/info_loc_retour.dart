@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_util.dart';
 
 class InfoLocRetour extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -28,9 +27,8 @@ class _InfoLocRetourState extends State<InfoLocRetour> {
 
   Future<void> _checkPermissions() async {
     try {
-      // Vérifier si l'utilisateur a la permission de lecture
-      final authData = await AuthUtil.getAuthData();
-      final hasReadPermission = authData['permissions']?['read'] ?? false;
+      // Les utilisateurs peuvent toujours lire les informations de retour
+      final hasReadPermission = true;
       
       if (mounted) {
         setState(() {
