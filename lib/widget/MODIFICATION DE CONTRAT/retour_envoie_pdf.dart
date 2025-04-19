@@ -148,10 +148,15 @@ class RetourEnvoiePdf {
             .doc(targetId)
             .collection('locations')
             .doc(contratId)
-            .set({
+            .update({
           'status': 'restitue',
           'dateRestitution': FieldValue.serverTimestamp(),
           'pdfClotureSent': true,
+          'dateFinEffectif': dateFinEffectif,
+          'kilometrageRetour': kilometrageRetour,
+          'commentaireRetour': commentaireRetour,
+          'pourcentageEssenceRetour': pourcentageEssenceRetour,
+          'signatureRetour': signatureRetourBase64,
         });
       } catch (e) {
         print('Erreur lors de la mise à jour du statut du contrat: $e');

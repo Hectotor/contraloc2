@@ -16,7 +16,6 @@ class ContratRestitues extends StatefulWidget {
 }
 
 class _ContratRestituesState extends State<ContratRestitues> {
-  final Map<String, String?> _photoUrlCache = {};
   final _searchController = TextEditingController();
   late VehicleAccessManager _vehicleAccessManager;
   String? _targetUserId;
@@ -95,20 +94,19 @@ class _ContratRestituesState extends State<ContratRestitues> {
         .snapshots();
   }
 
-  Future<String?> _getVehiclePhotoUrl(String immatriculation) async {
-    final cacheKey = immatriculation;
-    if (_photoUrlCache.containsKey(cacheKey)) {
-      return _photoUrlCache[cacheKey];
+  Future<String?> _getVehiclePhotoUrl(String? immatriculation) async {
+    if (immatriculation == null || immatriculation.isEmpty) {
+      return null;
     }
 
     try {
-      // Récupérer les données du véhicule directement depuis le serveur et le cache
+      // Récupérer les données du véhicule directement depuis le serveur
       final String effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid ?? '';
       if (effectiveUserId.isEmpty) {
         return null;
       }
       
-      // Requête directe qui récupère depuis le serveur et met à jour le cache
+      // Requête directe qui récupère depuis le serveur
       final query = FirebaseFirestore.instance
           .collection('users')
           .doc(effectiveUserId)
@@ -129,15 +127,12 @@ class _ContratRestituesState extends State<ContratRestitues> {
           }
         }
 
-        _photoUrlCache[cacheKey] = photoUrl;
         return photoUrl;
       }
 
-      _photoUrlCache[cacheKey] = null;
       return null;
     } catch (e) {
       print("Erreur lors de la récupération de la photo du véhicule: $e");
-      _photoUrlCache[cacheKey] = null;
       return null;
     }
   }
@@ -298,10 +293,25 @@ class _ContratRestituesState extends State<ContratRestitues> {
                     final data = contrat.data() as Map<String, dynamic>;
 
                     return FutureBuilder<String?>(
-                      future: _getVehiclePhotoUrl(data['immatriculation']),
+                      future: _getVehiclePhotoUrl(data['immatriculation'] as String?),
                       builder: (context, snapshot) {
-                        final photoUrl = snapshot.data;
+                        // Gérer les différents états du FutureBuilder
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+                        
+                        if (snapshot.hasError) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                            child: Center(child: Text('Erreur: ${snapshot.error}')),
+                          );
+                        }
 
+                        final photoUrl = snapshot.data ?? '';
+                        
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                           child: _buildContractCard(context, contrat.id, data, photoUrl),
@@ -318,7 +328,7 @@ class _ContratRestituesState extends State<ContratRestitues> {
     );
   }
 
-  Widget _buildContractCard(BuildContext context, String contratId, Map<String, dynamic> data, String? photoUrl) {
+  Widget _buildContractCard(BuildContext context, String contratId, Map<String, dynamic> data, String photoUrl) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -402,7 +412,7 @@ class _ContratRestituesState extends State<ContratRestitues> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: (photoUrl != null && photoUrl.isNotEmpty)
+                        child: photoUrl.isNotEmpty
                           ? Image.network(
                               photoUrl,
                               fit: BoxFit.cover,
@@ -445,10 +455,10 @@ class _ContratRestituesState extends State<ContratRestitues> {
                           const SizedBox(height: 12),
                           _buildInfoRow("Début", _formatTimestamp(data['dateDebut'])),
                           const SizedBox(height: 12),
-                          _buildInfoRow("Véhicule", data['immatriculation'] ?? "Non spécifié"),
+                          _buildInfoRow("Véhicule", data['immatriculation']),
                           if (data['marque'] != null && data['modele'] != null) ...[  
                             const SizedBox(height: 12),
-                            _buildInfoRow("Modèle", "${data['marque']} ${data['modele']}"),
+                            _buildInfoRow("Modèle", data['marque'] != null && data['modele'] != null ? "${data['marque']} ${data['modele']}" : null),
                           ],
                         ],
                       ),
@@ -463,7 +473,7 @@ class _ContratRestituesState extends State<ContratRestitues> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(String label, String? value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -480,7 +490,7 @@ class _ContratRestituesState extends State<ContratRestitues> {
         ),
         Expanded(
           child: Text(
-            value,
+            value ?? "Non spécifié",
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey[800],

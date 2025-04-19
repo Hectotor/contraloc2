@@ -36,59 +36,16 @@ class SuppContrat {
     );
 
     try {
-      // Vérifier le statut de l'utilisateur
+      // Récupérer les données d'authentification
       final authData = await AuthUtil.getAuthData();
-      final isCollaborateur = authData['isCollaborateur'] == true;
       final adminId = authData['adminId'];
       
-      // Les collaborateurs ne peuvent pas supprimer les contrats
-      if (isCollaborateur) {
-        if (dialogContext != null && dialogContext!.mounted) {
-          Navigator.pop(dialogContext!);
-        }
-        
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Les collaborateurs ne peuvent pas supprimer les contrats.'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-        return;
+      if (adminId == null) {
+        throw Exception("Impossible de récupérer l'ID de l'admin");
       }
-      
-      // Récupérer l'ID de l'utilisateur actuel
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception("Utilisateur non connecté");
-      final userId = user.uid;
-      
-      // Vérifier les permissions de suppression pour les collaborateurs
-      if (isCollaborateur) {
-        // Les collaborateurs ne peuvent pas supprimer les contrats
-        if (true) {
-          // Fermer le dialogue de chargement
-          if (dialogContext != null && dialogContext!.mounted) {
-            Navigator.pop(dialogContext!);
-          }
-          
-          // Afficher un message d'erreur
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Vous n\'avez pas les permissions nécessaires pour supprimer ce contrat.'),
-                backgroundColor: Colors.red,
-                duration: Duration(seconds: 3),
-              ),
-            );
-          }
-          return;
-        }
-      }
-      
-      // Déterminer l'ID à utiliser (admin pour les collaborateurs)
-      final targetId = isCollaborateur ? adminId : userId;
+
+      // Utiliser l'ID de l'admin pour la suppression
+      final targetId = adminId;
 
       // Récupérer les informations de l'utilisateur qui effectue la suppression
       String supprimePar = "Utilisateur inconnu";
@@ -119,7 +76,7 @@ class SuppContrat {
       // Récupérer les données du contrat
       final contratDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(userId)
+          .doc(targetId)
           .collection('locations')
           .doc(contratId)
           .get();
@@ -129,21 +86,20 @@ class SuppContrat {
         // Date actuelle pour l'horodatage
         final DateTime maintenant = DateTime.now();
         final String dateSuppressionStr = DateFormat('dd/MM/yyyy', 'fr_FR').format(maintenant);
-        
+
         // Mettre à jour le document avec le statut "supprimé"
         await FirebaseFirestore.instance
             .collection('users')
             .doc(targetId)
             .collection('locations')
             .doc(contratId)
-            .update({
+            .set({
               'statussupprime': 'supprimé',
               'dateSuppression': dateSuppressionStr,
               'supprimePar': supprimePar,
-              // Calculer la date de suppression définitive (90 jours plus tard)
               'dateSuppressionDefinitive': DateFormat('dd/MM/yyyy', 'fr_FR')
                   .format(maintenant.add(const Duration(days: 90))),
-            });
+            }, SetOptions(merge: true));
 
         // Fermer le dialogue de chargement
         if (dialogContext != null && dialogContext!.mounted) {

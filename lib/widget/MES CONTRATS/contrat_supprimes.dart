@@ -689,10 +689,10 @@ class _ContratSupprimesState extends State<ContratSupprimes> {
                     final data = contrat.data() as Map<String, dynamic>;
 
                     return FutureBuilder<String?>(
-                      future: _getVehiclePhotoUrl(data['immatriculation']),
+                      future: _getVehiclePhotoUrl(data['immatriculation'] ?? ''),
                       builder: (context, snapshot) {
-                        final photoUrl = snapshot.data;
-
+                        final photoUrl = snapshot.data ?? '';
+                        
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                           child: _buildContractCard(context, contrat.id, data, photoUrl),
