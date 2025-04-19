@@ -59,9 +59,9 @@ class _ClientPageState extends State<ClientPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _telephoneController = TextEditingController();
   final TextEditingController _adresseController = TextEditingController();
-  final _numeroPermisController = TextEditingController();
-  final _immatriculationVehiculeClientController = TextEditingController();
-  final _kilometrageVehiculeClientController = TextEditingController();
+  final TextEditingController _numeroPermisController = TextEditingController();
+  final TextEditingController _immatriculationVehiculeClientController = TextEditingController();
+  final TextEditingController _kilometrageVehiculeClientController = TextEditingController();
   File? _permisRecto;
   File? _permisVerso;
   String? _permisRectoUrl;

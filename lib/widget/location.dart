@@ -102,11 +102,11 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _locationCasqueController = TextEditingController();
   String? _selectedPaymentMethod;
 
-  final TextEditingController _nomClientController = TextEditingController();
-  final TextEditingController _prenomClientController = TextEditingController();
-  final TextEditingController _emailClientController = TextEditingController();
-  final TextEditingController _telephoneClientController = TextEditingController();
-  final TextEditingController _adresseClientController = TextEditingController();
+  final TextEditingController _nomController = TextEditingController();
+  final TextEditingController _prenomController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _telephoneController = TextEditingController();
+  final TextEditingController _adresseController = TextEditingController();
   final TextEditingController _numeroPermisController = TextEditingController();
   final TextEditingController _immatriculationVehiculeClientController = TextEditingController();
   final TextEditingController _kilometrageVehiculeClientController = TextEditingController();
@@ -135,11 +135,11 @@ class _LocationPageState extends State<LocationPage> {
     
     // Initialiser les données du client à partir des paramètres
     _entrepriseClientController.text = widget.entrepriseClient ?? '';
-    _nomClientController.text = widget.nom ?? '';
-    _prenomClientController.text = widget.prenom ?? '';
-    _emailClientController.text = widget.email ?? '';
-    _telephoneClientController.text = widget.telephone ?? '';
-    _adresseClientController.text = widget.adresse ?? '';
+    _nomController.text = widget.nom ?? '';
+    _prenomController.text = widget.prenom ?? '';
+    _emailController.text = widget.email ?? '';
+    _telephoneController.text = widget.telephone ?? '';
+    _adresseController.text = widget.adresse ?? '';
     _numeroPermisController.text = widget.numeroPermis ?? '';
     _immatriculationVehiculeClientController.text = widget.immatriculationVehiculeClient ?? '';
     _kilometrageVehiculeClientController.text = widget.kilometrageVehiculeClient ?? '';
@@ -241,11 +241,11 @@ class _LocationPageState extends State<LocationPage> {
     _entrepriseClientController.text = model.entrepriseClient ?? '';
     _selectedPaymentMethod = model.methodePaiement ?? 'Espèces';
     _conditionsController.text = model.conditions ?? '';
-    _nomClientController.text = model.nom ?? '';
-    _prenomClientController.text = model.prenom ?? '';
-    _emailClientController.text = model.email ?? '';
-    _telephoneClientController.text = model.telephone ?? '';
-    _adresseClientController.text = model.adresse ?? '';
+    _nomController.text = model.nom ?? '';
+    _prenomController.text = model.prenom ?? '';
+    _emailController.text = model.email ?? '';
+    _telephoneController.text = model.telephone ?? '';
+    _adresseController.text = model.adresse ?? '';
     _numeroPermisController.text = model.numeroPermis ?? '';
     _immatriculationVehiculeClientController.text = model.immatriculationVehiculeClient ?? '';
     _kilometrageVehiculeClientController.text = model.kilometrageVehiculeClient ?? '';
@@ -616,12 +616,12 @@ class _LocationPageState extends State<LocationPage> {
         adminId: targetId,
         createdBy: userId,
         isCollaborateur: collaborateurStatus['isCollaborateur'] ?? false,
-        nom: _nomClientController.text,
-        prenom: _prenomClientController.text,
+        nom: _nomController.text,
+        prenom: _prenomController.text,
         entrepriseClient: _entrepriseClientController.text,
-        adresse: _adresseClientController.text,
-        telephone: _telephoneClientController.text,
-        email: _emailClientController.text,
+        adresse: _adresseController.text,
+        telephone: _telephoneController.text,
+        email: _emailController.text,
         permisRectoUrl: _permisRectoUrl,
         permisVersoUrl: _permisVersoUrl,
         marque: widget.marque,
@@ -707,11 +707,11 @@ class _LocationPageState extends State<LocationPage> {
       await GenerationContratPdf.genererEtEnvoyerPdf(
         context: context,
         contratId: contratId,
-        nom: _nomClientController.text,
-        prenom: _prenomClientController.text,
-        adresse: _adresseClientController.text,
-        telephone: _telephoneClientController.text,
-        email: _emailClientController.text,
+        nom: _nomController.text,
+        prenom: _prenomController.text,
+        adresse: _adresseController.text,
+        telephone: _telephoneController.text,
+        email: _emailController.text,
         signatureAller: _signatureAller,
         photoVehiculeUrl: _vehiclePhotoUrl,
         dateDebut: _dateDebutController.text,
@@ -771,7 +771,7 @@ class _LocationPageState extends State<LocationPage> {
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 4),
-                if (widget.email != null && widget.email!.isNotEmpty) Text('Client: ${_nomClientController.text} ${_prenomClientController.text}'),
+                if (widget.email != null && widget.email!.isNotEmpty) Text('Client: ${_nomController.text} ${_prenomController.text}'),
               ],
             ),
             backgroundColor: Colors.green,
@@ -848,8 +848,8 @@ class _LocationPageState extends State<LocationPage> {
       context,
       title: 'Signature du contrat',
       checkboxText: 'Je reconnais avoir pris connaissance des termes et conditions de location.',
-      nom: _nomClientController.text,
-      prenom: _prenomClientController.text,
+      nom: _nomController.text,
+      prenom: _prenomController.text,
       existingSignature: _signatureAller.isNotEmpty ? _signatureAller : null,
     );
 
@@ -1012,11 +1012,11 @@ class _LocationPageState extends State<LocationPage> {
     _cautionController.dispose();
     _entrepriseClientController.dispose();
     _conditionsController.dispose();
-    _nomClientController.dispose();
-    _prenomClientController.dispose();
-    _emailClientController.dispose();
-    _telephoneClientController.dispose();
-    _adresseClientController.dispose();
+    _nomController.dispose();
+    _prenomController.dispose();
+    _emailController.dispose();
+    _telephoneController.dispose();
+    _adresseController.dispose();
     _numeroPermisController.dispose();
     _immatriculationVehiculeClientController.dispose();
     _kilometrageVehiculeClientController.dispose();
