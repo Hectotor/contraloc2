@@ -16,6 +16,7 @@ class ContratRestitues extends StatefulWidget {
 }
 
 class _ContratRestituesState extends State<ContratRestitues> {
+  final Map<String, String?> _photoUrlCache = {};
   final _searchController = TextEditingController();
   late VehicleAccessManager _vehicleAccessManager;
   String? _targetUserId;
@@ -99,14 +100,18 @@ class _ContratRestituesState extends State<ContratRestitues> {
       return null;
     }
 
+    // Vérifier dans le cache d'abord
+    if (_photoUrlCache.containsKey(immatriculation)) {
+      return _photoUrlCache[immatriculation];
+    }
+
     try {
-      // Récupérer les données du véhicule directement depuis le serveur
       final String effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid ?? '';
       if (effectiveUserId.isEmpty) {
+        _photoUrlCache[immatriculation] = null;
         return null;
       }
       
-      // Requête directe qui récupère depuis le serveur
       final query = FirebaseFirestore.instance
           .collection('users')
           .doc(effectiveUserId)
@@ -117,22 +122,25 @@ class _ContratRestituesState extends State<ContratRestitues> {
       
       if (snapshot.docs.isNotEmpty) {
         final data = snapshot.docs.first.data() as Map<String, dynamic>?;
-        String? photoUrl;
-        
         if (data != null) {
+          String? photoUrl;
           if (data.containsKey('photoUrls') && data['photoUrls'] is List && (data['photoUrls'] as List).isNotEmpty) {
             photoUrl = (data['photoUrls'] as List).first.toString();
           } else if (data.containsKey('photoVehiculeUrl')) {
             photoUrl = data['photoVehiculeUrl'] as String?;
           }
+          
+          _photoUrlCache[immatriculation] = photoUrl;
+          return photoUrl;
         }
-
-        return photoUrl;
       }
-
+      
+      // Même si on n'a pas trouvé de photo, on cache cette absence
+      _photoUrlCache[immatriculation] = null;
       return null;
     } catch (e) {
       print("Erreur lors de la récupération de la photo du véhicule: $e");
+      _photoUrlCache[immatriculation] = null;
       return null;
     }
   }

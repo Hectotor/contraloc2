@@ -307,7 +307,7 @@ Future<String> generatePdf(
                 ),
               ],
             ),
-            pw.SizedBox(height: 15),
+            pw.SizedBox(height: 10),
             PdfInfoContactWidget.build(
               nomEntreprise: contratModel.nomEntreprise ?? '',
               adresse: contratModel.adresseEntreprise ?? '',
@@ -319,7 +319,7 @@ Future<String> generatePdf(
               logoImage: logoImage,
               nomCollaborateur: nomCollaborateur,
             ),
-            pw.SizedBox(height: 20),
+            pw.SizedBox(height: 10),
             PdfVoitureWidget.build(
               contrat: contratModel,
               selectedPaymentMethod: contratModel.methodePaiement ?? '',
@@ -346,7 +346,7 @@ Future<String> generatePdf(
               boldFont: boldFont,
               ttf: ttf,
             ),
-            pw.SizedBox(height: 20),
+            pw.SizedBox(height: 10),
             pw.Container(
               padding: const pw.EdgeInsets.all(15),
               margin: const pw.EdgeInsets.only(
@@ -442,7 +442,7 @@ Future<String> generatePdf(
                     style: pw.TextStyle(fontSize: 7, font: ttf)),
               );
             }),
-            pw.SizedBox(height: 20), // Augmenté de 40 à 80
+            pw.SizedBox(height: 10), // Augmenté de 40 à 80
             SignaCachetWidget.build(
               logoImage: logoImage,
               nomEntreprise: contratModel.nomEntreprise ?? '',
@@ -459,77 +459,101 @@ Future<String> generatePdf(
               signatureRetourImage: signatureRetourImage,
             ),
             pw.SizedBox(height: 10),
+
+            // Indicateur de photos
+            if (photosAllerBytes.isNotEmpty || photosRetourBytes.isNotEmpty)
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('Photos du véhicule disponibles sur la page suivante',
+                      style: pw.TextStyle(fontSize: 12, font: boldFont, color: PdfColors.blue900)),
+                ],
+              ),
           ],
         ),
       ],
     ),
   );
 
-  // Page 3: Photos et documents
-  // Page 4: Permis de conduire et photos du véhicule
-  if (photosAllerBytes.isNotEmpty || photosRetourBytes.isNotEmpty) {
-    // Créer une page pour chaque groupe de photos
-    final photosPerPage = 4; // Maximum 4 photos par page
-    
-    // Photos à l'aller
-    if (photosAllerBytes.isNotEmpty) {
-      for (var i = 0; i < photosAllerBytes.length; i += photosPerPage) {
-        final pagePhotos = photosAllerBytes.skip(i).take(photosPerPage).toList();
-        pdf.addPage(pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          build: (pw.Context context) {
-            return [
-              pw.SizedBox(height: 20),
-              pw.Text('Photos du véhicule à l\'aller',
-                  style: pw.TextStyle(fontSize: 18, font: boldFont)),
-              pw.Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: pagePhotos.map((photoBytes) {
-                  return pw.Image(pw.MemoryImage(photoBytes),
-                      width: 150, // Réduit la taille pour plus de photos par page
-                      height: 150);
-                }).toList(),
-              ),
-            ];
-          },
-        ));
-      }
-    }
-
-    // Photos au retour
-    if (photosRetourBytes.isNotEmpty) {
-      for (var i = 0; i < photosRetourBytes.length; i += photosPerPage) {
-        final pagePhotos = photosRetourBytes.skip(i).take(photosPerPage).toList();
-        pdf.addPage(pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          build: (pw.Context context) {
-            return [
-              pw.SizedBox(height: 20),
-              pw.Text('Photos du véhicule au retour',
-                  style: pw.TextStyle(fontSize: 18, font: boldFont)),
-              pw.Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: pagePhotos.map((photoBytes) {
-                  return pw.Image(pw.MemoryImage(photoBytes),
-                      width: 150, // Réduit la taille pour plus de photos par page
-                      height: 150);
-                }).toList(),
-              ),
-            ];
-          },
-        ));
-      }
-    }
-  }
-
   // Sauvegarder le PDF
   final directory = await getTemporaryDirectory();
   final path = '${directory.path}/contrat.pdf';
-  final output = File(path);
-  await output.writeAsBytes(await pdf.save());
+  final file = File(path);
 
+  // Ajouter les pages de photos si nécessaires
+  if (photosAllerBytes.isNotEmpty || photosRetourBytes.isNotEmpty) {
+    // Créer une page pour les photos
+    pdf.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      build: (pw.Context context) {
+        List<pw.Widget> widgets = [];
+        
+        widgets.add(pw.Text('Photos du véhicule',
+            style: pw.TextStyle(fontSize: 18, font: boldFont)));
+        widgets.add(pw.SizedBox(height: 10));
+        
+        // Photos à l'aller
+        if (photosAllerBytes.isNotEmpty) {
+          widgets.add(pw.Text('Photos à l\'aller',
+              style: pw.TextStyle(fontSize: 14, font: boldFont)));
+          widgets.add(pw.SizedBox(height: 5));
+          
+          widgets.add(pw.Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: photosAllerBytes.map((photoBytes) {
+              return pw.Container(
+                decoration: pw.BoxDecoration(
+                  borderRadius: pw.BorderRadius.circular(10),
+                  boxShadow: [pw.BoxShadow(color: PdfColors.grey300, blurRadius: 3, offset: const PdfPoint(2, 2))],
+                ),
+                child: pw.ClipRRect(
+                  horizontalRadius: 10,
+                  verticalRadius: 10,
+                  child: pw.Image(pw.MemoryImage(photoBytes),
+                      width: 150,
+                      height: 150),
+                ),
+              );
+            }).toList(),
+          ));
+          
+          widgets.add(pw.SizedBox(height: 20));
+        }
+        
+        // Photos au retour
+        if (photosRetourBytes.isNotEmpty) {
+          widgets.add(pw.Text('Photos au retour',
+              style: pw.TextStyle(fontSize: 14, font: boldFont)));
+          widgets.add(pw.SizedBox(height: 5));
+          
+          widgets.add(pw.Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: photosRetourBytes.map((photoBytes) {
+              return pw.Container(
+                decoration: pw.BoxDecoration(
+                  borderRadius: pw.BorderRadius.circular(10),
+                  boxShadow: [pw.BoxShadow(color: PdfColors.grey300, blurRadius: 3, offset: const PdfPoint(2, 2))],
+                ),
+                child: pw.ClipRRect(
+                  horizontalRadius: 10,
+                  verticalRadius: 10,
+                  child: pw.Image(pw.MemoryImage(photoBytes),
+                      width: 150,
+                      height: 150),
+                ),
+              );
+            }).toList(),
+          ));
+        }
+        
+        return widgets;
+      },
+    ));
+  }
+
+  await file.writeAsBytes(await pdf.save());
   return path;
 }
 

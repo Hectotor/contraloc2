@@ -150,19 +150,18 @@ class _ContratEnCoursState extends State<ContratEnCours> {
   }
 
   Future<String?> _getVehiclePhotoUrl(String immatriculation) async {
-    final cacheKey = immatriculation;
-    if (_photoUrlCache.containsKey(cacheKey)) {
-      return _photoUrlCache[cacheKey];
+    // Vérifier dans le cache d'abord
+    if (_photoUrlCache.containsKey(immatriculation)) {
+      return _photoUrlCache[immatriculation];
     }
 
     try {
-      // Récupérer les données du véhicule directement depuis le serveur et le cache
       final String effectiveUserId = _targetUserId ?? FirebaseAuth.instance.currentUser?.uid ?? '';
       if (effectiveUserId.isEmpty) {
+        _photoUrlCache[immatriculation] = null;
         return null;
       }
       
-      // Requête directe qui récupère depuis le serveur et met à jour le cache
       final query = FirebaseFirestore.instance
           .collection('users')
           .doc(effectiveUserId)
@@ -173,22 +172,19 @@ class _ContratEnCoursState extends State<ContratEnCours> {
       
       if (snapshot.docs.isNotEmpty) {
         final data = snapshot.docs.first.data() as Map<String, dynamic>?;
-        
-        if (data != null) {
-          // Utiliser photoVehiculeUrl au lieu de photoUrls
-          if (data.containsKey('photoVehiculeUrl')) {
-            final photoUrl = data['photoVehiculeUrl'] as String?;
-            _photoUrlCache[cacheKey] = photoUrl;
-            return photoUrl;
-          }
+        if (data != null && data.containsKey('photoVehiculeUrl')) {
+          final photoUrl = data['photoVehiculeUrl'] as String?;
+          _photoUrlCache[immatriculation] = photoUrl;
+          return photoUrl;
         }
       }
       
-      _photoUrlCache[cacheKey] = null;
+      // Même si on n'a pas trouvé de photo, on cache cette absence
+      _photoUrlCache[immatriculation] = null;
       return null;
     } catch (e) {
       print("Erreur lors de la récupération de la photo du véhicule: $e");
-      _photoUrlCache[cacheKey] = null;
+      _photoUrlCache[immatriculation] = null;
       return null;
     }
   }
