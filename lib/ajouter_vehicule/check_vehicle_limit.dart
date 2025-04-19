@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/collaborateur_util.dart';
+import '../services/auth_util.dart';
 import 'package:contraloc/USERS/Subscription/abonnement_screen.dart';
 
 class VehicleLimitChecker {
@@ -138,7 +138,7 @@ class VehicleLimitChecker {
       }
 
       // Vérifier si l'utilisateur est un collaborateur
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
+      final status = await AuthUtil.getAuthData();
       final isCollaborateur = status['isCollaborateur'] ?? false;
       final adminId = status['adminId'];
       

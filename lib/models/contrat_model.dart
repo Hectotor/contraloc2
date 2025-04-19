@@ -176,8 +176,8 @@ class ContratModel {
       numeroPermis: data['numeroPermis'],
       immatriculationVehiculeClient: data['immatriculationVehiculeClient'],
       kilometrageVehiculeClient: data['kilometrageVehiculeClient'],
-      permisRectoUrl: data['permisRecto'],
-      permisVersoUrl: data['permisVerso'],
+      permisRectoUrl: data['permisRectoUrl'],
+      permisVersoUrl: data['permisVersoUrl'],
       marque: data['marque'],
       modele: data['modele'],
       immatriculation: data['immatriculation'],
@@ -294,8 +294,9 @@ class ContratModel {
       'dateCreation': dateCreation,
       'status': status ?? 'en_cours',
       'conditions': conditions ?? '',
-
       'contratId': contratId,
+      'permisRectoUrl': permisRectoUrl,
+      'permisVersoUrl': permisVersoUrl,
     };
     
     // Ajouter les champs optionnels seulement s'ils existent

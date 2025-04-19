@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:contraloc/services/access_locations.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/auth_util.dart';
 
 /// Service de file d'attente pour synchroniser les opérations qui ont échoué
 class SyncQueueService {
@@ -49,14 +50,27 @@ class SyncQueueService {
     for (var operation in queue) {
       try {
         if (operation['type'] == 'clotureContract') {
-          final success = await AccessLocations.clotureContract(
-            operation['contratId'],
-            Map<String, dynamic>.from(operation['updateData'])
-          );
+          final authData = await AuthUtil.getAuthData();
+          final targetId = authData['adminId'] as String;
           
-          if (!success) {
+          try {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(targetId)
+                .collection('locations')
+                .doc(operation['contratId'])
+                .set(
+                  Map<String, dynamic>.from(operation['updateData']),
+                  SetOptions(merge: true)
+                );
+            print('\u{2705} Opération en file d\'attente traitée: ${operation['contratId']}');
+          } catch (e) {
+            print('❌ Erreur lors du traitement: $e - contratId: ${operation['contratId']}');
             remainingQueue.add(operation);
-          } else {
+          }
+          
+          // Si l'opération n'est pas dans remainingQueue, c'est qu'elle a réussi
+          if (!remainingQueue.contains(operation)) {
             print('\u{2705} Opération en file d\'attente traitée: ${operation['contratId']}');
           }
         }

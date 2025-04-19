@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:intl/intl.dart';
@@ -7,7 +8,7 @@ import 'package:photo_view/photo_view_gallery.dart';
 import 'package:signature/signature.dart';
 import '../utils/affichage_facture_pdf.dart';
 import '../utils/affichage_contrat_pdf.dart';
-import 'package:contraloc/services/access_locations.dart';
+import 'package:contraloc/services/auth_util.dart';
 import 'MODIFICATION DE CONTRAT/supp_contrat.dart';
 import 'MODIFICATION DE CONTRAT/info_loc.dart';
 import 'MODIFICATION DE CONTRAT/info_loc_retour.dart';
@@ -244,14 +245,20 @@ class _ModifierScreenState extends State<ModifierScreen> {
         updateData['facture'] = factureData;
       }
 
-      // Utiliser la nouvelle méthode avec transactions pour clôturer le contrat
-      final bool success = await AccessLocations.clotureContract(widget.contratId, updateData);
-
-      print('📊 Résultat de la clôture: ${success ? "Succès" : "En attente - ajouté à la file"} - contratId: ${widget.contratId}');
+      final authData = await AuthUtil.getAuthData();
+      final targetId = authData['adminId'] as String;
       
-      // Vérifier le statut de l'opération
-      if (success) {
-        // Générer le PDF si la clôture a réussi
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(targetId)
+            .collection('locations')
+            .doc(widget.contratId)
+            .set(updateData, SetOptions(merge: true));
+        
+        print('📊 Résultat de la clôture: Succès - contratId: ${widget.contratId}');
+        
+        // Générer le PDF après la clôture
         await RetourEnvoiePdf.genererEtEnvoyerPdfCloture(
           context: context,
           contratData: widget.data,
@@ -260,57 +267,35 @@ class _ModifierScreenState extends State<ModifierScreen> {
           kilometrageRetour: _kilometrageRetourController.text,
           commentaireRetour: _commentaireRetourController.text,
           pourcentageEssenceRetour: _pourcentageEssenceRetourController.text,
-          signatureRetourBase64: signatureRetourBase64,
+          signatureRetourBase64: _signatureRetourBase64,
           dialogueDejaAffiche: true,
         );
+      } catch (e) {
+        print('❌ Erreur lors de la clôture: $e - contratId: ${widget.contratId}');
+      }
         
-        // Fermer le dialogue de chargement
-        if (mounted && Navigator.canPop(context)) {
-          Navigator.pop(context);
-        }
+      // Fermer le dialogue de chargement
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
         
-        // Afficher un message de succès
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Contrat clôturé avec succès. Le contrat est maintenant disponible dans la section 'Contrats restitués'"),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 5),
-          ),
+      // Afficher un message de succès
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Contrat clôturé avec succès. Le contrat est maintenant disponible dans la section 'Contrats restitués'"),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 5),
+        ),
+      );
+        
+      // Naviguer vers l'écran principal après une clôture réussie
+      if (mounted) {
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(
+            builder: (context) => const NavigationPage(initialTab: 1)
+          )
         );
-        
-        // Naviguer vers l'écran principal après une clôture réussie
-        if (mounted) {
-          Navigator.pushReplacement(
-            context, 
-            MaterialPageRoute(
-              builder: (context) => const NavigationPage(initialTab: 1)
-            )
-          );
-        }
-      } else {
-        // Fermer le dialogue de chargement
-        if (mounted && Navigator.canPop(context)) {
-          Navigator.pop(context);
-        }
-        
-        // Afficher un message indiquant que l'opération sera complétée plus tard
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("La connexion est instable. Votre contrat sera clôturé automatiquement dès que la connexion sera rétablie."),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 5),
-          ),
-        );
-        
-        // Naviguer vers l'écran principal même en cas d'échec
-        if (mounted) {
-          Navigator.pushReplacement(
-            context, 
-            MaterialPageRoute(
-              builder: (context) => const NavigationPage(initialTab: 0)
-            )
-          );
-        }
       }
     } catch (e) {
       print('❌ Erreur majeure lors de la clôture du contrat: $e');
@@ -730,7 +715,7 @@ class _ModifierScreenState extends State<ModifierScreen> {
                           ),const SizedBox(height: 20),
                         ],
                         
-                        if (widget.data['status'] == 'réservé') ...[
+                        if (widget.data['status'] == 'réservé' || widget.data['status'] == 'en_cours') ...[
                         
                           _buildGradientButton(
                             onPressed: () {

@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_util.dart';
 
 class AccessPlatinum {
   /// Vérifie si l'utilisateur (ou son administrateur) a un abonnement platinum
@@ -7,33 +7,27 @@ class AccessPlatinum {
     try {
       print('🔍 Vérification du statut platinum');
       
-      // Vérifier si l'utilisateur est connecté
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      // Utiliser AuthUtil pour obtenir les informations d'authentification
+      final authData = await AuthUtil.getAuthData();
+      if (authData.isEmpty) {
         print('❌ Aucun utilisateur connecté');
         return false;
       }
 
-      final uid = user.uid;
-      print('📝 Utilisateur connecté: $uid');
+      final targetId = authData['adminId'] as String;
+      print('📝 ID cible: $targetId');
 
       try {
-        // Récupérer d'abord les informations sur l'utilisateur pour savoir s'il est collaborateur
-        final userDocRef = FirebaseFirestore.instance.collection('users').doc(uid);
+        final userDocRef = FirebaseFirestore.instance.collection('users').doc(targetId);
         final userDoc = await userDocRef.get(const GetOptions(source: Source.server));
         
         final userData = userDoc.data();
         if (userData == null) {
           // Essayer d'accéder directement à l'authentification comme admin
-          print('📝 Essai d\'accès direct aux données d\'authentification comme administrateur');
-          final authDocRef = FirebaseFirestore.instance
-              .collection('users')
-              .doc(uid)
-              .collection('authentification')
-              .doc(uid);
-          
+          print('📝 Essai d\'accès direct aux données d\'authentification');
+          final authDocRef = await AuthUtil.getAuthDocRef(targetId);
           final authDoc = await authDocRef.get(const GetOptions(source: Source.server));
-          return _checkPlatinumStatus(authDoc.data());
+          return _checkPlatinumStatus(authDoc.data() as Map<String, dynamic>?);
         }
         
         // Vérifier si c'est un collaborateur
@@ -47,26 +41,16 @@ class AccessPlatinum {
           print('👥 Collaborateur détecté - Vérification du statut platinum de l\'admin: $adminId');
           
           // Vérifier l'authentification de l'administrateur
-          final adminAuthDocRef = FirebaseFirestore.instance
-              .collection('users')
-              .doc(adminId)
-              .collection('authentification')
-              .doc(adminId);
-          
-          // Utiliser Source.server pour éviter les problèmes de cache
+          final adminAuthDocRef = await AuthUtil.getAuthDocRef(adminId);
           final adminAuthDoc = await adminAuthDocRef.get(const GetOptions(source: Source.server));
-          return _checkPlatinumStatus(adminAuthDoc.data());
+          return _checkPlatinumStatus(adminAuthDoc.data() as Map<String, dynamic>?);
         } else {
           // C'est un administrateur, vérifier directement son statut platinum
           print('👮‍♂️ Administrateur détecté, vérification directe du statut platinum');
-          final authDocRef = FirebaseFirestore.instance
-              .collection('users')
-              .doc(uid)
-              .collection('authentification')
-              .doc(uid);
+          final authDocRef = await AuthUtil.getAuthDocRef(targetId);
           
           final authDoc = await authDocRef.get(const GetOptions(source: Source.server));
-          return _checkPlatinumStatus(authDoc.data());
+          return _checkPlatinumStatus(authDoc.data() as Map<String, dynamic>?);
         }
       } catch (e) {
         print('❌ Erreur pendant la récupération des données utilisateur: $e');

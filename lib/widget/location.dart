@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:contraloc/services/collaborateur_util.dart';
+
 import 'package:contraloc/utils/generation_contrat_pdf.dart';
 import 'package:contraloc/models/contrat_model.dart';
 import 'package:intl/intl.dart';
@@ -12,15 +12,15 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../widget/chargement.dart';
 import '../widget/popup_signature.dart';
+import '../widget/photo_upload_popup.dart';
 import 'CREATION DE CONTRAT/Containers/date_container.dart';
 import 'CREATION DE CONTRAT/Containers/kilometrage_container.dart';
 import 'CREATION DE CONTRAT/Containers/type_location_container.dart';
 import 'CREATION DE CONTRAT/Containers/essence_container.dart';
 import 'CREATION DE CONTRAT/Containers/etat_commentaire_container.dart';
-import '../services/access_condition.dart';
 import '../utils/contract_utils.dart';
-import '../widget/photo_upload_popup.dart';
-import '../services/access_admin.dart';
+import '../services/auth_util.dart';
+import '../USERS/contrat_condition.dart';
 
 class LocationPage extends StatefulWidget {
   final String marque;
@@ -78,6 +78,8 @@ class _LocationPageState extends State<LocationPage> {
   String _signatureAller = '';
   bool _isSigning = false;
   String? _vehiclePhotoUrl;
+  String? _permisRectoUrl;
+  String? _permisVersoUrl;
 
   final TextEditingController _prixLocationController = TextEditingController();
   final TextEditingController _accompteController = TextEditingController();
@@ -100,6 +102,15 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _locationCasqueController = TextEditingController();
   String? _selectedPaymentMethod;
 
+  final TextEditingController _nomClientController = TextEditingController();
+  final TextEditingController _prenomClientController = TextEditingController();
+  final TextEditingController _emailClientController = TextEditingController();
+  final TextEditingController _telephoneClientController = TextEditingController();
+  final TextEditingController _adresseClientController = TextEditingController();
+  final TextEditingController _numeroPermisController = TextEditingController();
+  final TextEditingController _immatriculationVehiculeClientController = TextEditingController();
+  final TextEditingController _kilometrageVehiculeClientController = TextEditingController();
+
   String? nomEntreprise;
   String? logoUrl;
   String? adresseEntreprise;
@@ -121,7 +132,18 @@ class _LocationPageState extends State<LocationPage> {
     
     _dateDebutController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
     _typeLocationController.text = "Gratuite";
+    
+    // Initialiser les données du client à partir des paramètres
     _entrepriseClientController.text = widget.entrepriseClient ?? '';
+    _nomClientController.text = widget.nom ?? '';
+    _prenomClientController.text = widget.prenom ?? '';
+    _emailClientController.text = widget.email ?? '';
+    _telephoneClientController.text = widget.telephone ?? '';
+    _adresseClientController.text = widget.adresse ?? '';
+    _numeroPermisController.text = widget.numeroPermis ?? '';
+    _immatriculationVehiculeClientController.text = widget.immatriculationVehiculeClient ?? '';
+    _kilometrageVehiculeClientController.text = widget.kilometrageVehiculeClient ?? '';
+    
     
     // Initialiser les variables d'entreprise
     _loadAdminInfo();
@@ -144,7 +166,16 @@ class _LocationPageState extends State<LocationPage> {
   Future<void> _loadAdminInfo() async {
     try {
       print('Chargement des informations administrateur...');
-      final adminInfo = await AccessAdmin.getAdminInfo();
+      final authData = await AuthUtil.getAuthData();
+      if (authData.isEmpty) {
+        print('❌ Aucun utilisateur connecté');
+        return;
+      }
+      final targetId = authData['adminId'] as String;
+      
+      final adminDocRef = await AuthUtil.getAuthDocRef(targetId);
+      final adminDoc = await adminDocRef.get(const GetOptions(source: Source.server));
+      final adminInfo = adminDoc.data() as Map<String, dynamic>? ?? {};
       
       if (adminInfo.isNotEmpty) {
         setState(() {
@@ -210,6 +241,16 @@ class _LocationPageState extends State<LocationPage> {
     _entrepriseClientController.text = model.entrepriseClient ?? '';
     _selectedPaymentMethod = model.methodePaiement ?? 'Espèces';
     _conditionsController.text = model.conditions ?? '';
+    _nomClientController.text = model.nom ?? '';
+    _prenomClientController.text = model.prenom ?? '';
+    _emailClientController.text = model.email ?? '';
+    _telephoneClientController.text = model.telephone ?? '';
+    _adresseClientController.text = model.adresse ?? '';
+    _numeroPermisController.text = model.numeroPermis ?? '';
+    _immatriculationVehiculeClientController.text = model.immatriculationVehiculeClient ?? '';
+    _kilometrageVehiculeClientController.text = model.kilometrageVehiculeClient ?? '';
+    _permisRectoUrl = model.permisRectoUrl;
+    _permisVersoUrl = model.permisVersoUrl;
   }
 
   Future<ContratModel?> _loadContractData(String contratId) async {
@@ -220,7 +261,7 @@ class _LocationPageState extends State<LocationPage> {
         return null;
       }
 
-      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
+      final collaborateurStatus = await AuthUtil.getAuthData();
       final String adminId = collaborateurStatus['isCollaborateur'] 
           ? collaborateurStatus['adminId'] ?? user.uid 
           : user.uid;
@@ -241,6 +282,18 @@ class _LocationPageState extends State<LocationPage> {
         // Mettre à jour les contrôleurs avec les données du modèle
         setState(() {
           _updateControllersFromModel(contratModel);
+          // Si des fichiers sont passés en paramètre, utiliser ceux-ci au lieu des URLs
+          if (widget.permisRecto != null) {
+            _permisRectoUrl = null; // Effacer l'URL car nous avons un fichier
+          } else {
+            _permisRectoUrl = contractData['permisRecto'];
+          }
+          
+          if (widget.permisVerso != null) {
+            _permisVersoUrl = null; // Effacer l'URL car nous avons un fichier
+          } else {
+            _permisVersoUrl = contractData['permisVerso'];
+          }
         });
 
         // Charger la signature si elle existe
@@ -294,7 +347,7 @@ class _LocationPageState extends State<LocationPage> {
         return;
       }
 
-      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
+      final collaborateurStatus = await AuthUtil.getAuthData();
       final String targetId = collaborateurStatus['isCollaborateur'] 
           ? collaborateurStatus['adminId'] ?? user.uid 
           : user.uid;
@@ -359,8 +412,22 @@ class _LocationPageState extends State<LocationPage> {
     }
 
     // Récupérer les conditions du contrat depuis Firestore
-    final conditions = await AccessCondition.getContractConditions();
-    final conditionsText = conditions?['texte'] ?? 'Conditions générales de location';
+    final authData = await AuthUtil.getAuthData();
+    if (authData.isEmpty) {
+      print('❌ Aucun utilisateur connecté');
+      return;
+    }
+    final targetId = authData['adminId'] as String;
+    
+    final conditionsDocRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(targetId)
+        .collection('contrats')
+        .doc('userId');
+    
+    final conditionsDoc = await conditionsDocRef.get(const GetOptions(source: Source.server));
+    final conditions = conditionsDoc.data() ?? {'texte': ContratModifier.defaultContract};
+    final conditionsText = conditions['texte'] ?? 'Conditions générales de location';
 
     if ((widget.nom != null &&
         widget.nom!.isNotEmpty &&
@@ -388,7 +455,7 @@ class _LocationPageState extends State<LocationPage> {
         return;
       }
 
-      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
+      final collaborateurStatus = await AuthUtil.getAuthData();
       final String userId = collaborateurStatus['userId'] ?? user.uid;
       final String targetId = collaborateurStatus['isCollaborateur'] 
           ? collaborateurStatus['adminId'] ?? user.uid 
@@ -515,7 +582,16 @@ class _LocationPageState extends State<LocationPage> {
       print('Récupération des informations de l\'entreprise...');
 
       // Récupérer les données de l'entreprise depuis Firestore
-      final adminData = await AccessAdmin.getAdminInfo();
+      final authData = await AuthUtil.getAuthData();
+      if (authData.isEmpty) {
+        print('❌ Aucun utilisateur connecté');
+        return;
+      }
+      final targetId = authData['adminId'] as String;
+      
+      final adminDocRef = await AuthUtil.getAuthDocRef(targetId);
+      final adminDoc = await adminDocRef.get(const GetOptions(source: Source.server));
+      final adminData = adminDoc.data() as Map<String, dynamic>? ?? {};
 
       // Utiliser les données de l'entreprise
       final nomEntreprise = adminData['nomEntreprise'] ?? '';
@@ -532,23 +608,30 @@ class _LocationPageState extends State<LocationPage> {
       print('SIRET: $siretEntreprise');
 
       // Création du contrat
+      // D'abord, télécharger les photos du permis si elles sont présentes en tant que fichiers
+      if (widget.permisRecto != null) {
+        _permisRectoUrl = await _compressAndUploadPhoto(widget.permisRecto!, 'permis/recto', contratId);
+        print('URL permis recto sauvegardée: $_permisRectoUrl');
+      }
+      if (widget.permisVerso != null) {
+        _permisVersoUrl = await _compressAndUploadPhoto(widget.permisVerso!, 'permis/verso', contratId);
+        print('URL permis verso sauvegardée: $_permisVersoUrl');
+      }
+
       final contratModel = ContratModel(
         contratId: contratId,
         userId: userId,
         adminId: targetId,
         createdBy: userId,
         isCollaborateur: collaborateurStatus['isCollaborateur'] ?? false,
-        nom: widget.nom,
-        prenom: widget.prenom,
+        nom: _nomClientController.text,
+        prenom: _prenomClientController.text,
         entrepriseClient: _entrepriseClientController.text,
-        adresse: widget.adresse,
-        telephone: widget.telephone,
-        email: widget.email,
-        numeroPermis: widget.numeroPermis,
-        immatriculationVehiculeClient: widget.immatriculationVehiculeClient,
-        kilometrageVehiculeClient: widget.kilometrageVehiculeClient,
-        permisRectoUrl: permisRectoUrl,
-        permisVersoUrl: permisVersoUrl,
+        adresse: _adresseClientController.text,
+        telephone: _telephoneClientController.text,
+        email: _emailClientController.text,
+        permisRectoUrl: _permisRectoUrl,
+        permisVersoUrl: _permisVersoUrl,
         marque: widget.marque,
         modele: widget.modele,
         immatriculation: widget.immatriculation,
@@ -583,6 +666,9 @@ class _LocationPageState extends State<LocationPage> {
         carburantManquant: _carburantManquantController.text.isNotEmpty ? _carburantManquantController.text : '',
         conditions: conditionsText,
         methodePaiement: _selectedPaymentMethod ?? 'Espèces',
+        numeroPermis: _numeroPermisController.text,
+        immatriculationVehiculeClient: _immatriculationVehiculeClientController.text,
+        kilometrageVehiculeClient: _kilometrageVehiculeClientController.text,
       );
 
       print('=== DEBUG CONTRAT MODEL ===');
@@ -629,11 +715,11 @@ class _LocationPageState extends State<LocationPage> {
       await GenerationContratPdf.genererEtEnvoyerPdf(
         context: context,
         contratId: contratId,
-        nom: widget.nom,
-        prenom: widget.prenom,
-        adresse: widget.adresse,
-        telephone: widget.telephone,
-        email: widget.email,
+        nom: _nomClientController.text,
+        prenom: _prenomClientController.text,
+        adresse: _adresseClientController.text,
+        telephone: _telephoneClientController.text,
+        email: _emailClientController.text,
         signatureAller: _signatureAller,
         photoVehiculeUrl: _vehiclePhotoUrl,
         dateDebut: _dateDebutController.text,
@@ -659,9 +745,9 @@ class _LocationPageState extends State<LocationPage> {
         kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : '',
         rayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : '',
         methodePaiement: _selectedPaymentMethod ?? 'Espèces',
-        numeroPermis: widget.numeroPermis,
-        immatriculationVehiculeClient: widget.immatriculationVehiculeClient,
-        kilometrageVehiculeClient: widget.kilometrageVehiculeClient,
+        numeroPermis: _numeroPermisController.text,
+        immatriculationVehiculeClient: _immatriculationVehiculeClientController.text,
+        kilometrageVehiculeClient: _kilometrageVehiculeClientController.text,
         permisRecto: permisRectoUrl,
         permisVerso: permisVersoUrl,
         marque: widget.marque,
@@ -693,7 +779,7 @@ class _LocationPageState extends State<LocationPage> {
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 4),
-                if (widget.email != null && widget.email!.isNotEmpty) Text('Client: ${widget.nom ?? ''} ${widget.prenom ?? ''}'),
+                if (widget.email != null && widget.email!.isNotEmpty) Text('Client: ${_nomClientController.text} ${_prenomClientController.text}'),
               ],
             ),
             backgroundColor: Colors.green,
@@ -770,8 +856,8 @@ class _LocationPageState extends State<LocationPage> {
       context,
       title: 'Signature du contrat',
       checkboxText: 'Je reconnais avoir pris connaissance des termes et conditions de location.',
-      nom: widget.nom,
-      prenom: widget.prenom,
+      nom: _nomClientController.text,
+      prenom: _prenomClientController.text,
       existingSignature: _signatureAller.isNotEmpty ? _signatureAller : null,
     );
 
@@ -802,8 +888,8 @@ class _LocationPageState extends State<LocationPage> {
     if (compressedImage != null) {
       print(" Compression réussie, taille après compression: ${compressedImage.length} octets");
 
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
-      final userId = status['userId'];
+      final status = await AuthUtil.getAuthData();
+      final userId = status['adminId'];
 
       if (userId == null) {
         print(" Erreur: Utilisateur non connecté");
@@ -934,6 +1020,14 @@ class _LocationPageState extends State<LocationPage> {
     _cautionController.dispose();
     _entrepriseClientController.dispose();
     _conditionsController.dispose();
+    _nomClientController.dispose();
+    _prenomClientController.dispose();
+    _emailClientController.dispose();
+    _telephoneClientController.dispose();
+    _adresseClientController.dispose();
+    _numeroPermisController.dispose();
+    _immatriculationVehiculeClientController.dispose();
+    _kilometrageVehiculeClientController.dispose();
 
     super.dispose();
   }

@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../utils/affichage_contrat_pdf.dart';
 import '../CREATION DE CONTRAT/mail.dart';
-import '../../services/access_locations.dart'; // Importer AccessLocations
+import '../../services/auth_util.dart'; // Importer AuthUtil
 
 class RetourEnvoiePdf {
   static Future<void> genererEtEnvoyerPdfCloture({
@@ -139,8 +139,16 @@ class RetourEnvoiePdf {
 
       // Mise à jour du statut du contrat
       try {
-        // Utiliser AccessLocations.updateContract qui construit correctement le chemin
-        await AccessLocations.updateContract(contratId, {
+        // Utiliser AuthUtil pour obtenir l'ID cible et construire le chemin
+        final authData = await AuthUtil.getAuthData();
+        final targetId = authData['adminId'] as String;
+        
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(targetId)
+            .collection('locations')
+            .doc(contratId)
+            .set({
           'status': 'restitue',
           'dateRestitution': FieldValue.serverTimestamp(),
           'pdfClotureSent': true,

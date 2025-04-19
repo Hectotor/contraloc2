@@ -203,6 +203,19 @@ class _ClientPageState extends State<ClientPage> {
                 marque: widget.marque,
                 modele: widget.modele,
                 immatriculation: widget.immatriculation,
+                // Passer également les données client pour la modification
+                entrepriseClient: entrepriseClientController.text,
+                nom: _nomController.text,
+                prenom: _prenomController.text,
+                adresse: _adresseController.text,
+                telephone: _telephoneController.text,
+                email: _emailController.text,
+                numeroPermis: _numeroPermisController.text,
+                immatriculationVehiculeClient: _immatriculationVehiculeClientController.text,
+                kilometrageVehiculeClient: _kilometrageVehiculeClientController.text,
+                permisRecto: _permisRecto,
+                permisVerso: _permisVerso,
+                
               ),
             ),
           );
