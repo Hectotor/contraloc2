@@ -282,18 +282,9 @@ class _LocationPageState extends State<LocationPage> {
         // Mettre à jour les contrôleurs avec les données du modèle
         setState(() {
           _updateControllersFromModel(contratModel);
-          // Si des fichiers sont passés en paramètre, utiliser ceux-ci au lieu des URLs
-          if (widget.permisRecto != null) {
-            _permisRectoUrl = null; // Effacer l'URL car nous avons un fichier
-          } else {
-            _permisRectoUrl = contractData['permisRecto'];
-          }
-          
-          if (widget.permisVerso != null) {
-            _permisVersoUrl = null; // Effacer l'URL car nous avons un fichier
-          } else {
-            _permisVersoUrl = contractData['permisVerso'];
-          }
+          // Charger les URLs des photos du permis depuis Firestore
+          _permisRectoUrl = contratModel.permisRectoUrl;
+          _permisVersoUrl = contratModel.permisVersoUrl;
         });
 
         // Charger la signature si elle existe
@@ -513,8 +504,9 @@ class _LocationPageState extends State<LocationPage> {
   Future<void> _finalizeContractSave(String contratId, List<String> photoUrls, String userId, String targetId, Map<String, dynamic> collaborateurStatus, String conditionsText) async {
     try {
       // Upload des photos
-      String? permisRectoUrl;
-      String? permisVersoUrl;
+      // Initialiser avec les URLs existantes pour ne pas les perdre
+      String? permisRectoUrl = _permisRectoUrl;
+      String? permisVersoUrl = _permisVersoUrl;
       List<String> vehiculeUrls = [];
 
       // Si des URLs de photos ont été retournées par le popup, les utiliser
