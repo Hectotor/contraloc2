@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../SCREENS/add_vehicule.dart';
-import '../services/collaborateur_util.dart';
+import '../services/auth_util.dart';
 
 class DeleteVehicule {
   final BuildContext context;
@@ -13,45 +13,20 @@ class DeleteVehicule {
 
   void navigateToAddVehicule([String? immatriculationId]) async {
     try {
-      // Vérifier le statut du collaborateur
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
-      final userId = status['userId'];
-      
-      if (userId == null) {
-        print("❌ Utilisateur non connecté");
+      // Récupérer l'adminId via AuthUtil
+      final adminId = await AuthUtilExtension.getAdminId();
+      if (adminId == null) {
+        print("❌ Aucun adminId trouvé");
         return;
       }
-      
-      // Déterminer l'ID à utiliser (admin ou collaborateur)
-      final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
-      
-      if (targetId == null) {
-        print("❌ ID cible non disponible");
-        return;
-      }
-      
-      // Vérifier les permissions si c'est un collaborateur
-      if (status['isCollaborateur']) {
-        // Vérifier si le collaborateur a la permission d'écriture
-        final hasWritePermission = await CollaborateurUtil.checkCollaborateurPermission('ecriture');
-        if (!hasWritePermission) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Vous n'avez pas la permission de modifier les véhicules."),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-          return;
-        }
-      }
+
+      // Utiliser directement l'adminId pour les opérations
 
       Map<String, dynamic>? vehicleData;
       if (immatriculationId != null) {
         final doc = await _firestore
             .collection('users')
-            .doc(targetId)
+            .doc(adminId)
             .collection('vehicules')
             .doc(immatriculationId)
             .get();
@@ -84,39 +59,14 @@ class DeleteVehicule {
 
   Future<void> deleteVehicule(String immatriculationId) async {
     try {
-      // Vérifier le statut du collaborateur
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
-      final userId = status['userId'];
-      
-      if (userId == null) {
-        print("❌ Utilisateur non connecté");
+      // Récupérer l'adminId via AuthUtil
+      final adminId = await AuthUtilExtension.getAdminId();
+      if (adminId == null) {
+        print("❌ Aucun adminId trouvé");
         return;
       }
-      
-      // Déterminer l'ID à utiliser (admin ou collaborateur)
-      final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
-      
-      if (targetId == null) {
-        print("❌ ID cible non disponible");
-        return;
-      }
-      
-      // Vérifier les permissions si c'est un collaborateur
-      if (status['isCollaborateur']) {
-        // Vérifier si le collaborateur a la permission de suppression
-        final hasDeletePermission = await CollaborateurUtil.checkCollaborateurPermission('suppression');
-        if (!hasDeletePermission) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Vous n'avez pas la permission de supprimer les véhicules."),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-          return;
-        }
-      }
+
+      // Utiliser directement l'adminId pour les opérations
 
       // Afficher un indicateur de chargement
       if (context.mounted) {
@@ -132,7 +82,7 @@ class DeleteVehicule {
       // Récupérer d'abord le document du véhicule
       final vehicleDoc = await _firestore
           .collection('users')
-          .doc(targetId)
+          .doc(adminId)
           .collection('vehicules')
           .doc(immatriculationId)
           .get();
@@ -141,7 +91,7 @@ class DeleteVehicule {
         // Si le document n'existe pas, essayer de le trouver par l'immatriculation
         final querySnapshot = await _firestore
             .collection('users')
-            .doc(targetId)
+            .doc(adminId)
             .collection('vehicules')
             .where('immatriculation', isEqualTo: immatriculationId)
             .get();
@@ -224,31 +174,11 @@ class DeleteVehicule {
           (fileUrl.startsWith('gs://') ||
               fileUrl.startsWith('https://firebasestorage.googleapis.com'))) {
         
-        // Vérifier le statut du collaborateur
-        final status = await CollaborateurUtil.checkCollaborateurStatus();
-        final userId = status['userId'];
-        final isCollaborateur = status['isCollaborateur'] == true;
-        
-        if (userId == null) {
-          print("❌ Utilisateur non connecté");
+        // Vérifier l'adminId
+        final adminId = await AuthUtilExtension.getAdminId();
+        if (adminId == null) {
+          print("❌ Aucun adminId trouvé");
           return;
-        }
-        
-        // Pour les collaborateurs, vérifier les permissions de suppression
-        if (isCollaborateur) {
-          final hasDeletePermission = await CollaborateurUtil.checkCollaborateurPermission('suppression');
-          if (!hasDeletePermission) {
-            print("❌ Permission de suppression refusée pour ce collaborateur");
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Vous n'avez pas la permission de supprimer les photos des véhicules."),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-            return;
-          }
         }
         
         final ref = _storage.refFromURL(fileUrl);

@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import '../services/collaborateur_util.dart';
+import '../services/auth_util.dart';
 import 'package:flutter/services.dart';
 import '../widget/take_picture.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -145,36 +145,16 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
 
   Future<String?> _uploadImageToStorage(File imageFile, String imageType) async {
     try {
-      // Vérifier le statut du collaborateur
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
-      final userId = status['userId'];
-      
-      if (userId == null) {
-        print(" Erreur: Utilisateur non connecté");
-        throw Exception("Utilisateur non connecté");
+      // Récupérer l'adminId via AuthUtil
+      final adminId = await AuthUtilExtension.getAdminId();
+      if (adminId == null) {
+        print("❌ Erreur: Aucun adminId trouvé");
+        throw Exception("Aucun adminId trouvé");
       }
+
+      print("Téléchargement d'image pour l'adminId: $adminId");
       
-      // Déterminer l'ID à utiliser (admin ou collaborateur)
-      final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
-      
-      if (targetId == null) {
-        print(" Erreur: ID cible non disponible");
-        throw Exception("ID cible non disponible");
-      }
-      
-      print(" Téléchargement d'image par ${status['isCollaborateur'] ? 'collaborateur' : 'admin'}");
-      print(" userId: $userId, targetId (adminId): $targetId");
-      
-      // Vérifier les permissions d'écriture pour les collaborateurs
-      if (status['isCollaborateur'] == true) {
-        final hasWritePermission = await CollaborateurUtil.checkCollaborateurPermission('ecriture');
-        print(" Permission d'écriture pour le collaborateur: ${hasWritePermission ? 'OUI' : 'NON'}");
-        
-        if (!hasWritePermission) {
-          print(" Erreur: Permission d'écriture refusée pour ce collaborateur");
-          throw Exception("Permission d'écriture refusée pour ce collaborateur");
-        }
-      }
+      // Compresser l'image avant de la télécharger
       
       // Compresser l'image avant de la télécharger
       final Uint8List imageBytes = await imageFile.readAsBytes();
@@ -192,7 +172,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       
       // Toujours stocker dans le dossier de l'administrateur
       // Cela garantit que les collaborateurs peuvent accéder aux fichiers avec les bonnes permissions
-      final String storagePath = 'users/${targetId}/vehicules/${immatriculation}/${fileName}';
+      final String storagePath = 'users/${adminId}/vehicules/${immatriculation}/${fileName}';
       print(" Chemin de stockage: $storagePath");
           
       final storageRef = _storage.ref().child(storagePath);
@@ -201,10 +181,10 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       final metadata = SettableMetadata(
         contentType: 'image/jpeg',
         customMetadata: {
-          'uploaded_by': userId,
-          'owner': targetId,
+          'uploaded_by': _auth.currentUser!.uid,
+          'owner': adminId,
           'timestamp': DateTime.now().toString(),
-          'collaborator': status['isCollaborateur'] == true ? 'true' : 'false'
+          'collaborator': 'false'
         }
       );
       print(" Métadonnées: ${metadata.customMetadata}");
@@ -246,39 +226,20 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Vérifier le statut du collaborateur
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
-      final userId = status['userId'];
-      
-      if (userId == null) {
-        throw Exception("Utilisateur non connecté");
-      }
-      
-      // Déterminer l'ID à utiliser (admin ou collaborateur)
-      final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
-      
-      if (targetId == null) {
-        throw Exception("ID cible non disponible");
-      }
-      
-      // Vérifier les permissions si c'est un collaborateur
-      if (status['isCollaborateur']) {
-        // Vérifier si le collaborateur a la permission d'écriture
-        final hasWritePermission = await CollaborateurUtil.checkCollaborateurPermission('ecriture');
-        if (!hasWritePermission) {
-          throw Exception("Vous n'avez pas la permission de modifier les véhicules");
-        }
+      // Récupérer l'adminId via AuthUtil
+      final adminId = await AuthUtilExtension.getAdminId();
+      if (adminId == null) {
+        print("❌ Erreur: Aucun adminId trouvé");
+        throw Exception("Aucun adminId trouvé");
       }
 
-      if (widget.vehicleId == null && _immatriculationController.text.isEmpty) {
-        throw Exception("L'immatriculation est requise");
-      }
+      print("Enregistrement du véhicule pour l'adminId: $adminId");
 
       // Vérifier si un véhicule avec cette immatriculation existe déjà
       if (widget.vehicleId == null) {
         final existingDoc = await _firestore
             .collection('users')
-            .doc(targetId)
+            .doc(adminId)
             .collection('vehicules')
             .where('immatriculation', isEqualTo: _immatriculationController.text)
             .get();
@@ -400,24 +361,15 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   }
 
   Future<DocumentReference> _getVehicleDocRef(String docId) async {
-    // Vérifier le statut du collaborateur
-    final status = await CollaborateurUtil.checkCollaborateurStatus();
-    final userId = status['userId'];
-    
-    if (userId == null) {
-      throw Exception("Utilisateur non connecté");
+    // Récupérer l'adminId via AuthUtil
+    final adminId = await AuthUtilExtension.getAdminId();
+    if (adminId == null) {
+      throw Exception("Aucun adminId trouvé");
     }
-    
-    // Déterminer l'ID à utiliser (admin ou collaborateur)
-    final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
-    
-    if (targetId == null) {
-      throw Exception("ID cible non disponible");
-    }
-    
+
     return _firestore
         .collection('users')
-        .doc(targetId)
+        .doc(adminId)
         .collection('vehicules')
         .doc(docId);
   }

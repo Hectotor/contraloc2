@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/auth_util.dart';
 
-class CollaborateurInfoWidget extends StatefulWidget {
+class AdminPersoWidget extends StatefulWidget {
   final bool showTitle;
   final bool showNom;
   final bool showPrenom;
@@ -14,7 +14,7 @@ class CollaborateurInfoWidget extends StatefulWidget {
   final EdgeInsets padding;
   final bool editable;
 
-  const CollaborateurInfoWidget({
+  const AdminPersoWidget({
     Key? key,
     this.showTitle = true,
     this.showNom = true,
@@ -29,16 +29,16 @@ class CollaborateurInfoWidget extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<CollaborateurInfoWidget> createState() => _CollaborateurInfoWidgetState();
+  State<AdminPersoWidget> createState() => _AdminPersoWidgetState();
 }
 
-class _CollaborateurInfoWidgetState extends State<CollaborateurInfoWidget> {
+class _AdminPersoWidgetState extends State<AdminPersoWidget> {
   bool _isLoading = true;
   bool _showContent = true;
   bool _isSaving = false;
-  Map<String, dynamic> _collaborateurInfo = {};
-  String? _userId;
-
+  Map<String, dynamic> _adminInfo = {};
+  String? _adminId;
+  
   final TextEditingController _nomController = TextEditingController();
   final TextEditingController _prenomController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -48,9 +48,9 @@ class _CollaborateurInfoWidgetState extends State<CollaborateurInfoWidget> {
   @override
   void initState() {
     super.initState();
-    _loadCollaborateurInfo();
+    _loadAdminInfo();
   }
-
+  
   @override
   void dispose() {
     _nomController.dispose();
@@ -61,83 +61,76 @@ class _CollaborateurInfoWidgetState extends State<CollaborateurInfoWidget> {
     super.dispose();
   }
 
-  Future<void> _loadCollaborateurInfo() async {
-    if (!mounted) return;
-
+  Future<void> _loadAdminInfo() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) return;
+      _adminId = await AuthUtilExtension.getAdminId();
+      if (_adminId != null) {
+        final adminDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(_adminId)
+            .collection('authentification')
+            .doc(_adminId)
+            .get();
 
-      _userId = currentUser.uid;
-
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .get(const GetOptions(source: Source.server));
-
-      if (userDoc.exists && userDoc.data() != null) {
-        final data = userDoc.data() as Map<String, dynamic>;
-        if (mounted) {
+        if (adminDoc.exists) {
+          final data = adminDoc.data() as Map<String, dynamic>;
           setState(() {
-            _collaborateurInfo = {
-              'email': currentUser.email ?? '',
+            _adminInfo = {
               'nom': data['nom'] ?? '',
               'prenom': data['prenom'] ?? '',
+              'email': data['email'] ?? '',
               'telephone': data['telephone'] ?? '',
               'adresse': data['adresse'] ?? '',
             };
-
-            _nomController.text = _collaborateurInfo['nom'];
-            _prenomController.text = _collaborateurInfo['prenom'];
-            _emailController.text = _collaborateurInfo['email'];
-            _telephoneController.text = _collaborateurInfo['telephone'] ?? '';
-            _adresseController.text = _collaborateurInfo['adresse'] ?? '';
+            
+            _nomController.text = _adminInfo['nom'];
+            _prenomController.text = _adminInfo['prenom'];
+            _emailController.text = _adminInfo['email'];
+            _telephoneController.text = _adminInfo['telephone'];
+            _adresseController.text = _adminInfo['adresse'];
           });
         }
       }
-    } catch (error) {
-      if (mounted) {
-        print('Erreur lors du chargement des informations du collaborateur: $error');
-      }
+    } catch (e) {
+      print('Erreur lors du chargement des informations personnelles: $e');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
-
-  Future<void> _saveCollaborateurInfo() async {
-    if (_userId == null) return;
-
+  
+  Future<void> _saveAdminInfo() async {
+    if (_adminId == null) return;
+    
     setState(() {
       _isSaving = true;
     });
-
+    
     try {
-      // L'email n'est pas inclus intentionnellement pour empêcher sa modification
-      // Téléphone et adresse sont également omis car ils ont été retirés de l'interface
       final updatedData = {
         'nom': _nomController.text.trim(),
         'prenom': _prenomController.text.trim(),
+        'telephone': _telephoneController.text.trim(),
       };
-
+      
       // Utilisation de set() avec merge: true au lieu de update() pour éviter les problèmes de permission
+      // conformément aux meilleures pratiques de l'application
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(_userId)
+          .doc(_adminId)
+          .collection('authentification')
+          .doc(_adminId)
           .set(updatedData, SetOptions(merge: true));
-
+      
       setState(() {
-        _collaborateurInfo['nom'] = updatedData['nom'];
-        _collaborateurInfo['prenom'] = updatedData['prenom'];
+        _adminInfo = updatedData;
       });
-
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Informations mises à jour avec succès')),
       );
@@ -205,7 +198,7 @@ class _CollaborateurInfoWidgetState extends State<CollaborateurInfoWidget> {
                   : Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (icon != null) ...[
+                        if (icon != null) ...[                        
                           Icon(
                             icon,
                             color: const Color(0xFF08004D),
@@ -219,7 +212,7 @@ class _CollaborateurInfoWidgetState extends State<CollaborateurInfoWidget> {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: readOnly && widget.editable
+                              color: readOnly && widget.editable 
                                   ? const Color(0xFF666666)
                                   : const Color(0xFF08004D),
                             ),
@@ -250,7 +243,7 @@ class _CollaborateurInfoWidgetState extends State<CollaborateurInfoWidget> {
       );
     }
 
-    if (_collaborateurInfo.isEmpty) {
+    if (_adminInfo.isEmpty) {
       return Container(
         padding: widget.padding,
         child: Center(
@@ -311,7 +304,7 @@ class _CollaborateurInfoWidgetState extends State<CollaborateurInfoWidget> {
                     Icon(
                       _showContent ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                       color: const Color(0xFF08004D),
-                      size: 20,
+                      size: 24,
                     ),
                   ],
                 ),
@@ -342,6 +335,12 @@ class _CollaborateurInfoWidgetState extends State<CollaborateurInfoWidget> {
                         controller: _emailController,
                         readOnly: true,
                       ),
+                    if (widget.showTelephone)
+                      _buildInfoRow(
+                        icon: null,
+                        label: 'Téléphone',
+                        controller: _telephoneController,
+                      ),
                     if (widget.editable)
                       Padding(
                         padding: const EdgeInsets.only(top: 16),
@@ -354,7 +353,7 @@ class _CollaborateurInfoWidgetState extends State<CollaborateurInfoWidget> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          onPressed: _isSaving ? null : _saveCollaborateurInfo,
+                          onPressed: _isSaving ? null : _saveAdminInfo,
                           child: SizedBox(
                             width: double.infinity,
                             child: Center(

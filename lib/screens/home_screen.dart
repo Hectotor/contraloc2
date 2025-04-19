@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:contraloc/services/sync_queue_service.dart';
 import '../HOME/delete_vehicule.dart';
 import '../widget/CREATION DE CONTRAT/client.dart'; 
-import '../services/collaborateur_util.dart'; 
+import '../services/auth_util.dart'; 
 import '../services/connectivity_service.dart'; 
 import 'add_vehicule.dart'; 
 import '../HOME/button_add_vehicle.dart'; 
@@ -56,11 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadUserData() async {
     try {
       // Vérifier si l'utilisateur est un collaborateur
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
-      final isCollaborateur = status['isCollaborateur'] == true;
+      final isCollaborateur = await AuthUtilExtension.isUserCollaborateur();
       
       // Récupérer les données d'authentification (contient le nom de l'entreprise)
-      final authData = await CollaborateurUtil.getAuthData();
+      final authData = await AuthUtil.getAuthData();
       String prenom = authData['prenom'] ?? '';
       
       if (isCollaborateur) {

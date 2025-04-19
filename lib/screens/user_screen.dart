@@ -8,7 +8,7 @@ import '../USERS/contrat_condition.dart';
 import '../USERS/collaborator/collaborator.dart';
 import '../USERS/supprimer_compte.dart';
 import '../USERS/profile.dart';
-import '../services/collaborateur_util.dart';
+import '../services/auth_util.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({Key? key}) : super(key: key);
@@ -39,11 +39,10 @@ class _UserScreenState extends State<UserScreen> {
     
     try {
       // Vérifier si l'utilisateur est un collaborateur
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
-      final isCollaborateur = status['isCollaborateur'] == true;
+      final isCollaborateur = await AuthUtilExtension.isUserCollaborateur();
       
       // Récupérer les données d'authentification
-      final authData = await CollaborateurUtil.getAuthData();
+      final authData = await AuthUtil.getAuthData();
       String prenom = authData['prenom'] ?? '';
       String nomEntreprise = authData['nomEntreprise'] ?? '';
       
