@@ -129,6 +129,9 @@ class _LocationPageState extends State<LocationPage> {
     print('permisRecto dans widget: ${widget.permisRecto}');
     print('permisVerso dans widget: ${widget.permisVerso}');
     print('=== FIN DEBUG INIT PERMIS PHOTOS ===');
+
+    // Charger les informations de l'entreprise
+    _loadAdminInfo();
     
     _dateDebutController.text = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').format(DateTime.now());
     _typeLocationController.text = "Gratuite";
@@ -163,38 +166,57 @@ class _LocationPageState extends State<LocationPage> {
     }
   }
 
-  Future<void> _loadAdminInfo() async {
+  Future<Map<String, dynamic>> _loadAdminInfo() async {
     try {
-      print('Chargement des informations administrateur...');
+      print('=== Début _loadAdminInfo ===');
+      // Récupérer les données d'authentification
       final authData = await AuthUtil.getAuthData();
+      print('authData: $authData');
+      
       if (authData.isEmpty) {
         print('❌ Aucun utilisateur connecté');
-        return;
+        throw Exception('Aucun utilisateur connecté');
       }
-      final targetId = authData['adminId'] as String;
+
+      // Récupérer l'ID de l'admin directement avec l'extension
+      final adminId = await AuthUtilExtension.getAdminId();
+      print('adminId via extension: $adminId');
       
-      final adminDocRef = await AuthUtil.getAuthDocRef(targetId);
+      // Récupérer l'ID de l'admin depuis authData
+      final userId = authData['adminId'] as String?;
+      print('userId depuis authData: $userId');
+      
+      if (userId == null) {
+        print('❌ Aucun userId trouvé');
+        throw Exception('Aucun identifiant utilisateur trouvé');
+      }
+
+      // Récupérer les données de l'entreprise en utilisant AuthUtil
+      final adminDocRef = await AuthUtil.getAuthDocRef(userId);
       final adminDoc = await adminDocRef.get(const GetOptions(source: Source.server));
-      final adminInfo = adminDoc.data() as Map<String, dynamic>? ?? {};
       
-      if (adminInfo.isNotEmpty) {
-        setState(() {
-          nomEntreprise = adminInfo['nomEntreprise'] ?? '';
-          logoUrl = adminInfo['logoUrl'] ?? '';
-          adresseEntreprise = adminInfo['adresseEntreprise'] ?? '';
-          telephoneEntreprise = adminInfo['telephoneEntreprise'] ?? '';
-          siretEntreprise = adminInfo['siretEntreprise'] ?? '';
-        });
-        
-        print('Informations administrateur chargées avec succès:');
-        print('Nom entreprise: $nomEntreprise');
-        print('Adresse: $adresseEntreprise');
-        print('SIRET: $siretEntreprise');
-      } else {
-        print('❌ Aucune information administrateur trouvée');
+      if (!adminDoc.exists) {
+        print('❌ Document utilisateur non trouvé');
+        throw Exception('Document utilisateur non trouvé');
       }
+
+      final adminData = adminDoc.data() as Map<String, dynamic>? ?? {};
+      
+      setState(() {
+        nomEntreprise = adminData['nomEntreprise'] as String?;
+        logoUrl = adminData['logoUrl'] as String?;
+        adresseEntreprise = adminData['adresseEntreprise'] as String?;
+        telephoneEntreprise = adminData['telephoneEntreprise'] as String?;
+        siretEntreprise = adminData['siretEntreprise'] as String?;
+      });
+
+      // Ajouter l'adminId aux données retournées
+      final result = Map<String, dynamic>.from(adminData);
+      result['adminId'] = userId;
+      return result;
     } catch (e) {
-      print('❌ Erreur lors du chargement des informations administrateur: $e');
+      print('❌ Erreur lors du chargement des informations de l\'entreprise: $e');
+      throw e;
     }
   }
 
@@ -408,8 +430,12 @@ class _LocationPageState extends State<LocationPage> {
       print('❌ Aucun utilisateur connecté');
       return;
     }
-    final targetId = authData['adminId'] as String;
-    
+    final targetId = authData['adminId'];
+    if (targetId == null) {
+      print('❌ Aucun adminId trouvé');
+      throw Exception('Aucun administrateur trouvé');
+    }
+
     final conditionsDocRef = FirebaseFirestore.instance
         .collection('users')
         .doc(targetId)
@@ -570,27 +596,25 @@ class _LocationPageState extends State<LocationPage> {
         print('=== FIN DEBUG PHOTOS VEHICULE ===');
       }
 
-      // Récupérer les informations de l'entreprise
-      print('Récupération des informations de l\'entreprise...');
-
-      // Récupérer les données de l'entreprise depuis Firestore
+      // Récupérer l'adminId via AuthUtil
       final authData = await AuthUtil.getAuthData();
       if (authData.isEmpty) {
         print('❌ Aucun utilisateur connecté');
-        return;
+        throw Exception('Aucun utilisateur connecté');
       }
-      final targetId = authData['adminId'] as String;
       
-      final adminDocRef = await AuthUtil.getAuthDocRef(targetId);
-      final adminDoc = await adminDocRef.get(const GetOptions(source: Source.server));
-      final adminData = adminDoc.data() as Map<String, dynamic>? ?? {};
+      final targetId = authData['adminId'] as String?;
+      if (targetId == null) {
+        print('❌ Aucun adminId trouvé');
+        throw Exception('Aucun administrateur trouvé');
+      }
 
-      // Utiliser les données de l'entreprise
-      final nomEntreprise = adminData['nomEntreprise'] ?? '';
-      final logoUrl = adminData['logoUrl'] ?? '';
-      final adresseEntreprise = adminData['adresseEntreprise'] ?? '';
-      final telephoneEntreprise = adminData['telephoneEntreprise'] ?? '';
-      final siretEntreprise = adminData['siretEntreprise'] ?? '';
+      // Utiliser les variables d'état déjà chargées
+      final nomEntreprise = this.nomEntreprise;
+      final logoUrl = this.logoUrl;
+      final adresseEntreprise = this.adresseEntreprise;
+      final telephoneEntreprise = this.telephoneEntreprise;
+      final siretEntreprise = this.siretEntreprise;
 
       print('Informations entreprise récupérées:');
       print('Nom: $nomEntreprise');
