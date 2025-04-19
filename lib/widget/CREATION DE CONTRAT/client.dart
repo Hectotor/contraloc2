@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:contraloc/services/access_premium.dart'; // Import de l'utilitaire collaborateur
+import 'package:contraloc/services/auth_util.dart'; // Import de AuthUtil
 import 'popup_vehicule_client.dart';
 import 'Containers/permis_info_container.dart'; // Import du nouveau composant
 import 'Containers/personal_info_container.dart'; // Import du nouveau composant
@@ -185,7 +186,9 @@ class _ClientPageState extends State<ClientPage> {
         // Déterminer si c'est un nouveau contrat ou une mise à jour
         if (widget.contratId != null && widget.contratId!.isNotEmpty) {
           // Mise à jour d'un contrat existant
-          final adminId = await _getAdminId();
+          final adminId = await AuthUtilExtension.getAdminId();
+          if (adminId == null) throw Exception('AdminId non trouvé');
+          
           await FirebaseFirestore.instance
               .collection('users')
               .doc(adminId)
@@ -193,8 +196,33 @@ class _ClientPageState extends State<ClientPage> {
               .doc(widget.contratId)
               .set(clientData, SetOptions(merge: true));
               
-          // Pour les contrats existants, naviguer vers la page de location
+          // Afficher un message de succès avec une meilleure mise en page
           if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green[400]),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Modifications enregistrées avec succès',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green[800],
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          
+          // Pour les contrats existants, naviguer vers la page de location
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -215,7 +243,6 @@ class _ClientPageState extends State<ClientPage> {
                 kilometrageVehiculeClient: _kilometrageVehiculeClientController.text,
                 permisRecto: _permisRecto,
                 permisVerso: _permisVerso,
-                
               ),
             ),
           );
@@ -293,27 +320,6 @@ class _ClientPageState extends State<ClientPage> {
       permisRectoUrl: _permisRectoUrl,
       permisVersoUrl: _permisVersoUrl,
     );
-  }
-
-  // Récupérer l'ID de l'administrateur (utilisateur actuel ou admin si collaborateur)
-  Future<String> _getAdminId() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return '';
-    
-    // Vérifier le statut collaborateur
-    DocumentSnapshot userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
-    
-    if (userDoc.exists && userDoc.data() is Map<String, dynamic>) {
-      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-      if (userData['isCollaborateur'] == true && userData['adminId'] != null) {
-        return userData['adminId'] as String;
-      }
-    }
-    
-    return user.uid;
   }
 
   @override

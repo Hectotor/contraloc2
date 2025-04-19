@@ -94,10 +94,10 @@ class _InfoClientState extends State<InfoClient> {
                   _buildInfoRow(context, "Email", widget.data['email'] ?? "Non spécifié"),
                   const SizedBox(height: 12),
                   _buildInfoRow(context, "N° Permis", widget.data['numeroPermis'] ?? "Non spécifié"),
-                  if (widget.data['immatriculationClient'] != null && widget.data['immatriculationClient'].isNotEmpty)
+                  if (widget.data['immatriculationVehiculeClient'] != null && widget.data['immatriculationVehiculeClient'].isNotEmpty)
                     const SizedBox(height: 12),
-                  if (widget.data['immatriculationClient'] != null && widget.data['immatriculationClient'].isNotEmpty)
-                    _buildInfoRow(context, "N° Immat", widget.data['immatriculationClient']),
+                  if (widget.data['immatriculationVehiculeClient'] != null && widget.data['immatriculationVehiculeClient'].isNotEmpty)
+                    _buildInfoRow(context, "N° Immat", widget.data['immatriculationVehiculeClient']),
                   if (widget.data['kilometrageVehiculeClient'] != null && widget.data['kilometrageVehiculeClient'].isNotEmpty)
                     const SizedBox(height: 12),
                   if (widget.data['kilometrageVehiculeClient'] != null && widget.data['kilometrageVehiculeClient'].isNotEmpty)
