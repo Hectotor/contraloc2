@@ -55,43 +55,68 @@ class _HomeScreenState extends State<HomeScreen> {
   // Méthode pour charger les données utilisateur avec CollaborateurUtil
   Future<void> _loadUserData() async {
     try {
-      // Vérifier si l'utilisateur est un collaborateur
-      final isCollaborateur = await AuthUtilExtension.isUserCollaborateur();
-      
-      // Récupérer les données d'authentification (contient le nom de l'entreprise)
+      // Récupérer les données d'authentification
       final authData = await AuthUtil.getAuthData();
-      String prenom = authData['prenom'] ?? '';
-      
-      if (isCollaborateur) {
-        // Pour un collaborateur, utiliser son prénom depuis son document utilisateur
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          try {
-            // Récupérer directement depuis le serveur et mettre à jour le cache en même temps
-            final userDoc = await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .get(const GetOptions(source: Source.server));
-            
-            if (userDoc.exists && userDoc.data() != null) {
-              final userData = userDoc.data()!;
-              if (userData.containsKey('prenom') && userData['prenom'] != null) {
-                prenom = userData['prenom'];
-                print(' Prénom du collaborateur récupéré: $prenom');
-              }
-            }
-          } catch (error) {
-            print(' Erreur lors de la récupération des données du collaborateur: $error');
-          }
-        }
+      final isCollaborateur = authData['isCollaborateur'] ?? false;
+      final adminId = authData['adminId'];
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+
+      if (adminId == null) {
+        throw Exception('ID administrateur non trouvé');
       }
-      
-      if (mounted) {
-        setState(() {
-          _prenom = prenom;
-          _nomEntreprise = authData['nomEntreprise'] ?? '';
-          _isUserDataLoaded = true;
-        });
+
+      // Si c'est un admin, charger ses propres données
+      if (isCollaborateur == false) {
+        final adminDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('authentification')
+            .doc(userId)
+            .get();
+
+        if (!adminDoc.exists) {
+          throw Exception('Administrateur non trouvé');
+        }
+
+        final Map<String, dynamic>? adminData = adminDoc.data();
+        if (mounted) {
+          setState(() {
+            _prenom = adminData?['prenom'] ?? '';
+            _nomEntreprise = adminData?['nomEntreprise'] ?? '';
+            _isUserDataLoaded = true;
+          });
+        }
+      } else {
+        // Si c'est un collaborateur, charger les données de l'admin et son propre prénom
+        final adminDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(adminId)
+            .get();
+
+        if (!adminDoc.exists) {
+          throw Exception('Administrateur non trouvé');
+        }
+
+        final Map<String, dynamic>? adminData = adminDoc.data();
+        String? nomEntreprise = adminData?['nomEntreprise'] as String?;
+
+        // Charger le prénom du collaborateur
+        final collaborateurDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
+
+        String? prenom = collaborateurDoc.exists 
+            ? (collaborateurDoc.data() ?? {})['prenom'] as String? 
+            : null;
+
+        if (mounted) {
+          setState(() {
+            _prenom = prenom ?? '';
+            _nomEntreprise = nomEntreprise ?? '';
+            _isUserDataLoaded = true;
+          });
+        }
       }
     } catch (e) {
       print(' Erreur lors du chargement des données utilisateur: $e');
