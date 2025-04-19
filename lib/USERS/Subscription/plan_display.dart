@@ -1,7 +1,7 @@
-import 'package:ContraLoc/USERS/Subscription/subscription_handler.dart';
+import 'package:contraloc/USERS/Subscription/subscription_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:ContraLoc/USERS/question_user.dart';
+import 'package:contraloc/USERS/question_user.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';

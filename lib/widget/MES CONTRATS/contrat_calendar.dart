@@ -4,8 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
-import 'package:ContraLoc/widget/MES CONTRATS/vehicle_access_manager.dart';
-import 'package:ContraLoc/widget/modifier.dart';
+import 'package:contraloc/widget/MES CONTRATS/vehicle_access_manager.dart';
+import 'package:contraloc/widget/modifier.dart';
 
 class CalendarScreen extends StatefulWidget {
   final Function(int)? onEventsCountChanged;

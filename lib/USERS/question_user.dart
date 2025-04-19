@@ -1,5 +1,5 @@
-import 'package:ContraLoc/USERS/privacy_policy.dart';
-import 'package:ContraLoc/USERS/terms_of_service.dart';
+import 'package:contraloc/USERS/privacy_policy.dart';
+import 'package:contraloc/USERS/terms_of_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';

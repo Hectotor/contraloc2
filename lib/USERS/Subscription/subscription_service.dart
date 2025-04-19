@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:ContraLoc/USERS/Subscription/stripe_service.dart';
-import 'package:ContraLoc/USERS/Subscription/revenue_cat_service.dart';
+import 'package:contraloc/USERS/Subscription/stripe_service.dart';
+import 'package:contraloc/USERS/Subscription/revenue_cat_service.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 /// Service pour gérer les abonnements

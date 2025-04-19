@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ContraLoc/widget/navigation.dart';
+import 'package:contraloc/widget/navigation.dart';
 
 class Popup {
   static Future<void> showSuccess(BuildContext context, {String? email}) {

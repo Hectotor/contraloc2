@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:ContraLoc/services/access_premium.dart';
-import 'package:ContraLoc/widget/MODIFICATION DE CONTRAT/commentaire_retour.dart';
-import 'package:ContraLoc/widget/CREATION DE CONTRAT/premium_dialog.dart';
+import 'package:contraloc/services/access_premium.dart';
+import 'package:contraloc/widget/MODIFICATION DE CONTRAT/commentaire_retour.dart';
+import 'package:contraloc/widget/CREATION DE CONTRAT/premium_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class EtatVehiculeRetour extends StatefulWidget {

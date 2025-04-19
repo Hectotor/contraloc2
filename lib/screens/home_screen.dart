@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:ContraLoc/widget/MES CONTRATS/vehicle_access_manager.dart';
+import 'package:contraloc/widget/MES CONTRATS/vehicle_access_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:ContraLoc/services/sync_queue_service.dart';
+import 'package:contraloc/services/sync_queue_service.dart';
 import '../HOME/delete_vehicule.dart';
 import '../widget/CREATION DE CONTRAT/client.dart'; 
 import '../services/collaborateur_util.dart'; 

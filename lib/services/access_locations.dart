@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:ContraLoc/services/sync_queue_service.dart';
+import 'package:contraloc/services/sync_queue_service.dart';
 
 /// Utilitaire pour gérer l'accès aux locations pour les collaborateurs et admins
 /// Permet de s'assurer que les locations sont toujours accédées via l'ID admin

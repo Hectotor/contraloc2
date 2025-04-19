@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:ContraLoc/services/access_premium.dart';
+import 'package:contraloc/services/access_premium.dart';
 import 'package:flutter/services.dart';
 import '../premium_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';

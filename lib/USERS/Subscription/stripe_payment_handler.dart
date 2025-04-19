@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:ContraLoc/USERS/Subscription/stripe_service.dart';
-import 'package:ContraLoc/USERS/Subscription/stripe_url_launcher.dart';
+import 'package:contraloc/USERS/Subscription/stripe_service.dart';
+import 'package:contraloc/USERS/Subscription/stripe_url_launcher.dart';
 
 /// Classe dédiée à la gestion des paiements Stripe
 class StripePaymentHandler {

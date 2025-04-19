@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:ContraLoc/USERS/Subscription/revenue_cat_service.dart';
+import 'package:contraloc/USERS/Subscription/revenue_cat_service.dart';
 import 'dart:io' show Platform;
 import 'package:url_launcher/url_launcher.dart';
 

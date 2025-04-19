@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:ContraLoc/services/collaborateur_util.dart';
-import 'package:ContraLoc/services/access_premium.dart';
+import 'package:contraloc/services/collaborateur_util.dart';
+import 'package:contraloc/services/access_premium.dart';
 
 import 'Subscription/abonnement_screen.dart';
 

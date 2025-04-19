@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'package:ContraLoc/firebase_options.dart';
-import 'package:ContraLoc/USERS/Subscription/revenue_cat_service.dart';
+import 'package:contraloc/firebase_options.dart';
+import 'package:contraloc/USERS/Subscription/revenue_cat_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Import pour SystemChrome
@@ -8,7 +8,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'SCREENS/splash_screen.dart';
-import 'package:ContraLoc/USERS/Subscription/subscription_service.dart'; // Import SubscriptionService
+import 'package:contraloc/USERS/Subscription/subscription_service.dart'; // Import SubscriptionService
 
 // Clé de navigateur globale pour la navigation sans contexte
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -106,7 +106,7 @@ class MyApp extends StatelessWidget {
           builder: (context, orientation) {
             return MaterialApp(
               navigatorKey: navigatorKey, // Utilisation de la clé de navigateur globale
-              title: 'Contraloc',
+              title: 'contraloc',
               debugShowCheckedModeBanner: false,
               theme: ThemeData(
                 primarySwatch: Colors.blue,

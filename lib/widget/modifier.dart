@@ -7,7 +7,7 @@ import 'package:photo_view/photo_view_gallery.dart';
 import 'package:signature/signature.dart';
 import '../utils/affichage_facture_pdf.dart';
 import '../utils/affichage_contrat_pdf.dart';
-import 'package:ContraLoc/services/access_locations.dart';
+import 'package:contraloc/services/access_locations.dart';
 import 'MODIFICATION DE CONTRAT/supp_contrat.dart';
 import 'MODIFICATION DE CONTRAT/info_loc.dart';
 import 'MODIFICATION DE CONTRAT/info_loc_retour.dart';

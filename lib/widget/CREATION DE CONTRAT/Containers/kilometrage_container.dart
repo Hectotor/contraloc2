@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:ContraLoc/widget/CREATION DE CONTRAT/create_contrat.dart';
+import 'package:contraloc/widget/CREATION DE CONTRAT/create_contrat.dart';
 
 class KilometrageContainer extends StatefulWidget {
   final TextEditingController kilometrageDepartController;

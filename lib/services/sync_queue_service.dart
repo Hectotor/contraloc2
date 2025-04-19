@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ContraLoc/services/access_locations.dart';
+import 'package:contraloc/services/access_locations.dart';
 
 /// Service de file d'attente pour synchroniser les opérations qui ont échoué
 class SyncQueueService {

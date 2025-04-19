@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
-import 'package:ContraLoc/services/collaborateur_util.dart';
+import 'package:contraloc/services/collaborateur_util.dart';
 
 class PhotoUploadPopup extends StatefulWidget {
   final List<File> photos;

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ContraLoc/USERS/Subscription/abonnement_screen.dart';
+import 'package:contraloc/USERS/Subscription/abonnement_screen.dart';
 
 class PremiumDialog {
   static Future<void> show(BuildContext context) {

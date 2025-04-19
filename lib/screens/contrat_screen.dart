@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widget/MES CONTRATS/contrat_encours.dart' as contrat_encours;
 import '../widget/MES CONTRATS/contrat_restitues.dart' as contrat_restitues;
-import '../widget/MES CONTRATS/calendar.dart' as calendar_screen;
+import '../widget/MES CONTRATS/contrat_calendar.dart' as calendar_screen;
 import '../widget/MES CONTRATS/contrat_supprimes.dart' as contrat_supprimes;
 import '../widget/MES CONTRATS/contrat_summary.dart' as contrat_summary;
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ContraLoc/widget/CREATION DE CONTRAT/create_contrat.dart';
+import 'package:contraloc/widget/CREATION DE CONTRAT/create_contrat.dart';
 import 'package:intl/intl.dart'; // Add this line
 
 class DateContainer extends StatefulWidget {
