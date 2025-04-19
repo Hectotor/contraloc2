@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/collaborateur_util.dart';
+import '../../services/auth_util.dart';
 
 import 'collaborator/admin_info_widget.dart';
 import 'collaborator/admin_logo_widget.dart';
@@ -31,7 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
 
     try {
-      final authData = await CollaborateurUtil.checkCollaborateurStatus();
+      final authData = await AuthUtil.getAuthData();
       setState(() {
         _isCollaborateur = authData['isCollaborateur'] ?? false;
       });

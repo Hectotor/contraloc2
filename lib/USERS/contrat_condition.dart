@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:contraloc/services/collaborateur_util.dart';
+import 'package:contraloc/services/auth_util.dart';
 import 'package:contraloc/services/access_premium.dart';
 
 import 'Subscription/abonnement_screen.dart';
@@ -117,10 +117,10 @@ class _ContratModifierState extends State<ContratModifier> {
         isLoading = true;
       });
       
-      // Récupérer le statut du collaborateur
-      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
-      final String targetId = collaborateurStatus['isCollaborateur'] 
-          ? collaborateurStatus['adminId'] ?? FirebaseAuth.instance.currentUser?.uid 
+      // Récupérer les données d'authentification
+      final authData = await AuthUtil.getAuthData();
+      final String targetId = authData['isCollaborateur'] 
+          ? authData['adminId'] ?? FirebaseAuth.instance.currentUser?.uid 
           : FirebaseAuth.instance.currentUser?.uid ?? '';
       
       if (targetId.isNotEmpty) {
@@ -180,24 +180,24 @@ class _ContratModifierState extends State<ContratModifier> {
     }
 
     try {
-      // Récupérer le statut du collaborateur
-      final collaborateurStatus = await CollaborateurUtil.checkCollaborateurStatus();
-      final String userId = collaborateurStatus['userId'] ?? FirebaseAuth.instance.currentUser?.uid ?? '';
-      final String targetId = collaborateurStatus['isCollaborateur'] 
-          ? collaborateurStatus['adminId'] ?? userId 
+      // Récupérer les données d'authentification
+      final authData = await AuthUtil.getAuthData();
+      final String userId = authData['userId'] ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+      final String targetId = authData['isCollaborateur'] 
+          ? authData['adminId'] ?? userId 
           : userId;
       
       if (targetId.isNotEmpty) {
         // Vérifier les permissions
         bool hasWritePermission = true;
-        if (collaborateurStatus['isCollaborateur'] == true) {
-          final permissions = collaborateurStatus['permissions'];
+        if (authData['isCollaborateur'] == true) {
+          final permissions = authData['permissions'];
           if (permissions is Map<String, dynamic>) {
             hasWritePermission = permissions['write'] == true;
           }
         }
         
-        if (collaborateurStatus['isCollaborateur'] == true && !hasWritePermission) {
+        if (authData['isCollaborateur'] == true && !hasWritePermission) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Vous n\'avez pas les permissions nécessaires pour modifier le contrat.'),

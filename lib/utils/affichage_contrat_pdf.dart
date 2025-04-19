@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import '../USERS/contrat_condition.dart';
-import '../services/collaborateur_util.dart';
+import '../services/auth_util.dart';
 import '../models/contrat_model.dart'; 
 import 'pdf.dart';
 
@@ -56,9 +56,9 @@ class AffichageContratPdf {
         print(' PDF non trouvé en cache local, génération sans appels Firestore...');
       }
       
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
-      final userId = status['userId'];
-      final isCollaborateur = status['isCollaborateur'] == true;
+      final authData = await AuthUtil.getAuthData();
+      final userId = authData['userId'];
+      final isCollaborateur = authData['isCollaborateur'] ?? false;
       
       print(' Génération PDF - userId: $userId, isCollaborateur: $isCollaborateur');
 
@@ -91,7 +91,7 @@ class AffichageContratPdf {
       print(' Signature de retour récupérée : ${signatureRetourBase64 != null ? 'Présente' : 'Absente'}');
       print(' Conditions personnalisées récupérées : ${conditions != ContratModifier.defaultContract ? 'Personnalisées' : 'Par défaut'}');
 
-      final userData = await CollaborateurUtil.getAuthData();
+      final userData = authData;
 
       // Créer un objet ContratModel à partir des données Firestore
       final contratModel = ContratModel.fromFirestore(data, id: contratId);

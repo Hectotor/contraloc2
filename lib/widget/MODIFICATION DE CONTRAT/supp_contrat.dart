@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../services/collaborateur_util.dart';
+import '../../services/auth_util.dart';
 import 'package:intl/intl.dart'; // Importer la bibliothèque Intl pour la mise en forme des dates
 
 class SuppContrat {
@@ -35,17 +35,17 @@ class SuppContrat {
     );
 
     try {
-      // Vérifier le statut du collaborateur
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
-      final userId = status['userId'];
-      final isCollaborateur = status['isCollaborateur'] == true;
-      final adminId = status['adminId'];
+      // Vérifier le statut de l'utilisateur
+      final authData = await AuthUtil.getAuthData();
+      final userId = authData['userId'];
+      final isCollaborateur = authData['isCollaborateur'] == true;
+      final adminId = authData['adminId'];
       
       if (userId == null) throw Exception("Utilisateur non connecté");
       
       // Vérifier les permissions de suppression pour les collaborateurs
       if (isCollaborateur) {
-        final hasDeletePermission = await CollaborateurUtil.checkCollaborateurPermission('suppression');
+        final hasDeletePermission = authData['permissions']?['delete'] ?? false;
         if (!hasDeletePermission) {
           // Fermer le dialogue de chargement
           if (dialogContext != null && dialogContext!.mounted) {
@@ -96,13 +96,12 @@ class SuppContrat {
       }
 
       // Récupérer les données du contrat
-      final contratDoc = await CollaborateurUtil.getDocument(
-        collection: 'users',
-        docId: targetId!,
-        subCollection: 'locations',
-        subDocId: contratId,
-        useAdminId: isCollaborateur,
-      );
+      final contratDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(targetId)
+          .collection('locations')
+          .doc(contratId)
+          .get();
 
       // Au lieu de supprimer le contrat, marquer comme "supprimé"
       if (contratDoc.exists) {

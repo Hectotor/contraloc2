@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../services/collaborateur_util.dart';
+import '../../services/auth_util.dart';
 
 class InfoVehicule extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -26,7 +26,8 @@ class _InfoVehiculeState extends State<InfoVehicule> {
   Future<void> _checkPermissionsAndLoadData() async {
     try {
       // Vérifier si l'utilisateur a la permission de lecture
-      final hasReadPermission = await CollaborateurUtil.checkCollaborateurPermission('lecture');
+      final authData = await AuthUtil.getAuthData();
+      final hasReadPermission = authData['permissions']?['read'] ?? false;
       
       if (!mounted) return;
       
@@ -101,8 +102,8 @@ class _InfoVehiculeState extends State<InfoVehicule> {
         return; // Sortir de la fonction si les données sont déjà disponibles
       }
       
-      final status = await CollaborateurUtil.checkCollaborateurStatus();
-      final userId = status['isCollaborateur'] ? status['adminId'] : status['userId'];
+      final authData = await AuthUtil.getAuthData();
+      final userId = authData['isCollaborateur'] ? authData['adminId'] : authData['userId'];
       
       if (userId == null) {
         print("❌ ID utilisateur non disponible");

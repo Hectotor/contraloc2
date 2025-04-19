@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
-import 'package:contraloc/services/collaborateur_util.dart';
+import 'package:contraloc/services/auth_util.dart';
 
 class PhotoUploadPopup extends StatefulWidget {
   final List<File> photos;
@@ -62,10 +62,10 @@ class _PhotoUploadPopupState extends State<PhotoUploadPopup> {
           continue;
         }
 
-        // Obtenir les informations de l'utilisateur
-        final status = await CollaborateurUtil.checkCollaborateurStatus();
-        final userId = status['userId'];
-        final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
+        // Obtenir les informations d'authentification
+        final authData = await AuthUtil.getAuthData();
+        final userId = authData['userId'];
+        final targetId = authData['isCollaborateur'] ? authData['adminId'] : userId;
 
         if (targetId == null) {
           setState(() {

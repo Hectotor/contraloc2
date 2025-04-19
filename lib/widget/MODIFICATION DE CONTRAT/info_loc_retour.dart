@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/collaborateur_util.dart';
+import '../../services/auth_util.dart';
 
 class InfoLocRetour extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -29,8 +29,8 @@ class _InfoLocRetourState extends State<InfoLocRetour> {
   Future<void> _checkPermissions() async {
     try {
       // Vérifier si l'utilisateur a la permission de lecture
-      // La méthode checkCollaborateurPermission utilise maintenant _executeWithRetry en interne
-      final hasReadPermission = await CollaborateurUtil.checkCollaborateurPermission('lecture');
+      final authData = await AuthUtil.getAuthData();
+      final hasReadPermission = authData['permissions']?['read'] ?? false;
       
       if (mounted) {
         setState(() {
