@@ -26,7 +26,7 @@ class SubscriptionService {
           .get();
 
       if (!userDoc.exists) {
-        print('❌ Document utilisateur non trouvé');
+        // Message d'erreur supprimé
         return;
       }
 
