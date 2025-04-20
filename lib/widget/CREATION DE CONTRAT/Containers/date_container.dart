@@ -84,6 +84,16 @@ class _DateContainerState extends State<DateContainer> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const Text(
+                      'Sélectionnez la date de début pour réserver le véhicule',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     CreateContrat.buildDateField(
                       "Date de début",
                       widget.dateDebutController,

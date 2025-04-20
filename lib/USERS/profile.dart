@@ -86,7 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
 
               // Informations de l'entreprise
-            
+            const SizedBox(height: 24),
                 AdminInfoWidget(
                   showTitle: true,
                   showNomEntreprise: true,
@@ -116,6 +116,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   editable: true, // Ajout du paramètre pour rendre les champs modifiables
                 ),
+            const SizedBox(height: 50),
             ],
           ),
         ),
