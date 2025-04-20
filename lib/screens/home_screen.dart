@@ -61,12 +61,12 @@ class _HomeScreenState extends State<HomeScreen> {
       final adminId = authData['adminId'];
       final userId = FirebaseAuth.instance.currentUser?.uid;
 
-      if (adminId == null) {
-        throw Exception('ID administrateur non trouvé');
+      if (userId == null) {
+        throw Exception('Utilisateur non authentifié');
       }
 
-      // Si c'est un admin, charger ses propres données
-      if (isCollaborateur == false) {
+      // Si c'est un admin, utiliser son propre ID
+      if (!isCollaborateur) {
         final adminDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(userId)
@@ -88,15 +88,68 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       } else {
         // Si c'est un collaborateur, charger les données de l'admin et son propre prénom
+        // 1. Essayer d'abord le document principal de l'admin
         final adminDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(adminId)
             .get();
 
+        // 2. Si le document principal n'existe pas, essayer la sous-collection authentification
         if (!adminDoc.exists) {
-          throw Exception('Administrateur non trouvé');
+          print('\ud83d\udc41 Document principal de l\'admin non trouvé, vérification dans authentification');
+          
+          final adminAuthDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .doc(adminId)
+              .get();
+          
+          if (!adminAuthDoc.exists) {
+            print('\u274c Admin non trouvé ni dans le document principal ni dans authentification');
+            throw Exception('Administrateur non trouvé');
+          }
+          
+          // Utiliser les données de la sous-collection authentification
+          print('\u2705 Document authentification de l\'admin trouvé');
+          final Map<String, dynamic>? adminData = adminAuthDoc.data();
+          String? nomEntreprise = adminData?['nomEntreprise'] as String?;
+
+          // Charger le prénom du collaborateur
+          final collaborateurDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .get();
+          
+          // Si le document principal du collaborateur n'existe pas, vérifier dans authentification
+          String? prenom;
+          if (collaborateurDoc.exists) {
+            prenom = (collaborateurDoc.data() ?? {})['prenom'] as String?;
+          } else {
+            print('\ud83d\udc41 Document collaborateur non trouvé, vérification dans authentification');
+            
+            final collabAuthDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(userId)
+                .collection('authentification')
+                .doc(userId)
+                .get();
+                
+            prenom = collabAuthDoc.exists ? (collabAuthDoc.data() ?? {})['prenom'] as String? : null;
+          }
+
+          if (mounted) {
+            setState(() {
+              _prenom = prenom ?? '';
+              _nomEntreprise = nomEntreprise ?? '';
+              _isUserDataLoaded = true;
+            });
+          }
+          return;
         }
 
+        // Si le document principal de l'admin existe, l'utiliser
+        print('\u2705 Document principal de l\'admin trouvé');
         final Map<String, dynamic>? adminData = adminDoc.data();
         String? nomEntreprise = adminData?['nomEntreprise'] as String?;
 
@@ -133,8 +186,20 @@ class _HomeScreenState extends State<HomeScreen> {
   // Méthode pour initialiser toutes les données nécessaires
   Future<void> _initializeData() async {
     try {
+      // Vérifier si l'utilisateur est authentifié
+      if (FirebaseAuth.instance.currentUser == null) {
+        print(' Attente de l\'authentification...');
+        return; // Attendre que l'utilisateur soit authentifié
+      }
+
       // Charger les données utilisateur
       await _loadUserData();
+      
+      // Ne continuer que si les données utilisateur ont été chargées avec succès
+      if (!_isUserDataLoaded) {
+        print('\u274c Données utilisateur non chargées, annulation de l\'initialisation');
+        return;
+      }
       
       // Initialiser le gestionnaire d'accès aux véhicules
       await _initializeVehicleAccess();
@@ -168,7 +233,9 @@ class _HomeScreenState extends State<HomeScreen> {
       
       // Forcer une mise à jour de l'interface après l'initialisation
       if (mounted) {
-        setState(() {});
+        setState(() {
+          _isVehicleManagerInitialized = true;
+        });
       }
     } catch (e) {
       print(' Erreur lors de la réinitialisation du gestionnaire d\'accès aux véhicules: $e');

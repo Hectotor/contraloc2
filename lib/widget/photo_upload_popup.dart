@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:contraloc/services/auth_util.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class PhotoUploadPopup extends StatefulWidget {
   final List<File> photos;
@@ -64,8 +65,14 @@ class _PhotoUploadPopupState extends State<PhotoUploadPopup> {
 
         // Obtenir les informations d'authentification
         final authData = await AuthUtil.getAuthData();
-        final userId = authData['userId'];
-        final targetId = authData['isCollaborateur'] ? authData['adminId'] : userId;
+        final userId = FirebaseAuth.instance.currentUser?.uid;
+        final isCollaborateur = authData['isCollaborateur'] ?? false;
+        final adminId = authData['adminId'];
+        
+        // Obtenir l'ID cible (admin ou utilisateur courant)
+        final targetId = isCollaborateur ? adminId : userId;
+        
+        print('\ud83d\udd25 Téléchargement pour userId: $userId, isCollaborateur: $isCollaborateur, adminId: $adminId, targetId: $targetId');
 
         if (targetId == null) {
           setState(() {
