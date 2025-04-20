@@ -554,7 +554,9 @@ class _LocationPageState extends State<LocationPage> {
         print('=== DEBUG PERMIS PHOTOS ===');
         print('permisRecto existe: ${widget.permisRecto != null}');
         print('permisVerso existe: ${widget.permisVerso != null}');
-        if (widget.permisRecto != null) {
+        
+        // Vérifier si les URLs existent déjà avant de télécharger
+        if (widget.permisRecto != null && _permisRectoUrl == null) {
           print('Uploading permisRecto...');
           permisRectoUrl = await _compressAndUploadPhoto(
             widget.permisRecto as File,
@@ -564,7 +566,7 @@ class _LocationPageState extends State<LocationPage> {
           print('permisRectoUrl après upload: $permisRectoUrl');
         }
 
-        if (widget.permisVerso != null) {
+        if (widget.permisVerso != null && _permisVersoUrl == null) {
           print('Uploading permisVerso...');
           permisVersoUrl = await _compressAndUploadPhoto(
             widget.permisVerso as File,
@@ -582,10 +584,20 @@ class _LocationPageState extends State<LocationPage> {
           print('Aucune photo à uploader');
         }
 
-        // Upload des autres photos
+        // Upload des autres photos uniquement si nécessaire
         for (var photo in _photos) {
-          String url = await _compressAndUploadPhoto(photo, 'photos', contratId);
-          vehiculeUrls.add(url);
+          // Vérifier si l'URL existe déjà
+          bool urlExists = false;
+          for (var url in vehiculeUrls) {
+            if (url == photo.path) {
+              urlExists = true;
+              break;
+            }
+          }
+          if (!urlExists) {
+            String url = await _compressAndUploadPhoto(photo, 'photos', contratId);
+            vehiculeUrls.add(url);
+          }
         }
 
         print('=== DEBUG PHOTOS VEHICULE ===');
