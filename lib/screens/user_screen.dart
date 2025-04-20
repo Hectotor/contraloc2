@@ -44,12 +44,13 @@ class _UserScreenState extends State<UserScreen> {
       final adminId = authData['adminId'];
       final userId = FirebaseAuth.instance.currentUser?.uid;
 
-      if (adminId == null) {
-        throw Exception('ID administrateur non trouvé');
+      if (userId == null) {
+        throw Exception('Utilisateur non authentifié');
       }
 
       // Si c'est un admin, charger ses propres données
-      if (isCollaborateur == false) {
+      if (!isCollaborateur) {
+        // 1. Essayer d'abord dans le document authentification
         final adminDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(userId)
@@ -57,40 +58,96 @@ class _UserScreenState extends State<UserScreen> {
             .doc(userId)
             .get();
 
-        if (!adminDoc.exists) {
-          throw Exception('Administrateur non trouvé');
+        if (adminDoc.exists) {
+          final Map<String, dynamic>? adminData = adminDoc.data();
+          setState(() {
+            _prenom = adminData?['prenom'] ?? '';
+            _nomEntreprise = adminData?['nomEntreprise'] ?? '';
+            _isCollaborateur = isCollaborateur;
+            _isLoading = false;
+          });
+          return;
         }
-
-        final Map<String, dynamic>? adminData = adminDoc.data();
+        
+        // 2. Si non trouvé, essayer dans le document principal
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
+            
+        if (!userDoc.exists) {
+          throw Exception('Données utilisateur non trouvées');
+        }
+        
+        final Map<String, dynamic>? userData = userDoc.data();
         setState(() {
-          _prenom = adminData?['prenom'] ?? '';
-          _nomEntreprise = adminData?['nomEntreprise'] ?? '';
+          _prenom = userData?['prenom'] ?? '';
+          _nomEntreprise = userData?['nomEntreprise'] ?? '';
           _isCollaborateur = isCollaborateur;
           _isLoading = false;
         });
       } else {
-        // Si c'est un collaborateur, charger les données de l'admin et son propre prénom
+        // Si c'est un collaborateur
+        if (adminId == null) {
+          throw Exception('ID administrateur non trouvé pour le collaborateur');
+        }
+        
+        // 1. Essayer d'abord le document principal de l'admin
         final adminDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(adminId)
             .get();
 
+        // 2. Si le document principal n'existe pas, essayer la sous-collection authentification
+        Map<String, dynamic>? adminData;
         if (!adminDoc.exists) {
-          throw Exception('Administrateur non trouvé');
+          print('\ud83d\udc41 Document principal de l\'admin non trouvé, vérification dans authentification');
+          
+          final adminAuthDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .doc(adminId)
+              .get();
+          
+          if (!adminAuthDoc.exists) {
+            print('\u274c Admin non trouvé ni dans le document principal ni dans authentification');
+            throw Exception('Administrateur non trouvé');
+          }
+          
+          // Utiliser les données de la sous-collection authentification
+          print('\u2705 Document authentification de l\'admin trouvé');
+          adminData = adminAuthDoc.data();
+        } else {
+          // Si le document principal de l'admin existe, l'utiliser
+          print('\u2705 Document principal de l\'admin trouvé');
+          adminData = adminDoc.data();
         }
 
-        final Map<String, dynamic>? adminData = adminDoc.data();
         String? nomEntreprise = adminData?['nomEntreprise'] as String?;
 
         // Charger le prénom du collaborateur
+        String? prenom;
+        
+        // 1. Essayer d'abord le document principal du collaborateur
         final collaborateurDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(userId)
             .get();
-
-        String? prenom = collaborateurDoc.exists 
-            ? (collaborateurDoc.data() ?? {})['prenom'] as String? 
-            : null;
+        
+        if (collaborateurDoc.exists) {
+          prenom = (collaborateurDoc.data() ?? {})['prenom'] as String?;
+        } else {
+          // 2. Si non trouvé, essayer dans la sous-collection authentification
+          final collabAuthDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .collection('authentification')
+              .doc(userId)
+              .get();
+              
+          prenom = collabAuthDoc.exists ? (collabAuthDoc.data() ?? {})['prenom'] as String? : null;
+        }
 
         setState(() {
           _prenom = prenom ?? '';
