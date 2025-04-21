@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:contraloc/main_mobile.dart'; // Import pour accéder à navigatorKey
+import 'package:contraloc/main.dart'; // Import pour accéder à navigatorKey
 import 'package:contraloc/MOBILE/widget/MES%20CONTRATS/vehicle_access_manager.dart';
 import 'package:contraloc/MOBILE/screens/login.dart';
 
