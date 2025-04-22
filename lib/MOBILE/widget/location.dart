@@ -18,9 +18,11 @@ import 'CREATION DE CONTRAT/Containers/kilometrage_container.dart';
 import 'CREATION DE CONTRAT/Containers/type_location_container.dart';
 import 'CREATION DE CONTRAT/Containers/essence_container.dart';
 import 'CREATION DE CONTRAT/Containers/etat_commentaire_container.dart';
+import '../utils/affichage_contrat_pdf.dart';
 import '../utils/contract_utils.dart';
 import '../services/auth_util.dart';
 import '../USERS/contrat_condition.dart';
+import '../utils/pdf_upload_utils.dart';
 
 class LocationPage extends StatefulWidget {
   final String marque;
@@ -704,6 +706,26 @@ class _LocationPageState extends State<LocationPage> {
       print('permisVersoUrl dans ContratModel: ${contratModel.permisVersoUrl}');
       print('photosUrls dans ContratModel: ${contratModel.photosUrls?.length ?? 0} photos');
       print('Contenu de photosUrls: ${contratModel.photosUrls}');
+
+      // === Génération et upload du PDF du contrat (état EN COURS) ===
+      final pdfUrl = await generateAndUploadPdfAndSaveUrl(
+        generatePdf: () async => await AffichageContratPdf.genererEtAfficherContratPdf(
+          data: contratModel.toFirestore(),
+          afficherPdf: false,
+          contratId: contratId,
+          context: context,
+        ),
+        userId: targetId,
+        contratId: contratId,
+        context: context,
+        firestoreData: contratModel.toFirestore(),
+      );
+      if (pdfUrl != null) {
+        print('✅ PDF généré, uploadé et url enregistrée: $pdfUrl');
+      } else {
+        print('❌ Erreur lors de la génération, upload ou sauvegarde du PDF');
+      }
+      // === Fin génération/upload PDF ===
 
       // Sauvegarder le contrat dans Firestore
       print(' Sauvegarde du contrat dans la collection de ${collaborateurStatus['isCollaborateur'] ? 'l\'administrateur' : 'l\'utilisateur'}');

@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../utils/affichage_contrat_pdf.dart';
 import '../CREATION DE CONTRAT/mail.dart';
 import '../../services/auth_util.dart'; // Importer AuthUtil
+import '../../utils/pdf_upload_utils.dart'; // Importer la fonction utilitaire
 
 class RetourEnvoiePdf {
   static Future<void> genererEtEnvoyerPdfCloture({
@@ -60,14 +61,26 @@ class RetourEnvoiePdf {
       print('signatureRetour: ${signatureRetourBase64 != null ? "Présente" : "Absente"}');
       print('=== FIN DEBUG DONNEES RETOUR ===');
 
-      // Générer le PDF sans l'afficher
-      final pdfPath = await AffichageContratPdf.genererEtAfficherContratPdf(
-        context: context,
-        data: contratDataComplet,
+      // === Génération et upload du PDF du contrat (clôture) ===
+      final pdfUrl = await generateAndUploadPdfAndSaveUrl(
+        generatePdf: () async => await AffichageContratPdf.genererEtAfficherContratPdf(
+          data: contratDataComplet,
+          afficherPdf: false,
+          contratId: contratId,
+          context: context,
+          signatureRetourBase64: signatureRetourBase64,
+        ),
+        userId: (await AuthUtil.getAuthData())['adminId'],
         contratId: contratId,
-        signatureRetourBase64: signatureRetourBase64,
-        afficherPdf: false, // Ne pas afficher le PDF
+        context: context,
+        firestoreData: contratDataComplet,
       );
+      if (pdfUrl != null) {
+        print('✅ PDF clôture généré, uploadé et url enregistrée: $pdfUrl');
+      } else {
+        print('❌ Erreur lors de la génération, upload ou sauvegarde du PDF de clôture');
+      }
+      // === Fin génération/upload PDF ===
 
       // Fermer le dialogue de chargement seulement si c'est cette méthode qui l'a ouvert
       if (!dialogueDejaAffiche && context.mounted) {
@@ -91,7 +104,13 @@ class RetourEnvoiePdf {
       if ((contratData['email'] ?? '').toString().isNotEmpty) {
         try {
           await EmailService.sendClotureEmailWithPdf(
-            pdfPath: pdfPath,
+            pdfPath: await AffichageContratPdf.genererEtAfficherContratPdf(
+              data: contratDataComplet,
+              afficherPdf: false,
+              contratId: contratId,
+              context: context,
+              signatureRetourBase64: signatureRetourBase64,
+            ),
             email: (contratData['email'] ?? '').toString(),
             marque: (contratData['marque'] ?? '').toString(),
             modele: (contratData['modele'] ?? '').toString(),
