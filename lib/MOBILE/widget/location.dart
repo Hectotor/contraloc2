@@ -112,6 +112,12 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _numeroPermisController = TextEditingController();
   final TextEditingController _immatriculationVehiculeClientController = TextEditingController();
   final TextEditingController _kilometrageVehiculeClientController = TextEditingController();
+  final TextEditingController _nomEntrepriseController = TextEditingController();
+  final TextEditingController _logoUrlController = TextEditingController();
+  final TextEditingController _adresseEntrepriseController = TextEditingController();
+  final TextEditingController _telephoneEntrepriseController = TextEditingController();
+  final TextEditingController _siretEntrepriseController = TextEditingController();
+
 
   String? nomEntreprise;
   String? logoUrl;
@@ -184,32 +190,28 @@ class _LocationPageState extends State<LocationPage> {
       final adminId = await AuthUtilExtension.getAdminId();
       print('adminId via extension: $adminId');
       
-      // Récupérer l'ID de l'admin depuis authData
-      final userId = authData['adminId'] as String?;
-      print('userId depuis authData: $userId');
-      
-      if (userId == null) {
-        print('❌ Aucun userId trouvé');
-        throw Exception('Aucun identifiant utilisateur trouvé');
-      }
+      // Pour collaborateur, il faut récupérer les infos d'authentification de l'admin
+      final userId = adminId;
+      final authDocSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('authentification')
+          .doc(userId)
+          .get();
 
-      // Récupérer les données de l'entreprise en utilisant AuthUtil
-      final adminDocRef = await AuthUtil.getAuthDocRef(userId);
-      final adminDoc = await adminDocRef.get(const GetOptions(source: Source.server));
-      
-      if (!adminDoc.exists) {
-        print('❌ Document utilisateur non trouvé');
-        throw Exception('Document utilisateur non trouvé');
+      if (!authDocSnap.exists) {
+        print('❌ Document infos entreprise non trouvé dans authentification');
+        throw Exception('Infos entreprise manquantes');
       }
+      final adminData = authDocSnap.data() ?? {};
 
-      final adminData = adminDoc.data() as Map<String, dynamic>? ?? {};
-      
       setState(() {
-        nomEntreprise = adminData['nomEntreprise'] as String?;
-        logoUrl = adminData['logoUrl'] as String?;
-        adresseEntreprise = adminData['adresseEntreprise'] as String?;
-        telephoneEntreprise = adminData['telephoneEntreprise'] as String?;
-        siretEntreprise = adminData['siretEntreprise'] as String?;
+        // On ne met à jour que les contrôleurs, plus besoin de stocker dans les variables d'instance
+        _nomEntrepriseController.text = adminData['nomEntreprise'] ?? '';
+        _logoUrlController.text = adminData['logoUrl'] ?? '';
+        _adresseEntrepriseController.text = adminData['adresse'] ?? '';
+        _telephoneEntrepriseController.text = adminData['telephone'] ?? '';
+        _siretEntrepriseController.text = adminData['siret'] ?? '';
       });
 
       // Ajouter l'adminId aux données retournées
@@ -624,19 +626,6 @@ class _LocationPageState extends State<LocationPage> {
       }
 
       // Utiliser les variables d'état déjà chargées
-      final nomEntreprise = this.nomEntreprise;
-      final logoUrl = this.logoUrl;
-      final adresseEntreprise = this.adresseEntreprise;
-      final telephoneEntreprise = this.telephoneEntreprise;
-      final siretEntreprise = this.siretEntreprise;
-
-      print('Informations entreprise récupérées:');
-      print('Nom: $nomEntreprise');
-      print('Logo: $logoUrl');
-      print('Adresse: $adresseEntreprise');
-      print('Téléphone: $telephoneEntreprise');
-      print('SIRET: $siretEntreprise');
-
       // Création du contrat
       // D'abord, télécharger les photos du permis si elles sont présentes en tant que fichiers
       if (widget.permisRecto != null) {
@@ -685,11 +674,11 @@ class _LocationPageState extends State<LocationPage> {
         franchise: _franchiseController.text.isNotEmpty ? _franchiseController.text : '',
         prixLocation: _prixLocationController.text.isNotEmpty ? _prixLocationController.text : '',
         accompte: _accompteController.text.isNotEmpty ? _accompteController.text : '',
-        nomEntreprise: nomEntreprise,
-        logoUrl: logoUrl,
-        adresseEntreprise: adresseEntreprise,
-        telephoneEntreprise: telephoneEntreprise,
-        siretEntreprise: siretEntreprise,
+        nomEntreprise: _nomEntrepriseController.text,
+        logoUrl: _logoUrlController.text,
+        adresseEntreprise: _adresseEntrepriseController.text,
+        telephoneEntreprise: _telephoneEntrepriseController.text,
+        siretEntreprise: _siretEntrepriseController.text,
         rayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : null,
         kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : null,
         kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : '',
@@ -805,11 +794,11 @@ class _LocationPageState extends State<LocationPage> {
         immatriculation: widget.immatriculation,
         conditions: conditionsText,
         entrepriseClient: _entrepriseClientController.text,
-        nomEntreprise: nomEntreprise,
-        logoUrl: logoUrl,
-        adresseEntreprise: adresseEntreprise,
-        telephoneEntreprise: telephoneEntreprise,
-        siretEntreprise: siretEntreprise,
+        nomEntreprise: _nomEntrepriseController.text,
+        logoUrl: _logoUrlController.text,
+        adresseEntreprise: _adresseEntrepriseController.text,
+        telephoneEntreprise: _telephoneEntrepriseController.text,
+        siretEntreprise: _siretEntrepriseController.text,
         photosUrls: vehiculeUrls,
       );
 

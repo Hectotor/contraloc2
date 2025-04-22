@@ -85,26 +85,6 @@ class GenerationContratPdf {
         throw Exception(' Informations d\'entreprise non trouvées');
       }
       
-      // Assigner les valeurs récupérées
-      final nomEntrepriseInfo = adminInfo['nomEntreprise'] ?? 'Non défini';
-      final logoUrlInfo = adminInfo['logoUrl'] ?? '';
-      final adresseEntrepriseInfo = adminInfo['adresseEntreprise'] ?? 'Non défini';
-      final telephoneEntrepriseInfo = adminInfo['telephoneEntreprise'] ?? 'Non défini';
-      final siretEntrepriseInfo = adminInfo['siretEntreprise'] ?? 'Non défini';
-      
-      // Utiliser les valeurs fournies en paramètre si elles existent, sinon utiliser les valeurs récupérées
-      final nomEntrepriseFinal = nomEntreprise ?? nomEntrepriseInfo;
-      final logoUrlFinal = logoUrl ?? logoUrlInfo;
-      final adresseEntrepriseFinal = adresseEntreprise ?? adresseEntrepriseInfo;
-      final telephoneEntrepriseFinal = telephoneEntreprise ?? telephoneEntrepriseInfo;
-      final siretEntrepriseFinal = siretEntreprise ?? siretEntrepriseInfo;
-      
-      print(' Informations entreprise récupérées avec succès:');
-      print('Nom entreprise: $nomEntrepriseFinal');
-      print('Adresse: $adresseEntrepriseFinal');
-      print('Téléphone: $telephoneEntrepriseFinal');
-      print('SIRET: $siretEntrepriseFinal');
-
       // Récupérer les données de l'utilisateur pour vérifier s'il est collaborateur
       final userDataDoc = await FirebaseFirestore.instance
           .collection('users')
@@ -210,11 +190,11 @@ class GenerationContratPdf {
         nettoyageExt: nettoyageExt,
         locationCasque: locationCasque,
         methodePaiement: methodePaiement,
-        nomEntreprise: nomEntrepriseFinal,
-        logoUrl: logoUrlFinal,
-        adresseEntreprise: adresseEntrepriseFinal,
-        telephoneEntreprise: telephoneEntrepriseFinal,
-        siretEntreprise: siretEntrepriseFinal,
+        nomEntreprise: nomEntreprise,
+        logoUrl: logoUrl,
+        adresseEntreprise: adresseEntreprise,
+        telephoneEntreprise: telephoneEntreprise,
+        siretEntreprise: siretEntreprise,
         nomCollaborateur: nomCollaborateurFinal,
         prenomCollaborateur: prenomCollaborateurFinal,
         conditions: conditions,
@@ -297,10 +277,10 @@ class GenerationContratPdf {
           immatriculation: immatriculation ?? '',
           prenom: prenom ?? '',
           nom: nom ?? '',
-          nomEntreprise: nomEntrepriseFinal ?? '',
-          adresse: adresseEntrepriseFinal,
-          telephone: telephoneEntrepriseFinal,
-          logoUrl: logoUrlFinal ?? '',
+          nomEntreprise: nomEntreprise,
+          adresse: adresseEntreprise,
+          telephone: telephoneEntreprise,
+          logoUrl: logoUrl,
           sendCopyToAdmin: true,
           nomCollaborateur: nomCollaborateurFinal,
           prenomCollaborateur: prenomCollaborateurFinal,
