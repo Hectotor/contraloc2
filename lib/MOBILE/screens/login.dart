@@ -115,11 +115,28 @@ class _LoginPageState extends State<LoginPage> {
           // Continuer malgré l'erreur car l'utilisateur est déjà connecté
         }
 
-        // Vérification du champ emailVerifie dans Firestore
-        final userDoc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
-        final emailVerifie = userDoc.data()?['emailVerifie'] ?? false;
+        // Synchroniser Firestore si l'email est confirmé côté Firebase
+        if (userCredential.user!.emailVerified) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .collection('authentification')
+              .doc(userCredential.user!.uid)
+              .update({'emailVerifie': true});
+        }
 
-        if (emailVerifie == true) {
+        // Vérification du champ emailVerifie dans Firestore (sous-collection authentification)
+        final authDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .collection('authentification')
+            .doc(userCredential.user!.uid)
+            .get();
+        final data = authDoc.data();
+        final hasEmailVerifie = data != null && data.containsKey('emailVerifie');
+        final emailVerifie = hasEmailVerifie ? data['emailVerifie'] : null;
+
+        if (!hasEmailVerifie || emailVerifie == true) {
           if (mounted) {
             Navigator.pushReplacement(
               context,

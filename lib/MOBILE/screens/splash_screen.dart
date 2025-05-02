@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'login.dart';
 import '../widget/navigation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -56,12 +57,46 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     await Future.delayed(const Duration(milliseconds: 5000));
     User? user = FirebaseAuth.instance.currentUser;
     if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => user != null ? NavigationPage() : LoginPage(),
-      ),
-    );
+
+    if (user != null) {
+      // Synchroniser Firestore si l'email est confirmé côté Firebase
+      if (user.emailVerified) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('authentification')
+            .doc(user.uid)
+            .update({'emailVerifie': true});
+      }
+      // Vérification Firestore du champ emailVerifie dans la sous-collection authentification
+      final authDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('authentification')
+          .doc(user.uid)
+          .get();
+      final data = authDoc.data();
+      final hasEmailVerifie = data != null && data.containsKey('emailVerifie');
+      final emailVerifie = hasEmailVerifie ? data['emailVerifie'] : null;
+      if (!hasEmailVerifie || emailVerifie == true) {
+        // Champ absent OU true -> laisser passer
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => NavigationPage()),
+        );
+      } else {
+        // Champ présent ET false -> bloquer
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => LoginPage()),
+        );
+      }
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => LoginPage()),
+      );
+    }
   }
 
   @override
