@@ -151,10 +151,6 @@ class _InscriptionPageState extends State<InscriptionPage> {
           'emailVerifie': false,
           'dateCreation': FieldValue.serverTimestamp(),
           'telephone': _telephoneController.text.trim(),
-          'subscriptionId': 'free',
-          'isSubscriptionActive': false,
-          'numberOfCars': 1,
-          // Ajout des nouveaux champs
           'cb_subscription': 'free',
           'cb_nb_car': 1,
         });
