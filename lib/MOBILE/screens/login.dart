@@ -8,6 +8,7 @@ import '../widget/inscription.dart'; // Import de la page d'inscription
 import '../widget/navigation.dart'; // Import de la page de navigation
 import '../utils/welcome_mail.dart'; // Ajout de l'import pour WelcomeMail
 import '../widget/chargement.dart'; // Import du widget de chargement
+import '../widget/popup_mail_nonverifie.dart'; // Nouveau popup pour email non vérifié
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -114,10 +115,25 @@ class _LoginPageState extends State<LoginPage> {
           // Continuer malgré l'erreur car l'utilisateur est déjà connecté
         }
 
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const NavigationPage()),
+        // Vérification du champ emailVerifie dans Firestore
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
+        final emailVerifie = userDoc.data()?['emailVerifie'] ?? false;
+
+        if (emailVerifie == true) {
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const NavigationPage()),
+            );
+          }
+        } else {
+          // Afficher le nouveau popup email non vérifié avec bouton de renvoi
+          PopupMailNonVerifie.afficher(
+            context: context,
+            onResendEmail: () async {
+              final user = FirebaseAuth.instance.currentUser;
+              await user?.sendEmailVerification();
+            },
           );
         }
       }
@@ -355,7 +371,7 @@ class _LoginPageState extends State<LoginPage> {
                     Column(
                       children: const [
                         Text(
-                          "Fabriqué en France 🇫🇷",
+                          "Fabriqué en France ",
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey,
