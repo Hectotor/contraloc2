@@ -115,43 +115,54 @@ class _LoginPageState extends State<LoginPage> {
           // Continuer malgré l'erreur car l'utilisateur est déjà connecté
         }
 
-        // Synchroniser Firestore si l'email est confirmé côté Firebase
-        if (userCredential.user!.emailVerified) {
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userCredential.user!.uid)
-              .collection('authentification')
-              .doc(userCredential.user!.uid)
-              .update({'emailVerifie': true});
-        }
-
-        // Vérification du champ emailVerifie dans Firestore (sous-collection authentification)
-        final authDoc = await FirebaseFirestore.instance
+        // Synchroniser Firestore si l'email est confirmé côté Firebase ET que le doc existe déjà
+        final authDocRef = FirebaseFirestore.instance
             .collection('users')
             .doc(userCredential.user!.uid)
             .collection('authentification')
-            .doc(userCredential.user!.uid)
-            .get();
-        final data = authDoc.data();
-        final hasEmailVerifie = data != null && data.containsKey('emailVerifie');
-        final emailVerifie = hasEmailVerifie ? data['emailVerifie'] : null;
+            .doc(userCredential.user!.uid);
+        final authDocSnapshot = await authDocRef.get();
+        final docExists = authDocSnapshot.exists;
+        if (userCredential.user!.emailVerified && docExists) {
+          await authDocRef.update({'emailVerifie': true});
+        }
 
-        if (!hasEmailVerifie || emailVerifie == true) {
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const NavigationPage()),
+        // Vérification du champ emailVerifie dans Firestore (sous-collection authentification)
+        try {
+          final authDoc = await authDocRef.get();
+          final data = authDoc.data();
+          final hasEmailVerifie = data != null && data.containsKey('emailVerifie');
+          final emailVerifie = hasEmailVerifie ? data['emailVerifie'] : null;
+
+          if (data == null || !hasEmailVerifie || emailVerifie == true) {
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const NavigationPage()),
+              );
+            }
+          } else {
+            // Afficher le nouveau popup email non vérifié avec bouton de renvoi
+            PopupMailNonVerifie.afficher(
+              context: context,
+              onResendEmail: () async {
+                final user = FirebaseAuth.instance.currentUser;
+                await user?.sendEmailVerification();
+              },
             );
           }
-        } else {
-          // Afficher le nouveau popup email non vérifié avec bouton de renvoi
-          PopupMailNonVerifie.afficher(
-            context: context,
-            onResendEmail: () async {
-              final user = FirebaseAuth.instance.currentUser;
-              await user?.sendEmailVerification();
-            },
-          );
+        } catch (e) {
+          if (e.toString().contains('not-found')) {
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const NavigationPage()),
+              );
+            }
+          } else {
+            print('Erreur Firestore: $e');
+            // Optionnel : afficher une erreur à l'utilisateur
+          }
         }
       }
     } on FirebaseAuthException catch (e) {

@@ -59,37 +59,46 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     if (!mounted) return;
 
     if (user != null) {
-      // Synchroniser Firestore si l'email est confirmé côté Firebase
-      if (user.emailVerified) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('authentification')
-            .doc(user.uid)
-            .update({'emailVerifie': true});
-      }
-      // Vérification Firestore du champ emailVerifie dans la sous-collection authentification
-      final authDoc = await FirebaseFirestore.instance
+      // Synchroniser Firestore si l'email est confirmé côté Firebase ET que le doc existe déjà
+      final authDocRef = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('authentification')
-          .doc(user.uid)
-          .get();
-      final data = authDoc.data();
-      final hasEmailVerifie = data != null && data.containsKey('emailVerifie');
-      final emailVerifie = hasEmailVerifie ? data['emailVerifie'] : null;
-      if (!hasEmailVerifie || emailVerifie == true) {
-        // Champ absent OU true -> laisser passer
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => NavigationPage()),
-        );
-      } else {
-        // Champ présent ET false -> bloquer
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => LoginPage()),
-        );
+          .doc(user.uid);
+      final authDocSnapshot = await authDocRef.get();
+      final docExists = authDocSnapshot.exists;
+      if (user.emailVerified && docExists) {
+        await authDocRef.update({'emailVerifie': true});
+      }
+      // Vérification Firestore du champ emailVerifie dans la sous-collection authentification
+      try {
+        final authDoc = await authDocRef.get();
+        final data = authDoc.data();
+        final hasEmailVerifie = data != null && data.containsKey('emailVerifie');
+        final emailVerifie = hasEmailVerifie ? data['emailVerifie'] : null;
+        if (data == null || !hasEmailVerifie || emailVerifie == true) {
+          // Champ absent OU true OU pas de doc -> laisser passer
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => NavigationPage()),
+          );
+        } else {
+          // Champ présent ET false -> bloquer
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => LoginPage()),
+          );
+        }
+      } catch (e) {
+        if (e.toString().contains('not-found')) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => NavigationPage()),
+          );
+        } else {
+          print('Erreur Firestore: $e');
+          // Optionnel : afficher une erreur à l'utilisateur
+        }
       }
     } else {
       Navigator.pushReplacement(
