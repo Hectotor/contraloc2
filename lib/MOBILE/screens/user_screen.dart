@@ -249,7 +249,7 @@ class _UserScreenState extends State<UserScreen> {
                         child: Padding(
                           padding: const EdgeInsets.only(bottom: 20),
                           child: Text(
-                            'Version 1.1.4\nFabriqué en France 🇫🇷\nDepuis 2020 - Contraloc.fr',
+                            'Version 1.1.5\nFabriqué en France 🇫🇷\nDepuis 2020 - Contraloc.fr',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.grey[600],
