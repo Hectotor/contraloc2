@@ -5,16 +5,12 @@ import 'package:intl/intl.dart'; // Add this line
 class DateContainer extends StatefulWidget {
   final TextEditingController dateDebutController;
   final TextEditingController dateFinTheoriqueController;
-  final TextEditingController lieuDepartController;
-  final TextEditingController lieuArriveeController;
   final Future<void> Function(TextEditingController) selectDateTime;
 
   const DateContainer({
     super.key,
     required this.dateDebutController,
     required this.dateFinTheoriqueController,
-    required this.lieuDepartController,
-    required this.lieuArriveeController,
     required this.selectDateTime,
   });
 
@@ -154,42 +150,6 @@ class _DateContainerState extends State<DateContainer> {
                       false,
                       context,
                       widget.selectDateTime,
-                    ),
-                    const SizedBox(height: 15),
-                    
-                    // Champ Lieu de départ
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 15),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: TextField(
-                        controller: widget.lieuDepartController,
-                        decoration: const InputDecoration(
-                          hintText: 'Lieu de départ',
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 15),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    
-                    // Champ Lieu d'arrivée
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 15),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: TextField(
-                        controller: widget.lieuArriveeController,
-                        decoration: const InputDecoration(
-                          hintText: 'Lieu d\'arrivée',
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 15),
-                        ),
-                      ),
                     ),
                   ],
                 ),

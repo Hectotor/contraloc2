@@ -23,6 +23,7 @@ import '../utils/contract_utils.dart';
 import '../services/auth_util.dart';
 import '../USERS/contrat_condition.dart';
 import '../utils/pdf_upload_utils.dart';
+import '../widget/lieux_popup.dart';
 
 class LocationPage extends StatefulWidget {
   final String marque;
@@ -121,6 +122,8 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _siretEntrepriseController = TextEditingController();
   final TextEditingController _devisesLocationController = TextEditingController();
 
+  String? _lieuDepart;
+  String? _lieuArrivee;
 
   String? nomEntreprise;
   String? logoUrl;
@@ -232,9 +235,9 @@ class _LocationPageState extends State<LocationPage> {
     // Mise à jour des contrôleurs avec les données du modèle
     if (model.dateDebut != null) _dateDebutController.text = model.dateDebut!;
     if (model.dateFinTheorique != null) _dateFinTheoriqueController.text = model.dateFinTheorique!;
+    if (model.lieuDepart != null) _lieuDepart = model.lieuDepart;
+    if (model.lieuArrivee != null) _lieuArrivee = model.lieuArrivee;
     if (model.kilometrageDepart != null) _kilometrageDepartController.text = model.kilometrageDepart!;
-    if (model.lieuDepart != null) _lieuDepartController.text = model.lieuDepart!;
-    if (model.lieuArrivee != null) _lieuArriveeController.text = model.lieuArrivee!;
     if (model.typeLocation != null) _typeLocationController.text = model.typeLocation!;
     if (model.commentaireAller != null) _commentaireController.text = model.commentaireAller!;
     setState(() => _pourcentageEssence = model.pourcentageEssence);
@@ -283,6 +286,8 @@ class _LocationPageState extends State<LocationPage> {
     _kilometrageVehiculeClientController.text = model.kilometrageVehiculeClient ?? '';
     _permisRectoUrl = model.permisRectoUrl;
     _permisVersoUrl = model.permisVersoUrl;
+    _lieuDepart = model.lieuDepart;
+    _lieuArrivee = model.lieuArrivee;
   }
 
   Future<ContratModel?> _loadContractData(String contratId) async {
@@ -772,8 +777,8 @@ class _LocationPageState extends State<LocationPage> {
         photoVehiculeUrl: _vehiclePhotoUrl,
         dateDebut: _dateDebutController.text,
         dateFinTheorique: _dateFinTheoriqueController.text,
-        lieuDepart: _lieuDepartController.text,
-        lieuArrivee: _lieuArriveeController.text,
+        lieuDepart: _lieuDepartController.text.isNotEmpty ? _lieuDepartController.text : '',
+        lieuArrivee: _lieuArriveeController.text.isNotEmpty ? _lieuArriveeController.text : '',
         kilometrageDepart: _kilometrageDepartController.text,
         typeLocation: _typeLocationController.text,
         pourcentageEssence: _pourcentageEssence,
@@ -1142,6 +1147,22 @@ class _LocationPageState extends State<LocationPage> {
     }
   }
 
+  void _showLieuxPopup() {
+    showDialog(
+      context: context,
+      builder: (context) => LieuxPopup(
+        lieuDepartInitial: _lieuDepart,
+        lieuArriveeInitial: _lieuArrivee,
+        onLieuxSelected: (lieuDepart, lieuArrivee) {
+          setState(() {
+            _lieuDepart = lieuDepart;
+            _lieuArrivee = lieuArrivee;
+          });
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1166,6 +1187,15 @@ class _LocationPageState extends State<LocationPage> {
             Navigator.pop(context); 
           },
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.location_on),
+            onPressed: () {
+              _showLieuxPopup();
+            },
+            tooltip: 'Sélectionner les lieux',
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -1199,9 +1229,7 @@ class _LocationPageState extends State<LocationPage> {
                 DateContainer(
                   dateDebutController: _dateDebutController,
                   dateFinTheoriqueController: _dateFinTheoriqueController,
-                  lieuDepartController: _lieuDepartController,
-                  lieuArriveeController: _lieuArriveeController,
-                  selectDateTime: _selectDateTime,
+                  selectDateTime: (controller) => _selectDateTime(controller),
                 ),
                 const SizedBox(height: 15),
                 KilometrageContainer(

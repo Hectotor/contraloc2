@@ -1,37 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
-class PopupVehiculeClient extends StatefulWidget {
-  final Function(String, String) onSave;
-  final String? immatriculationVehiculeClient;
-  final String? kilometrageVehiculeClient;
+class LieuxPopup extends StatefulWidget {
+  final Function(String, String) onLieuxSelected;
+  final String? lieuDepartInitial;
+  final String? lieuArriveeInitial;
 
-  const PopupVehiculeClient({
+  const LieuxPopup({
     Key? key,
-    required this.onSave,
-    this.immatriculationVehiculeClient,
-    this.kilometrageVehiculeClient,
+    required this.onLieuxSelected,
+    this.lieuDepartInitial,
+    this.lieuArriveeInitial,
   }) : super(key: key);
 
   @override
-  State<PopupVehiculeClient> createState() => _PopupVehiculeClientState();
+  State<LieuxPopup> createState() => _LieuxPopupState();
 }
 
-class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
-  final TextEditingController _immatriculationVehiculeClientController = TextEditingController();
-  final TextEditingController _kilometrageVehiculeClientController = TextEditingController();
+class _LieuxPopupState extends State<LieuxPopup> {
+  final TextEditingController _lieuDepartController = TextEditingController();
+  final TextEditingController _lieuArriveeController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _immatriculationVehiculeClientController.text = widget.immatriculationVehiculeClient ?? '';
-    _kilometrageVehiculeClientController.text = widget.kilometrageVehiculeClient ?? '';
+    _lieuDepartController.text = widget.lieuDepartInitial ?? '';
+    _lieuArriveeController.text = widget.lieuArriveeInitial ?? '';
   }
 
   @override
   void dispose() {
-    _immatriculationVehiculeClientController.dispose();
-    _kilometrageVehiculeClientController.dispose();
+    _lieuDepartController.dispose();
+    _lieuArriveeController.dispose();
     super.dispose();
   }
 
@@ -62,11 +61,11 @@ class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.directions_car, color: Color(0xFF08004D), size: 24),
+                  const Icon(Icons.location_on, color: Color(0xFF08004D), size: 24),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      "Véhicule du client",
+                      "Sélection des lieux",
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -83,39 +82,29 @@ class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextField(
-                    controller: _immatriculationVehiculeClientController,
+                    controller: _lieuDepartController,
                     decoration: InputDecoration(
-                      labelText: 'Immatriculation',
+                      labelText: 'Lieu de départ',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    textCapitalization: TextCapitalization.characters,
                   ),
                   const SizedBox(height: 16),
                   TextField(
-                    controller: _kilometrageVehiculeClientController,
+                    controller: _lieuArriveeController,
                     decoration: InputDecoration(
-                      labelText: 'Kilométrage',
+                      labelText: 'Lieu d\'arrivée',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      suffixText: "km",
                     ),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
                   ),
                   const SizedBox(height: 30),
+                  
+                  // Valider button
                   ElevatedButton(
-                    onPressed: () {
-                      widget.onSave(
-                        _immatriculationVehiculeClientController.text.trim(),
-                        _kilometrageVehiculeClientController.text.trim(),
-                      );
-                      Navigator.pop(context);
-                    },
+                    onPressed: _validateAndClose,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF08004D),
                       minimumSize: const Size(double.infinity, 56),
@@ -125,7 +114,7 @@ class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
                       elevation: 2,
                     ),
                     child: const Text(
-                      "Enregistrer",
+                      "Valider",
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -141,23 +130,14 @@ class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
       ),
     );
   }
-}
 
-// Function to show the vehicle dialog
-Future<void> showVehiculeClientDialog({
-  required BuildContext context,
-  required Function(String, String) onSave,
-  String? immatriculationVehiculeClient,
-  String? kilometrageVehiculeClient,
-}) async {
-  return showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return PopupVehiculeClient(
-        onSave: onSave,
-        immatriculationVehiculeClient: immatriculationVehiculeClient,
-        kilometrageVehiculeClient: kilometrageVehiculeClient,
+  void _validateAndClose() {
+    if (_lieuDepartController.text.isNotEmpty && _lieuArriveeController.text.isNotEmpty) {
+      widget.onLieuxSelected(
+        _lieuDepartController.text.trim(),
+        _lieuArriveeController.text.trim(),
       );
-    },
-  );
+      Navigator.of(context).pop();
+    }
+  }
 }
