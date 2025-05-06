@@ -56,6 +56,7 @@ class GenerationContratPdf {
     String? adresseEntreprise,
     String? telephoneEntreprise,
     String? siretEntreprise,
+    String? devisesLocation,
     String? nomCollaborateur,
     String? prenomCollaborateur,
     String? conditions,
@@ -195,6 +196,7 @@ class GenerationContratPdf {
         adresseEntreprise: adresseEntreprise,
         telephoneEntreprise: telephoneEntreprise,
         siretEntreprise: siretEntreprise,
+        devisesLocation: devisesLocation,
         nomCollaborateur: nomCollaborateurFinal,
         prenomCollaborateur: prenomCollaborateurFinal,
         conditions: conditions,
@@ -213,6 +215,7 @@ class GenerationContratPdf {
       print('adresseEntreprise: ${contratModel.adresseEntreprise}');
       print('telephoneEntreprise: ${contratModel.telephoneEntreprise}');
       print('siretEntreprise: ${contratModel.siretEntreprise}');
+      print('devisesLocation: ${contratModel.devisesLocation}');
       print('nomCollaborateur: ${contratModel.nomCollaborateur}');
       print('prenomCollaborateur: ${contratModel.prenomCollaborateur}');
       print('conditions: ${contratModel.conditions}');

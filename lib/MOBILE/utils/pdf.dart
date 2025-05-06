@@ -342,7 +342,8 @@ Future<String> generatePdf(
               prixLocation: contratModel.prixLocation ?? '',
               coutTotalTheorique: coutTotalTheorique,
               coutTotal: coutTotal,
-              accompte: contratModel.accompte ?? '', // Ajout du paramètre accompte
+              accompte: contratModel.accompte ?? '',
+              devise: contratModel.devisesLocation ?? '€', // Utiliser la devise du contrat ou € par défaut
               boldFont: boldFont,
               ttf: ttf,
             ),

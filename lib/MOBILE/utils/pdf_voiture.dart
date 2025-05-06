@@ -29,6 +29,7 @@ class PdfVoitureWidget {
     required String selectedPaymentMethod,
     required pw.Font boldFont,
     required pw.Font ttf,
+    required String devise, // Nouveau paramètre pour la devise
   }) {
     // Récupérer le type de location du map data, ou utiliser la valeur passée en paramètre
     final String typeLocationValue = contrat.typeLocation ?? typeLocation;
@@ -55,7 +56,7 @@ class PdfVoitureWidget {
           pw.Text('Informations du Véhicule:',
               style: pw.TextStyle(fontSize: 12, font: boldFont)),
           _buildVehiculeInfo(contrat, typeCarburant, boiteVitesses, assuranceNom,
-              assuranceNumero, franchise, ttf),
+              assuranceNumero, franchise, ttf, devise),
           pw.SizedBox(height: 10), // Réduit la taille de l'espace
           pw.Text('Détails de la Location:',
               style: pw.TextStyle(fontSize: 12, font: boldFont)),
@@ -77,7 +78,8 @@ class PdfVoitureWidget {
               coutTotal,
               accompte,
               selectedPaymentMethod,
-              ttf),
+              ttf,
+              devise),
         ],
       ),
     );
@@ -90,7 +92,8 @@ class PdfVoitureWidget {
       String assuranceNom,
       String assuranceNumero,
       String franchise,
-      pw.Font ttf) {
+      pw.Font ttf,
+      String devise) {
     return pw.Column(
       children: [
         pw.Row(
@@ -117,7 +120,7 @@ class PdfVoitureWidget {
           children: [
             pw.Text('Assurance: $assuranceNom', style: pw.TextStyle(font: ttf, fontSize: 9)),
             pw.Text('N°: $assuranceNumero', style: pw.TextStyle(font: ttf, fontSize: 9)),
-            pw.Text('Franchise: $franchise €', style: pw.TextStyle(font: ttf, fontSize: 9)),
+            pw.Text('Franchise: $franchise $devise', style: pw.TextStyle(font: ttf, fontSize: 9)),
           ],
         ),
       ],
@@ -142,7 +145,8 @@ class PdfVoitureWidget {
       double? coutTotal,
       String accompte,
       String selectedPaymentMethod,
-      pw.Font ttf) {
+      pw.Font ttf,
+      String devise) {
     
     // Utiliser directement les valeurs passées en paramètre, qui sont déjà traitées
     final String cautionValue = contrat.caution ?? '';
@@ -365,7 +369,7 @@ class PdfVoitureWidget {
                   child: accompte.isNotEmpty
                     ? pw.Column(
                         children: [
-                          pw.Text('Accompte: $accompte €', 
+                          pw.Text('Accompte: $accompte $devise', 
                             textAlign: pw.TextAlign.center,
                             style: pw.TextStyle(font: ttf, fontSize: 9)),
                           pw.Text('Méthode de paiement: $selectedPaymentMethod', 
@@ -380,7 +384,7 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Caution: $cautionValue €',
+                  child: pw.Text('Caution: $cautionValue $devise',
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
@@ -473,7 +477,7 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.center,
-                  child: pw.Text('Prix Km supp: ${contrat.kilometrageSupp} €/km',
+                  child: pw.Text('Prix Km supp: ${contrat.kilometrageSupp} $devise/km',
                       textAlign: pw.TextAlign.center,
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
@@ -482,8 +486,8 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Coût total km supp: ${calculateKmSupp().toStringAsFixed(2)} €',
-                      style: pw.TextStyle(font: ttf, fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                  child: pw.Text('Coût total km supp: ${calculateKmSupp().toStringAsFixed(2)} $devise',
+                       style: pw.TextStyle(font: ttf, fontSize: 9, fontWeight: pw.FontWeight.bold)),
                 ),
               ),
             ],
@@ -502,24 +506,24 @@ class PdfVoitureWidget {
             children: [
               pw.Expanded(
                 flex: 1,
-                child: pw.Text('Montant journalier: ${typeLocationValue == "Gratuite" ? "0" : "$prixLocation"} €',
+                child: pw.Text('Montant journalier: ${typeLocationValue == "Gratuite" ? "0" : "$prixLocation"} $devise',
                     style: pw.TextStyle(font: ttf, fontSize: 9)),
               ),
               pw.Expanded(
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.center,
-                  child: pw.Text('Coût total théorique: ${typeLocationValue == "Gratuite" ? "0" : calculateCoutTotalTheorique(dateDebut, dateFinTheorique, prixLocation).toStringAsFixed(2)} €',
-                      textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                  child: pw.Text('Coût total théorique: ${typeLocationValue == "Gratuite" ? "0" : calculateCoutTotalTheorique(dateDebut, dateFinTheorique, prixLocation).toStringAsFixed(2)} $devise',
+                       textAlign: pw.TextAlign.center,
+                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
               pw.Expanded(
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Coût total effectif: ${typeLocationValue == "Gratuite" ? "0" : calculateCoutTotalEffectif(dateDebut, dateFinEffectifData, prixLocation).toStringAsFixed(2)} €',
-                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                  child: pw.Text('Coût total effectif: ${typeLocationValue == "Gratuite" ? "0" : calculateCoutTotalEffectif(dateDebut, dateFinEffectifData, prixLocation).toStringAsFixed(2)} $devise',
+                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
             ],
@@ -574,7 +578,7 @@ class PdfVoitureWidget {
             children: [
               pw.Expanded(
                 flex: 1,
-                child: pw.Text('Frais de nettoyage intérieur: ${contrat.nettoyageInt ?? ''} €',
+                child: pw.Text('Frais de nettoyage intérieur: ${contrat.nettoyageInt ?? ''} $devise',
                     style: pw.TextStyle(font: ttf, fontSize: 9)),
               ),
               pw.Expanded(
@@ -590,7 +594,7 @@ class PdfVoitureWidget {
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Frais de nettoyage extérieur: ${contrat.nettoyageExt ?? ''} €',
+                  child: pw.Text('Frais de nettoyage extérieur: ${contrat.nettoyageExt ?? ''} $devise',
                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
@@ -607,24 +611,24 @@ class PdfVoitureWidget {
             children: [
               pw.Expanded(
                 flex: 1,
-                child: pw.Text('Frais de carburant manquant: ${contrat.carburantManquant ?? ''} €',
+                child: pw.Text('Frais de carburant manquant: ${contrat.carburantManquant ?? ''} $devise',
                     style: pw.TextStyle(font: ttf, fontSize: 9)),
               ),
               pw.Expanded(
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.center,
-                  child: pw.Text('Frais de location casque: ${contrat.locationCasque ?? ''} €', 
-                      textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                  child: pw.Text('Frais de location casque: ${contrat.locationCasque ?? ''} $devise', 
+                       textAlign: pw.TextAlign.center,
+                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
               pw.Expanded(
                 flex: 1,
                 child: pw.Container(
                   alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Frais de rayures/dommages: ${contrat.rayures ?? ''} €',
-                      style: pw.TextStyle(font: ttf, fontSize: 9)),
+                  child: pw.Text('Frais de rayures/dommages: ${contrat.rayures ?? ''} $devise',
+                       style: pw.TextStyle(font: ttf, fontSize: 9)),
                 ),
               ),
             ],

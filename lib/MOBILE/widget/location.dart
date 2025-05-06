@@ -117,6 +117,7 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _adresseEntrepriseController = TextEditingController();
   final TextEditingController _telephoneEntrepriseController = TextEditingController();
   final TextEditingController _siretEntrepriseController = TextEditingController();
+  final TextEditingController _devisesLocationController = TextEditingController();
 
 
   String? nomEntreprise;
@@ -212,6 +213,7 @@ class _LocationPageState extends State<LocationPage> {
         _adresseEntrepriseController.text = adminData['adresse'] ?? '';
         _telephoneEntrepriseController.text = adminData['telephone'] ?? '';
         _siretEntrepriseController.text = adminData['siret'] ?? '';
+        _devisesLocationController.text = adminData['devisesLocation'] ?? '';
       });
 
       // Ajouter l'adminId aux données retournées
@@ -679,6 +681,7 @@ class _LocationPageState extends State<LocationPage> {
         adresseEntreprise: _adresseEntrepriseController.text,
         telephoneEntreprise: _telephoneEntrepriseController.text,
         siretEntreprise: _siretEntrepriseController.text,
+        devisesLocation: _devisesLocationController.text.isNotEmpty ? _devisesLocationController.text : '',
         rayures: _rayuresController.text.isNotEmpty ? _rayuresController.text : null,
         kilometrageAutorise: _kilometrageAutoriseController.text.isNotEmpty ? _kilometrageAutoriseController.text : null,
         kilometrageSupp: _kilometrageSuppController.text.isNotEmpty ? _kilometrageSuppController.text : '',
@@ -799,6 +802,7 @@ class _LocationPageState extends State<LocationPage> {
         adresseEntreprise: _adresseEntrepriseController.text,
         telephoneEntreprise: _telephoneEntrepriseController.text,
         siretEntreprise: _siretEntrepriseController.text,
+        devisesLocation: _devisesLocationController.text.isNotEmpty ? _devisesLocationController.text : '',
         photosUrls: vehiculeUrls,
       );
 

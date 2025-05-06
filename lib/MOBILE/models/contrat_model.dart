@@ -70,6 +70,7 @@ class ContratModel {
   final String? kilometrageSupp;
   final String? rayures;
   final String? locationCasque;
+  final String? devisesLocation;
   
   // Informations entreprise
   final String? logoUrl;
@@ -146,6 +147,7 @@ class ContratModel {
     this.kilometrageSupp,
     this.rayures,
     this.locationCasque,
+    this.devisesLocation,
     this.logoUrl,
     this.nomEntreprise,
     this.adresseEntreprise,
@@ -225,7 +227,7 @@ class ContratModel {
       dateRetour: data['dateRetour'],
       kilometrageRetour: data['kilometrageRetour'],
       pourcentageEssenceRetour: data['pourcentageEssenceRetour'],
-      
+      devisesLocation: data['devisesLocation'] ?? '€',
     );
   }
   
@@ -249,12 +251,12 @@ class ContratModel {
       'numeroPermis': numeroPermis ?? '',
       'immatriculationVehiculeClient': immatriculationVehiculeClient ?? '',
       'kilometrageVehiculeClient': kilometrageVehiculeClient ?? '',
-      'permisRecto': permisRectoUrl,
-      'permisVerso': permisVersoUrl,
+      'permisRecto': permisRectoUrl ?? '',
+      'permisVerso': permisVersoUrl ?? '',
       'marque': marque ?? '',
       'modele': modele ?? '',
       'immatriculation': immatriculation ?? '',
-      'photoVehiculeUrl': photoVehiculeUrl,
+      'photoVehiculeUrl': photoVehiculeUrl ?? '',
       'vin': vin ?? '',
       'typeCarburant': typeCarburant ?? '',
       'boiteVitesses': boiteVitesses ?? '',
@@ -295,8 +297,9 @@ class ContratModel {
       'status': status ?? 'en_cours',
       'conditions': conditions ?? '',
       'contratId': contratId,
-      'permisRectoUrl': permisRectoUrl,
-      'permisVersoUrl': permisVersoUrl,
+      'permisRectoUrl': permisRectoUrl ?? '',
+      'permisVersoUrl': permisVersoUrl ?? '',
+      'devisesLocation': devisesLocation ?? '€',
     };
     
     // Ajouter les champs optionnels seulement s'ils existent
@@ -313,7 +316,7 @@ class ContratModel {
   // Ajout d'une méthode simple pour transformer l'objet en Map
   Map<String, dynamic> toMap() {
     return {
-      'contratId': contratId,
+      'contratId': contratId ?? '',
       'userId': userId,
       'adminId': adminId,
       'createdBy': createdBy,
@@ -327,8 +330,8 @@ class ContratModel {
       'numeroPermis': numeroPermis,
       'immatriculationVehiculeClient': immatriculationVehiculeClient,
       'kilometrageVehiculeClient': kilometrageVehiculeClient,
-      'permisRectoUrl': permisRectoUrl,
-      'permisVersoUrl': permisVersoUrl,
+      'permisRectoUrl': permisRectoUrl ?? '',
+      'permisVersoUrl': permisVersoUrl ?? '',
       'marque': marque,
       'modele': modele,
       'immatriculation': immatriculation,
@@ -376,6 +379,7 @@ class ContratModel {
       'dateRetour': dateRetour,
       'kilometrageRetour': kilometrageRetour,
       'pourcentageEssenceRetour': pourcentageEssenceRetour,
+      'devisesLocation': devisesLocation ?? '€',
     };
   }
   
@@ -399,8 +403,8 @@ class ContratModel {
       'numeroPermis': numeroPermis,
       'immatriculationVehiculeClient': immatriculationVehiculeClient,
       'kilometrageVehiculeClient': kilometrageVehiculeClient,
-      'permisRecto': permisRectoUrl,
-      'permisVerso': permisVersoUrl,
+      'permisRecto': permisRectoUrl ?? '',
+      'permisVerso': permisVersoUrl ?? '',
       'modele': modele,
       'marque': marque,
       'immatriculation': immatriculation,
@@ -428,6 +432,7 @@ class ContratModel {
       'signatureRetour': signatureRetour,
       'methodePaiement': methodePaiement,
       'locationCasque': locationCasque,
+      'devisesLocation': devisesLocation ?? '€',
     };
   }
 
@@ -444,6 +449,7 @@ class ContratModel {
       'prenomCollaborateur': prenomCollaborateur ?? '',
       'dateCreation': dateCreation?.toDate().toString() ?? '',
       'dateReservation': dateReservation?.toDate().toString() ?? '',
+      'devisesLocation': devisesLocation ?? '€',
     };
   }
   
@@ -515,6 +521,7 @@ class ContratModel {
     String? dateRetour,
     String? kilometrageRetour,
     String? pourcentageEssenceRetour,
+    String? devisesLocation,
   }) {
     return ContratModel(
       contratId: contratId ?? this.contratId,
@@ -583,6 +590,7 @@ class ContratModel {
       dateRetour: dateRetour ?? this.dateRetour,
       kilometrageRetour: kilometrageRetour ?? this.kilometrageRetour,
       pourcentageEssenceRetour: pourcentageEssenceRetour ?? this.pourcentageEssenceRetour,
+      devisesLocation: devisesLocation ?? this.devisesLocation ?? '€',
     );
   }
 }
