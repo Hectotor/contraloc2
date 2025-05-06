@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 class LieuxPopup extends StatefulWidget {
   final Function(String, String) onLieuxSelected;
   final String? lieuDepartInitial;
-  final String? lieuArriveeInitial;
+  final String? lieuRestitutionInitial;
 
   const LieuxPopup({
     Key? key,
     required this.onLieuxSelected,
     this.lieuDepartInitial,
-    this.lieuArriveeInitial,
+    this.lieuRestitutionInitial,
   }) : super(key: key);
 
   @override
@@ -18,19 +18,19 @@ class LieuxPopup extends StatefulWidget {
 
 class _LieuxPopupState extends State<LieuxPopup> {
   final TextEditingController _lieuDepartController = TextEditingController();
-  final TextEditingController _lieuArriveeController = TextEditingController();
+  final TextEditingController _lieuRestitutionController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _lieuDepartController.text = widget.lieuDepartInitial ?? '';
-    _lieuArriveeController.text = widget.lieuArriveeInitial ?? '';
+    _lieuRestitutionController.text = widget.lieuRestitutionInitial ?? '';
   }
 
   @override
   void dispose() {
     _lieuDepartController.dispose();
-    _lieuArriveeController.dispose();
+    _lieuRestitutionController.dispose();
     super.dispose();
   }
 
@@ -92,9 +92,9 @@ class _LieuxPopupState extends State<LieuxPopup> {
                   ),
                   const SizedBox(height: 16),
                   TextField(
-                    controller: _lieuArriveeController,
+                    controller: _lieuRestitutionController,
                     decoration: InputDecoration(
-                      labelText: 'Lieu d\'arrivée',
+                      labelText: 'Lieu de restitution',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -132,10 +132,10 @@ class _LieuxPopupState extends State<LieuxPopup> {
   }
 
   void _validateAndClose() {
-    if (_lieuDepartController.text.isNotEmpty && _lieuArriveeController.text.isNotEmpty) {
+    if (_lieuDepartController.text.isNotEmpty && _lieuRestitutionController.text.isNotEmpty) {
       widget.onLieuxSelected(
         _lieuDepartController.text.trim(),
-        _lieuArriveeController.text.trim(),
+        _lieuRestitutionController.text.trim(),
       );
       Navigator.of(context).pop();
     }

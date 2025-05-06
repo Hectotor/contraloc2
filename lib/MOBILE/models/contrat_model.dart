@@ -39,7 +39,7 @@ class ContratModel {
   final String? dateDebut;
   final String? dateFinTheorique;
   final String? lieuDepart;
-  final String? lieuArrivee;
+  final String? lieuRestitution;
   final String? dateFinReelle;
   final String? kilometrageDepart;
   final String? kilometrageArrivee;
@@ -122,7 +122,7 @@ class ContratModel {
     this.dateDebut,
     this.dateFinTheorique,
     this.lieuDepart,
-    this.lieuArrivee,
+    this.lieuRestitution,
     this.dateFinReelle,
     this.kilometrageDepart,
     this.kilometrageArrivee,
@@ -194,7 +194,7 @@ class ContratModel {
       dateDebut: data['dateDebut'],
       dateFinTheorique: data['dateFinTheorique'],
       lieuDepart: data['lieuDepart'],
-      lieuArrivee: data['lieuArrivee'],
+      lieuRestitution: data['lieuRestitution'],
       dateFinReelle: data['dateFinReelle'],
       kilometrageDepart: data['kilometrageDepart'],
       kilometrageArrivee: data['kilometrageArrivee'],
@@ -269,7 +269,7 @@ class ContratModel {
       'dateDebut': dateDebut ?? '',
       'dateFinTheorique': dateFinTheorique ?? '',
       'lieuDepart': lieuDepart ?? '',
-      'lieuArrivee': lieuArrivee ?? '',
+      'lieuRestitution': lieuRestitution ?? '',
       'dateFinReelle': dateFinReelle ?? '',
       'kilometrageDepart': kilometrageDepart ?? '',
       'kilometrageArrivee': kilometrageArrivee ?? '',
@@ -350,7 +350,7 @@ class ContratModel {
       'dateDebut': dateDebut,
       'dateFinTheorique': dateFinTheorique,
       'lieuDepart': lieuDepart,
-      'lieuArrivee': lieuArrivee,
+      'lieuRestitution': lieuRestitution,
       'dateFinReelle': dateFinReelle,
       'kilometrageDepart': kilometrageDepart,
       'kilometrageArrivee': kilometrageArrivee,
@@ -421,7 +421,7 @@ class ContratModel {
       'dateDebut': dateDebut,
       'dateFinTheorique': dateFinTheorique,
       'lieuDepart': lieuDepart,
-      'lieuArrivee': lieuArrivee,
+      'lieuRestitution': lieuRestitution,
       'vin': vin,
       'typeCarburant': typeCarburant,
       'boiteVitesses': boiteVitesses,
@@ -495,7 +495,7 @@ class ContratModel {
     String? dateDebut,
     String? dateFinTheorique,
     String? lieuDepart,
-    String? lieuArrivee,
+    String? lieuRestitution,
     String? dateFinReelle,
     String? kilometrageDepart,
     String? kilometrageArrivee,
@@ -566,7 +566,7 @@ class ContratModel {
       dateDebut: dateDebut ?? this.dateDebut,
       dateFinTheorique: dateFinTheorique ?? this.dateFinTheorique,
       lieuDepart: lieuDepart ?? this.lieuDepart,
-      lieuArrivee: lieuArrivee ?? this.lieuArrivee,
+      lieuRestitution: lieuRestitution ?? this.lieuRestitution,
       dateFinReelle: dateFinReelle ?? this.dateFinReelle,
       kilometrageDepart: kilometrageDepart ?? this.kilometrageDepart,
       kilometrageArrivee: kilometrageArrivee ?? this.kilometrageArrivee,

@@ -70,7 +70,7 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _dateFinTheoriqueController =
       TextEditingController();
   final TextEditingController _lieuDepartController = TextEditingController();
-  final TextEditingController _lieuArriveeController = TextEditingController();
+  final TextEditingController _lieuRestitutionController = TextEditingController();
   final TextEditingController _kilometrageDepartController =
       TextEditingController();
   final TextEditingController _commentaireController = TextEditingController();
@@ -123,7 +123,7 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _devisesLocationController = TextEditingController();
 
   String? _lieuDepart;
-  String? _lieuArrivee;
+  String? _lieuRestitution;
 
   String? nomEntreprise;
   String? logoUrl;
@@ -236,7 +236,7 @@ class _LocationPageState extends State<LocationPage> {
     if (model.dateDebut != null) _dateDebutController.text = model.dateDebut!;
     if (model.dateFinTheorique != null) _dateFinTheoriqueController.text = model.dateFinTheorique!;
     if (model.lieuDepart != null) _lieuDepart = model.lieuDepart;
-    if (model.lieuArrivee != null) _lieuArrivee = model.lieuArrivee;
+    if (model.lieuRestitution != null) _lieuRestitution = model.lieuRestitution;
     if (model.kilometrageDepart != null) _kilometrageDepartController.text = model.kilometrageDepart!;
     if (model.typeLocation != null) _typeLocationController.text = model.typeLocation!;
     if (model.commentaireAller != null) _commentaireController.text = model.commentaireAller!;
@@ -287,7 +287,7 @@ class _LocationPageState extends State<LocationPage> {
     _permisRectoUrl = model.permisRectoUrl;
     _permisVersoUrl = model.permisVersoUrl;
     _lieuDepart = model.lieuDepart;
-    _lieuArrivee = model.lieuArrivee;
+    _lieuRestitution = model.lieuRestitution;
   }
 
   Future<ContratModel?> _loadContractData(String contratId) async {
@@ -672,7 +672,7 @@ class _LocationPageState extends State<LocationPage> {
         dateDebut: _dateDebutController.text.isNotEmpty ? _dateDebutController.text : '',
         dateFinTheorique: _dateFinTheoriqueController.text.isNotEmpty ? _dateFinTheoriqueController.text : '',
         lieuDepart: _lieuDepartController.text.isNotEmpty ? _lieuDepartController.text : '',
-        lieuArrivee: _lieuArriveeController.text.isNotEmpty ? _lieuArriveeController.text : '',
+        lieuRestitution: _lieuRestitutionController.text.isNotEmpty ? _lieuRestitutionController.text : '',
         kilometrageDepart: _kilometrageDepartController.text.isNotEmpty ? _kilometrageDepartController.text : '',
         typeLocation: _typeLocationController.text.isNotEmpty ? _typeLocationController.text : "Gratuite",
         pourcentageEssence: _pourcentageEssence,
@@ -778,7 +778,7 @@ class _LocationPageState extends State<LocationPage> {
         dateDebut: _dateDebutController.text,
         dateFinTheorique: _dateFinTheoriqueController.text,
         lieuDepart: _lieuDepartController.text.isNotEmpty ? _lieuDepartController.text : '',
-        lieuArrivee: _lieuArriveeController.text.isNotEmpty ? _lieuArriveeController.text : '',
+        lieuRestitution: _lieuRestitutionController.text.isNotEmpty ? _lieuRestitutionController.text : '',
         kilometrageDepart: _kilometrageDepartController.text,
         typeLocation: _typeLocationController.text,
         pourcentageEssence: _pourcentageEssence,
@@ -1056,7 +1056,7 @@ class _LocationPageState extends State<LocationPage> {
     _dateDebutController.dispose();
     _dateFinTheoriqueController.dispose();
     _lieuDepartController.dispose();
-    _lieuArriveeController.dispose();
+    _lieuRestitutionController.dispose();
     _kilometrageDepartController.dispose();
     _commentaireController.dispose();
     _prixLocationController.dispose();
@@ -1152,11 +1152,11 @@ class _LocationPageState extends State<LocationPage> {
       context: context,
       builder: (context) => LieuxPopup(
         lieuDepartInitial: _lieuDepart,
-        lieuArriveeInitial: _lieuArrivee,
-        onLieuxSelected: (lieuDepart, lieuArrivee) {
+        lieuRestitutionInitial: _lieuRestitution,
+        onLieuxSelected: (lieuDepart, lieuRestitution) {
           setState(() {
             _lieuDepart = lieuDepart;
-            _lieuArrivee = lieuArrivee;
+            _lieuRestitution = lieuRestitution;
           });
         },
       ),
