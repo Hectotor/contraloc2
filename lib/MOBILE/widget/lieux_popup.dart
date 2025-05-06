@@ -132,12 +132,11 @@ class _LieuxPopupState extends State<LieuxPopup> {
   }
 
   void _validateAndClose() {
-    if (_lieuDepartController.text.isNotEmpty && _lieuRestitutionController.text.isNotEmpty) {
-      widget.onLieuxSelected(
-        _lieuDepartController.text.trim(),
-        _lieuRestitutionController.text.trim(),
-      );
-      Navigator.of(context).pop();
-    }
+    // Les champs ne sont pas obligatoires
+    widget.onLieuxSelected(
+      _lieuDepartController.text.trim(),
+      _lieuRestitutionController.text.trim(),
+    );
+    Navigator.of(context).pop();
   }
 }
