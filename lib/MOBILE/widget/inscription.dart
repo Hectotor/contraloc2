@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import '../USERS/Subscription/revenue_cat_service.dart'; // Import RevenueCat Service
 import 'popup_mail_confir.dart'; // Import du widget PopupMailConfirmation
+import 'devises.dart'; // Import du nouveau widget DeviseWidget
 
 // Définition de UpperCaseTextFormatter
 class UpperCaseTextFormatter extends TextInputFormatter {
@@ -308,50 +309,8 @@ class _InscriptionPageState extends State<InscriptionPage> {
               ),
               const SizedBox(height: 16),
               // Champ Devises Location
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: DropdownButton<String>(
-                    value: _devisesLocationController.text.isEmpty ? null : _devisesLocationController.text,
-                    hint: const Text('Sélectionnez une devise'),
-                    isExpanded: true,
-                    items: [
-                      DropdownMenuItem(
-                        value: 'EUR',
-                        child: const Text('Euro (EUR - €)'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'CHF',
-                        child: const Text('Franc suisse (CHF)'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'DZD',
-                        child: const Text('Dinar algérien (DZD - DA)'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'MAD',
-                        child: const Text('Dirham marocain (MAD - DH)'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'TND',
-                        child: const Text('Dinar tunisien (TND)'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'EGP',
-                        child: const Text('Livre égyptienne (EGP - LE)'),
-                      ),
-                    ],
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _devisesLocationController.text = newValue ?? '';
-                      });
-                    },
-                  ),
-                ),
+              DeviseWidget(
+                controller: _devisesLocationController,
               ),
               const SizedBox(height: 16),
             ],

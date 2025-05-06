@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_util.dart';
+import '../../../../MOBILE/widget/devises.dart';
 
 class AdminInfoWidget extends StatefulWidget {
   final bool showTitle;
@@ -42,6 +43,7 @@ class _AdminInfoWidgetState extends State<AdminInfoWidget> {
   final TextEditingController _telephoneController = TextEditingController();
   final TextEditingController _adresseController = TextEditingController();
   final TextEditingController _siretController = TextEditingController();
+  final TextEditingController _devisesLocationController = TextEditingController();
 
   @override
   void initState() {
@@ -55,6 +57,7 @@ class _AdminInfoWidgetState extends State<AdminInfoWidget> {
     _telephoneController.dispose();
     _adresseController.dispose();
     _siretController.dispose();
+    _devisesLocationController.dispose();
     super.dispose();
   }
 
@@ -85,6 +88,7 @@ class _AdminInfoWidgetState extends State<AdminInfoWidget> {
             _telephoneController.text = _adminInfo['telephone'] ?? '';
             _adresseController.text = _adminInfo['adresse'] ?? '';
             _siretController.text = _adminInfo['siret'] ?? '';
+            _devisesLocationController.text = _adminInfo['devisesLocation'] ?? '';
           });
         }
       }
@@ -110,6 +114,7 @@ class _AdminInfoWidgetState extends State<AdminInfoWidget> {
         'telephone': _telephoneController.text.trim(),
         'adresse': _adresseController.text.trim(),
         'siret': _siretController.text.trim(),
+        'devisesLocation': _devisesLocationController.text.trim(),
       };
 
       // Mettre à jour les données dans Firestore
@@ -122,6 +127,7 @@ class _AdminInfoWidgetState extends State<AdminInfoWidget> {
 
       setState(() {
         _adminInfo.addAll(updatedData);
+        _devisesLocationController.text = updatedData['devisesLocation'] ?? '';
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -250,6 +256,14 @@ class _AdminInfoWidgetState extends State<AdminInfoWidget> {
                         label: 'SIRET',
                         controller: _siretController,
                       ),
+                    _buildInfoRow(
+                      icon: Icons.currency_exchange,
+                      label: 'Devise',
+                      controller: _devisesLocationController,
+                      child: DeviseWidget(
+                        controller: _devisesLocationController,
+                      ),
+                    ),
                     // Afficher le bouton de sauvegarde uniquement si l'édition est permise et que l'utilisateur n'est pas un collaborateur
                     if (widget.editable && !_isCollaborateur)
                       Padding(
@@ -298,6 +312,7 @@ class _AdminInfoWidgetState extends State<AdminInfoWidget> {
     required IconData? icon,
     required String label,
     required TextEditingController controller,
+    Widget? child,
   }) {
     // Si c'est un collaborateur, l'édition n'est jamais permise, quelle que soit la valeur de widget.editable
     final bool canEdit = widget.editable && !_isCollaborateur;
@@ -330,7 +345,7 @@ class _AdminInfoWidgetState extends State<AdminInfoWidget> {
                 color: Colors.white,
               ),
               padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
-              child: canEdit
+              child: child ?? (canEdit
                   ? TextFormField(
                       controller: controller,
                       maxLines: null,
@@ -342,13 +357,13 @@ class _AdminInfoWidgetState extends State<AdminInfoWidget> {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF08004D),
+                        color: Colors.black87,
                       ),
                     )
                   : Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (icon != null) ...[
+                        if (icon != null) ...[  
                           Icon(
                             icon,
                             color: const Color(0xFF08004D),
@@ -362,14 +377,14 @@ class _AdminInfoWidgetState extends State<AdminInfoWidget> {
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF08004D),
+                              color: Colors.black87,
                             ),
                             softWrap: true,
                             overflow: TextOverflow.visible,
                           ),
                         ),
                       ],
-                    ),
+                    )),
             ),
           ),
         ],

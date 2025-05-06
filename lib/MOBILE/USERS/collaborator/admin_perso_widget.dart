@@ -164,7 +164,7 @@ class _AdminPersoWidgetState extends State<AdminPersoWidget> {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF08004D),
+                color: Colors.black87,
               ),
             ),
           ),
@@ -192,7 +192,7 @@ class _AdminPersoWidgetState extends State<AdminPersoWidget> {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF08004D),
+                        color: Colors.black87,
                       ),
                     )
                   : Row(
@@ -214,7 +214,7 @@ class _AdminPersoWidgetState extends State<AdminPersoWidget> {
                               fontWeight: FontWeight.bold,
                               color: readOnly && widget.editable 
                                   ? const Color(0xFF666666)
-                                  : const Color(0xFF08004D),
+                                  : Colors.black87,
                             ),
                             softWrap: true,
                             overflow: TextOverflow.visible,
