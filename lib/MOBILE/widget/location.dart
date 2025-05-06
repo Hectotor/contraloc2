@@ -68,6 +68,8 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _dateDebutController = TextEditingController();
   final TextEditingController _dateFinTheoriqueController =
       TextEditingController();
+  final TextEditingController _lieuDepartController = TextEditingController();
+  final TextEditingController _lieuArriveeController = TextEditingController();
   final TextEditingController _kilometrageDepartController =
       TextEditingController();
   final TextEditingController _commentaireController = TextEditingController();
@@ -231,6 +233,8 @@ class _LocationPageState extends State<LocationPage> {
     if (model.dateDebut != null) _dateDebutController.text = model.dateDebut!;
     if (model.dateFinTheorique != null) _dateFinTheoriqueController.text = model.dateFinTheorique!;
     if (model.kilometrageDepart != null) _kilometrageDepartController.text = model.kilometrageDepart!;
+    if (model.lieuDepart != null) _lieuDepartController.text = model.lieuDepart!;
+    if (model.lieuArrivee != null) _lieuArriveeController.text = model.lieuArrivee!;
     if (model.typeLocation != null) _typeLocationController.text = model.typeLocation!;
     if (model.commentaireAller != null) _commentaireController.text = model.commentaireAller!;
     setState(() => _pourcentageEssence = model.pourcentageEssence);
@@ -662,6 +666,8 @@ class _LocationPageState extends State<LocationPage> {
         boiteVitesses: _boiteVitessesController.text.isNotEmpty ? _boiteVitessesController.text : '',
         dateDebut: _dateDebutController.text.isNotEmpty ? _dateDebutController.text : '',
         dateFinTheorique: _dateFinTheoriqueController.text.isNotEmpty ? _dateFinTheoriqueController.text : '',
+        lieuDepart: _lieuDepartController.text.isNotEmpty ? _lieuDepartController.text : '',
+        lieuArrivee: _lieuArriveeController.text.isNotEmpty ? _lieuArriveeController.text : '',
         kilometrageDepart: _kilometrageDepartController.text.isNotEmpty ? _kilometrageDepartController.text : '',
         typeLocation: _typeLocationController.text.isNotEmpty ? _typeLocationController.text : "Gratuite",
         pourcentageEssence: _pourcentageEssence,
@@ -766,6 +772,8 @@ class _LocationPageState extends State<LocationPage> {
         photoVehiculeUrl: _vehiclePhotoUrl,
         dateDebut: _dateDebutController.text,
         dateFinTheorique: _dateFinTheoriqueController.text,
+        lieuDepart: _lieuDepartController.text,
+        lieuArrivee: _lieuArriveeController.text,
         kilometrageDepart: _kilometrageDepartController.text,
         typeLocation: _typeLocationController.text,
         pourcentageEssence: _pourcentageEssence,
@@ -1042,6 +1050,8 @@ class _LocationPageState extends State<LocationPage> {
   void dispose() {
     _dateDebutController.dispose();
     _dateFinTheoriqueController.dispose();
+    _lieuDepartController.dispose();
+    _lieuArriveeController.dispose();
     _kilometrageDepartController.dispose();
     _commentaireController.dispose();
     _prixLocationController.dispose();
@@ -1189,7 +1199,9 @@ class _LocationPageState extends State<LocationPage> {
                 DateContainer(
                   dateDebutController: _dateDebutController,
                   dateFinTheoriqueController: _dateFinTheoriqueController,
-                  selectDateTime: (controller) => _selectDateTime(controller),
+                  lieuDepartController: _lieuDepartController,
+                  lieuArriveeController: _lieuArriveeController,
+                  selectDateTime: _selectDateTime,
                 ),
                 const SizedBox(height: 15),
                 KilometrageContainer(

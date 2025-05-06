@@ -38,6 +38,8 @@ class ContratModel {
   // Informations contrat
   final String? dateDebut;
   final String? dateFinTheorique;
+  final String? lieuDepart;
+  final String? lieuArrivee;
   final String? dateFinReelle;
   final String? kilometrageDepart;
   final String? kilometrageArrivee;
@@ -119,6 +121,8 @@ class ContratModel {
     this.boiteVitesses,
     this.dateDebut,
     this.dateFinTheorique,
+    this.lieuDepart,
+    this.lieuArrivee,
     this.dateFinReelle,
     this.kilometrageDepart,
     this.kilometrageArrivee,
@@ -189,6 +193,8 @@ class ContratModel {
       boiteVitesses: data['boiteVitesses'],
       dateDebut: data['dateDebut'],
       dateFinTheorique: data['dateFinTheorique'],
+      lieuDepart: data['lieuDepart'],
+      lieuArrivee: data['lieuArrivee'],
       dateFinReelle: data['dateFinReelle'],
       kilometrageDepart: data['kilometrageDepart'],
       kilometrageArrivee: data['kilometrageArrivee'],
@@ -262,6 +268,8 @@ class ContratModel {
       'boiteVitesses': boiteVitesses ?? '',
       'dateDebut': dateDebut ?? '',
       'dateFinTheorique': dateFinTheorique ?? '',
+      'lieuDepart': lieuDepart ?? '',
+      'lieuArrivee': lieuArrivee ?? '',
       'dateFinReelle': dateFinReelle ?? '',
       'kilometrageDepart': kilometrageDepart ?? '',
       'kilometrageArrivee': kilometrageArrivee ?? '',
@@ -341,6 +349,8 @@ class ContratModel {
       'boiteVitesses': boiteVitesses,
       'dateDebut': dateDebut,
       'dateFinTheorique': dateFinTheorique,
+      'lieuDepart': lieuDepart,
+      'lieuArrivee': lieuArrivee,
       'dateFinReelle': dateFinReelle,
       'kilometrageDepart': kilometrageDepart,
       'kilometrageArrivee': kilometrageArrivee,
@@ -410,6 +420,8 @@ class ContratModel {
       'immatriculation': immatriculation,
       'dateDebut': dateDebut,
       'dateFinTheorique': dateFinTheorique,
+      'lieuDepart': lieuDepart,
+      'lieuArrivee': lieuArrivee,
       'vin': vin,
       'typeCarburant': typeCarburant,
       'boiteVitesses': boiteVitesses,
@@ -482,6 +494,8 @@ class ContratModel {
     String? boiteVitesses,
     String? dateDebut,
     String? dateFinTheorique,
+    String? lieuDepart,
+    String? lieuArrivee,
     String? dateFinReelle,
     String? kilometrageDepart,
     String? kilometrageArrivee,
@@ -551,6 +565,8 @@ class ContratModel {
       boiteVitesses: boiteVitesses ?? this.boiteVitesses,
       dateDebut: dateDebut ?? this.dateDebut,
       dateFinTheorique: dateFinTheorique ?? this.dateFinTheorique,
+      lieuDepart: lieuDepart ?? this.lieuDepart,
+      lieuArrivee: lieuArrivee ?? this.lieuArrivee,
       dateFinReelle: dateFinReelle ?? this.dateFinReelle,
       kilometrageDepart: kilometrageDepart ?? this.kilometrageDepart,
       kilometrageArrivee: kilometrageArrivee ?? this.kilometrageArrivee,
