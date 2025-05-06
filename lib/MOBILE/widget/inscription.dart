@@ -56,6 +56,7 @@ class _InscriptionPageState extends State<InscriptionPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
+  final TextEditingController _devisesLocationController = TextEditingController();
 
   // Ajouter ces variables d'état
   bool _showPassword = false;
@@ -89,6 +90,7 @@ class _InscriptionPageState extends State<InscriptionPage> {
         _adresseController.text.trim().isEmpty ||
         email.isEmpty ||
         _telephoneController.text.trim().isEmpty ||
+        _devisesLocationController.text.trim().isEmpty ||
         password.isEmpty ||
         confirmPassword.isEmpty) {
       Fluttertoast.showToast(
@@ -151,6 +153,7 @@ class _InscriptionPageState extends State<InscriptionPage> {
           'emailVerifie': false,
           'dateCreation': FieldValue.serverTimestamp(),
           'telephone': _telephoneController.text.trim(),
+          'devisesLocation': _devisesLocationController.text.trim(),
           'cb_subscription': 'free',
           'cb_nb_car': 1,
         });
@@ -224,9 +227,6 @@ class _InscriptionPageState extends State<InscriptionPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // En-tête
-                  _buildHeader(),
-                  const SizedBox(height: 24),
                   
                   // Section des informations personnelles
                   _buildPersonalInfoSection(),
@@ -258,63 +258,15 @@ class _InscriptionPageState extends State<InscriptionPage> {
   }
 
   // En-tête avec titre
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Créez votre compte",
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF08004D),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Remplissez le formulaire pour accéder à toutes les fonctionnalités",
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   // Section des informations personnelles
   Widget _buildPersonalInfoSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 8, bottom: 16),
-          child: Text(
-            "Informations professionnelles",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
-            ),
-          ),
-        ),
         _buildInputCard(
-          title: "Nom de l'entreprise",
+          title: "Entreprise",
           icon: Icons.business,
           color: Colors.blue[700]!,
           child: Column(
@@ -354,6 +306,54 @@ class _InscriptionPageState extends State<InscriptionPage> {
                 true,
                 keyboardType: TextInputType.phone,
               ),
+              const SizedBox(height: 16),
+              // Champ Devises Location
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: DropdownButton<String>(
+                    value: _devisesLocationController.text.isEmpty ? null : _devisesLocationController.text,
+                    hint: const Text('Sélectionnez une devise'),
+                    isExpanded: true,
+                    items: [
+                      DropdownMenuItem(
+                        value: 'EUR',
+                        child: const Text('Euro (EUR - €)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'CHF',
+                        child: const Text('Franc suisse (CHF)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'DZD',
+                        child: const Text('Dinar algérien (DZD - DA)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'MAD',
+                        child: const Text('Dirham marocain (MAD - DH)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'TND',
+                        child: const Text('Dinar tunisien (TND)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'EGP',
+                        child: const Text('Livre égyptienne (EGP - LE)'),
+                      ),
+                    ],
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _devisesLocationController.text = newValue ?? '';
+                      });
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -366,19 +366,8 @@ class _InscriptionPageState extends State<InscriptionPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 8, bottom: 16),
-          child: Text(
-            "Informations de connexion",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
-            ),
-          ),
-        ),
         _buildInputCard(
-          title: "Email",
+          title: "Connexion",
           icon: Icons.email,
           color: Colors.red[700]!,
           child: Column(
