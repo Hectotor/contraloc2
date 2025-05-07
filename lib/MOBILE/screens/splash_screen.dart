@@ -4,6 +4,8 @@ import 'package:animated_text_kit/animated_text_kit.dart';
 import 'login.dart';
 import '../widget/navigation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../services/auth_util.dart';
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -14,6 +16,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  String? _enterpriseLogoUrl;
+  bool _showEnterpriseLogo = false;
 
   @override
   void initState() {
@@ -44,7 +48,24 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     // Démarrer l'animation
     _controller.forward();
     
+    // Charger le logo de l'entreprise en arrière-plan
+    _loadEnterpriseLogo();
+    
     _navigateToNextPage();
+  }
+
+  Future<void> _loadEnterpriseLogo() async {
+    final logoUrl = await _getEnterpriseLogoUrl();
+    if (logoUrl != null && mounted) {
+      // Attendre 2 secondes avant d'afficher le logo de l'entreprise
+      await Future.delayed(const Duration(milliseconds: 2000));
+      if (mounted) {
+        setState(() {
+          _enterpriseLogoUrl = logoUrl;
+          _showEnterpriseLogo = true;
+        });
+      }
+    }
   }
 
   @override
@@ -108,6 +129,38 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     }
   }
 
+  Future<String?> _getEnterpriseLogoUrl() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+
+      // Récupérer les données d'authentification
+      final authData = await AuthUtil.getAuthData();
+      final adminId = authData['adminId'];
+
+      if (adminId != null) {
+        // Essayer d'accéder à la sous-collection authentification
+        try {
+          final adminAuthDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(adminId)
+              .collection('authentification')
+              .doc(adminId)
+              .get();
+          
+          if (adminAuthDoc.exists && adminAuthDoc.data()?['logoUrl'] != null) {
+            return adminAuthDoc.data()?['logoUrl'];
+          }
+        } catch (e) {
+          print('Erreur d\'accès à la sous-collection authentification: $e');
+        }
+      }
+    } catch (e) {
+      print('Erreur lors de la récupération du logo: $e');
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -137,14 +190,52 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             ),
                           ],
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(100),
-                          child: Image.asset(
-                            'assets/icon/logoCon.png',
+                        child: AnimatedCrossFade(
+                          duration: const Duration(milliseconds: 500),
+                          firstChild: ClipRRect(
+                            borderRadius: BorderRadius.circular(100),
+                            child: Image.asset(
+                              'assets/icon/logoCon.png',
+                              width: 180,
+                              height: 180,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          secondChild: _enterpriseLogoUrl != null ? CachedNetworkImage(
+                            imageUrl: _enterpriseLogoUrl!,
                             width: 180,
                             height: 180,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.contain,
+                            placeholder: (context, url) => ClipRRect(
+                              borderRadius: BorderRadius.circular(100),
+                              child: Image.asset(
+                                'assets/icon/logoCon.png',
+                                width: 180,
+                                height: 180,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => ClipRRect(
+                              borderRadius: BorderRadius.circular(100),
+                              child: Image.asset(
+                                'assets/icon/logoCon.png',
+                                width: 180,
+                                height: 180,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ) : ClipRRect(
+                            borderRadius: BorderRadius.circular(100),
+                            child: Image.asset(
+                              'assets/icon/logoCon.png',
+                              width: 180,
+                              height: 180,
+                              fit: BoxFit.cover,
+                            ),
                           ),
+                          crossFadeState: _showEnterpriseLogo && _enterpriseLogoUrl != null
+                              ? CrossFadeState.showSecond
+                              : CrossFadeState.showFirst,
                         ),
                       ),
                       const SizedBox(height: 40),
