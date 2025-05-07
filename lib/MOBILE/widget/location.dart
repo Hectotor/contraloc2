@@ -286,8 +286,8 @@ class _LocationPageState extends State<LocationPage> {
     _kilometrageVehiculeClientController.text = model.kilometrageVehiculeClient ?? '';
     _permisRectoUrl = model.permisRecto;
     _permisVersoUrl = model.permisVerso;
-    _lieuDepart = model.lieuDepart;
-    _lieuRestitution = model.lieuRestitution;
+    _lieuDepartController.text = model.lieuDepart ?? '';
+    _lieuRestitutionController.text = model.lieuRestitution ?? '';
   }
 
   Future<ContratModel?> _loadContractData(String contratId) async {
