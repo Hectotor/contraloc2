@@ -1,12 +1,13 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import '../services/auth_util.dart';
-import 'package:flutter/services.dart';
 import '../widget/take_picture.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../ajouter_vehicule/enregistrer_vehicule.dart';
@@ -835,7 +836,8 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
             );
             if (pickedDate != null) {
               setState(() {
-                controller.text = pickedDate.toLocal().toString().split(' ')[0];
+                // Format de date français: JJ-MM-YYYY
+                controller.text = DateFormat('dd-MM-yyyy').format(pickedDate);
               });
             }
           },
