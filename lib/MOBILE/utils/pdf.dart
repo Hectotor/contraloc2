@@ -375,13 +375,36 @@ Future<String> generatePdf(
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
+                            if (contratModel.lieuDepart != null && contratModel.lieuDepart!.isNotEmpty) ...[
+                              pw.Text('Lieu de départ:',
+                                  style: pw.TextStyle(
+                                    fontSize: 10,
+                                    font: boldFont,
+                                  )),
+                              pw.SizedBox(height: 2),
+                              pw.Text(contratModel.lieuDepart!,
+                                  style: pw.TextStyle(fontSize: 10)),
+                              pw.SizedBox(height: 8),
+                            ],
+                            if (contratModel.lieuRestitution != null && contratModel.lieuRestitution!.isNotEmpty) ...[
+                              pw.Text('Lieu de restitution:',
+                                  style: pw.TextStyle(
+                                    fontSize: 10,
+                                    font: boldFont,
+                                  )),
+                              pw.SizedBox(height: 2),
+                              pw.Text(contratModel.lieuRestitution!,
+                                  style: pw.TextStyle(fontSize: 10)),
+                              pw.SizedBox(height: 8),
+                            ],
                             pw.Text('Aller:',
                                 style: pw.TextStyle(
-                                    fontSize: 12,
-                                    font: boldFont,
-                                    color: PdfColors.black)),
+                                  fontSize: 12,
+                                  font: boldFont,
+                                  color: PdfColors.black)),
                             pw.Text(contratModel.commentaireAller ?? '',
                                 style: pw.TextStyle(font: ttf)),
+                            pw.SizedBox(height: 8),
                           ],
                         ),
                       ),

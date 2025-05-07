@@ -89,6 +89,7 @@ class _LieuxPopupState extends State<LieuxPopup> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                    textCapitalization: TextCapitalization.sentences,
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -99,6 +100,7 @@ class _LieuxPopupState extends State<LieuxPopup> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                    textCapitalization: TextCapitalization.sentences,
                   ),
                   const SizedBox(height: 30),
                   
