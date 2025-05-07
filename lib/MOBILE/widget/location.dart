@@ -1155,8 +1155,17 @@ class _LocationPageState extends State<LocationPage> {
         lieuRestitutionInitial: _lieuRestitution,
         onLieuxSelected: (lieuDepart, lieuRestitution) {
           setState(() {
+            // Mettre u00e0 jour les variables
             _lieuDepart = lieuDepart;
             _lieuRestitution = lieuRestitution;
+            
+            // Mettre u00e0 jour les contru00f4leurs de texte pour l'enregistrement
+            _lieuDepartController.text = lieuDepart;
+            _lieuRestitutionController.text = lieuRestitution;
+            
+            // Debug pour vu00e9rifier les valeurs
+            print('Lieu de du00e9part mis u00e0 jour: $lieuDepart');
+            print('Lieu de restitution mis u00e0 jour: $lieuRestitution');
           });
         },
       ),
