@@ -23,7 +23,7 @@ import '../utils/contract_utils.dart';
 import '../services/auth_util.dart';
 import '../USERS/contrat_condition.dart';
 import '../utils/pdf_upload_utils.dart';
-import '../widget/lieux_popup.dart';
+import 'CREATION DE CONTRAT/Containers/lieux_popup.dart';
 
 class LocationPage extends StatefulWidget {
   final String marque;
