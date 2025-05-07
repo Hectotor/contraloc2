@@ -143,6 +143,14 @@ class _InfoLocState extends State<InfoLoc> {
                     _buildInfoRow(context, "Fin théori", widget.data['dateFinTheorique']),
                     const SizedBox(height: 12),
                   ],
+                  if (widget.data['lieuDepart'] != null && widget.data['lieuDepart'].toString().isNotEmpty) ...[
+                    _buildInfoRow(context, "Lieu départ", widget.data['lieuDepart']),
+                    const SizedBox(height: 12),
+                  ],
+                  if (widget.data['lieuRestitution'] != null && widget.data['lieuRestitution'].toString().isNotEmpty) ...[
+                    _buildInfoRow(context, "Lieu restit", widget.data['lieuRestitution']),
+                    const SizedBox(height: 12),
+                  ],
                   _buildInfoRow(context, "Départ", "${widget.data['kilometrageDepart']?.toString() ?? "Non spécifié"} km"),
                   const SizedBox(height: 12),
                   _buildInfoRow(context, "Autorisée", "${widget.data['kilometrageAutorise'] ?? "Non spécifié"} km"),
