@@ -9,6 +9,7 @@ import 'package:signature/signature.dart';
 import '../utils/affichage_facture_pdf.dart';
 import '../utils/affichage_contrat_pdf.dart';
 import 'package:contraloc/MOBILE/services/auth_util.dart';
+import '../utils/vehicle_update_util.dart';
 import 'MODIFICATION DE CONTRAT/supp_contrat.dart';
 import 'MODIFICATION DE CONTRAT/info_loc.dart';
 import 'MODIFICATION DE CONTRAT/info_loc_retour.dart';
@@ -71,6 +72,8 @@ class _ModifierScreenState extends State<ModifierScreen> {
         return status.replaceAll('_', ' ').toUpperCase();
     }
   }
+
+
 
   @override
   void initState() {
@@ -255,6 +258,15 @@ class _ModifierScreenState extends State<ModifierScreen> {
             .collection('locations')
             .doc(widget.contratId)
             .set(updateData, SetOptions(merge: true));
+        
+        // Mettre à jour le kilométrage actuel du véhicule si le kilométrage de retour est spécifié
+        if (_kilometrageRetourController.text.isNotEmpty) {
+          await VehicleUpdateUtil.updateVehicleCurrentKilometrage(
+            adminId: targetId,
+            immatriculation: widget.data['immatriculation'] ?? '',
+            kilometrage: _kilometrageRetourController.text,
+          );
+        }
         
         print('📊 Résultat de la clôture: Succès - contratId: ${widget.contratId}');
         
