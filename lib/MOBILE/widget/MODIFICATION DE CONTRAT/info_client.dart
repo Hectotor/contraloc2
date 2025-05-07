@@ -104,7 +104,8 @@ class _InfoClientState extends State<InfoClient> {
                     _buildInfoRow(context, "Km", widget.data['kilometrageVehiculeClient']),
                   
                   // Photos du permis de conduire
-                  if (widget.data['permisRecto'] != null || widget.data['permisVerso'] != null) ...[
+                  if ((widget.data['permisRecto'] != null && widget.data['permisRecto'].toString().isNotEmpty) || 
+                      (widget.data['permisVerso'] != null && widget.data['permisVerso'].toString().isNotEmpty)) ...[
                     const SizedBox(height: 20),
                     Row(
                       children: [
@@ -124,7 +125,7 @@ class _InfoClientState extends State<InfoClient> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        if (widget.data['permisRecto'] != null)
+                        if (widget.data['permisRecto'] != null && widget.data['permisRecto'].toString().isNotEmpty)
                           GestureDetector(
                             onTap: () => widget.onShowFullScreenImages(
                                 context, [widget.data['permisRecto']], 0),
@@ -155,7 +156,7 @@ class _InfoClientState extends State<InfoClient> {
                               ),
                             ),
                           ),
-                        if (widget.data['permisVerso'] != null)
+                        if (widget.data['permisVerso'] != null && widget.data['permisVerso'].toString().isNotEmpty)
                           GestureDetector(
                             onTap: () => widget.onShowFullScreenImages(
                                 context, [widget.data['permisVerso']], 0),

@@ -260,7 +260,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                         height: double.infinity,
                                       ),
                                     )
-                                  else if (widget.permisRectoUrl != null)
+                                  else if (widget.permisRectoUrl != null && widget.permisRectoUrl!.isNotEmpty)
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(12),
                                       child: Image.network(
@@ -268,6 +268,19 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                         fit: BoxFit.cover,
                                         width: double.infinity,
                                         height: double.infinity,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          print('Erreur de chargement de l\'image recto: $error');
+                                          return Center(
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.error, size: 40, color: Colors.red[300]),
+                                                SizedBox(height: 8),
+                                                Text('Erreur image', style: TextStyle(color: Colors.red[300])),
+                                              ],
+                                            ),
+                                          );
+                                        },
                                         loadingBuilder: (context, child, loadingProgress) {
                                           if (loadingProgress == null) return child;
                                           return Center(
@@ -301,7 +314,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                         ],
                                       ),
                                     ),
-                                  if (_isPremiumUser && (_rectoImage != null || widget.permisRectoUrl != null))
+                                  if (_isPremiumUser && (_rectoImage != null || (widget.permisRectoUrl != null && widget.permisRectoUrl!.isNotEmpty)))
                                     Positioned(
                                       right: 0,
                                       bottom: 0,
@@ -359,7 +372,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                         height: double.infinity,
                                       ),
                                     )
-                                  else if (widget.permisVersoUrl != null)
+                                  else if (widget.permisVersoUrl != null && widget.permisVersoUrl!.isNotEmpty)
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(12),
                                       child: Image.network(
@@ -367,6 +380,19 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                         fit: BoxFit.cover,
                                         width: double.infinity,
                                         height: double.infinity,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          print('Erreur de chargement de l\'image verso: $error');
+                                          return Center(
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.error, size: 40, color: Colors.red[300]),
+                                                SizedBox(height: 8),
+                                                Text('Erreur image', style: TextStyle(color: Colors.red[300])),
+                                              ],
+                                            ),
+                                          );
+                                        },
                                         loadingBuilder: (context, child, loadingProgress) {
                                           if (loadingProgress == null) return child;
                                           return Center(
@@ -400,7 +426,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                         ],
                                       ),
                                     ),
-                                  if (_versoImage != null || widget.permisVersoUrl != null)
+                                  if (_isPremiumUser && (_versoImage != null || (widget.permisVersoUrl != null && widget.permisVersoUrl!.isNotEmpty)))
                                     Positioned(
                                       right: 0,
                                       bottom: 0,

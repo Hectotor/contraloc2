@@ -284,8 +284,8 @@ class _LocationPageState extends State<LocationPage> {
     _numeroPermisController.text = model.numeroPermis ?? '';
     _immatriculationVehiculeClientController.text = model.immatriculationVehiculeClient ?? '';
     _kilometrageVehiculeClientController.text = model.kilometrageVehiculeClient ?? '';
-    _permisRectoUrl = model.permisRectoUrl;
-    _permisVersoUrl = model.permisVersoUrl;
+    _permisRectoUrl = model.permisRecto;
+    _permisVersoUrl = model.permisVerso;
     _lieuDepart = model.lieuDepart;
     _lieuRestitution = model.lieuRestitution;
   }
@@ -320,8 +320,8 @@ class _LocationPageState extends State<LocationPage> {
         setState(() {
           _updateControllersFromModel(contratModel);
           // Charger les URLs des photos du permis depuis Firestore
-          _permisRectoUrl = contratModel.permisRectoUrl;
-          _permisVersoUrl = contratModel.permisVersoUrl;
+          _permisRectoUrl = contratModel.permisRecto;
+          _permisVersoUrl = contratModel.permisVerso;
         });
 
         // Charger la signature si elle existe
@@ -660,8 +660,8 @@ class _LocationPageState extends State<LocationPage> {
         adresse: _adresseController.text,
         telephone: _telephoneController.text,
         email: _emailController.text,
-        permisRectoUrl: _permisRectoUrl,
-        permisVersoUrl: _permisVersoUrl,
+        permisRecto: _permisRectoUrl,
+        permisVerso: _permisVersoUrl,
         marque: widget.marque,
         modele: widget.modele,
         immatriculation: widget.immatriculation,
@@ -705,8 +705,8 @@ class _LocationPageState extends State<LocationPage> {
       );
 
       print('=== DEBUG CONTRAT MODEL ===');
-      print('permisRectoUrl dans ContratModel: ${contratModel.permisRectoUrl}');
-      print('permisVersoUrl dans ContratModel: ${contratModel.permisVersoUrl}');
+      print('permisRecto dans ContratModel: ${contratModel.permisRecto}');
+      print('permisVerso dans ContratModel: ${contratModel.permisVerso}');
       print('photosUrls dans ContratModel: ${contratModel.photosUrls?.length ?? 0} photos');
       print('Contenu de photosUrls: ${contratModel.photosUrls}');
 

@@ -21,10 +21,10 @@ class ContratModel {
   final String? kilometrageVehiculeClient;
   
   // Informations permis
-  final String? permisRectoUrl;
-  final String? permisVersoUrl;
-  final File? permisRectoFile;
-  final File? permisVersoFile;
+  final String? permisRecto; // URL de la photo recto du permis
+  final String? permisVerso; // URL de la photo verso du permis
+  final File? permisRectoFile; // Fichier local pour la photo recto (non stocku00e9 dans Firestore)
+  final File? permisVersoFile; // Fichier local pour la photo verso (non stocku00e9 dans Firestore)
   
   // Informations véhicule
   final String? marque;
@@ -108,8 +108,8 @@ class ContratModel {
     this.numeroPermis,
     this.immatriculationVehiculeClient,
     this.kilometrageVehiculeClient,
-    this.permisRectoUrl,
-    this.permisVersoUrl,
+    this.permisRecto,
+    this.permisVerso,
     this.permisRectoFile,
     this.permisVersoFile,
     this.marque,
@@ -151,7 +151,6 @@ class ContratModel {
     this.kilometrageSupp,
     this.rayures,
     this.locationCasque,
-    this.devisesLocation,
     this.logoUrl,
     this.nomEntreprise,
     this.adresseEntreprise,
@@ -163,6 +162,7 @@ class ContratModel {
     this.dateRetour,
     this.kilometrageRetour,
     this.pourcentageEssenceRetour,
+    this.devisesLocation,
   });
   
   // Créer une instance à partir des données Firestore
@@ -182,8 +182,8 @@ class ContratModel {
       numeroPermis: data['numeroPermis'],
       immatriculationVehiculeClient: data['immatriculationVehiculeClient'],
       kilometrageVehiculeClient: data['kilometrageVehiculeClient'],
-      permisRectoUrl: data['permisRectoUrl'],
-      permisVersoUrl: data['permisVersoUrl'],
+      permisRecto: data['permisRecto'],
+      permisVerso: data['permisVerso'],
       marque: data['marque'],
       modele: data['modele'],
       immatriculation: data['immatriculation'],
@@ -257,8 +257,8 @@ class ContratModel {
       'numeroPermis': numeroPermis ?? '',
       'immatriculationVehiculeClient': immatriculationVehiculeClient ?? '',
       'kilometrageVehiculeClient': kilometrageVehiculeClient ?? '',
-      'permisRecto': permisRectoUrl ?? '',
-      'permisVerso': permisVersoUrl ?? '',
+      'permisRecto': permisRecto ?? '',
+      'permisVerso': permisVerso ?? '',
       'marque': marque ?? '',
       'modele': modele ?? '',
       'immatriculation': immatriculation ?? '',
@@ -305,8 +305,6 @@ class ContratModel {
       'status': status ?? 'en_cours',
       'conditions': conditions ?? '',
       'contratId': contratId,
-      'permisRectoUrl': permisRectoUrl ?? '',
-      'permisVersoUrl': permisVersoUrl ?? '',
       'devisesLocation': devisesLocation ?? '€',
     };
     
@@ -338,8 +336,8 @@ class ContratModel {
       'numeroPermis': numeroPermis,
       'immatriculationVehiculeClient': immatriculationVehiculeClient,
       'kilometrageVehiculeClient': kilometrageVehiculeClient,
-      'permisRectoUrl': permisRectoUrl ?? '',
-      'permisVersoUrl': permisVersoUrl ?? '',
+      'permisRecto': permisRecto ?? '',
+      'permisVerso': permisVerso ?? '',
       'marque': marque,
       'modele': modele,
       'immatriculation': immatriculation,
@@ -406,48 +404,10 @@ class ContratModel {
       'prenomCollaborateur': prenomCollaborateur ?? '',
       'dateCreation': dateCreation?.toDate().toString() ?? '',
       'dateReservation': dateReservation?.toDate().toString() ?? '',
-      'nom': nom,
-      'prenom': prenom,
-      'entrepriseClient': entrepriseClient ?? '',
-      'email': email,
-      'numeroPermis': numeroPermis,
-      'immatriculationVehiculeClient': immatriculationVehiculeClient,
-      'kilometrageVehiculeClient': kilometrageVehiculeClient,
-      'permisRecto': permisRectoUrl ?? '',
-      'permisVerso': permisVersoUrl ?? '',
-      'modele': modele,
-      'marque': marque,
-      'immatriculation': immatriculation,
-      'dateDebut': dateDebut,
-      'dateFinTheorique': dateFinTheorique,
-      'lieuDepart': lieuDepart,
-      'lieuRestitution': lieuRestitution,
-      'vin': vin,
-      'typeCarburant': typeCarburant,
-      'boiteVitesses': boiteVitesses,
-      'prixLocation': prixLocation,
-      'accompte': accompte,
-      'caution': caution,
-      'nettoyageInt': nettoyageInt,
-      'nettoyageExt': nettoyageExt,
-      'carburantManquant': carburantManquant,
-      'kilometrageDepart': kilometrageDepart,
-      'pourcentageEssence': pourcentageEssence.toString(),
-      'condition': conditions,
-      'signatureAller': signatureAller,
-      'kilometrageSupp': kilometrageSupp,
-      'rayures': rayures,
-      'kilometrageAutorise': kilometrageAutorise,
-      'typeLocation': typeLocation,
-      'commentaireAller': commentaireAller,
-      'commentaireRetour': commentaireRetour,
-      'signatureRetour': signatureRetour,
-      'methodePaiement': methodePaiement,
-      'locationCasque': locationCasque,
       'devisesLocation': devisesLocation ?? '€',
     };
   }
-
+  
   // Conversion en Map pour l'export
   Map<String, String> toMapExport() {
     return {
@@ -481,8 +441,8 @@ class ContratModel {
     String? numeroPermis,
     String? immatriculationVehiculeClient,
     String? kilometrageVehiculeClient,
-    String? permisRectoUrl,
-    String? permisVersoUrl,
+    String? permisRecto,
+    String? permisVerso,
     File? permisRectoFile,
     File? permisVersoFile,
     String? marque,
@@ -552,8 +512,8 @@ class ContratModel {
       numeroPermis: numeroPermis ?? this.numeroPermis,
       immatriculationVehiculeClient: immatriculationVehiculeClient ?? this.immatriculationVehiculeClient,
       kilometrageVehiculeClient: kilometrageVehiculeClient ?? this.kilometrageVehiculeClient,
-      permisRectoUrl: permisRectoUrl ?? this.permisRectoUrl,
-      permisVersoUrl: permisVersoUrl ?? this.permisVersoUrl,
+      permisRecto: permisRecto ?? this.permisRecto,
+      permisVerso: permisVerso ?? this.permisVerso,
       permisRectoFile: permisRectoFile ?? this.permisRectoFile,
       permisVersoFile: permisVersoFile ?? this.permisVersoFile,
       marque: marque ?? this.marque,
