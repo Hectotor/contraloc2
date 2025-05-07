@@ -360,12 +360,41 @@ Future<String> generatePdf(
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('Commentaires:',
-                      style: pw.TextStyle(
-                        fontSize: 12,
-                        font: boldFont,
-                        color: PdfColors.blue900,
-                      )),
+                  pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      // Titre principal
+                      pw.Text('Commentaires:',
+                          style: pw.TextStyle(
+                            fontSize: 12,
+                            font: boldFont,
+                            color: PdfColors.blue900,
+                          )),
+                      pw.SizedBox(width: 10),
+                      
+                      // Lieux de départ et de restitution
+                      if (contratModel.lieuDepart != null && contratModel.lieuDepart!.isNotEmpty)
+                        pw.Text('Départ: ${contratModel.lieuDepart!}',
+                            style: pw.TextStyle(
+                              fontSize: 10,
+                              font: boldFont,
+                            )),
+                      
+                      if (contratModel.lieuDepart != null && contratModel.lieuDepart!.isNotEmpty && 
+                         contratModel.lieuRestitution != null && contratModel.lieuRestitution!.isNotEmpty)
+                        pw.Text(' / ',
+                            style: pw.TextStyle(
+                              fontSize: 10,
+                            )),
+                      
+                      if (contratModel.lieuRestitution != null && contratModel.lieuRestitution!.isNotEmpty)
+                        pw.Text('Restitution: ${contratModel.lieuRestitution!}',
+                            style: pw.TextStyle(
+                              fontSize: 10,
+                              font: boldFont,
+                            )),
+                    ],
+                  ),
                   pw.Divider(color: PdfColors.black),
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -375,28 +404,7 @@ Future<String> generatePdf(
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
-                            if (contratModel.lieuDepart != null && contratModel.lieuDepart!.isNotEmpty) ...[
-                              pw.Text('Lieu de départ:',
-                                  style: pw.TextStyle(
-                                    fontSize: 10,
-                                    font: boldFont,
-                                  )),
-                              pw.SizedBox(height: 2),
-                              pw.Text(contratModel.lieuDepart!,
-                                  style: pw.TextStyle(fontSize: 10)),
-                              pw.SizedBox(height: 8),
-                            ],
-                            if (contratModel.lieuRestitution != null && contratModel.lieuRestitution!.isNotEmpty) ...[
-                              pw.Text('Lieu de restitution:',
-                                  style: pw.TextStyle(
-                                    fontSize: 10,
-                                    font: boldFont,
-                                  )),
-                              pw.SizedBox(height: 2),
-                              pw.Text(contratModel.lieuRestitution!,
-                                  style: pw.TextStyle(fontSize: 10)),
-                              pw.SizedBox(height: 8),
-                            ],
+                            // Les lieux de départ et de restitution sont maintenant affichés dans l'en-tête
                             pw.Text('Aller:',
                                 style: pw.TextStyle(
                                   fontSize: 12,
