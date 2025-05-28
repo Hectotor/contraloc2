@@ -5,11 +5,11 @@ import 'package:contraloc/MOBILE/widget/MES%20CONTRATS/vehicle_access_manager.da
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:contraloc/MOBILE/services/sync_queue_service.dart';
 import '../HOME/delete_vehicule.dart';
-import '../widget/CREATION DE CONTRAT/client.dart'; 
 import '../services/auth_util.dart'; 
 import '../services/connectivity_service.dart'; 
 import '../HOME/button_add_vehicle.dart'; 
 import '../HOME/vehicle_list_view.dart';
+import '../HOME/vehicle_grid_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -405,154 +405,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       }).toList();
                     }
 
-                    return Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 5),
-                              const Text(
-                                "(Appuie long pour modifier)",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: GridView.builder(
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 10,
-                              mainAxisSpacing: 10,
-                              childAspectRatio: 3 / 4,
-                            ),
-                            padding: const EdgeInsets.all(12.0),
-                            itemCount: filteredVehicles.length,
-                            itemBuilder: (context, index) {
-                              final vehicle = filteredVehicles[index];
-                              final data = vehicle.data() as Map<String, dynamic>;
-
-                              return GestureDetector(
-                                onTap: () async {
-                                  final doc = await _vehicleAccessManager.getVehicleDocument(vehicle.id);
-
-                                  if (!mounted) return;
-
-                                  if (doc.exists) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => ClientPage(
-                                          marque: data['marque'] ?? '',
-                                          modele: data['modele'] ?? '',
-                                          immatriculation:
-                                              data['immatriculation'] ?? '',
-                                        ),
-                                      ),
-                                    );
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text("Ce véhicule n'existe plus."),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  }
-                                },
-                                onLongPress: () =>
-                                    _deleteVehicule.showActionDialog(vehicle.id),
-                                child: Card(
-                                  elevation: 5,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  color: Colors.white, 
-                                  child: Column(
-                                    children: [
-                                      Expanded(
-                                        child: ClipRRect(
-                                          borderRadius: const BorderRadius.only(
-                                            topLeft: Radius.circular(16),
-                                            topRight: Radius.circular(16),
-                                          ),
-                                          child: data['photoVehiculeUrl'] != null &&
-                                                  data['photoVehiculeUrl'].isNotEmpty
-                                              ? Image.network(
-                                                  data['photoVehiculeUrl'],
-                                                  width: double.infinity,
-                                                  height: double.infinity,
-                                                  fit: BoxFit.cover,
-                                                  loadingBuilder:
-                                                      (context, child, loadingProgress) {
-                                                    if (loadingProgress == null)
-                                                      return child;
-                                                    return const Center(
-                                                      child: CircularProgressIndicator(),
-                                                    );
-                                                  },
-                                                  errorBuilder:
-                                                      (context, error, stackTrace) {
-                                                    return const Center(
-                                                      child: Icon(
-                                                        Icons.error,
-                                                        color: Colors.red,
-                                                        size: 50,
-                                                      ),
-                                                    );
-                                                  },
-                                                )
-                                              : const Center(
-                                                  child: Icon(
-                                                    Icons.directions_car_filled_rounded,
-                                                    size: 90,
-                                                    color: Colors.grey,
-                                                  ),
-                                                ),
-                                        ),
-                                      ),
-                                      const Divider(
-                                        color: Colors.black12,
-                                        height: 1,
-                                        thickness: 1,
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: Column(
-                                          children: [
-                                            Text(
-                                              "${data['marque']} ${data['modele']}",
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                                color: Color(0xFF1A237E),
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              "${data['immatriculation']}",
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.grey,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                    // Utiliser le composant VehicleGridView pour afficher la grille de véhicules
+                    return VehicleGridView(
+                      filteredVehicles: filteredVehicles,
+                      vehicleAccessManager: _vehicleAccessManager,
+                      onLongPress: (vehicleId) => _deleteVehicule.showActionDialog(vehicleId),
                     );
                   },
                 ),
