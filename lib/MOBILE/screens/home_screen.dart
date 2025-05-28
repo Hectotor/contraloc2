@@ -8,8 +8,8 @@ import '../HOME/delete_vehicule.dart';
 import '../widget/CREATION DE CONTRAT/client.dart'; 
 import '../services/auth_util.dart'; 
 import '../services/connectivity_service.dart'; 
-import 'add_vehicule.dart'; 
 import '../HOME/button_add_vehicle.dart'; 
+import '../HOME/vehicle_list_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -377,62 +377,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     }
                     
-                    if (snapshot.hasError) {
-                      print(' Erreur dans le stream des véhicules: ${snapshot.error}');
-                      return Center(
-                        child: Text(
-                          'Erreur lors du chargement des véhicules',
-                          style: TextStyle(color: Colors.red),
-                        ),
+                    // Vérifier les conditions pour afficher le widget VehicleListView
+                    if (snapshot.hasError || 
+                        (snapshot.data?.docs.isEmpty ?? true) && 
+                        snapshot.connectionState == ConnectionState.active) {
+                      // Retourner le widget VehicleListView pour gérer les états d'erreur et vide
+                      return VehicleListView(
+                        snapshot: snapshot,
+                        nomEntreprise: _nomEntreprise,
+                        prenom: _prenom,
                       );
                     }
-
+                    
                     final vehicles = snapshot.data?.docs ?? [];
-
-                    if (vehicles.isEmpty && snapshot.connectionState == ConnectionState.active) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            RichText(
-                              textAlign: TextAlign.center,
-                              text: TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: _nomEntreprise.isNotEmpty 
-                                        ? "$_nomEntreprise\n \n" 
-                                        : "Bonjour $_prenom,\n \n",
-                                    style: const TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF1A237E),
-                                    ),
-                                  ),
-                                  const TextSpan(
-                                    text: "Bienvenue sur Contraloc",
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.normal,
-                                      color: Color(0xFF1A237E),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            const Text(
-                              "Commencez par ajouter un véhicule",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Color(0xFF757575),
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
 
                     List<QueryDocumentSnapshot> filteredVehicles = vehicles;
                     if (_isSearching && _searchQuery.isNotEmpty) {
@@ -600,25 +557,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
                 // Pilule bleue "Ajouter" centrée en bas
-                Positioned(
-                  bottom: 20,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: CustomActionButton(
-                      text: "Ajouter",
-                      icon: Icons.add_circle_outline,
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AddVehiculeScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
+                const PositionedAddButton(),
               ],
             ),
     );

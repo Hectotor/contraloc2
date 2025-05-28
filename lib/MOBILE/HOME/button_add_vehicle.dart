@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/add_vehicule.dart';
 
 /// Un bouton d'action personnalisé avec un design moderne
 /// 
@@ -98,6 +99,40 @@ class CustomActionButton extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Un bouton d'ajout positionné en bas de l'écran
+///
+/// Ce widget encapsule un CustomActionButton dans un Positioned
+/// pour le placer en bas de l'écran.
+class PositionedAddButton extends StatelessWidget {
+  /// Constructeur pour le bouton d'ajout positionné
+  const PositionedAddButton({
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: 20,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: CustomActionButton(
+          text: "Ajouter",
+          icon: Icons.add_circle_outline,
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AddVehiculeScreen(),
+              ),
+            );
+          },
         ),
       ),
     );
