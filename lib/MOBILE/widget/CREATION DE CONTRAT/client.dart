@@ -4,7 +4,7 @@ import '../location.dart'; // Import de la page location
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:contraloc/MOBILE/services/access_premium.dart'; // Import de l'utilitaire collaborateur
+// Import de access_premium.dart supprimé car non utilisé
 import 'package:contraloc/MOBILE/services/auth_util.dart'; // Import de AuthUtil
 import 'popup_vehicule_client.dart';
 import 'Containers/permis_info_container.dart'; // Import du nouveau composant
@@ -66,13 +66,13 @@ class _ClientPageState extends State<ClientPage> {
   File? _permisVerso;
   String? _permisRectoUrl;
   String? _permisVersoUrl;
-  bool isPremiumUser = true;
+  // Variable isPremiumUser supprimée car non utilisée
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeSubscription(); // Initialiser et vérifier le statut d'abonnement
+    // _initializeSubscription() supprimée car non utilisée
     
     // Si nous avons un contratId, c'est une modification de contrat existant
     if (widget.contratId != null) {
@@ -80,20 +80,7 @@ class _ClientPageState extends State<ClientPage> {
     }
   }
 
-  // Méthode pour initialiser et vérifier le statut d'abonnement
-  Future<void> _initializeSubscription() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final isPremium = await AccessPremium.isPremiumUser();
-        setState(() {
-          isPremiumUser = isPremium;
-        });
-      }
-    } catch (e) {
-      print('Erreur lors de l\'initialisation du statut premium: $e');
-    }
-  }
+  // Méthode _initializeSubscription supprimée car non utilisée
 
   Future<void> _loadClientData() async {
     try {

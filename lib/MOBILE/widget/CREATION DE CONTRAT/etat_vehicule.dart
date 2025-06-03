@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:contraloc/MOBILE/USERS/Subscription/abonnement_screen.dart';
-import 'package:contraloc/MOBILE/services/access_premium.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// Import supprimé car plus nécessaire après la suppression des vérifications premium
+// Imports supprimés car plus nécessaires après la suppression des vérifications premium
 
 class EtatVehicule extends StatefulWidget {
   final List<File> photos;
@@ -22,89 +21,26 @@ class EtatVehicule extends StatefulWidget {
 }
 
 class _EtatVehiculeState extends State<EtatVehicule> {
-  bool isPremiumUser = false;
+  // Variable isPremiumUser supprimée car tous les utilisateurs peuvent prendre des photos
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _checkPremiumStatus();
-  }
-
-  Future<void> _checkPremiumStatus() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final isPremium = await AccessPremium.isPremiumUser();
-        if (mounted) {
-          setState(() {
-            isPremiumUser = isPremium;
-            isLoading = false;
-          });
-        }
-      }
-    } catch (e) {
-      print('Erreur lors de la vérification du statut premium: $e');
+    
+    // Définit isLoading à false après un court délai (anciennement dans _checkPremiumStatus)
+    Future.delayed(Duration(milliseconds: 100)).then((_) {
       if (mounted) {
         setState(() {
           isLoading = false;
         });
       }
-    }
+    });
   }
 
-  void _showPremiumDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: const Text(
-            "Fonctionnalité Premium",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF08004D),
-            ),
-          ),
-          content: const Text(
-            "La prise de photos de l'état du véhicule est disponible uniquement avec l'abonnement Premium. Souhaitez-vous découvrir nos offres ?",
-            style: TextStyle(fontSize: 16),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                "Plus tard",
-                style: TextStyle(color: Colors.black),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AbonnementScreen(),
-                  ),
-                );
-              },
-              child: const Text(
-                "Voir les offres",
-                style: TextStyle(
-                  color: Color(0xFF08004D),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // Méthode _checkPremiumStatus supprimée car elle n'est plus nécessaire
+
+  // Méthode _showPremiumDialog supprimée car elle n'est plus utilisée
 
   Future<void> _pickImage() async {
     if (widget.photos.length >= 10) {
@@ -189,7 +125,7 @@ class _EtatVehiculeState extends State<EtatVehicule> {
         ),
         const SizedBox(height: 10),
         InkWell(
-          onTap: isLoading ? null : isPremiumUser ? _pickImage : _showPremiumDialog,
+          onTap: isLoading ? null : _pickImage,
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
             decoration: BoxDecoration(
@@ -200,10 +136,10 @@ class _EtatVehiculeState extends State<EtatVehicule> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock, color: Colors.black, size: 20),
+                Icon(Icons.add_a_photo, color: Colors.black, size: 20),
                 const SizedBox(width: 10),
                 Text(
-                  isPremiumUser ? "Ajouter des photos" : "Fonctionnalité Premium",
+                  "Ajouter des photos",
                   style: TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.w600,

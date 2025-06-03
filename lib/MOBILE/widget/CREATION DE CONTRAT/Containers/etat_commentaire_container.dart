@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:contraloc/MOBILE/services/access_premium.dart';
+// Import supprimé car plus nécessaire après la suppression des vérifications premium
 import 'package:flutter/services.dart';
-import '../premium_dialog.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// Import supprimé car plus nécessaire après la suppression des vérifications premium
+// Import supprimé car plus nécessaire après la suppression des vérifications premium
 
 class EtatCommentaireContainer extends StatefulWidget {
   final List<File> photos;
@@ -25,7 +25,7 @@ class EtatCommentaireContainer extends StatefulWidget {
 }
 
 class _EtatCommentaireContainerState extends State<EtatCommentaireContainer> {
-  bool isPremiumUser = false;
+  // Variable isPremiumUser supprimée car tous les utilisateurs peuvent prendre des photos
   bool isLoading = true;
   bool _showContent = false;
   late final PageController _pageController;
@@ -35,12 +35,20 @@ class _EtatCommentaireContainerState extends State<EtatCommentaireContainer> {
     super.initState();
     _showContent = false;
     _pageController = PageController();
+    
+    // Définit isLoading à false après un court délai (anciennement dans _checkPremiumStatus)
+    Future.delayed(Duration(milliseconds: 100)).then((_) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.photos.isNotEmpty) {
         _pageController.jumpToPage(widget.photos.length - 1);
       }
     });
-    _checkPremiumStatus();
   }
 
   @override
@@ -59,31 +67,9 @@ class _EtatCommentaireContainerState extends State<EtatCommentaireContainer> {
     }
   }
 
-  Future<void> _checkPremiumStatus() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final isPremium = await AccessPremium.isPremiumUser();
-        if (mounted) {
-          setState(() {
-            isPremiumUser = isPremium;
-            isLoading = false;
-          });
-        }
-      }
-    } catch (e) {
-      print('Erreur lors de la vérification du statut premium: $e');
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
-    }
-  }
+  // Méthode _checkPremiumStatus supprimée car elle n'est plus nécessaire
 
-  void _showPremiumDialog() {
-    PremiumDialog.show(context);
-  }
+  // Méthode _showPremiumDialog supprimée car elle n'est plus utilisée
 
   Future<void> _pickImage() async {
     if (widget.photos.length >= 10) {
@@ -231,7 +217,7 @@ class _EtatCommentaireContainerState extends State<EtatCommentaireContainer> {
                       Container(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: isLoading ? null : isPremiumUser ? _pickImage : _showPremiumDialog,
+                          onPressed: isLoading ? null : _pickImage,
                           icon: const Icon(Icons.add_a_photo, color: Color(0xFF08004D)),
                           label: const Text('Ajouter une photo', style: TextStyle(color: Color(0xFF08004D))),
                           style: ElevatedButton.styleFrom(

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
-import 'package:contraloc/MOBILE/services/access_premium.dart';
+// Import de access_premium.dart supprimé car non utilisé
 import '../image_picker_dialog.dart';
-import '../premium_dialog.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// Import de premium_dialog.dart supprimé car non utilisé
+// Import de firebase_auth.dart supprimé car non utilisé
 
 class PermisInfoContainer extends StatefulWidget {
   final TextEditingController numeroPermisController;
@@ -33,7 +33,7 @@ class PermisInfoContainer extends StatefulWidget {
 
 class _PermisInfoContainerState extends State<PermisInfoContainer> {
   bool _showContent = false;
-  bool _isPremiumUser = false;
+  // Variable _isPremiumUser supprimée car tous les utilisateurs peuvent prendre des photos
   File? _rectoImage;
   File? _versoImage;
 
@@ -41,40 +41,12 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
   void initState() {
     super.initState();
     _showContent = false;
-    _initializeSubscription();
+    // _initializeSubscription() supprimée car non utilisée
   }
 
-  // Méthode pour initialiser et vérifier le statut d'abonnement
-  Future<void> _initializeSubscription() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final isPremium = await AccessPremium.isPremiumUser();
-        setState(() {
-          _isPremiumUser = isPremium;
-        });
-        print("_isPremiumUser défini à: $_isPremiumUser");
-      }
-    } catch (e) {
-      print('Erreur lors de l\'initialisation du statut premium: $e');
-    }
-  }
+  // Méthode _initializeSubscription supprimée car non utilisée
 
-  Future<bool> _checkPremiumStatus() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final isPremium = await AccessPremium.isPremiumUser();
-        setState(() {
-          _isPremiumUser = isPremium;
-        });
-        return isPremium;
-      }
-    } catch (e) {
-      print('Erreur lors de la vérification du statut premium: $e');
-    }
-    return false;
-  }
+  // Méthode _checkPremiumStatus supprimée car non utilisée
 
   void _handleHeaderTap() {
     setState(() {
@@ -82,9 +54,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
     });
   }
 
-  void _showPremiumDialog() {
-    PremiumDialog.show(context);
-  }
+  // Méthode _showPremiumDialog supprimée car non utilisée
 
   // Sélectionner une image
   Future<void> _selectImage(XFile image, bool isRecto) async {
@@ -118,12 +88,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
 
   // Afficher la boîte de dialogue pour choisir la source de l'image
   Future<void> _showImagePickerDialog(bool isRecto) async {
-    final isPremium = await _checkPremiumStatus();
-    if (!isPremium) {
-      _showPremiumDialog();
-      return;
-    }
-    
+    // Tous les utilisateurs peuvent prendre des photos, pas besoin de vérifier le statut premium
     ImagePickerDialog.show(
       context,
       isRecto,
@@ -314,7 +279,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                         ],
                                       ),
                                     ),
-                                  if (_isPremiumUser && (_rectoImage != null || (widget.permisRectoUrl != null && widget.permisRectoUrl!.isNotEmpty)))
+                                  if (_rectoImage != null || (widget.permisRectoUrl != null && widget.permisRectoUrl!.isNotEmpty))
                                     Positioned(
                                       right: 0,
                                       bottom: 0,
@@ -426,7 +391,7 @@ class _PermisInfoContainerState extends State<PermisInfoContainer> {
                                         ],
                                       ),
                                     ),
-                                  if (_isPremiumUser && (_versoImage != null || (widget.permisVersoUrl != null && widget.permisVersoUrl!.isNotEmpty)))
+                                  if (_versoImage != null || (widget.permisVersoUrl != null && widget.permisVersoUrl!.isNotEmpty))
                                     Positioned(
                                       right: 0,
                                       bottom: 0,

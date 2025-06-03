@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:contraloc/MOBILE/services/access_premium.dart';
+// Import supprimé car plus nécessaire après la suppression des vérifications premium
 import 'package:contraloc/MOBILE/widget/MODIFICATION DE CONTRAT/commentaire_retour.dart';
-import 'package:contraloc/MOBILE/widget/CREATION DE CONTRAT/premium_dialog.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// Import supprimé car plus nécessaire après la suppression des vérifications premium
+// Import supprimé car plus nécessaire après la suppression des vérifications premium
 
 class EtatVehiculeRetour extends StatefulWidget {
   final List<File> photos;
@@ -25,7 +25,7 @@ class EtatVehiculeRetour extends StatefulWidget {
 }
 
 class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
-  bool isPremiumUser = false;
+  // Variable isPremiumUser supprimée car tous les utilisateurs peuvent prendre des photos
   late TextEditingController _commentaireController;
   bool _showContent = true;
 
@@ -38,7 +38,7 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
   @override
   void initState() {
     super.initState();
-    _initializeSubscription();
+    // _initializeSubscription() supprimée car elle ne faisait plus rien
     _commentaireController = widget.commentaireController ?? TextEditingController();
   }
 
@@ -51,25 +51,9 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
     super.dispose();
   }
 
-  Future<void> _initializeSubscription() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final isPremium = await AccessPremium.isPremiumUser();
-        if (mounted) {
-          setState(() {
-            isPremiumUser = isPremium;
-          });
-        }
-      }
-    } catch (e) {
-      print('Erreur lors de l\'initialisation du statut premium: $e');
-    }
-  }
+  // Méthode _initializeSubscription supprimée car elle ne faisait plus rien
 
-  void _showPremiumDialog() {
-    PremiumDialog.show(context);
-  }
+  // Méthode _showPremiumDialog supprimée car elle n'est plus utilisée
 
   Future<void> _pickImage() async {
     if (widget.photos.length >= 10) {
@@ -203,7 +187,7 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
                   Container(
                     width: double.infinity,
                     child: InkWell(
-                      onTap: isPremiumUser ? _pickImage : _showPremiumDialog,
+                      onTap: _pickImage,
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                         decoration: BoxDecoration(
@@ -214,10 +198,10 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(isPremiumUser ? Icons.add_a_photo : Icons.lock, color: Colors.purple[700], size: 20),
+                            Icon(Icons.add_a_photo, color: Colors.purple[700], size: 20),
                             const SizedBox(width: 10),
                             Text(
-                              isPremiumUser ? "Ajouter des photos" : "Fonctionnalité Premium",
+                              "Ajouter des photos",
                               style: TextStyle(
                                 color: Colors.purple[700],
                                 fontWeight: FontWeight.w600,
@@ -230,7 +214,7 @@ class _EtatVehiculeRetourState extends State<EtatVehiculeRetour> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  if (widget.photos.isNotEmpty && isPremiumUser) _buildPhotoScroll(),
+                  if (widget.photos.isNotEmpty) _buildPhotoScroll(),
                   const SizedBox(height: 20),
                   CommentaireRetourWidget(controller: _commentaireController),
                 ],
