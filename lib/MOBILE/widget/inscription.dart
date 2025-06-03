@@ -181,8 +181,10 @@ class _InscriptionPageState extends State<InscriptionPage> {
   }
 
   bool _isPasswordValid(String password) {
+    // Expression régulière modifiée pour accepter plus de caractères spéciaux
+    // Ajout de -, ., +, =, ~, ^, #, _, |, `, :, ;, <, >, [, ], {, }, (, ), /, \
     final regex = RegExp(
-        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$');
+        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&\-\.\+\=\~\^\#\_\|\`\:\;\<\>\[\]\{\}\(\)\/\\])[A-Za-z\d@$!%*?&\-\.\+\=\~\^\#\_\|\`\:\;\<\>\[\]\{\}\(\)\/\\]{8,}$');
     return regex.hasMatch(password);
   }
 
