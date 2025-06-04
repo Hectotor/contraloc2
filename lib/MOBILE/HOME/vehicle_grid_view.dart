@@ -68,17 +68,8 @@ class VehicleGridView extends StatelessWidget {
 
                   if (doc.exists) {
                     // Utiliser directement les données du document data
-                    if (data['isRented'] == 'en_cours') {
-                      // Afficher un message d'erreur si le véhicule est déjà loué
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Ce véhicule est actuellement en location.'),
-                          backgroundColor: Colors.red,
-                          duration: Duration(seconds: 3),
-                        ),
-                      );
-                    } else if (data['isRented'] == 'réservé') {
-                      // Pour les véhicules réservés, afficher un popup d'avertissement mais autoriser la création
+                    if (data['isRented'] == 'en_cours' || data['isRented'] == 'réservé') {
+                      // Pour les véhicules en cours ou réservés, afficher un popup d'avertissement mais autoriser la création
                       showDialog(
                         context: context,
                         builder: (context) => Dialog(
@@ -91,15 +82,15 @@ class VehicleGridView extends StatelessWidget {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.warning_amber_rounded,
-                                  color: Colors.orange,
+                                  color: data['isRented'] == 'en_cours' ? Colors.red : Colors.orange,
                                   size: 60,
                                 ),
                                 const SizedBox(height: 20),
-                                const Text(
-                                  "Véhicule réservé",
-                                  style: TextStyle(
+                                Text(
+                                  data['isRented'] == 'en_cours' ? "Véhicule loué" : "Véhicule réservé",
+                                  style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFF08004D),
@@ -107,11 +98,14 @@ class VehicleGridView extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
-                                  data['dateReserve'] != null
-                                    ? "Attention : ce véhicule a été réservé pour le ${data['dateReserve']}. "
+                                  data['isRented'] == 'en_cours'
+                                    ? "Attention : ce véhicule est actuellement loué. "
                                       "Voulez-vous tout de même créer un contrat ?"
-                                    : "Attention : ce véhicule est déjà réservé. "
-                                      "Voulez-vous tout de même créer un contrat ?",
+                                    : (data['dateReserve'] != null
+                                      ? "Attention : ce véhicule a été réservé pour le ${data['dateReserve']}. "
+                                        "Voulez-vous tout de même créer un contrat ?"
+                                      : "Attention : ce véhicule est déjà réservé. "
+                                        "Voulez-vous tout de même créer un contrat ?"),
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(fontSize: 14),
                                 ),
