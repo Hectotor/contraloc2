@@ -99,8 +99,8 @@ class VehicleGridView extends StatelessWidget {
                                 const SizedBox(height: 10),
                                 Text(
                                   data['isRented'] == 'en_cours'
-                                    ? "Attention : ce véhicule est actuellement loué. "
-                                      "Voulez-vous tout de même créer un contrat ?"
+                                    ? "Attention : ce véhicule est loué. "
+                                      "Restituez-le avant de créer un nouveau contrat, sauf si vous souhaitez le réserver."
                                     : (data['dateReserve'] != null
                                       ? "Attention : ce véhicule a été réservé pour le ${data['dateReserve']}. "
                                         "Voulez-vous tout de même créer un contrat ?"
