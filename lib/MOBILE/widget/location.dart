@@ -704,12 +704,6 @@ class _LocationPageState extends State<LocationPage> {
         kilometrageVehiculeClient: _kilometrageVehiculeClientController.text,
       );
 
-      print('=== DEBUG CONTRAT MODEL ===');
-      print('permisRecto dans ContratModel: ${contratModel.permisRecto}');
-      print('permisVerso dans ContratModel: ${contratModel.permisVerso}');
-      print('photosUrls dans ContratModel: ${contratModel.photosUrls?.length ?? 0} photos');
-      print('Contenu de photosUrls: ${contratModel.photosUrls}');
-
       // === Génération et upload du PDF du contrat (état EN COURS) ===
       final pdfUrl = await generateAndUploadPdfAndSaveUrl(
         generatePdf: () async => await AffichageContratPdf.genererEtAfficherContratPdf(
@@ -739,19 +733,8 @@ class _LocationPageState extends State<LocationPage> {
 
       // Vérifier si les photos sont présentes dans le modèle mais pas dans les données Firestore
       if (contratModel.photosUrls != null && contratModel.photosUrls!.isNotEmpty && contratData['photos'] == null) {
-        print(' Photos présentes dans le modèle mais pas dans les données Firestore, correction...');
         contratData['photos'] = contratModel.photosUrls;
       }
-
-      print('=== Début de la sauvegarde du contrat ===');
-      print('User ID: ${contratModel.userId}');
-      print('Admin ID: ${contratModel.adminId}');
-      print('Target ID: $targetId');
-      print('Contrat ID: $contratId');
-      print('=== Données du contrat ===');
-      print(contratData);
-      print('=== Structure de sauvegarde ===');
-      print('Collection: users/$targetId/locations/$contratId');
 
       await _firestore
           .collection('users')
@@ -760,9 +743,53 @@ class _LocationPageState extends State<LocationPage> {
           .doc(contratId)
           .set(contratData, SetOptions(merge: true));
 
-      print('=== Fin des logs ===');
-      print('=== Sauvegarde réussie ===');
-      print('Sauvegardé dans: users/$targetId/locations/$contratId');
+      // Mettre à jour le statut du véhicule dans la collection des véhicules
+      // Récupérer l'ID du véhicule à partir de l'immatriculation
+      final vehicleQuery = await _firestore
+          .collection('users')
+          .doc(targetId)
+          .collection('vehicules')
+          .where('immatriculation', isEqualTo: widget.immatriculation)
+          .limit(1)
+          .get();
+
+      if (vehicleQuery.docs.isNotEmpty) {
+        final vehicleId = vehicleQuery.docs.first.id;
+        print('🚗 Mise à jour du statut du véhicule: $vehicleId');
+        
+        // Mettre à jour le statut du véhicule avec le même statut que le contrat
+        final String vehicleStatus = _determineContractStatus();
+        
+        // Préparer les données de mise à jour
+        Map<String, dynamic> updateData = {'isRented': vehicleStatus};
+        
+        // Si le véhicule est réservé ou en cours, ajouter la date de début de location
+        if ((vehicleStatus == 'réservé' || vehicleStatus == 'en_cours') && _dateDebutController.text.isNotEmpty) {
+          // Convertir la date de début en format court (JJ/MM/AAAA)
+          try {
+            final dateDebut = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(_dateDebutController.text);
+            final dateFormatted = DateFormat('dd/MM/yyyy').format(dateDebut);
+            updateData['dateReserve'] = dateFormatted;
+            print('📅 Date de début ajoutée: $dateFormatted pour statut: $vehicleStatus');
+          } catch (e) {
+            print('❌ Erreur lors du formatage de la date: $e');
+          }
+        }
+        
+        // Mettre à jour le document du véhicule
+        await _firestore
+            .collection('users')
+            .doc(targetId)
+            .collection('vehicules')
+            .doc(vehicleId)
+            .update(updateData);
+            
+        print('✅ Statut du véhicule mis à jour: $vehicleStatus');
+      } else {
+        print('❌ Véhicule non trouvé pour l\'immatriculation: ${widget.immatriculation}');
+      }
+
+
 
       // Générer et envoyer le PDF
       await GenerationContratPdf.genererEtEnvoyerPdf(

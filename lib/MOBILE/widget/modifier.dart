@@ -268,6 +268,40 @@ class _ModifierScreenState extends State<ModifierScreen> {
           );
         }
         
+        // Mettre à jour le statut du véhicule pour indiquer qu'il n'est plus en location
+        final String immatriculation = widget.data['immatriculation'] ?? '';
+        if (immatriculation.isNotEmpty) {
+          print('🚗 Mise à jour du statut du véhicule pour l\'immatriculation: $immatriculation');
+          
+          // Rechercher le véhicule par son immatriculation
+          final vehicleQuery = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(targetId)
+              .collection('vehicules')
+              .where('immatriculation', isEqualTo: immatriculation)
+              .limit(1)
+              .get();
+
+          if (vehicleQuery.docs.isNotEmpty) {
+            final vehicleId = vehicleQuery.docs.first.id;
+            
+            // Mettre à jour le statut du véhicule à 'restitue' pour indiquer qu'il est disponible
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(targetId)
+                .collection('vehicules')
+                .doc(vehicleId)
+                .update({
+                  'isRented': 'restitue',
+                  'dateReserve': FieldValue.delete() // Supprimer le champ dateReserve
+                });
+                
+            print('✅ Statut du véhicule mis à jour à "restitue" et champ dateReserve supprimé pour l\'ID: $vehicleId');
+          } else {
+            print('❌ Véhicule non trouvé pour l\'immatriculation: $immatriculation');
+          }
+        }
+        
         print('📊 Résultat de la clôture: Succès - contratId: ${widget.contratId}');
         
         // Générer le PDF après la clôture

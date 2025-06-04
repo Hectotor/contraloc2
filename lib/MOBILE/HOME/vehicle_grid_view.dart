@@ -67,17 +67,132 @@ class VehicleGridView extends StatelessWidget {
                   if (!context.mounted) return;
 
                   if (doc.exists) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ClientPage(
-                          marque: data['marque'] ?? '',
-                          modele: data['modele'] ?? '',
-                          immatriculation:
-                              data['immatriculation'] ?? '',
+                    // Utiliser directement les données du document data
+                    if (data['isRented'] == 'en_cours') {
+                      // Afficher un message d'erreur si le véhicule est déjà loué
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Ce véhicule est actuellement en location.'),
+                          backgroundColor: Colors.red,
+                          duration: Duration(seconds: 3),
                         ),
-                      ),
-                    );
+                      );
+                    } else if (data['isRented'] == 'réservé') {
+                      // Pour les véhicules réservés, afficher un popup d'avertissement mais autoriser la création
+                      showDialog(
+                        context: context,
+                        builder: (context) => Dialog(
+                          backgroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: Colors.orange,
+                                  size: 60,
+                                ),
+                                const SizedBox(height: 20),
+                                const Text(
+                                  "Véhicule réservé",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF08004D),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  data['dateReserve'] != null
+                                    ? "Attention : ce véhicule a été réservé pour le ${data['dateReserve']}. "
+                                      "Voulez-vous tout de même créer un contrat ?"
+                                    : "Attention : ce véhicule est déjà réservé. "
+                                      "Voulez-vous tout de même créer un contrat ?",
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                                const SizedBox(height: 20),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.grey[300],
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                        ),
+                                        onPressed: () {
+                                          Navigator.pop(context); // Fermer le popup sans rien faire
+                                        },
+                                        child: const Text(
+                                          'Annuler',
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF08004D),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                        ),
+                                        onPressed: () {
+                                          Navigator.pop(context); // Fermer le popup
+                                          // Naviguer vers la page de création de contrat
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => ClientPage(
+                                                immatriculation: data['immatriculation'] ?? '',
+                                                marque: data['marque'] ?? '',
+                                                modele: data['modele'] ?? '',
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        child: const Text(
+                                          'Continuer',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    } else {
+                      // Si le véhicule est disponible, naviguer vers la page de création de contrat
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ClientPage(
+                            immatriculation: data['immatriculation'] ?? '',
+                            marque: data['marque'] ?? '',
+                            modele: data['modele'] ?? '',
+                          ),
+                        ),
+                      );
+                    }
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -94,14 +209,16 @@ class VehicleGridView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   color: Colors.white, 
-                  child: Column(
+                  child: Stack(
                     children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(16),
-                            topRight: Radius.circular(16),
-                          ),
+                      Column(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                topRight: Radius.circular(16),
+                              ),
                           child: data['photoVehiculeUrl'] != null &&
                                   data['photoVehiculeUrl'].isNotEmpty
                               ? Image.network(
@@ -135,13 +252,13 @@ class VehicleGridView extends StatelessWidget {
                                     color: Colors.grey,
                                   ),
                                 ),
-                        ),
-                      ),
-                      const Divider(
-                        color: Colors.black12,
-                        height: 1,
-                        thickness: 1,
-                      ),
+                            ),
+                          ),
+                          const Divider(
+                            color: Colors.black12,
+                            height: 1,
+                            thickness: 1,
+                          ),
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Column(
@@ -167,6 +284,63 @@ class VehicleGridView extends StatelessWidget {
                           ],
                         ),
                       ),
+                        ],
+                      ),
+                      
+                      // Badge de statut
+                      if (data['isRented'] != null)
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: data['isRented'] == 'en_cours' 
+                                ? Colors.red.withOpacity(0.9)
+                                : data['isRented'] == 'réservé'
+                                  ? Colors.orange.withOpacity(0.9)
+                                  : Colors.green.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.3),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  data['isRented'] == 'en_cours'
+                                    ? 'Loué'
+                                    : data['isRented'] == 'réservé'
+                                      ? 'Réservé'
+                                      : 'Disponible',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                if (data['dateReserve'] != null && 
+                                    (data['isRented'] == 'en_cours' || data['isRented'] == 'réservé'))
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      '${data['dateReserve']}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
