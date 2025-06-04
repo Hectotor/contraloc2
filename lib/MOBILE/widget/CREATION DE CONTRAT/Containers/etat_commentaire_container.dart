@@ -233,79 +233,7 @@ class _EtatCommentaireContainerState extends State<EtatCommentaireContainer> {
                         ),
                       ),
                     ],
-                    if (widget.photos.isNotEmpty)
-                      Container(
-                        margin: const EdgeInsets.symmetric(vertical: 20),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              height: 200, // Hauteur fixe
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: widget.photos.length,
-                                itemBuilder: (context, index) {
-                                  if (index >= 10) return Container(); // Limite à 10 photos
-                                  
-                                  return Container(
-                                    width: 200, // Largeur fixe
-                                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                                    child: Stack(
-                                      children: [
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(12),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black.withOpacity(0.1),
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
-                                          ),
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(12),
-                                            child: Image.file(
-                                              widget.photos[index],
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              height: double.infinity,
-                                            ),
-                                          ),
-                                        ),
-                                        Positioned(
-                                          right: 0,
-                                          bottom: 0,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: Colors.black.withOpacity(0.1),
-                                              borderRadius: BorderRadius.circular(16),
-                                            ),
-                                            padding: const EdgeInsets.all(8),
-                                            child: IconButton(
-                                              icon: const Icon(
-                                                Icons.delete,
-                                                color: Colors.white,
-                                                size: 20,
-                                              ),
-                                              onPressed: () {
-                                                widget.onRemovePhoto(widget.photos[index]);
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    if (widget.photos.isNotEmpty) _buildPhotoScroll(),
                      const SizedBox(height: 15),
                     // Section commentaire
                     const Text(
@@ -351,6 +279,82 @@ class _EtatCommentaireContainerState extends State<EtatCommentaireContainer> {
           ],
         ),
       ),
+    );
+  }
+  
+
+  Widget _buildPhotoScroll() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "${widget.photos.length} photo${widget.photos.length > 1 ? 's' : ''} (${widget.photos.length}/10)",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[700],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 250,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: widget.photos.length,
+            itemBuilder: (context, index) {
+              return Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        widget.photos[index],
+                        width: 200,
+                        height: 234,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: GestureDetector(
+                      onTap: () {
+                        widget.onRemovePhoto(widget.photos[index]);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              spreadRadius: 1,
+                              blurRadius: 3,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
