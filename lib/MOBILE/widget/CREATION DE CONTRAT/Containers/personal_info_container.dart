@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../client_search.dart';
 
 class PersonalInfoContainer extends StatefulWidget {
   final TextEditingController entrepriseClientController;
@@ -24,6 +25,7 @@ class PersonalInfoContainer extends StatefulWidget {
 
 class _PersonalInfoContainerState extends State<PersonalInfoContainer> {
   bool _showContent = true;
+  final TextEditingController _searchController = TextEditingController();
 
   bool _isValidEmail(String email) {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
@@ -105,6 +107,50 @@ class _PersonalInfoContainerState extends State<PersonalInfoContainer> {
 
   List<Widget> _buildFields(BuildContext context) {
     return [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: GestureDetector(
+          onTap: () {
+            showClientSearchDialog(
+              context: context,
+              onClientSelected: (client) {
+                // Remplir les champs avec les données du client sélectionné
+                setState(() {
+                  widget.entrepriseClientController.text = client['entreprise'] ?? '';
+                  widget.nomController.text = client['nom'] ?? '';
+                  widget.prenomController.text = client['prenom'] ?? '';
+                  widget.emailController.text = client['email'] ?? '';
+                  widget.telephoneController.text = client['telephone'] ?? '';
+                  widget.adresseController.text = client['adresse'] ?? '';
+                });
+              },
+            );
+          },
+          child: TextField(
+            controller: _searchController,
+            enabled: false, // Désactivé pour que le tap ouvre le popup à la place
+            decoration: InputDecoration(
+              hintText: 'Rechercher un client existant...',
+              prefixIcon: const Icon(Icons.search, color: Color(0xFF08004D)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF08004D)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF08004D), width: 1),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF08004D), width: 1),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            ),
+          ),
+        ),
+      ),
       _buildField(context, 'Entreprise', widget.entrepriseClientController),
       _buildField(context, 'Prénom', widget.prenomController),
       _buildField(context, 'Nom', widget.nomController),
