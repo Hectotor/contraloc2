@@ -53,30 +53,28 @@ class _ClientSearchState extends State<ClientSearch> {
             .collection('locations')
             .get();
 
-        print('Nombre de documents trouvés: ${locationsSnapshot.docs.length}');
+        //print('Nombre de documents trouvés: ${locationsSnapshot.docs.length}');
         
         final List<Map<String, dynamic>> clientsList = [];
         
         for (var doc in locationsSnapshot.docs) {
           final data = doc.data();
-          print('Document ID: ${doc.id}, données: $data');
           
-          // Vérifier si ce document contient des informations client
-          // Modifié pour vérifier les champs nom ou prenom au lieu de nomClient
-          if ((data.containsKey('nom') && data['nom'] != null) || 
-              (data.containsKey('prenom') && data['prenom'] != null)) {
+          // Vérifier si ce document contient des informations client avec nom ET prénom
+          if (data.containsKey('nom') && data['nom'] != null && data['nom'].toString().trim().isNotEmpty &&
+              data.containsKey('prenom') && data['prenom'] != null && data['prenom'].toString().trim().isNotEmpty) {
             // Créer un objet client avec les informations disponibles
             final client = {
               'id': doc.id,
-              'nom': data['nom'] ?? '',
-              'prenom': data['prenom'] ?? '',
+              'nom': data['nom'],
+              'prenom': data['prenom'],
               'entreprise': data['entrepriseClient'] ?? '', // Vérifie les deux formats possibles
               'email': data['email'] ?? '',
               'telephone': data['telephone'] ?? '',
               'adresse': data['adresse'] ?? '',
             };
             
-            print('Client ajouté: $client');
+            //print('Client ajouté: $client');
             clientsList.add(client);
           }
         }
