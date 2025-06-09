@@ -56,32 +56,42 @@ class _ClientSearchState extends State<ClientSearch> {
         //print('Nombre de documents trouvés: ${locationsSnapshot.docs.length}');
         
         final List<Map<String, dynamic>> clientsList = [];
+      // Map pour suivre les clients uniques par nom et prénom
+      final Map<String, Map<String, dynamic>> uniqueClients = {};
+      
+      for (var doc in locationsSnapshot.docs) {
+        final data = doc.data();
         
-        for (var doc in locationsSnapshot.docs) {
-          final data = doc.data();
+        // Vérifier si ce document contient des informations client avec nom ET prénom
+        if (data.containsKey('nom') && data['nom'] != null && data['nom'].toString().trim().isNotEmpty &&
+            data.containsKey('prenom') && data['prenom'] != null && data['prenom'].toString().trim().isNotEmpty) {
+          // Créer un objet client avec les informations disponibles
+          final client = {
+            'id': doc.id,
+            'nom': data['nom'],
+            'prenom': data['prenom'],
+            'entreprise': data['entrepriseClient'] ?? '', // Vérifie les deux formats possibles
+            'email': data['email'] ?? '',
+            'telephone': data['telephone'] ?? '',
+            'adresse': data['adresse'] ?? '',
+            // Informations du permis de conduire
+            'numeroPermis': data['numeroPermis'] ?? '',
+            'permisRectoUrl': data['permisRectoUrl'] ?? '',
+            'permisVersoUrl': data['permisVersoUrl'] ?? '',
+          };
           
-          // Vérifier si ce document contient des informations client avec nom ET prénom
-          if (data.containsKey('nom') && data['nom'] != null && data['nom'].toString().trim().isNotEmpty &&
-              data.containsKey('prenom') && data['prenom'] != null && data['prenom'].toString().trim().isNotEmpty) {
-            // Créer un objet client avec les informations disponibles
-            final client = {
-              'id': doc.id,
-              'nom': data['nom'],
-              'prenom': data['prenom'],
-              'entreprise': data['entrepriseClient'] ?? '', // Vérifie les deux formats possibles
-              'email': data['email'] ?? '',
-              'telephone': data['telephone'] ?? '',
-              'adresse': data['adresse'] ?? '',
-              // Informations du permis de conduire
-              'numeroPermis': data['numeroPermis'] ?? '',
-              'permisRectoUrl': data['permisRectoUrl'] ?? '',
-              'permisVersoUrl': data['permisVersoUrl'] ?? '',
-            };
-            
-            //print('Client ajouté: $client');
-            clientsList.add(client);
+          // Créer une clé unique basée sur le nom et prénom
+          final String uniqueKey = '${data['prenom'].toString().toLowerCase()}_${data['nom'].toString().toLowerCase()}';
+          
+          // Si ce client n'existe pas encore dans notre map, l'ajouter
+          if (!uniqueClients.containsKey(uniqueKey)) {
+            uniqueClients[uniqueKey] = client;
           }
         }
+      }
+      
+      // Convertir la map en liste
+      clientsList.addAll(uniqueClients.values);
         
         print('Nombre total de clients trouvés: ${clientsList.length}');
         
