@@ -72,6 +72,10 @@ class _ClientSearchState extends State<ClientSearch> {
               'email': data['email'] ?? '',
               'telephone': data['telephone'] ?? '',
               'adresse': data['adresse'] ?? '',
+              // Informations du permis de conduire
+              'numeroPermis': data['numeroPermis'] ?? '',
+              'permisRectoUrl': data['permisRectoUrl'] ?? '',
+              'permisVersoUrl': data['permisVersoUrl'] ?? '',
             };
             
             //print('Client ajouté: $client');

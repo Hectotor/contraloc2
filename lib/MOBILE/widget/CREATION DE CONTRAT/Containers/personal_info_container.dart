@@ -8,6 +8,7 @@ class PersonalInfoContainer extends StatefulWidget {
   final TextEditingController emailController;
   final TextEditingController telephoneController;
   final TextEditingController adresseController;
+  final Function(String, String?, String?)? onPermisInfoUpdate; // Callback pour mettre à jour les infos du permis
 
   const PersonalInfoContainer({
     Key? key,
@@ -17,6 +18,7 @@ class PersonalInfoContainer extends StatefulWidget {
     required this.emailController,
     required this.telephoneController,
     required this.adresseController,
+    this.onPermisInfoUpdate, // Optionnel
   }) : super(key: key);
 
   @override
@@ -123,6 +125,15 @@ class _PersonalInfoContainerState extends State<PersonalInfoContainer> {
                   widget.telephoneController.text = client['telephone'] ?? '';
                   widget.adresseController.text = client['adresse'] ?? '';
                 });
+                
+                // Mettre à jour les informations du permis si le callback est fourni
+                if (widget.onPermisInfoUpdate != null) {
+                  final numeroPermis = client['numeroPermis'] ?? '';
+                  final permisRectoUrl = client['permisRectoUrl'];
+                  final permisVersoUrl = client['permisVersoUrl'];
+                  
+                  widget.onPermisInfoUpdate!(numeroPermis, permisRectoUrl, permisVersoUrl);
+                }
               },
             );
           },

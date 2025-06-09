@@ -68,6 +68,15 @@ class _ClientPageState extends State<ClientPage> {
   String? _permisVersoUrl;
   // Variable isPremiumUser supprimée car non utilisée
   bool _isLoading = false;
+  
+  // Méthode pour mettre à jour les informations du permis
+  void updatePermisInfo(String numeroPermis, String? rectoUrl, String? versoUrl) {
+    setState(() {
+      _numeroPermisController.text = numeroPermis;
+      _permisRectoUrl = rectoUrl;
+      _permisVersoUrl = versoUrl;
+    });
+  }
 
   @override
   void initState() {
@@ -357,6 +366,7 @@ class _ClientPageState extends State<ClientPage> {
                       emailController: _emailController,
                       telephoneController: _telephoneController,
                       adresseController: _adresseController,
+                      onPermisInfoUpdate: updatePermisInfo, // Ajout du callback pour mettre à jour les infos du permis
                     ),
                     const SizedBox(height: 15),
                     _buildLicenseInfo(context),
