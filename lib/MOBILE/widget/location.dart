@@ -41,6 +41,8 @@ class LocationPage extends StatefulWidget {
   final String? contratId;
   final File? permisRecto;
   final File? permisVerso;
+  final String? permisRectoUrl;
+  final String? permisVersoUrl;
 
   const LocationPage({
     Key? key,
@@ -59,6 +61,8 @@ class LocationPage extends StatefulWidget {
     this.contratId,
     this.permisRecto,
     this.permisVerso,
+    this.permisRectoUrl,
+    this.permisVersoUrl,
   }) : super(key: key);
 
   @override
@@ -161,6 +165,15 @@ class _LocationPageState extends State<LocationPage> {
     _immatriculationVehiculeClientController.text = widget.immatriculationVehiculeClient ?? '';
     _kilometrageVehiculeClientController.text = widget.kilometrageVehiculeClient ?? '';
     
+    // Initialiser les URLs des images du permis
+    _permisRectoUrl = widget.permisRectoUrl;
+    _permisVersoUrl = widget.permisVersoUrl;
+    
+    // Debug des URLs du permis
+    print('=== DEBUG INIT PERMIS URLS ===');
+    print('permisRectoUrl dans widget: ${widget.permisRectoUrl}');
+    print('permisVersoUrl dans widget: ${widget.permisVersoUrl}');
+    print('=== FIN DEBUG INIT PERMIS URLS ===');
     
     // Initialiser les variables d'entreprise
     _loadAdminInfo();

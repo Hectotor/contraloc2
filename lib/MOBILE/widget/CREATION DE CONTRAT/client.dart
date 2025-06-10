@@ -265,6 +265,8 @@ class _ClientPageState extends State<ClientPage> {
                 kilometrageVehiculeClient: _kilometrageVehiculeClientController.text,
                 permisRecto: _permisRecto,
                 permisVerso: _permisVerso,
+                permisRectoUrl: _permisRectoUrl,
+                permisVersoUrl: _permisVersoUrl,
               ),
             ),
           );

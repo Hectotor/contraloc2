@@ -149,7 +149,7 @@ class _ClientSearchState extends State<ClientSearch> {
       children: [
         // Champ de recherche
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
@@ -213,7 +213,7 @@ class _ClientSearchState extends State<ClientSearch> {
           // Liste des clients avec scrolling
           Flexible(
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
+              margin: const EdgeInsets.symmetric(horizontal: 5),
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: const Color(0xFF08004D)),
