@@ -16,6 +16,7 @@ class ClientSearch extends StatefulWidget {
 
 class _ClientSearchState extends State<ClientSearch> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   List<Map<String, dynamic>> _clients = [];
   List<Map<String, dynamic>> _filteredClients = [];
   bool _isLoading = false;
@@ -25,6 +26,19 @@ class _ClientSearchState extends State<ClientSearch> {
   void initState() {
     super.initState();
     _loadClients();
+    
+    // Mettre le focus sur le champ de recherche après le build initial
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _searchFocusNode.requestFocus();
+    });
+  }
+  
+  @override
+  void dispose() {
+    // Libérer les ressources
+    _searchFocusNode.dispose();
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadClients() async {
@@ -232,6 +246,8 @@ class _ClientSearchState extends State<ClientSearch> {
           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
           child: TextField(
             controller: _searchController,
+            focusNode: _searchFocusNode,
+            autofocus: true,
             decoration: InputDecoration(
               hintText: 'Rechercher un client existant...',
               prefixIcon: const Icon(Icons.search, color: Color(0xFF08004D)),
@@ -293,7 +309,7 @@ class _ClientSearchState extends State<ClientSearch> {
           // Liste des clients avec scrolling
           Flexible(
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 5),
+              margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: const Color(0xFF08004D)),
@@ -349,11 +365,7 @@ class _ClientSearchState extends State<ClientSearch> {
     );
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
+  // La méthode dispose est déjà définie plus haut dans le code
 }
 
 // Widget pour afficher un popup de recherche de client
