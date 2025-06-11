@@ -27,7 +27,6 @@ class PersonalInfoContainer extends StatefulWidget {
 
 class _PersonalInfoContainerState extends State<PersonalInfoContainer> {
   bool _showContent = true;
-  final TextEditingController _searchController = TextEditingController();
 
   bool _isValidEmail(String email) {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
@@ -137,27 +136,22 @@ class _PersonalInfoContainerState extends State<PersonalInfoContainer> {
               },
             );
           },
-          child: TextField(
-            controller: _searchController,
-            enabled: false, // Désactivé pour que le tap ouvre le popup à la place
-            decoration: InputDecoration(
-              hintText: 'Rechercher un client existant...',
-              prefixIcon: const Icon(Icons.search, color: Color(0xFF08004D)),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF08004D)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF08004D), width: 1),
-              ),
-              disabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF08004D), width: 1),
-              ),
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF08004D), width: 1),
+            ),
+            child: Row(
+              children: const [
+                Icon(Icons.search, color: Color(0xFF08004D)),
+                SizedBox(width: 10),
+                Text(
+                  'Rechercher un client existant...',
+                  style: TextStyle(color: Color(0xFF666666)),
+                ),
+              ],
             ),
           ),
         ),
