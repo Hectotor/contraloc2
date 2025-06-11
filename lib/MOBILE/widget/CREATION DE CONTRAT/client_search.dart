@@ -204,31 +204,38 @@ class _ClientSearchState extends State<ClientSearch> {
   }
 
   void _filterClients(String query) {
-    // Toujours montrer tous les clients quand la recherche est vide
-    if (query.isEmpty) {
-      setState(() {
-        _filteredClients = _clients;
-      });
-      return;
-    }
-
-    final lowercaseQuery = query.toLowerCase();
-    
+  // Toujours montrer tous les clients quand la recherche est vide
+  if (query.isEmpty) {
     setState(() {
-      _filteredClients = _clients.where((client) {
-        final nom = client['nom'].toString().toLowerCase();
-        final prenom = client['prenom'].toString().toLowerCase();
-        final entreprise = client['entreprise'].toString().toLowerCase();
-        final email = client['email'].toString().toLowerCase();
-        final telephone = client['telephone'].toString().toLowerCase();
-        
-        return nom.contains(lowercaseQuery) ||
-               prenom.contains(lowercaseQuery) ||
-               entreprise.contains(lowercaseQuery) ||
-               email.contains(lowercaseQuery) ||
-               telephone.contains(lowercaseQuery);
-      }).toList();
+      _filteredClients = _clients;
     });
+    return;
+  }
+
+  // Nettoyer la requête en supprimant les espaces en trop et en la mettant en minuscules
+  final lowercaseQuery = query.trim().toLowerCase();
+  
+  // Diviser la requête en mots pour permettre la recherche multi-mots
+  final queryWords = lowercaseQuery.split(' ').where((word) => word.isNotEmpty).toList();
+  
+  setState(() {
+    _filteredClients = _clients.where((client) {
+      final nom = client['nom'].toString().toLowerCase();
+      final prenom = client['prenom'].toString().toLowerCase();
+      final entreprise = client['entreprise'].toString().toLowerCase();
+      final email = client['email'].toString().toLowerCase();
+      final telephone = client['telephone'].toString().toLowerCase();
+      
+      // Vérifier si tous les mots de la requête sont présents dans au moins un des champs
+      return queryWords.every((word) {
+        return nom.contains(word) ||
+               prenom.contains(word) ||
+               entreprise.contains(word) ||
+               email.contains(word) ||
+               telephone.contains(word);
+      });
+    }).toList();
+  });
   }
 
   @override
