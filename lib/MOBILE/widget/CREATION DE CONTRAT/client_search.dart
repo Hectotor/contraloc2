@@ -65,6 +65,21 @@ class _ClientSearchState extends State<ClientSearch> {
         // Vérifier si ce document contient des informations client avec nom ET prénom
         if (data.containsKey('nom') && data['nom'] != null && data['nom'].toString().trim().isNotEmpty &&
             data.containsKey('prenom') && data['prenom'] != null && data['prenom'].toString().trim().isNotEmpty) {
+          // Extraire la date de début si elle existe
+          DateTime? dateDebut;
+          if (data.containsKey('dateDebut') && data['dateDebut'] != null) {
+            try {
+              // Essayer de convertir la date de début en DateTime
+              if (data['dateDebut'] is Timestamp) {
+                dateDebut = (data['dateDebut'] as Timestamp).toDate();
+              } else if (data['dateDebut'] is String) {
+                dateDebut = DateTime.tryParse(data['dateDebut']);
+              }
+            } catch (e) {
+              print('Erreur lors de la conversion de la date: $e');
+            }
+          }
+          
           // Créer un objet client avec les informations disponibles
           final client = {
             'id': doc.id,
@@ -76,8 +91,9 @@ class _ClientSearchState extends State<ClientSearch> {
             'adresse': data['adresse'] ?? '',
             // Informations du permis de conduire
             'numeroPermis': data['numeroPermis'] ?? '',
-            'permisRectoUrl': data['permisRectoUrl'] ?? '',
-            'permisVersoUrl': data['permisVersoUrl'] ?? '',
+            'permisRectoUrl': data['permisRecto'] ?? '', // Utiliser le bon nom de champ
+            'permisVersoUrl': data['permisVerso'] ?? '', // Utiliser le bon nom de champ
+            'dateDebut': dateDebut, // Stocker la date de début pour le tri
           };
           
           // Créer une clé unique basée sur le nom et prénom
@@ -86,6 +102,70 @@ class _ClientSearchState extends State<ClientSearch> {
           // Si ce client n'existe pas encore dans notre map, l'ajouter
           if (!uniqueClients.containsKey(uniqueKey)) {
             uniqueClients[uniqueKey] = client;
+          } else {
+            // Le client existe déjà, vérifier si nous devons mettre à jour ses informations
+            bool shouldUpdate = false;
+            
+            // Vérifier si la date est plus récente
+            if (dateDebut != null && uniqueClients[uniqueKey]!['dateDebut'] != null && 
+                dateDebut.isAfter(uniqueClients[uniqueKey]!['dateDebut'])) {
+              shouldUpdate = true;
+            }
+            
+            // Vérifier si les informations du client ont été mises à jour
+            if (!shouldUpdate) {
+              // Vérifier les informations générales du client
+              
+              // Entreprise
+              if (data['entrepriseClient'] != null && data['entrepriseClient'].toString().isNotEmpty && 
+                  (uniqueClients[uniqueKey]!['entreprise'] == null || uniqueClients[uniqueKey]!['entreprise'].toString().isEmpty)) {
+                shouldUpdate = true;
+              }
+              
+              // Email
+              if (!shouldUpdate && data['email'] != null && data['email'].toString().isNotEmpty && 
+                  (uniqueClients[uniqueKey]!['email'] == null || uniqueClients[uniqueKey]!['email'].toString().isEmpty)) {
+                shouldUpdate = true;
+              }
+              
+              // Téléphone
+              if (!shouldUpdate && data['telephone'] != null && data['telephone'].toString().isNotEmpty && 
+                  (uniqueClients[uniqueKey]!['telephone'] == null || uniqueClients[uniqueKey]!['telephone'].toString().isEmpty)) {
+                shouldUpdate = true;
+              }
+              
+              // Adresse
+              if (!shouldUpdate && data['adresse'] != null && data['adresse'].toString().isNotEmpty && 
+                  (uniqueClients[uniqueKey]!['adresse'] == null || uniqueClients[uniqueKey]!['adresse'].toString().isEmpty)) {
+                shouldUpdate = true;
+              }
+              
+              // Vérifier les informations du permis
+              
+              // Numéro de permis
+              if (!shouldUpdate && data['numeroPermis'] != null && data['numeroPermis'].toString().isNotEmpty && 
+                  (uniqueClients[uniqueKey]!['numeroPermis'] == null || uniqueClients[uniqueKey]!['numeroPermis'].toString().isEmpty)) {
+                shouldUpdate = true;
+              }
+              
+              // Images du permis - recto
+              if (!shouldUpdate && data['permisRecto'] != null && data['permisRecto'].toString().isNotEmpty && 
+                  (uniqueClients[uniqueKey]!['permisRectoUrl'] == null || uniqueClients[uniqueKey]!['permisRectoUrl'].toString().isEmpty)) {
+                shouldUpdate = true;
+              }
+              
+              // Images du permis - verso
+              if (!shouldUpdate && data['permisVerso'] != null && data['permisVerso'].toString().isNotEmpty && 
+                  (uniqueClients[uniqueKey]!['permisVersoUrl'] == null || uniqueClients[uniqueKey]!['permisVersoUrl'].toString().isEmpty)) {
+                shouldUpdate = true;
+              }
+            }
+            
+            // Si nous devons mettre à jour, remplacer le client existant
+            if (shouldUpdate) {
+              print('Mise à jour du client ${client['prenom']} ${client['nom']} avec des informations plus récentes');
+              uniqueClients[uniqueKey] = client;
+            }
           }
         }
       }
@@ -230,13 +310,27 @@ class _ClientSearchState extends State<ClientSearch> {
                       ListTile(
                         dense: true,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        title: Text(
-                          '${client['prenom']} ${client['nom']}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Color(0xFF08004D),
-                          ),
+                        title: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${client['prenom']} ${client['nom']}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Color(0xFF08004D),
+                              ),
+                            ),
+                            if (client['entreprise'] != null && client['entreprise'].toString().isNotEmpty)
+                              Text(
+                                'Entreprise: (${client['entreprise']})',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF666666),
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                          ],
                         ),
                         onTap: () {
                           widget.onClientSelected(client);
