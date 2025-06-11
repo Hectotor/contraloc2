@@ -110,8 +110,9 @@ class _ClientSearchState extends State<ClientSearch> {
             'dateDebut': dateDebut, // Stocker la date de début pour le tri
           };
           
-          // Créer une clé unique basée sur le nom et prénom
-          final String uniqueKey = '${data['prenom'].toString().toLowerCase()}_${data['nom'].toString().toLowerCase()}';
+          // Créer une clé unique basée sur le nom, prénom et entreprise
+          final String entreprise = data['entrepriseClient']?.toString().toLowerCase() ?? '';
+          final String uniqueKey = '${data['prenom'].toString().toLowerCase()}_${data['nom'].toString().toLowerCase()}_$entreprise';
           
           // Si ce client n'existe pas encore dans notre map, l'ajouter
           if (!uniqueClients.containsKey(uniqueKey)) {
