@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../HOME/button_add_vehicle.dart';
+import '../PHOTOS/button_photo_actions.dart';
 
 class PhotosScreen extends StatefulWidget {
   const PhotosScreen({Key? key}) : super(key: key);
@@ -46,28 +46,8 @@ class _PhotosScreenState extends State<PhotosScreen> {
               ],
             ),
           ),
-          // Bouton d'ajout positionné en bas de l'écran
-          Positioned(
-            bottom: 20,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: CustomActionButton(
-                text: "Prendre une photo",
-                icon: Icons.camera_alt,
-                onPressed: () {
-                  // Afficher un message temporaire
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Fonctionnalité de prise de photo bientôt disponible'),
-                      backgroundColor: Color(0xFF08004D),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
+          // Boutons d'action photo positionnés en bas de l'écran
+          const PhotoActionButtons(),
         ],
       ),
     );
