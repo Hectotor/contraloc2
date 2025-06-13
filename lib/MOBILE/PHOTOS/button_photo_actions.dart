@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'vehicle_info_page.dart';
+
 
 /// Un bouton d'action personnalisé avec un design moderne
 /// 
@@ -160,12 +162,11 @@ class PhotoActionButtons extends StatelessWidget {
           text: "Commencer",
           icon: Icons.auto_fix_high,
           onPressed: () {
-            // Afficher un message temporaire
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Fonctionnalité de suppression d\'arrière-plan bientôt disponible'),
-                backgroundColor: Color(0xFF08004D),
-                duration: Duration(seconds: 2),
+            // Naviguer vers la page du formulaire de véhicule
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const VehicleInfoPage(),
               ),
             );
           },
