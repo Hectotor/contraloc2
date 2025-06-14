@@ -31,14 +31,14 @@ class _VehiclePhotosGalleryState extends State<VehiclePhotosGallery> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Color(0xFF08004D)),
         title: Text(
           _photosList[_currentIndex].key,
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: Color(0xFF08004D), fontWeight: FontWeight.bold),
         ),
       ),
       body: SafeArea(
@@ -82,7 +82,7 @@ class _VehiclePhotosGalleryState extends State<VehiclePhotosGallery> {
             // Indicateurs et légendes
             Container(
               padding: const EdgeInsets.all(16.0),
-              color: Colors.black,
+              color: Colors.white,
               child: Column(
                 children: [
                   // Indicateurs de position
@@ -96,8 +96,8 @@ class _VehiclePhotosGalleryState extends State<VehiclePhotosGallery> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: _currentIndex == entry.key
-                              ? Colors.white
-                              : Colors.white.withOpacity(0.4),
+                              ? const Color(0xFF08004D)
+                              : const Color(0xFF08004D).withOpacity(0.4),
                         ),
                       );
                     }).toList(),
@@ -107,7 +107,7 @@ class _VehiclePhotosGalleryState extends State<VehiclePhotosGallery> {
                   Text(
                     '${_currentIndex + 1}/${_photosList.length} - ${_photosList[_currentIndex].key}',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Color(0xFF08004D),
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
