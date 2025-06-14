@@ -279,7 +279,7 @@ class _VehiclePhotoViewsState extends State<VehiclePhotoViews> {
           left: 0,
           right: 0,
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.5),
               borderRadius: const BorderRadius.only(
