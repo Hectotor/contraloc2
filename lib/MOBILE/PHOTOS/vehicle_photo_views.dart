@@ -43,14 +43,15 @@ class _VehiclePhotoViewsState extends State<VehiclePhotoViews> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildPhotoViewBlock(context, 'Avant ¾ gauche'),
-          _buildPhotoViewBlock(context, 'Avant ¾ droit'),
-          _buildPhotoViewBlock(context, 'Arrière ¾ gauche'),
-          _buildPhotoViewBlock(context, 'Arrière ¾ droit'),
-          _buildPhotoViewBlock(context, 'Vue latérale gauche'),
-          _buildPhotoViewBlock(context, 'Vue latérale droite'),
-          _buildPhotoViewBlock(context, 'Vue arrière plein centre'),
           _buildPhotoViewBlock(context, 'Vue avant plein centre'),
+          _buildPhotoViewBlock(context, 'Avant ¾ gauche'),
+          _buildPhotoViewBlock(context, 'Vue latérale gauche'),
+          _buildPhotoViewBlock(context, 'Arrière ¾ gauche'),
+          _buildPhotoViewBlock(context, 'Vue arrière plein centre'),
+          _buildPhotoViewBlock(context, 'Arrière ¾ droit'),
+          _buildPhotoViewBlock(context, 'Vue latérale droite'),
+          _buildPhotoViewBlock(context, 'Avant ¾ droit'),
+
         ],
       ),
     );
