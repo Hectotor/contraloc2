@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'vehicle_photo_views.dart';
+import 'generate_button.dart';
 
 /// Page dédiée au formulaire d'informations du véhicule
 class VehicleInfoPage extends StatelessWidget {
@@ -14,38 +16,54 @@ class VehicleInfoPage extends StatelessWidget {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                  TextField(
+                    decoration: InputDecoration(
+                      labelText: 'Informations du véhicule',
+                      labelStyle: const TextStyle(
+                        color: Color(0xFF08004D),
+                        fontWeight: FontWeight.bold,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFF08004D)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFF08004D), width: 2),
+                      ),
+                    ),
                   ),
-                ],
-              ),
-              child: TextField(
-                decoration: InputDecoration(
-                  labelText: 'Informations du véhicule',
-                  labelStyle: const TextStyle(
-                    color: Color(0xFF08004D),
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Vues du véhicule',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF08004D),
+                    ),
                   ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFF08004D)),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'Pour un résultat optimal, merci de bien cadrer vos photos et de suivre chaque étape.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                      color: Color(0xFF08004D),
+                      fontWeight: FontWeight.w300,
+                    ),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFF08004D), width: 2),
+                  const SizedBox(height: 10),
+                  const VehiclePhotoViews(),
+                  const SizedBox(height: 30),
+                  Center(
+                    child: GenerateButton(
+                      onPressed: () {
+                        // Action à effectuer lors du clic sur le bouton
+                      },
+                    ),
                   ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
