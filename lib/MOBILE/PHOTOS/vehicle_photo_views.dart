@@ -162,16 +162,19 @@ class _VehiclePhotoViewsState extends State<VehiclePhotoViews> {
     
     return Stack(
       children: [
-        // Image ou espace vide
+        // Image ou espace vide avec bords arrondis
         Positioned.fill(
-          child: hasImage
-              ? Image.file(
-                  File(imagePath!),
-                  fit: BoxFit.cover,
-                )
-              : Container(
-                  color: Colors.grey[200],
-                ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(11),
+            child: hasImage
+                ? Image.file(
+                    File(imagePath!),
+                    fit: BoxFit.cover,
+                  )
+                : Container(
+                    color: Colors.grey[200],
+                  ),
+          ),
         ),
         // Bouton de suppression
         if (hasImage)
@@ -252,27 +255,7 @@ class _VehiclePhotoViewsState extends State<VehiclePhotoViews> {
             ),
           ),
           
-        // Indicateur de version traitée
-        if (hasImage && hasProcessedImage && showProcessed)
-          Positioned(
-            top: 8,
-            left: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'Traitée',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
+        // Aucun indicateur textuel n'est nécessaire car l'icône change déjà de couleur
         // Overlay semi-transparent avec le titre
         Positioned(
           bottom: 0,
