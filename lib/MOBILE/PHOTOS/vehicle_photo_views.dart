@@ -6,7 +6,9 @@ import 'vehicle_photos_gallery.dart';
 
 /// Widget pour afficher les différentes vues de photo du véhicule
 class VehiclePhotoViews extends StatefulWidget {
-  const VehiclePhotoViews({Key? key}) : super(key: key);
+  final Function(Map<String, String>)? onImagesUpdated;
+  
+  const VehiclePhotoViews({Key? key, this.onImagesUpdated}) : super(key: key);
 
   @override
   State<VehiclePhotoViews> createState() => _VehiclePhotoViewsState();
@@ -68,9 +70,11 @@ class _VehiclePhotoViewsState extends State<VehiclePhotoViews> {
           context, 
           false, // isRecto n'est pas pertinent ici
           (XFile image) {
-            // Mettre à jour l'état avec l'image sélectionnée
             setState(() {
               _selectedImages[title] = image.path;
+              if (widget.onImagesUpdated != null) {
+                widget.onImagesUpdated!(_selectedImages);
+              }
             });
             print('Image sélectionnée pour $title: ${image.path}');
           },
@@ -137,6 +141,10 @@ class _VehiclePhotoViewsState extends State<VehiclePhotoViews> {
             onTap: () {
               setState(() {
                 _selectedImages.remove(title);
+                // Notifier le parent des changements
+                if (widget.onImagesUpdated != null) {
+                  widget.onImagesUpdated!(_selectedImages);
+                }
               });
             },
             child: Container(

@@ -1,10 +1,84 @@
 import 'package:flutter/material.dart';
 import 'vehicle_photo_views.dart';
 import 'generate_button.dart';
+import 'background_removal_service.dart';
 
 /// Page dédiée au formulaire d'informations du véhicule
-class VehicleInfoPage extends StatelessWidget {
+class VehicleInfoPage extends StatefulWidget {
   const VehicleInfoPage({Key? key}) : super(key: key);
+
+  @override
+  State<VehicleInfoPage> createState() => _VehicleInfoPageState();
+}
+
+class _VehicleInfoPageState extends State<VehicleInfoPage> {
+  // Map pour stocker les images sélectionnées
+  Map<String, String> _vehicleImages = {};
+  bool _isProcessing = false;
+  
+  // Méthode pour mettre à jour les images
+  void _updateImages(Map<String, String> images) {
+    setState(() {
+      _vehicleImages = images;
+    });
+  }
+  
+  // Méthode pour traiter les images avec remove.bg
+  Future<void> _processImagesWithRemoveBg() async {
+    if (_vehicleImages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez d\'abord ajouter des photos du véhicule')),
+      );
+      return;
+    }
+    
+    setState(() {
+      _isProcessing = true;
+    });
+    
+    // Afficher le dialogue de traitement
+    BackgroundRemovalService.showProcessingDialog(context);
+    
+    // Traiter chaque image
+    Map<String, String> processedImages = {};
+    bool hasError = false;
+    
+    for (var entry in _vehicleImages.entries) {
+      final processedImagePath = await BackgroundRemovalService.removeBackground(
+        entry.value,
+      );
+      
+      if (processedImagePath != null) {
+        processedImages[entry.key] = processedImagePath;
+      } else {
+        hasError = true;
+        break;
+      }
+    }
+    
+    // Fermer le dialogue de traitement
+    Navigator.of(context).pop();
+    
+    if (!hasError) {
+      setState(() {
+        _vehicleImages = processedImages;
+        _isProcessing = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Traitement des images réussi ! Arrière-plans remplacés.')),
+      );
+    } else {
+      setState(() {
+        _isProcessing = false;
+      });
+      
+      BackgroundRemovalService.showErrorDialog(
+        context, 
+        'Une erreur est survenue lors du traitement des images. Vérifiez votre clé API remove.bg.',
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,12 +129,12 @@ class VehicleInfoPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const VehiclePhotoViews(),
+                  VehiclePhotoViews(onImagesUpdated: _updateImages),
                   const SizedBox(height: 30),
                   Center(
                     child: GenerateButton(
-                      onPressed: () {
-                        // Action à effectuer lors du clic sur le bouton
+                      onPressed: _isProcessing ? () {} : () async {
+                        await _processImagesWithRemoveBg();
                       },
                     ),
                   ),
