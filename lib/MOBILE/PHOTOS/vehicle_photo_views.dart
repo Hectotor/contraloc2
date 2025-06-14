@@ -7,16 +7,41 @@ import 'vehicle_photos_gallery.dart';
 /// Widget pour afficher les différentes vues de photo du véhicule
 class VehiclePhotoViews extends StatefulWidget {
   final Function(Map<String, String>)? onImagesUpdated;
-  
-  const VehiclePhotoViews({Key? key, this.onImagesUpdated}) : super(key: key);
+  final Map<String, String> processedImages;
+
+  const VehiclePhotoViews({
+    Key? key, 
+    this.onImagesUpdated,
+    this.processedImages = const {},
+  }) : super(key: key);
 
   @override
   State<VehiclePhotoViews> createState() => _VehiclePhotoViewsState();
 }
 
 class _VehiclePhotoViewsState extends State<VehiclePhotoViews> {
-  // Map pour stocker les chemins des images sélectionnées pour chaque vue
+  // Map pour stocker les chemins des images sélectionnées (originales)
   final Map<String, String> _selectedImages = {};
+  
+  // Map pour suivre quel mode d'affichage est actif pour chaque image
+  final Map<String, bool> _showProcessed = {};
+  
+  @override
+  void initState() {
+    super.initState();
+  }
+  
+  @override
+  void didUpdateWidget(VehiclePhotoViews oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Vérifier si de nouvelles images traitées sont disponibles
+    for (var entry in widget.processedImages.entries) {
+      if (_selectedImages.containsKey(entry.key)) {
+        // Activer automatiquement l'affichage des images traitées
+        _showProcessed[entry.key] = true;
+      }
+    }
+  }
   
   /// Ouvre la galerie de photos en plein écran
   void _openGallery(String currentTitle) {
@@ -121,68 +146,133 @@ class _VehiclePhotoViewsState extends State<VehiclePhotoViews> {
   
   /// Construit l'aperçu de l'image sélectionnée
   Widget _buildImagePreview(String title) {
+    final hasImage = _selectedImages.containsKey(title);
+    final hasProcessedImage = widget.processedImages.containsKey(title);
+    final showProcessed = _showProcessed[title] ?? false;
+    
+    // Déterminer quel chemin d'image utiliser
+    String? imagePath;
+    if (hasImage) {
+      if (showProcessed && hasProcessedImage) {
+        imagePath = widget.processedImages[title];
+      } else {
+        imagePath = _selectedImages[title];
+      }
+    }
+    
     return Stack(
       children: [
-        // Image qui remplit tout le conteneur
+        // Image ou espace vide
         Positioned.fill(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(11),
-            child: Image.file(
-              File(_selectedImages[title]!),
-              fit: BoxFit.cover,
+          child: hasImage
+              ? Image.file(
+                  File(imagePath!),
+                  fit: BoxFit.cover,
+                )
+              : Container(
+                  color: Colors.grey[200],
+                ),
+        ),
+        // Bouton de suppression
+        if (hasImage)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedImages.remove(title);
+                  _showProcessed.remove(title);
+                  // Notifier le parent des changements
+                  if (widget.onImagesUpdated != null) {
+                    widget.onImagesUpdated!(_selectedImages);
+                  }
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close,
+                  color: Color(0xFF08004D),
+                  size: 20,
+                ),
+              ),
             ),
           ),
-        ),
-        // Bouton de suppression (croix) en haut à droite
-        Positioned(
-          top: 8,
-          right: 8,
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedImages.remove(title);
-                // Notifier le parent des changements
-                if (widget.onImagesUpdated != null) {
-                  widget.onImagesUpdated!(_selectedImages);
-                }
-              });
-            },
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.close,
-                color: Colors.white,
-                size: 20,
+        
+        // Bouton pour basculer entre original et traité
+        if (hasImage && hasProcessedImage)
+          Positioned(
+            bottom: 8,
+            left: 8,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showProcessed[title] = !(_showProcessed[title] ?? false);
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.7),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.auto_fix_high,
+                  color: showProcessed ? Colors.amber : Color(0xFF08004D),
+                  size: 20,
+                ),
               ),
             ),
           ),
-        ),
-        // Bouton pour voir la galerie (oeil) en haut à gauche
-        Positioned(
-          top: 8,
-          left: 8,
-          child: GestureDetector(
-            onTap: () {
-              _openGallery(title);
-            },
+        
+        // Bouton pour ouvrir la galerie
+        if (hasImage)
+          Positioned(
+            top: 60, // Positionné en dessous de la croix
+            right: 8,
+            child: GestureDetector(
+              onTap: () => _openGallery(title),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.remove_red_eye,
+                  color: Color(0xFF08004D),
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+          
+        // Indicateur de version traitée
+        if (hasImage && hasProcessedImage && showProcessed)
+          Positioned(
+            top: 8,
+            left: 8,
             child: Container(
-              padding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF08004D),
-                shape: BoxShape.circle,
+                color: Colors.amber.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Icons.remove_red_eye,
-                color: Colors.white,
-                size: 20,
+              child: const Text(
+                'Traitée',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
-        ),
         // Overlay semi-transparent avec le titre
         Positioned(
           bottom: 0,
