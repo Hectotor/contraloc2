@@ -75,21 +75,22 @@ class _VehiclePhotoViewsState extends State<VehiclePhotoViews> {
           },
         );
       },
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8.0),
-        height: 250,
-        decoration: BoxDecoration(
-          color: const Color(0xFF08004D).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: const Color(0xFF08004D),
-            width: 1,
+      child: AspectRatio(
+        aspectRatio: 4 / 3, // Format 4:3
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8.0),
+          decoration: BoxDecoration(
+            color: const Color(0xFF08004D).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFF08004D),
+              width: 1,
+            ),
           ),
-        ),
-        padding: hasImage ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: 20.0),
-        child: hasImage
-          ? _buildImagePreview(title)
-          : Row(
+          padding: hasImage ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: 20.0),
+          child: hasImage
+            ? _buildImagePreview(title)
+            : Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 const Icon(
@@ -108,6 +109,7 @@ class _VehiclePhotoViewsState extends State<VehiclePhotoViews> {
                 ),
               ],
             ),
+        ),
       ),
     );
   }
@@ -116,18 +118,13 @@ class _VehiclePhotoViewsState extends State<VehiclePhotoViews> {
   Widget _buildImagePreview(String title) {
     return Stack(
       children: [
-        // Image qui remplit tout le conteneur en format horizontal
+        // Image qui remplit tout le conteneur
         Positioned.fill(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(11),
-            child: Center(
-              child: AspectRatio(
-                aspectRatio: 4 / 3, // Format horizontal standard (16:9)
-                child: Image.file(
-                  File(_selectedImages[title]!),
-                  fit: BoxFit.cover,
-                ),
-              ),
+            child: Image.file(
+              File(_selectedImages[title]!),
+              fit: BoxFit.cover,
             ),
           ),
         ),

@@ -70,7 +70,7 @@ class _VehiclePhotosGalleryState extends State<VehiclePhotosGallery> {
                           maxScale: 3.0,
                           child: Center(
                             child: AspectRatio(
-                              aspectRatio: 4 / 3, // Format horizontal standard (16:9)
+                              aspectRatio: 4 / 3, // Format horizontal standard (4:3)
                               child: Image.file(
                                 File(entry.value),
                                 fit: BoxFit.cover,
