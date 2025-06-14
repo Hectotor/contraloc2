@@ -46,7 +46,7 @@ class VehicleInfoPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   const Text(
-                    'Pour un résultat optimal, merci de bien cadrer vos photos et de suivre chaque étape.',
+                    'Pour un rendu optimal, privilégiez les photos au format horizontal.',
                     style: TextStyle(
                       fontSize: 14,
                       fontStyle: FontStyle.italic,
