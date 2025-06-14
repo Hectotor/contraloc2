@@ -68,9 +68,14 @@ class _VehiclePhotosGalleryState extends State<VehiclePhotosGallery> {
                         child: InteractiveViewer(
                           minScale: 0.5,
                           maxScale: 3.0,
-                          child: Image.file(
-                            File(entry.value),
-                            fit: BoxFit.contain,
+                          child: Center(
+                            child: AspectRatio(
+                              aspectRatio: 4 / 3, // Format horizontal standard (16:9)
+                              child: Image.file(
+                                File(entry.value),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
                           ),
                         ),
                       );

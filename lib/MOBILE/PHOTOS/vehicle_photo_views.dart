@@ -116,13 +116,18 @@ class _VehiclePhotoViewsState extends State<VehiclePhotoViews> {
   Widget _buildImagePreview(String title) {
     return Stack(
       children: [
-        // Image qui remplit tout le conteneur
+        // Image qui remplit tout le conteneur en format horizontal
         Positioned.fill(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(11),
-            child: Image.file(
-              File(_selectedImages[title]!),
-              fit: BoxFit.cover,
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: 4 / 3, // Format horizontal standard (16:9)
+                child: Image.file(
+                  File(_selectedImages[title]!),
+                  fit: BoxFit.cover,
+                ),
+              ),
             ),
           ),
         ),
