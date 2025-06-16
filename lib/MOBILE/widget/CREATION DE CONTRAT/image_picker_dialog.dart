@@ -5,7 +5,7 @@ import '../../PHOTOS/vehicle_info_page.dart';
 
 class ImagePickerDialog {
   static Future<void> show(BuildContext context, bool isRecto, 
-      Function(XFile) onImageSelected) async {
+      Function(XFile) onImageSelected, {String? photoTypeHint}) async {
     // Vérifier si nous sommes sur la page VehicleInfoPage
     bool isVehicleInfoPage = false;
     
@@ -87,11 +87,18 @@ class ImagePickerDialog {
                   onTap: () async {
                     Navigator.of(context).pop();
                     
-                    // Déterminer le type de photo en fonction de isRecto
-                    // Cette logique peut être adaptée selon vos besoins
-                    String photoType = isRecto 
-                        ? "Vue avant plein centre" 
-                        : "Vue latérale gauche";
+                    // Déterminer le type de photo à partir du paramètre ou utiliser la valeur par défaut
+                    String photoType;
+                    
+                    // Si un type de photo spécifique a été fourni, l'utiliser
+                    if (photoTypeHint != null) {
+                      photoType = photoTypeHint;
+                    } else {
+                      // Sinon, utiliser isRecto comme fallback simple
+                      photoType = isRecto 
+                          ? "Vue avant plein centre" 
+                          : "Vue latérale gauche";
+                    }
                     
                     // Afficher le guide photo puis prendre la photo
                     PhotoGuideDialog.show(

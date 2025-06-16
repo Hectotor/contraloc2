@@ -103,6 +103,8 @@ class _VehiclePhotoViewsState extends State<VehiclePhotoViews> {
             });
             print('Image sélectionnée pour $title: ${image.path}');
           },
+          // Passer le titre de la vue comme type de photo
+          photoTypeHint: title,
         );
       },
       child: AspectRatio(

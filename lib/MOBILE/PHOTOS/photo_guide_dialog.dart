@@ -9,6 +9,7 @@ class PhotoGuideDialog {
     BuildContext context,
     String photoType,
     Function(XFile) onPhotoTaken,
+    {bool forceLandscape = false}
   ) async {
     // Déterminer les conseils en fonction du type de photo
     String tips = _getTipsForPhotoType(photoType);
@@ -74,22 +75,13 @@ class PhotoGuideDialog {
     // Ajouter l'overlay au contexte actuel
     overlayState.insert(overlayEntry);
     
-    // Forcer l'orientation paysage pour la prise de photo
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    
-    // Lancer la caméra
+    // Lancer la caméra sans changer l'orientation
     final ImagePicker picker = ImagePicker();
     try {
       final XFile? image = await picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 80,
       );
-      
-      // Rétablir l'orientation automatique
-      await SystemChrome.setPreferredOrientations([]);
       
       // Supprimer l'overlay
       overlayEntry.remove();
@@ -98,9 +90,6 @@ class PhotoGuideDialog {
         onPhotoTaken(image);
       }
     } catch (e) {
-      // Rétablir l'orientation automatique
-      await SystemChrome.setPreferredOrientations([]);
-      
       // Supprimer l'overlay
       overlayEntry.remove();
       
