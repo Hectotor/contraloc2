@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../PHOTOS/photo_guide_dialog.dart';
+import '../../PHOTOS/direct_camera_guide.dart';
 import '../../PHOTOS/vehicle_info_page.dart';
 
 class ImagePickerDialog {
@@ -100,12 +100,13 @@ class ImagePickerDialog {
                           : "Vue latérale gauche";
                     }
                     
-                    // Afficher le guide photo puis prendre la photo
-                    PhotoGuideDialog.show(
+                    // Afficher l'écran de caméra avec guides visuels en temps réel
+                    DirectCameraGuide.show(
                       context,
                       photoType,
-                      (XFile photo) {
-                        // Traiter la photo prise
+                      (String photoPath) {
+                        // Convertir le chemin en XFile pour compatibilité
+                        final photo = XFile(photoPath);
                         onImageSelected(photo);
                       },
                     );
