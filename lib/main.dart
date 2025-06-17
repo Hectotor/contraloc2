@@ -87,9 +87,14 @@ Future<void> main() async {
     return; // Arrêter l'application en cas d'erreur critique
   }
 
+  // Autoriser toutes les orientations pour l'application
+  // Les écrans spécifiques comme DirectCameraGuide peuvent ensuite
+  // définir leurs propres contraintes d'orientation
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
   ]);
 
   runApp(const MyApp());

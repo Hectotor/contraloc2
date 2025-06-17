@@ -101,7 +101,7 @@ class ImagePickerDialog {
                     }
                     
                     // Afficher l'écran de caméra avec guides visuels en temps réel
-                    DirectCameraGuide.show(
+                    SmartCameraGuide.show(
                       context,
                       photoType,
                       (String photoPath) {

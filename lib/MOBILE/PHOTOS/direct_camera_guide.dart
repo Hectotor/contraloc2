@@ -1,97 +1,126 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
-/// Une simulation d'écran de caméra avec guides visuels en temps réel
-/// Cette classe simule ce que ferait le plugin camera
-/// Pour une implémentation réelle, il faudrait installer le plugin camera
-class DirectCameraGuide extends StatefulWidget {
+/// Guide de caméra intelligent avec assistance en temps réel
+class SmartCameraGuide extends StatefulWidget {
   final String photoType;
   final Function(String) onPhotoTaken;
+  final VoidCallback? onCancel;
 
-  const DirectCameraGuide({
+  const SmartCameraGuide({
     Key? key,
     required this.photoType,
     required this.onPhotoTaken,
+    this.onCancel,
   }) : super(key: key);
 
-  /// Affiche l'écran de caméra simple
+  /// Lance l'interface de prise de photo guidée
   static Future<void> show(
     BuildContext context,
     String photoType,
-    Function(String) onPhotoTaken,
-  ) async {
+    Function(String) onPhotoTaken, {
+    VoidCallback? onCancel,
+  }) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => DirectCameraGuide(
+        builder: (context) => SmartCameraGuide(
           photoType: photoType,
           onPhotoTaken: onPhotoTaken,
+          onCancel: onCancel,
         ),
       ),
     );
   }
 
   @override
-  State<DirectCameraGuide> createState() => _DirectCameraGuideState();
+  State<SmartCameraGuide> createState() => _SmartCameraGuideState();
 }
 
-class _DirectCameraGuideState extends State<DirectCameraGuide> {
-  bool _isCapturing = false;
-  bool _isAligned = true;
-  bool _isCameraInitialized = false;
-  
+class _SmartCameraGuideState extends State<SmartCameraGuide>
+    with TickerProviderStateMixin {
+  // État de la caméra
   CameraController? _controller;
   List<CameraDescription>? _cameras;
+  bool _isCameraInitialized = false;
+  bool _isCapturing = false;
+  double _currentZoom = 1.0; // Zoom standard 1x
   
-  // Données d'orientation
+  // Données d'orientation et d'alignement
   double _roll = 0.0;
   double _pitch = 0.0;
+  bool _isAligned = false;
+  bool _isStable = false;
+  
+  // Abonnements aux capteurs
   StreamSubscription? _accelerometerSubscription;
+  StreamSubscription? _gyroscopeSubscription;
+  
+  // Animations
+  late AnimationController _pulseController;
+  late AnimationController _levelController;
+  late Animation<double> _pulseAnimation;
+  late Animation<double> _levelAnimation;
+  
+  // Configuration flash
+  FlashMode _flashMode = FlashMode.off;
+  
+  // Historique de stabilité
+  List<double> _stabilityHistory = [];
+  Timer? _stabilityTimer;
 
   @override
   void initState() {
     super.initState();
-    // Forcer l'orientation paysage pour cet écran
+    _setupAnimations();
+    _initializeCamera();
+    _startSensorListening();
+    _setupStabilityCheck();
+    _lockOrientation();
+  }
+
+  void _setupAnimations() {
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _levelController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    _levelAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _levelController, curve: Curves.elasticOut),
+    );
+    
+    _pulseController.repeat(reverse: true);
+  }
+
+  void _lockOrientation() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeRight,
       DeviceOrientation.landscapeLeft,
     ]);
-    // Initialiser la caméra
-    _initializeCamera();
-    
-    // Écouter les données d'orientation
-    _accelerometerSubscription = accelerometerEvents.listen((AccelerometerEvent event) {
-      if (mounted) {
-        setState(() {
-          // Calculer l'orientation (roll et pitch)
-          _roll = event.y;
-          _pitch = event.x;
-          
-          // Vérifier si l'appareil est correctement aligné
-          // (tolère une légère inclinaison de ±0.3 radians)
-          _isAligned = (_roll.abs() < 0.3 && _pitch.abs() < 0.3);
-        });
-      }
-    });
   }
-  
-  // Initialiser la caméra
+
   Future<void> _initializeCamera() async {
     try {
-      // Obtenir la liste des caméras disponibles
       _cameras = await availableCameras();
       
       if (_cameras != null && _cameras!.isNotEmpty) {
-        // Utiliser la caméra arrière par défaut
-        final CameraDescription camera = _cameras!.firstWhere(
+        final camera = _cameras!.firstWhere(
           (camera) => camera.lensDirection == CameraLensDirection.back,
           orElse: () => _cameras!.first,
         );
         
-        // Créer et initialiser le contrôleur
         _controller = CameraController(
           camera,
           ResolutionPreset.high,
@@ -100,6 +129,11 @@ class _DirectCameraGuideState extends State<DirectCameraGuide> {
         );
         
         await _controller!.initialize();
+        await _controller!.lockCaptureOrientation(DeviceOrientation.landscapeRight);
+        
+        // Initialisation du zoom standard 1x
+        _currentZoom = 1.0;
+        await _controller!.setZoomLevel(_currentZoom);
         
         if (mounted) {
           setState(() {
@@ -108,20 +142,123 @@ class _DirectCameraGuideState extends State<DirectCameraGuide> {
         }
       }
     } catch (e) {
-      print('Erreur lors de l\'initialisation de la caméra: $e');
+      debugPrint('Erreur initialisation caméra: $e');
+      _showError('Impossible d\'accéder à la caméra');
+    }
+  }
+
+  void _startSensorListening() {
+    // Accéléromètre pour l'orientation
+    _accelerometerSubscription = accelerometerEvents.listen((event) {
+      if (mounted) {
+        setState(() {
+          _roll = event.y;
+          _pitch = event.x;
+          _updateAlignment();
+        });
+      }
+    });
+    
+    // Gyroscope pour la stabilité
+    _gyroscopeSubscription = gyroscopeEvents.listen((event) {
+      if (mounted) {
+        final movement = math.sqrt(
+          event.x * event.x + event.y * event.y + event.z * event.z
+        );
+        _stabilityHistory.add(movement);
+        if (_stabilityHistory.length > 10) {
+          _stabilityHistory.removeAt(0);
+        }
+      }
+    });
+  }
+
+  void _setupStabilityCheck() {
+    _stabilityTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (_stabilityHistory.isNotEmpty) {
+        final avgMovement = _stabilityHistory.reduce((a, b) => a + b) / 
+                           _stabilityHistory.length;
+        final wasStable = _isStable;
+        _isStable = avgMovement < 0.5;
+        
+        if (!wasStable && _isStable && _isAligned) {
+          _levelController.forward();
+          HapticFeedback.lightImpact();
+        }
+      }
+    });
+  }
+
+  void _updateAlignment() {
+    const tolerance = 0.3;
+    final wasAligned = _isAligned;
+    _isAligned = (_roll.abs() < tolerance && _pitch.abs() < tolerance);
+    
+    if (!wasAligned && _isAligned) {
+      HapticFeedback.selectionClick();
     }
   }
 
   @override
   void dispose() {
-    // Libérer les ressources
+    _restoreOrientation();
     _controller?.dispose();
     _accelerometerSubscription?.cancel();
-    
-    // Rétablir l'orientation automatique
-    SystemChrome.setPreferredOrientations([]);
-    
+    _gyroscopeSubscription?.cancel();
+    _stabilityTimer?.cancel();
+    _pulseController.dispose();
+    _levelController.dispose();
     super.dispose();
+  }
+
+  void _restoreOrientation() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setPreferredOrientations([]);
+  }
+
+  
+  Future<void> _capturePhoto() async {
+    if (!_canCapture()) return;
+
+    setState(() => _isCapturing = true);
+    HapticFeedback.mediumImpact();
+
+    try {
+      await _controller!.setFlashMode(_flashMode);
+      final photo = await _controller!.takePicture();
+      
+      if (mounted) {
+        widget.onPhotoTaken(photo.path);
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      debugPrint('Erreur capture: $e');
+      _showError('Erreur lors de la prise de photo');
+    } finally {
+      if (mounted) {
+        setState(() => _isCapturing = false);
+      }
+    }
+  }
+
+  bool _canCapture() {
+    return _isCameraInitialized && 
+           _controller != null && 
+           _controller!.value.isInitialized && 
+           !_isCapturing &&
+           _isAligned &&
+           _isStable;
+  }
+
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -130,157 +267,25 @@ class _DirectCameraGuideState extends State<DirectCameraGuide> {
       backgroundColor: Colors.black,
       body: OrientationBuilder(
         builder: (context, orientation) {
-          // Vérifier que nous sommes bien en mode paysage
           final isLandscape = orientation == Orientation.landscape;
           
           return Stack(
             children: [
-              // Aperçu de la caméra en temps réel avec format 4:3
-              Positioned.fill(
-                child: _isCameraInitialized && _controller != null && _controller!.value.isInitialized
-                  ? Center(
-                      child: Container(
-                        color: Colors.black,
-                        child: AspectRatio(
-                          aspectRatio: isLandscape ? 4.0 / 3.0 : 3.0 / 4.0,
-                          child: CameraPreview(_controller!),
-                        ),
-                      ),
-                    )
-                  : Container(
-                      color: Colors.black,
-                      child: Center(
-                        child: Text(
-                          _isCameraInitialized ? 'Préparation de la caméra...' : 'Initialisation de la caméra...',
-                          style: const TextStyle(color: Colors.white54),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-              ),
+              // Aperçu caméra
+              _buildCameraPreview(),
               
-              // Message indiquant d'utiliser le mode paysage si nécessaire
-              if (!isLandscape)
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    color: Colors.black.withOpacity(0.7),
-                    child: const Text(
-                      'Veuillez tourner votre appareil en mode paysage',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
+              // Message orientation si nécessaire
+              if (!isLandscape) _buildOrientationMessage(),
               
-              // Indicateur d'orientation (niveau à bulle visuel)
-              Positioned(
-                top: 20,
-                left: 20,
-                child: RotationTransition(
-                  turns: AlwaysStoppedAnimation(_roll / (2 * 3.14159)),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: _isAligned ? Colors.green.withOpacity(0.7) : Colors.red.withOpacity(0.7),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.arrow_upward,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                ),
-              ),
-
-              // Guides visuels superposés
-              Positioned.fill(
-                child: _buildOverlays(),
-              ),
-
-              // Indicateur d'alignement
-              Positioned(
-                top: 60,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _isAligned 
-                          ? Colors.green.withOpacity(0.7) 
-                          : Colors.red.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      _isAligned 
-                          ? 'Bien aligné ✓' 
-                          : 'Ajustez l\'angle ✗',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              // Conseils spécifiques au type de photo
-              Positioned(
-                bottom: 120,
-                left: 20,
-                right: 20,
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    _getTipsForPhotoType(),
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-
-              // Bouton de capture
-              Positioned(
-                bottom: 40,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: GestureDetector(
-                    onTap: _isCapturing || !_isAligned ? null : _capturePhoto,
-                    child: Container(
-                      width: 70,
-                      height: 70,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: _isAligned ? Colors.white : Colors.white38,
-                          width: 4,
-                        ),
-                        color: _isAligned ? Colors.white24 : Colors.black38,
-                      ),
-                      child: _isCapturing
-                          ? const Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                              ),
-                            )
-                          : Icon(
-                              Icons.camera_alt,
-                              color: _isAligned ? Colors.white : Colors.white38,
-                              size: 30,
-                            ),
-                    ),
-                  ),
-                ),
-              ),
+              // Interface utilisateur
+              _buildTopBar(),
+              _buildBottomBar(),
+              _buildAlignmentIndicators(),
+              _buildPhotoGuides(),
+              _buildInstructions(),
+              
+              // Bouton de capture hors cadre (comme un appareil photo classique)
+              _buildOutsideCaptureButton(),
             ],
           );
         },
@@ -288,51 +293,238 @@ class _DirectCameraGuideState extends State<DirectCameraGuide> {
     );
   }
 
-  Widget _buildOverlays() {
+  Widget _buildCameraPreview() {
+    if (!_isCameraInitialized || 
+        _controller == null || 
+        !_controller!.value.isInitialized) {
+      return Positioned.fill(
+        child: Container(
+          color: Colors.black,
+          child: const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          ),
+        ),
+      );
+    }
+    
+    // Calcul pour garantir un ratio 4:3 exact
+    final size = MediaQuery.of(context).size;
+    final targetRatio = 4.0 / 3.0;
+    
+    return Positioned.fill(
+      child: Center(
+        child: Container(
+          color: Colors.black,
+          child: Transform.rotate(
+            angle: math.pi, // Rotation de 180° pour corriger l'inversion
+            child: AspectRatio(
+              aspectRatio: targetRatio,
+              child: ClipRect(
+                child: OverflowBox(
+                  alignment: Alignment.center,
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: size.width,
+                      height: size.width / targetRatio,
+                      child: CameraPreview(_controller!),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrientationMessage() {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.screen_rotation, color: Colors.white, size: 48),
+            const SizedBox(height: 16),
+            const Text(
+              'Tournez votre appareil',
+              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Utilisez le mode paysage pour une meilleure prise de vue',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.only(top: 40, bottom: 16, left: 16, right: 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+          ),
+        ),
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 28),
+              onPressed: () {
+                if (widget.onCancel != null) {
+                  widget.onCancel!();
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+            Expanded(
+              child: Text(
+                widget.photoType,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            // Espace pour équilibrer l'interface sans le bouton flash
+            const SizedBox(width: 48),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomBar() {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+            colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+          ),
+        ),
+        // Barre du bas vide pour conserver le dégradé
+        child: const SizedBox(height: 20),
+      ),
+    );
+  }
+
+  // Nouveau bouton de capture positionné sur le côté, hors du cadre photo
+  Widget _buildOutsideCaptureButton() {
+    return Positioned(
+      right: 20,
+      top: 0,
+      bottom: 0,
+      child: Center(
+        child: AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            return GestureDetector(
+              onTap: _capturePhoto,
+              child: Transform.scale(
+                scale: _canCapture() ? _pulseAnimation.value : 1.0,
+                child: Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _canCapture() ? Colors.green : Colors.white70,
+                      width: 3,
+                    ),
+                    color: _canCapture() 
+                      ? Colors.green.withOpacity(0.4) 
+                      : Colors.black.withOpacity(0.7),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _canCapture() ? Colors.green.withOpacity(0.5) : Colors.black.withOpacity(0.5),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: _isCapturing
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Icon(
+                        Icons.camera,
+                        color: _canCapture() ? Colors.green : Colors.white70,
+                        size: 32,
+                      ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlignmentIndicators() {
     return Stack(
       children: [
-        // Cadre de guidage avec règle des tiers
-        Positioned.fill(
-          child: CustomPaint(
-            painter: GridPainter(),
-          ),
-        ),
-        
-        // Guide spécifique au type de photo
-        Positioned.fill(
-          child: CustomPaint(
-            painter: PhotoTypeGuidePainter(widget.photoType),
-          ),
-        ),
-        
-        // Niveau à bulle horizontal
+        // Indicateur d'alignement central
         Positioned(
-          top: 100,
+          top: 80,
           left: 0,
           right: 0,
           child: Center(
-            child: Container(
-              width: 200,
-              height: 30,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.black45,
-                borderRadius: BorderRadius.circular(15),
+                color: _isAligned && _isStable
+                  ? Colors.green.withOpacity(0.8)
+                  : _isAligned 
+                    ? Colors.orange.withOpacity(0.8)
+                    : Colors.red.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(25),
               ),
-              child: Stack(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Indicateur de niveau
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
-                    left: _isAligned ? 85 : (_roll > 0 ? 120 : 50),
-                    top: 5,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: _isAligned ? Colors.green : Colors.red,
-                        shape: BoxShape.circle,
-                      ),
+                  Icon(
+                    _isAligned && _isStable
+                      ? Icons.check_circle
+                      : _isAligned
+                        ? Icons.pause_circle
+                        : Icons.warning,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _isAligned && _isStable
+                      ? 'Parfait ! Appuyez pour capturer'
+                      : _isAligned
+                        ? 'Maintenez stable'
+                        : 'Ajustez l\'angle',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
@@ -341,257 +533,309 @@ class _DirectCameraGuideState extends State<DirectCameraGuide> {
           ),
         ),
         
-        // Flèches directionnelles pour guider l'utilisateur
-        Positioned(
-          top: MediaQuery.of(context).size.height / 2 - 100,
-          left: 20,
-          child: _buildDirectionArrow(Icons.arrow_back, _roll < -0.1),
-        ),
-        Positioned(
-          top: MediaQuery.of(context).size.height / 2 - 100,
-          right: 20,
-          child: _buildDirectionArrow(Icons.arrow_forward, _roll > 0.1),
-        ),
-        Positioned(
-          top: MediaQuery.of(context).size.height / 2 - 150,
-          left: MediaQuery.of(context).size.width / 2 - 25,
-          child: _buildDirectionArrow(Icons.arrow_upward, _pitch < -0.1),
-        ),
-        Positioned(
-          top: MediaQuery.of(context).size.height / 2 - 50,
-          left: MediaQuery.of(context).size.width / 2 - 25,
-          child: _buildDirectionArrow(Icons.arrow_downward, _pitch > 0.1),
-        ),
+        // Niveau à bulle
+        _buildBubbleLevel(),
         
-        // Conseils spécifiques au type de photo
-        Positioned(
-          bottom: 100,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                _getPhotoTypeInstructions(),
-                style: const TextStyle(color: Colors.white, fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ),
+        // Flèches directionnelles
+        _buildDirectionArrows(),
       ],
     );
   }
 
-  Widget _buildDirectionArrow(IconData icon, bool show) {
-    return Visibility(
-      visible: show,
-      child: Icon(
-        icon,
-        color: Colors.white,
-        size: 30,
+  Widget _buildBubbleLevel() {
+    return Positioned(
+      top: 130,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: Container(
+          width: 240,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.black54,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: Stack(
+            children: [
+              // Marques de niveau
+              Positioned.fill(
+                child: Row(
+                  children: [
+                    Expanded(flex: 1, child: Container()),
+                    Container(width: 2, color: Colors.white38),
+                    Expanded(flex: 1, child: Container()),
+                    Container(width: 2, color: Colors.white),
+                    Expanded(flex: 1, child: Container()),
+                    Container(width: 2, color: Colors.white38),
+                    Expanded(flex: 1, child: Container()),
+                  ],
+                ),
+              ),
+              
+              // Bulle
+              AnimatedBuilder(
+                animation: _levelAnimation,
+                builder: (context, child) {
+                  final offset = (_roll * 60).clamp(-100.0, 100.0);
+                  return AnimatedPositioned(
+                    duration: const Duration(milliseconds: 100),
+                    left: 120 + offset - 15,
+                    top: 5,
+                    child: Transform.scale(
+                      scale: 1.0 + (_levelAnimation.value * 0.2),
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: _isAligned ? Colors.green : Colors.red,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: (_isAligned ? Colors.green : Colors.red)
+                                  .withOpacity(0.5),
+                              blurRadius: 8,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  String _getPhotoTypeInstructions() {
-    switch (widget.photoType) {
-      case 'Vue avant plein centre':
-        return 'Positionnez-vous face au véhicule. Assurez-vous que tout l\'avant est visible.';
-      
-      case 'Vue arrière plein centre':
-        return 'Positionnez-vous derrière le véhicule. Assurez-vous que la plaque est visible.';
-      
-      case 'Vue latérale gauche':
-      case 'Vue latérale droite':
-        return 'Positionnez-vous perpendiculairement au véhicule. Capturez toute la longueur.';
-      
-      case 'Avant ¾ gauche':
-      case 'Avant ¾ droit':
-        return 'Positionnez-vous à 45° par rapport à l\'avant. Capturez l\'avant et le côté.';
-      
-      case 'Arrière ¾ gauche':
-      case 'Arrière ¾ droit':
-        return 'Positionnez-vous à 45° par rapport à l\'arrière. Capturez l\'arrière et le côté.';
-      
-      default:
-        return 'Tenez votre téléphone horizontalement. Assurez-vous que l\'éclairage est suffisant.';
-    }
+  Widget _buildDirectionArrows() {
+    return Stack(
+      children: [
+        // Flèche gauche
+        if (_roll < -0.1)
+          Positioned(
+            left: 30,
+            top: MediaQuery.of(context).size.height / 2 - 25,
+            child: _buildAnimatedArrow(Icons.arrow_back),
+          ),
+        
+        // Flèche droite
+        if (_roll > 0.1)
+          Positioned(
+            right: 30,
+            top: MediaQuery.of(context).size.height / 2 - 25,
+            child: _buildAnimatedArrow(Icons.arrow_forward),
+          ),
+        
+        // Flèche haut
+        if (_pitch < -0.1)
+          Positioned(
+            left: MediaQuery.of(context).size.width / 2 - 25,
+            top: MediaQuery.of(context).size.height / 2 - 100,
+            child: _buildAnimatedArrow(Icons.arrow_upward),
+          ),
+        
+        // Flèche bas
+        if (_pitch > 0.1)
+          Positioned(
+            left: MediaQuery.of(context).size.width / 2 - 25,
+            top: MediaQuery.of(context).size.height / 2 + 50,
+            child: _buildAnimatedArrow(Icons.arrow_downward),
+          ),
+      ],
+    );
   }
 
-  String _getTipsForPhotoType() {
-    switch (widget.photoType) {
-      case 'Vue avant plein centre':
-        return 'Positionnez-vous face au véhicule. Assurez-vous que tout l\'avant est visible.';
-      
-      case 'Vue arrière plein centre':
-        return 'Positionnez-vous derrière le véhicule. Assurez-vous que la plaque est visible.';
-      
-      case 'Vue latérale gauche':
-      case 'Vue latérale droite':
-        return 'Positionnez-vous perpendiculairement au véhicule. Capturez toute la longueur.';
-      
-      case 'Avant ¾ gauche':
-      case 'Avant ¾ droit':
-        return 'Positionnez-vous à 45° par rapport à l\'avant. Capturez l\'avant et le côté.';
-      
-      case 'Arrière ¾ gauche':
-      case 'Arrière ¾ droit':
-        return 'Positionnez-vous à 45° par rapport à l\'arrière. Capturez l\'arrière et le côté.';
-      
-      default:
-        return 'Tenez votre téléphone horizontalement. Assurez-vous que l\'éclairage est suffisant.';
-    }
-  }
-
-  Future<void> _capturePhoto() async {
-    if (_isCapturing || !_isCameraInitialized || _controller == null || !_controller!.value.isInitialized) return;
-
-    setState(() {
-      _isCapturing = true;
-    });
-
-    try {
-      // Prendre la photo avec la caméra
-      final XFile photo = await _controller!.takePicture();
-      
-      if (mounted) {
-        // Passer le chemin de la photo au callback
-        widget.onPhotoTaken(photo.path);
-        Navigator.of(context).pop();
-      }
-    } catch (e) {
-      print('Erreur lors de la prise de photo: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de la prise de photo: $e')),
+  Widget _buildAnimatedArrow(IconData icon) {
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _pulseAnimation.value,
+          child: Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.8),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: 30),
+          ),
         );
-        setState(() {
-          _isCapturing = false;
-        });
-      }
+      },
+    );
+  }
+
+  Widget _buildPhotoGuides() {
+    return Positioned.fill(
+      child: CustomPaint(
+        painter: SmartGuidePainter(
+          photoType: widget.photoType,
+          isAligned: _isAligned,
+          isStable: _isStable,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInstructions() {
+    return Positioned(
+      bottom: 140,
+      left: 16,
+      right: 16,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          PhotoTypeHelper.getInstructions(widget.photoType),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            height: 1.4,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+}
+
+/// Helper pour les instructions spécifiques à chaque type de photo
+class PhotoTypeHelper {
+  static String getInstructions(String photoType) {
+    switch (photoType) {
+      case 'Vue avant plein centre':
+        return 'Placez-vous face au véhicule, centrez-le dans le cadre. Assurez-vous que les phares et la plaque sont visibles.';
+      
+      case 'Vue arrière plein centre':
+        return 'Placez-vous derrière le véhicule, centrez-le dans le cadre. La plaque d\'immatriculation doit être clairement visible.';
+      
+      case 'Vue latérale gauche':
+      case 'Vue latérale droite':
+        return 'Positionnez-vous perpendiculairement au véhicule. Capturez toute la longueur du véhicule dans le cadre.';
+      
+      case 'Avant ¾ gauche':
+      case 'Avant ¾ droit':
+        return 'Positionnez-vous à 45° par rapport à l\'avant du véhicule. Montrez l\'avant et le côté simultanément.';
+      
+      case 'Arrière ¾ gauche':
+      case 'Arrière ¾ droit':
+        return 'Positionnez-vous à 45° par rapport à l\'arrière du véhicule. Montrez l\'arrière et le côté simultanément.';
+      
+      default:
+        return 'Suivez les guides visuels et maintenez l\'appareil stable pour une photo parfaite.';
     }
   }
 }
 
-/// Painter pour dessiner la grille de règle des tiers
-class GridPainter extends CustomPainter {
+/// Painter amélioré pour les guides visuels
+class SmartGuidePainter extends CustomPainter {
+  final String photoType;
+  final bool isAligned;
+  final bool isStable;
+  
+  SmartGuidePainter({
+    required this.photoType,
+    required this.isAligned,
+    required this.isStable,
+  });
+  
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white30
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
-
-    // Dessiner la grille des tiers (règle des tiers)
     final double w = size.width;
     final double h = size.height;
-
+    
+    // Grille des tiers
+    _drawRuleOfThirds(canvas, size);
+    
+    // Guides spécifiques au type de photo
+    _drawPhotoTypeGuide(canvas, size);
+    
+    // Zone de focus dynamique
+    _drawFocusZone(canvas, size);
+  }
+  
+  void _drawRuleOfThirds(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.3)
+      ..strokeWidth = 1.0;
+    
+    final w = size.width;
+    final h = size.height;
+    
     // Lignes verticales
     canvas.drawLine(Offset(w / 3, 0), Offset(w / 3, h), paint);
     canvas.drawLine(Offset(2 * w / 3, 0), Offset(2 * w / 3, h), paint);
-
+    
     // Lignes horizontales
     canvas.drawLine(Offset(0, h / 3), Offset(w, h / 3), paint);
     canvas.drawLine(Offset(0, 2 * h / 3), Offset(w, 2 * h / 3), paint);
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class PhotoTypeGuidePainter extends CustomPainter {
-  final String photoType;
   
-  PhotoTypeGuidePainter(this.photoType);
-  
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-    
-    // Peinture pour les lignes guides
-    final Paint linePaint = Paint()
-      ..color = Colors.yellow.withOpacity(0.7)
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-    
-    // Peinture pour le cercle de focus
-    final Paint circlePaint = Paint()
-      ..color = Colors.yellow.withOpacity(0.4)
+  void _drawPhotoTypeGuide(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = (isAligned && isStable ? Colors.green : Colors.orange)
+          .withOpacity(0.6)
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke;
     
-    // Peinture pour le rectangle de focus (vues latérales)
-    final Paint rectPaint = Paint()
-      ..color = Colors.yellow.withOpacity(0.4)
-      ..strokeWidth = 3.0
-      ..style = PaintingStyle.stroke;
+    final w = size.width;
+    final h = size.height;
     
     switch (photoType) {
       case 'Vue avant plein centre':
-        // Cercle au centre
-        canvas.drawCircle(Offset(w * 0.5, h * 0.5), 40, circlePaint);
-        // Ligne verticale centrale
-        canvas.drawLine(Offset(w * 0.5, 0), Offset(w * 0.5, h), linePaint);
-        break;
-        
-      case 'Avant ¾ gauche':
-        // Cercle à ~60% x / 50% y
-        canvas.drawCircle(Offset(w * 0.6, h * 0.5), 40, circlePaint);
-        // Diagonale haut gauche vers bas droit
-        canvas.drawLine(Offset(0, 0), Offset(w, h), linePaint);
+      case 'Vue arrière plein centre':
+        // Ligne centrale verticale
+        canvas.drawLine(Offset(w * 0.5, h * 0.2), Offset(w * 0.5, h * 0.8), paint);
+        // Rectangle central
+        final rect = Rect.fromCenter(
+          center: Offset(w * 0.5, h * 0.5),
+          width: w * 0.6,
+          height: h * 0.5,
+        );
+        canvas.drawRect(rect, paint);
         break;
         
       case 'Vue latérale gauche':
-        // Rectangle couvrant 90% largeur
-        final Rect rect = Rect.fromLTWH(w * 0.05, h * 0.25, w * 0.9, h * 0.5);
-        canvas.drawRect(rect, rectPaint);
-        // Lignes horizontales parallèles
-        canvas.drawLine(Offset(0, h * 0.25), Offset(w, h * 0.25), linePaint);
-        canvas.drawLine(Offset(0, h * 0.75), Offset(w, h * 0.75), linePaint);
-        break;
-        
-      case 'Arrière ¾ gauche':
-        // Cercle à ~60% x / 50% y
-        canvas.drawCircle(Offset(w * 0.6, h * 0.5), 40, circlePaint);
-        // Diagonale bas gauche vers haut droit
-        canvas.drawLine(Offset(0, h), Offset(w, 0), linePaint);
-        break;
-        
-      case 'Vue arrière plein centre':
-        // Cercle au centre
-        canvas.drawCircle(Offset(w * 0.5, h * 0.5), 40, circlePaint);
-        // Ligne verticale centrale
-        canvas.drawLine(Offset(w * 0.5, 0), Offset(w * 0.5, h), linePaint);
-        break;
-        
-      case 'Arrière ¾ droit':
-        // Cercle à ~40% x / 50% y
-        canvas.drawCircle(Offset(w * 0.4, h * 0.5), 40, circlePaint);
-        // Diagonale haut droit vers bas gauche
-        canvas.drawLine(Offset(w, 0), Offset(0, h), linePaint);
-        break;
-        
       case 'Vue latérale droite':
-        // Rectangle couvrant 90% largeur
-        final Rect rect = Rect.fromLTWH(w * 0.05, h * 0.25, w * 0.9, h * 0.5);
-        canvas.drawRect(rect, rectPaint);
-        // Lignes horizontales parallèles
-        canvas.drawLine(Offset(0, h * 0.25), Offset(w, h * 0.25), linePaint);
-        canvas.drawLine(Offset(0, h * 0.75), Offset(w, h * 0.75), linePaint);
+        // Rectangle horizontal
+        final rect = Rect.fromLTWH(w * 0.1, h * 0.3, w * 0.8, h * 0.4);
+        canvas.drawRect(rect, paint);
         break;
         
-      default:
-        // Guide générique
-        canvas.drawCircle(Offset(w * 0.5, h * 0.5), 40, circlePaint);
+      case 'Avant ¾ gauche':
+      case 'Arrière ¾ gauche':
+        // Guide diagonal
+        canvas.drawLine(Offset(w * 0.2, h * 0.2), Offset(w * 0.8, h * 0.8), paint);
+        break;
+        
+      case 'Avant ¾ droit':
+      case 'Arrière ¾ droit':
+        // Guide diagonal inverse
+        canvas.drawLine(Offset(w * 0.8, h * 0.2), Offset(w * 0.2, h * 0.8), paint);
+        break;
     }
+  }
+  
+  void _drawFocusZone(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = (isAligned && isStable ? Colors.green : Colors.red)
+          .withOpacity(0.4)
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+    
+    final center = Offset(size.width * 0.5, size.height * 0.5);
+    final radius = isAligned && isStable ? 50.0 : 40.0;
+    
+    canvas.drawCircle(center, radius, paint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
