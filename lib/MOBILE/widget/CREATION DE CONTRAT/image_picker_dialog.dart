@@ -1,6 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../PHOTOS/direct_camera_guide.dart';
+import '../../PHOTOS/simple_camera.dart';
 import '../../PHOTOS/vehicle_info_page.dart';
 
 class ImagePickerDialog {
@@ -84,34 +85,19 @@ class ImagePickerDialog {
                   leading: const Icon(Icons.auto_awesome, color: Color(0xFF08004D)),
                   title: const Text('Prendre une photo guidée'),
                   subtitle: const Text('Avec assistance pour un cadrage optimal'),
-                  onTap: () async {
+                  onTap: () {
                     Navigator.of(context).pop();
-                    
-                    // Déterminer le type de photo à partir du paramètre ou utiliser la valeur par défaut
-                    String photoType;
-                    
-                    // Si un type de photo spécifique a été fourni, l'utiliser
-                    if (photoTypeHint != null) {
-                      photoType = photoTypeHint;
-                    } else {
-                      // Sinon, utiliser isRecto comme fallback simple
-                      photoType = isRecto 
-                          ? "Vue avant plein centre" 
-                          : "Vue latérale gauche";
-                    }
-                    
-                    // Afficher l'écran de caméra avec guides visuels en temps réel
-                    SmartCameraGuide.show(
+
+                    SimpleCamera.show(
                       context,
-                      photoType,
-                      (String photoPath) {
-                        // Convertir le chemin en XFile pour compatibilité
-                        final photo = XFile(photoPath);
+                      (File photoFile) {
+                        final photo = XFile(photoFile.path);
                         onImageSelected(photo);
                       },
                     );
-                },
-              ),
+                  },
+                ),
+              
               ListTile(
                 leading: const Icon(Icons.photo_library, color: Color(0xFF08004D)),
                 title: const Text('Choisir depuis la galerie'),
