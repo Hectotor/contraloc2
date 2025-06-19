@@ -111,45 +111,7 @@ class _SimpleCameraState extends State<SimpleCamera> {
     }
   }
 
-  Future<void> _switchCamera() async {
-    if (_cameras.length <= 1) return;
 
-    final lensDirection = _controller!.description.lensDirection;
-    CameraDescription newCamera;
-
-    if (lensDirection == CameraLensDirection.back) {
-      newCamera = _cameras.firstWhere(
-        (camera) => camera.lensDirection == CameraLensDirection.front,
-        orElse: () => _cameras.first,
-      );
-    } else {
-      newCamera = _cameras.firstWhere(
-        (camera) => camera.lensDirection == CameraLensDirection.back,
-        orElse: () => _cameras.first,
-      );
-    }
-
-    if (newCamera == _controller!.description) return;
-
-    await _controller!.dispose();
-    
-    _controller = CameraController(
-      newCamera,
-      ResolutionPreset.high,
-      enableAudio: false,
-    );
-
-    try {
-      await _controller!.initialize();
-      if (mounted) {
-        setState(() {});
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors du changement de caméra: $e')),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -183,27 +145,24 @@ class _SimpleCameraState extends State<SimpleCamera> {
                 FloatingActionButton(
                   heroTag: 'close',
                   backgroundColor: Colors.red,
-                  child: const Icon(Icons.close, color: Colors.white),
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
+                  child: const Icon(Icons.close, color: Colors.white),
                 ),
                 // Bouton pour prendre une photo
                 FloatingActionButton(
                   heroTag: 'capture',
                   backgroundColor: Colors.white,
+                  onPressed: _takePhoto,
                   child: _isProcessing 
                     ? const CircularProgressIndicator()
-                    : const Icon(Icons.camera_alt, color: Colors.black),
-                  onPressed: _takePhoto,
+                    : Transform.rotate(
+                        angle: 1.5708, // 90 degrés en radians
+                        child: const Icon(Icons.camera_alt, color: Colors.black),
+                      ),
                 ),
-                // Bouton pour changer de caméra
-                FloatingActionButton(
-                  heroTag: 'switch',
-                  backgroundColor: Colors.grey[800],
-                  child: const Icon(Icons.flip_camera_ios, color: Colors.white),
-                  onPressed: _switchCamera,
-                ),
+
               ],
             ),
           ),
