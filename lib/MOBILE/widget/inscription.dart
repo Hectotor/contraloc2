@@ -494,55 +494,73 @@ class _InscriptionPageState extends State<InscriptionPage> {
   }
 
   Widget _buildPasswordField(String label, TextEditingController controller) {
-    return TextField(
-      controller: controller,
-      obscureText:
-          label == "Mot de passe" ? !_showPassword : !_showConfirmPassword,
-      style: const TextStyle(
-        fontSize: 16,
-        color: Color(0xFF333333),
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(
-          color: Colors.grey[600],
-          fontSize: 14,
-        ),
-        suffixIcon: IconButton(
-          icon: Icon(
-            label == "Mot de passe"
-                ? (_showPassword ? Icons.visibility_off : Icons.visibility)
-                : (_showConfirmPassword
-                    ? Icons.visibility_off
-                    : Icons.visibility),
-            color: const Color(0xFF08004D),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          obscureText:
+              label == "Mot de passe" ? !_showPassword : !_showConfirmPassword,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Color(0xFF333333),
           ),
-          onPressed: () {
-            setState(() {
-              if (label == "Mot de passe") {
-                _showPassword = !_showPassword;
-              } else {
-                _showConfirmPassword = !_showConfirmPassword;
-              }
-            });
-          },
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+            suffixIcon: IconButton(
+              icon: Icon(
+                label == "Mot de passe"
+                    ? (_showPassword ? Icons.visibility_off : Icons.visibility)
+                    : (_showConfirmPassword
+                        ? Icons.visibility_off
+                        : Icons.visibility),
+                color: const Color(0xFF08004D),
+              ),
+              onPressed: () {
+                setState(() {
+                  if (label == "Mot de passe") {
+                    _showPassword = !_showPassword;
+                  } else {
+                    _showConfirmPassword = !_showConfirmPassword;
+                  }
+                });
+              },
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF08004D), width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            filled: true,
+            fillColor: Colors.white,
+          ),
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF08004D), width: 1.5),
-        ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        filled: true,
-        fillColor: Colors.white,
-      ),
+        // Afficher le message d'aide uniquement pour le champ "Mot de passe"
+        if (label == "Mot de passe")
+          Padding(
+            padding: const EdgeInsets.only(left: 8.0, top: 4.0),
+            child: Text(
+              "(Au moins 8 caractères, dont une majuscule, un chiffre et un caractère spécial)",
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

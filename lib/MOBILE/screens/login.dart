@@ -399,7 +399,7 @@ class _LoginPageState extends State<LoginPage> {
                     Column(
                       children: const [
                         Text(
-                          "Fabriqué en France ",
+                          "Fabriqué en France 🇫🇷 ",
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey,

@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:image/image.dart' as img;
 
 class SimpleCamera extends StatefulWidget {
   final Function(File) onPhotoTaken;
@@ -56,6 +58,7 @@ class _SimpleCameraState extends State<SimpleCamera> {
         backCamera,
         ResolutionPreset.high,
         enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.jpeg,
       );
 
       await _controller!.initialize();
@@ -93,10 +96,10 @@ class _SimpleCameraState extends State<SimpleCamera> {
       final String fileName = path.basename(photo.path);
       final String filePath = path.join(directory.path, fileName);
       
-      final File savedImage = File(photo.path);
-      final File copiedImage = await savedImage.copy(filePath);
+      // Corriger l'orientation de l'image
+      final File correctedImage = await _fixImageOrientation(File(photo.path), filePath);
       
-      widget.onPhotoTaken(copiedImage);
+      widget.onPhotoTaken(correctedImage);
       Navigator.of(context).pop();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -110,8 +113,32 @@ class _SimpleCameraState extends State<SimpleCamera> {
       }
     }
   }
-
-
+  
+  /// Corrige l'orientation de l'image pour qu'elle s'affiche correctement
+  Future<File> _fixImageOrientation(File inputImage, String outputPath) async {
+    try {
+      // Lire l'image avec le package image
+      final Uint8List bytes = await inputImage.readAsBytes();
+      final img.Image? originalImage = img.decodeImage(bytes);
+      
+      if (originalImage == null) {
+        return inputImage; // Retourner l'image originale si on ne peut pas la décoder
+      }
+      
+      // Rotation de l'image pour corriger l'orientation (270 degrés dans le sens horaire)
+      // ce qui équivaut à une rotation de 90 degrés dans le sens anti-horaire
+      final img.Image rotatedImage = img.copyRotate(originalImage, angle: 270);
+      
+      // Enregistrer l'image corrigée
+      final File outputFile = File(outputPath);
+      await outputFile.writeAsBytes(img.encodeJpg(rotatedImage));
+      
+      return outputFile;
+    } catch (e) {
+      print('Erreur lors de la correction de l\'orientation: $e');
+      return inputImage; // En cas d'erreur, retourner l'image originale
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +189,6 @@ class _SimpleCameraState extends State<SimpleCamera> {
                         child: const Icon(Icons.camera_alt, color: Colors.black),
                       ),
                 ),
-
               ],
             ),
           ),

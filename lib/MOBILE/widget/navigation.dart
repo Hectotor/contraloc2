@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../SCREENS/home_screen.dart';
 import '../SCREENS/contrat_screen.dart';
 import '../SCREENS/user_screen.dart';
-import '../SCREENS/photos_screen.dart';
 import '../SCREENS/chiffre_affaire_screen.dart';
 
 class NavigationPage extends StatefulWidget {
@@ -29,7 +28,7 @@ class _NavigationPageState extends State<NavigationPage> {
       const HomeScreen(),
       ContratScreen(showSuccessMessage: widget.fromPage == 'fromLocation'),
       const ChiffreAffaireScreen(),
-      const PhotosScreen(), // Nouvel écran de gestion des photos
+      // PhotosScreen temporairement masqué
       const UserScreen(),
     ];
     if (widget.fromPage == 'fromLocation') {
@@ -111,11 +110,6 @@ class _NavigationPageState extends State<NavigationPage> {
               icon: Icon(Icons.bar_chart_outlined),
               activeIcon: Icon(Icons.bar_chart), // Icône pleine pour "Chiffre d'affaire"
               label: "Chiffres",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.camera_alt_outlined),
-              activeIcon: Icon(Icons.camera_alt),
-              label: "Photos",
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
