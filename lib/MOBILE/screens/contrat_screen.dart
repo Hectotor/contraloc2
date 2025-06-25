@@ -80,7 +80,7 @@ class _ContratScreenState extends State<ContratScreen>
                 alignment: Alignment.center,
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'Calendrier',
+                  'Réservations',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                 ),
               ),

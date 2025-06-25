@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../USERS/popup_deconnexion.dart';
 import '../USERS/question_user.dart';
 import '../USERS/Subscription/abonnement_screen.dart';
@@ -248,13 +249,35 @@ class _UserScreenState extends State<UserScreen> {
                       Center(
                         child: Padding(
                           padding: const EdgeInsets.only(bottom: 20),
-                          child: Text(
-                            'Version 1.1.8\nFabriqué en France 🇫🇷\nDepuis 2020 - Contraloc.fr',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                            ),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Version 1.1.8\nFabriqué en France 🇫🇷',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () async {
+                                  final Uri url = Uri.parse('https://contraloc.fr');
+                                  if (!await launchUrl(url)) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Impossible d\'ouvrir le site web')),
+                                    );
+                                  }
+                                },
+                                child: Text(
+                                  'Depuis 2020 - Contraloc.fr',
+                                  style: TextStyle(
+                                    color: Colors.blue[700],
+                                    fontSize: 12,
+                                    //decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
