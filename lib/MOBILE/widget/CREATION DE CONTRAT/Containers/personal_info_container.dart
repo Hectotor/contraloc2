@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../client_search.dart';
 
 class PersonalInfoContainer extends StatefulWidget {
@@ -58,6 +59,13 @@ class _PersonalInfoContainerState extends State<PersonalInfoContainer> {
             child: TextFormField(
               controller: controller,
               maxLines: null,
+              textInputAction: TextInputAction.done,
+              minLines: 1,
+              // Empêcher les sauts de ligne avec ce gestionnaire d'événements clavier
+              inputFormatters: [
+                // Filtre qui supprime les caractères de nouvelle ligne
+                FilteringTextInputFormatter.deny(RegExp(r'\n')),
+              ],
               decoration: InputDecoration(
                 contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                 isDense: true,
@@ -90,7 +98,7 @@ class _PersonalInfoContainerState extends State<PersonalInfoContainer> {
                 }
                 return null;
               },
-              keyboardType: label == 'Téléphone' ? TextInputType.phone : null,
+              keyboardType: label == 'Téléphone' ? TextInputType.phone : TextInputType.text,
               onChanged: (value) {
                 if (label == 'Prénom' || label == 'Nom' || label == 'Adresse' || label == 'Entreprise') {
                   controller.value = TextEditingValue(
