@@ -41,6 +41,7 @@ class LocationPage extends StatefulWidget {
   final File? permisVerso;
   final String? permisRectoUrl;
   final String? permisVersoUrl;
+  final List<File>? vehiculeClientPhotos; // Photos du véhicule client
 
   const LocationPage({
     Key? key,
@@ -61,6 +62,7 @@ class LocationPage extends StatefulWidget {
     this.permisVerso,
     this.permisRectoUrl,
     this.permisVersoUrl,
+    this.vehiculeClientPhotos, // Photos du véhicule client
   }) : super(key: key);
 
   @override
@@ -79,6 +81,7 @@ class _LocationPageState extends State<LocationPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final List<File> _photos = [];
+  List<File> _vehiculeClientPhotos = []; // Photos du véhicule client
   int _pourcentageEssence = 50;
   bool _isLoading = false;
   bool _acceptedConditions = false;
@@ -87,6 +90,7 @@ class _LocationPageState extends State<LocationPage> {
   String? _vehiclePhotoUrl;
   String? _permisRectoUrl;
   String? _permisVersoUrl;
+  List<String> _vehiculeClientPhotoUrls = []; // URLs des photos du véhicule client
 
   final TextEditingController _prixLocationController = TextEditingController();
   final TextEditingController _accompteController = TextEditingController();
@@ -166,6 +170,12 @@ class _LocationPageState extends State<LocationPage> {
     // Initialiser les URLs des images du permis
     _permisRectoUrl = widget.permisRectoUrl;
     _permisVersoUrl = widget.permisVersoUrl;
+    
+    // Initialiser les photos du véhicule client
+    if (widget.vehiculeClientPhotos != null && widget.vehiculeClientPhotos!.isNotEmpty) {
+      _vehiculeClientPhotos = widget.vehiculeClientPhotos!;
+      print('Photos du véhicule client initialisées: ${_vehiculeClientPhotos.length}');
+    }
     
     // Debug des URLs du permis
     print('=== DEBUG INIT PERMIS URLS ===');
@@ -424,6 +434,7 @@ class _LocationPageState extends State<LocationPage> {
       String? permisRectoUrl = _permisRectoUrl;
       String? permisVersoUrl = _permisVersoUrl;
       List<String> vehiculeUrls = [];
+      _vehiculeClientPhotoUrls = []; // Réinitialiser la liste des URLs des photos du véhicule client
 
       // Si des URLs de photos ont été retournées par le popup, les utiliser
       if (photoUrls.isNotEmpty) {
@@ -468,11 +479,21 @@ class _LocationPageState extends State<LocationPage> {
         print('=== FIN DEBUG PERMIS PHOTOS ===');
 
         // Afficher les photos existantes pour débogage
-        if (_photos.isNotEmpty) {
-          print('Photos existantes avant upload: ${_photos.length}');
-        } else {
-          print('Aucune photo à uploader');
+      if (_photos.isNotEmpty) {
+        print('Photos existantes avant upload: ${_photos.length}');
+      } else {
+        print('Aucune photo à uploader');
+      }
+      
+      // Upload des photos du véhicule client
+      if (_vehiculeClientPhotos.isNotEmpty) {
+        print('Photos du véhicule client à uploader: ${_vehiculeClientPhotos.length}');
+        for (var photo in _vehiculeClientPhotos) {
+          String url = await ImageUploadUtils.compressAndUploadPhoto(photo, 'vehicule_client', contratId);
+          _vehiculeClientPhotoUrls.add(url);
         }
+        print('Photos du véhicule client uploadées: ${_vehiculeClientPhotoUrls.length}');
+      }  
 
         // Upload des autres photos uniquement si nécessaire
         for (var photo in _photos) {
@@ -609,6 +630,12 @@ class _LocationPageState extends State<LocationPage> {
       // Vérifier si les photos sont présentes dans le modèle mais pas dans les données Firestore
       if (contratModel.photosUrls != null && contratModel.photosUrls!.isNotEmpty && contratData['photos'] == null) {
         contratData['photos'] = contratModel.photosUrls;
+      }
+      
+      // Ajouter les URLs des photos du véhicule client aux données du contrat
+      if (_vehiculeClientPhotoUrls.isNotEmpty) {
+        contratData['vehiculeClientPhotosUrls'] = _vehiculeClientPhotoUrls;
+        print('Ajout de ${_vehiculeClientPhotoUrls.length} photos du véhicule client au contrat');
       }
 
       await _firestore

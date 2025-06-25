@@ -168,7 +168,7 @@ class _ClientPageState extends State<ClientPage> {
           'immatriculationVehiculeClient': _immatriculationVehiculeClientController.text,
           'kilometrageVehiculeClient': _kilometrageVehiculeClientController.text,
           'dateCreation': DateTime.now(),
-          'dateModification': DateTime.now(),
+          'dateModification': DateTime.now()
         };
 
         // Ajouter les URLs des photos si disponibles
@@ -239,6 +239,7 @@ class _ClientPageState extends State<ClientPage> {
                 kilometrageVehiculeClient: _kilometrageVehiculeClientController.text,
                 permisRecto: _permisRecto,
                 permisVerso: _permisVerso,
+                vehiculeClientPhotos: _vehiculeClientPhotos, // Ajout des photos du véhicule client
               ),
             ),
           );
@@ -267,6 +268,7 @@ class _ClientPageState extends State<ClientPage> {
                 permisVerso: _permisVerso,
                 permisRectoUrl: _permisRectoUrl,
                 permisVersoUrl: _permisVersoUrl,
+                vehiculeClientPhotos: _vehiculeClientPhotos, // Ajout des photos du véhicule client
               ),
             ),
           );
