@@ -286,16 +286,22 @@ class _ClientPageState extends State<ClientPage> {
     }
   }
 
+  // Liste pour stocker les photos du véhicule client
+  List<File> _vehiculeClientPhotos = [];
+
   void _showVehicleDialog() {
     showVehiculeClientDialog(
       context: context,
       immatriculationVehiculeClient: _immatriculationVehiculeClientController.text,
       kilometrageVehiculeClient: _kilometrageVehiculeClientController.text,
-      onSave: (immatriculation, kilometrage) {
+      existingPhotos: _vehiculeClientPhotos,
+      onSave: (immatriculation, kilometrage, photos) {
         setState(() {
           _immatriculationVehiculeClientController.text = immatriculation;
           _kilometrageVehiculeClientController.text = kilometrage;
+          _vehiculeClientPhotos = photos;
         });
+        print('Photos du véhicule client enregistrées: ${photos.length}');
       },
     );
   }

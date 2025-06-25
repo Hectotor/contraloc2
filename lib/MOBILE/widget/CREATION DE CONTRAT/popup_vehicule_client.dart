@@ -1,16 +1,20 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 class PopupVehiculeClient extends StatefulWidget {
-  final Function(String, String) onSave;
+  final Function(String, String, List<File>) onSave;
   final String? immatriculationVehiculeClient;
   final String? kilometrageVehiculeClient;
+  final List<File>? existingPhotos;
 
   const PopupVehiculeClient({
     Key? key,
     required this.onSave,
     this.immatriculationVehiculeClient,
     this.kilometrageVehiculeClient,
+    this.existingPhotos,
   }) : super(key: key);
 
   @override
@@ -20,12 +24,16 @@ class PopupVehiculeClient extends StatefulWidget {
 class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
   final TextEditingController _immatriculationVehiculeClientController = TextEditingController();
   final TextEditingController _kilometrageVehiculeClientController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+  List<File> _photos = [];
+  final int _maxPhotos = 5;
 
   @override
   void initState() {
     super.initState();
     _immatriculationVehiculeClientController.text = widget.immatriculationVehiculeClient ?? '';
     _kilometrageVehiculeClientController.text = widget.kilometrageVehiculeClient ?? '';
+    _photos = widget.existingPhotos?.toList() ?? [];
   }
 
   @override
@@ -33,6 +41,38 @@ class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
     _immatriculationVehiculeClientController.dispose();
     _kilometrageVehiculeClientController.dispose();
     super.dispose();
+  }
+
+  Future<void> _takePhoto() async {
+    if (_photos.length >= _maxPhotos) {
+      return;
+    }
+
+    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+    if (image != null) {
+      setState(() {
+        _photos.add(File(image.path));
+      });
+    }
+  }
+  
+  Future<void> _pickPhotoFromGallery() async {
+    if (_photos.length >= _maxPhotos) {
+      return;
+    }
+
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _photos.add(File(image.path));
+      });
+    }
+  }
+
+  void _removePhoto(int index) {
+    setState(() {
+      _photos.removeAt(index);
+    });
   }
 
   @override
@@ -85,7 +125,7 @@ class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
                   TextField(
                     controller: _immatriculationVehiculeClientController,
                     decoration: InputDecoration(
-                      labelText: 'Immatriculation',
+                      labelText: 'Modèle,Immatriculation...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -107,12 +147,118 @@ class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
                       FilteringTextInputFormatter.digitsOnly,
                     ],
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Photos du véhicule (${_photos.length}/$_maxPhotos)',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF08004D),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    height: 120,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: _photos.isEmpty
+                        ? Center(
+                            child: Text(
+                              'Aucune photo',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          )
+                        : ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _photos.length,
+                            itemBuilder: (context, index) {
+                              return Stack(
+                                children: [
+                                  Container(
+                                    margin: const EdgeInsets.all(8),
+                                    width: 100,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      image: DecorationImage(
+                                        image: FileImage(_photos[index]),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: GestureDetector(
+                                      onTap: () => _removePhoto(index),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.red,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.close,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                  ),
+                  const SizedBox(height: 10),
+                  Visibility(
+                    visible: _photos.length < _maxPhotos,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _takePhoto,
+                            icon: const Icon(Icons.camera_alt, color: Colors.white),
+                            label: const Text(
+                              'Photo',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF08004D).withOpacity(0.8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _pickPhotoFromGallery,
+                            icon: const Icon(Icons.photo_library, color: Colors.white),
+                            label: const Text(
+                              'Galerie',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF08004D).withOpacity(0.8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () {
                       widget.onSave(
                         _immatriculationVehiculeClientController.text.trim(),
                         _kilometrageVehiculeClientController.text.trim(),
+                        _photos,
                       );
                       Navigator.pop(context);
                     },
@@ -146,9 +292,10 @@ class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
 // Function to show the vehicle dialog
 Future<void> showVehiculeClientDialog({
   required BuildContext context,
-  required Function(String, String) onSave,
+  required Function(String, String, List<File>) onSave,
   String? immatriculationVehiculeClient,
   String? kilometrageVehiculeClient,
+  List<File>? existingPhotos,
 }) async {
   return showDialog(
     context: context,
@@ -157,6 +304,7 @@ Future<void> showVehiculeClientDialog({
         onSave: onSave,
         immatriculationVehiculeClient: immatriculationVehiculeClient,
         kilometrageVehiculeClient: kilometrageVehiculeClient,
+        existingPhotos: existingPhotos,
       );
     },
   );
