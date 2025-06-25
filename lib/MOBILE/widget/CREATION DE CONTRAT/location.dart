@@ -7,12 +7,11 @@ import 'package:contraloc/MOBILE/models/contrat_model.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 import 'dart:convert';
-import 'package:path_provider/path_provider.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:contraloc/MOBILE/widget/CREATION%20DE%20CONTRAT/image_upload_utils.dart';
+import 'package:contraloc/MOBILE/widget/CREATION%20DE%20CONTRAT/contrat_validation_utils.dart';
+import 'package:contraloc/MOBILE/widget/CREATION%20DE%20CONTRAT/contract_data_utils.dart';
 import '../chargement.dart';
 import '../popup_signature.dart';
-import '../photo_upload_popup.dart';
 import 'Containers/date_container.dart';
 import 'Containers/kilometrage_container.dart';
 import 'Containers/type_location_container.dart';
@@ -21,7 +20,6 @@ import 'Containers/etat_commentaire_container.dart';
 import '../../utils/affichage_contrat_pdf.dart';
 import '../../utils/contract_utils.dart';
 import '../../services/auth_util.dart';
-import '../../USERS/contrat_condition.dart';
 import '../../utils/pdf_upload_utils.dart';
 import 'Containers/lieux_popup.dart';
 
@@ -304,79 +302,33 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   Future<ContratModel?> _loadContractData(String contratId) async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        print('❌ Aucun utilisateur connecté');
-        return null;
-      }
-
-      final collaborateurStatus = await AuthUtil.getAuthData();
-      final String adminId = collaborateurStatus['isCollaborateur'] 
-          ? collaborateurStatus['adminId'] ?? user.uid 
-          : user.uid;
-
-      // Récupérer les données du contrat
-      final contratDoc = await _firestore
-          .collection('users')
-          .doc(adminId)
-          .collection('locations')
-          .doc(contratId)
-          .get();
-
-      if (contratDoc.exists && contratDoc.data() != null) {
-        // Créer un modèle de contrat à partir des données Firestore
-        final contractData = contratDoc.data()!;
-        final contratModel = ContratModel.fromFirestore(contractData, id: contratId);
-
-        // Mettre à jour les contrôleurs avec les données du modèle
+    return ContractDataUtils.loadContractData(
+      contratId: contratId,
+      firestore: _firestore,
+      onUpdateControllers: (model) {
         setState(() {
-          _updateControllersFromModel(contratModel);
-          // Charger les URLs des photos du permis depuis Firestore
-          _permisRectoUrl = contratModel.permisRecto;
-          _permisVersoUrl = contratModel.permisVerso;
+          _updateControllersFromModel(model);
         });
-
-        // Charger la signature si elle existe
-        if (contractData['signatureAller'] != null) {
-          setState(() {
-            _signatureAller = contractData['signatureAller'];
-            if (_signatureAller.isNotEmpty) {
-              _acceptedConditions = true; // Si une signature existe, les conditions ont été acceptées
-            }
-          });
-        }
-
-        // Charger les photos si elles existent
-        if (contractData['photos'] != null && contractData['photos'] is List) {
-          List<dynamic> photoUrls = contractData['photos'];
-          print('Photos trouvées: ${photoUrls.length}');
-
-          // Télécharger les photos depuis les URLs et les ajouter à la liste _photos
-          for (String photoUrl in photoUrls) {
-            try {
-              print('Téléchargement de la photo: $photoUrl');
-              final photoFile = await _downloadImageFromUrl(photoUrl);
-              if (photoFile != null) {
-                setState(() {
-                  _photos.add(photoFile);
-                });
-              }
-            } catch (e) {
-              print('Erreur lors du traitement de la photo: $e');
-            }
-          }
-        }
-
-        return contratModel;
-      } else {
-        print('Aucun contrat trouvé avec l\'ID: $contratId');
-        return null;
-      }
-    } catch (e) {
-      print('Erreur lors du chargement des données du contrat: $e');
-      return null;
-    }
+      },
+      onUpdateState: ({
+        String? permisRectoUrl,
+        String? permisVersoUrl,
+        String? signatureAller,
+        bool? acceptedConditions,
+      }) {
+        setState(() {
+          if (permisRectoUrl != null) _permisRectoUrl = permisRectoUrl;
+          if (permisVersoUrl != null) _permisVersoUrl = permisVersoUrl;
+          if (signatureAller != null) _signatureAller = signatureAller;
+          if (acceptedConditions != null) _acceptedConditions = acceptedConditions;
+        });
+      },
+      onAddPhoto: (photo) {
+        setState(() {
+          _photos.add(photo);
+        });
+      },
+    );
   }
 
   Future<void> _fetchVehicleData() async {
@@ -443,115 +395,25 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   Future<void> _validerContrat() async {
-    if (_typeLocationController.text == "Payante" && _prixLocationController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Veuillez d'abord configurer le prix de location du véhicule dans sa fiche"),
-        ),
-      );
-      return;
-    }
-
-    // Récupérer les conditions du contrat depuis Firestore
-    final authData = await AuthUtil.getAuthData();
-    if (authData.isEmpty) {
-      print('❌ Aucun utilisateur connecté');
-      return;
-    }
-    final targetId = authData['adminId'];
-    if (targetId == null) {
-      print('❌ Aucun adminId trouvé');
-      throw Exception('Aucun administrateur trouvé');
-    }
-
-    final conditionsDocRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(targetId)
-        .collection('contrats')
-        .doc('userId');
-    
-    final conditionsDoc = await conditionsDocRef.get(const GetOptions(source: Source.server));
-    final conditions = conditionsDoc.data() ?? {'texte': ContratModifier.defaultContract};
-    final conditionsText = conditions['texte'] ?? 'Conditions générales de location';
-
-    if ((widget.nom != null &&
-        widget.nom!.isNotEmpty &&
-        widget.prenom != null &&
-        widget.prenom!.isNotEmpty) &&
-        !_acceptedConditions) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Vous devez accepter les conditions de location")),
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Vous devez être connecté pour créer un contrat")),
-        );
-        return;
-      }
-
-      final collaborateurStatus = await AuthUtil.getAuthData();
-      final String userId = collaborateurStatus['userId'] ?? user.uid;
-      final String targetId = collaborateurStatus['isCollaborateur'] 
-          ? collaborateurStatus['adminId'] ?? user.uid 
-          : user.uid;
-
-      // Gestion de l'ID du contrat
-      final contratId = widget.contratId ?? _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('locations')
-          .doc()
-          .id;
-
-      // Préparer les photos à uploader
-      List<File> photosToUpload = [];
-      if (widget.permisRecto != null) {
-        photosToUpload.add(widget.permisRecto as File);
-      }
-      if (widget.permisVerso != null) {
-        photosToUpload.add(widget.permisVerso as File);
-      }
-      photosToUpload.addAll(_photos);
-
-      // Afficher le popup de téléchargement des photos si des photos sont à uploader
-      if (photosToUpload.isNotEmpty) {
-        // Afficher le popup de téléchargement des photos
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => PhotoUploadPopup(
-            photos: photosToUpload,
-            contratId: contratId,
-            onUploadComplete: (List<String> urls) async {
-              // Continuer le processus de sauvegarde après l'upload des photos
-              await _finalizeContractSave(contratId, urls, userId, targetId, collaborateurStatus, conditionsText);
-            },
-          ),
-        );
-      } else {
-        // Pas de photos à uploader, continuer directement
-        await _finalizeContractSave(contratId, [], userId, targetId, collaborateurStatus, conditionsText);
-      }
-    } catch (e) {
-      print('Erreur lors de la validation du contrat: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: $e')),
-      );
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    // Utilisation de la classe utilitaire pour valider le contrat
+    await ContratValidationUtils.validerContrat(
+      context: context,
+      typeLocation: _typeLocationController.text,
+      prixLocation: _prixLocationController.text,
+      acceptedConditions: _acceptedConditions,
+      nom: widget.nom,
+      prenom: widget.prenom,
+      contratId: widget.contratId,
+      permisRecto: widget.permisRecto,
+      permisVerso: widget.permisVerso,
+      photos: _photos,
+      onLoadingStateChanged: (isLoading) {
+        setState(() {
+          _isLoading = isLoading;
+        });
+      },
+      onFinalizeSave: _finalizeContractSave,
+    );
   }
 
   // Méthode pour finaliser la sauvegarde du contrat après l'upload des photos
@@ -586,7 +448,7 @@ class _LocationPageState extends State<LocationPage> {
         // Vérifier si les URLs existent déjà avant de télécharger
         if (widget.permisRecto != null && _permisRectoUrl == null) {
           print('Uploading permisRecto...');
-          permisRectoUrl = await _compressAndUploadPhoto(
+          permisRectoUrl = await ImageUploadUtils.compressAndUploadPhoto(
             widget.permisRecto as File,
             'permis/recto',
             contratId
@@ -596,7 +458,7 @@ class _LocationPageState extends State<LocationPage> {
 
         if (widget.permisVerso != null && _permisVersoUrl == null) {
           print('Uploading permisVerso...');
-          permisVersoUrl = await _compressAndUploadPhoto(
+          permisVersoUrl = await ImageUploadUtils.compressAndUploadPhoto(
             widget.permisVerso as File,
             'permis/verso',
             contratId
@@ -623,7 +485,7 @@ class _LocationPageState extends State<LocationPage> {
             }
           }
           if (!urlExists) {
-            String url = await _compressAndUploadPhoto(photo, 'photos', contratId);
+            String url = await ImageUploadUtils.compressAndUploadPhoto(photo, 'photos', contratId);
             vehiculeUrls.add(url);
           }
         }
@@ -653,11 +515,11 @@ class _LocationPageState extends State<LocationPage> {
       // Création du contrat
       // D'abord, télécharger les photos du permis si elles sont présentes en tant que fichiers
       if (widget.permisRecto != null) {
-        _permisRectoUrl = await _compressAndUploadPhoto(widget.permisRecto!, 'permis/recto', contratId);
+        _permisRectoUrl = await ImageUploadUtils.compressAndUploadPhoto(widget.permisRecto!, 'permis/recto', contratId);
         print('URL permis recto sauvegardée: $_permisRectoUrl');
       }
       if (widget.permisVerso != null) {
-        _permisVersoUrl = await _compressAndUploadPhoto(widget.permisVerso!, 'permis/verso', contratId);
+        _permisVersoUrl = await ImageUploadUtils.compressAndUploadPhoto(widget.permisVerso!, 'permis/verso', contratId);
         print('URL permis verso sauvegardée: $_permisVersoUrl');
       }
 
@@ -968,116 +830,9 @@ class _LocationPageState extends State<LocationPage> {
     }
   }
 
-  Future<String> _compressAndUploadPhoto(
-    File photo, String folder, String contratId) async {
-  try {
-    print(" Début de compression de l'image: ${photo.absolute.path}");
-    print(" Taille de l'image avant compression: ${await photo.length()} octets");
+  // Cette méthode a été déplacée vers ImageUploadUtils.compressAndUploadPhoto
 
-    final compressedImage = await FlutterImageCompress.compressWithFile(
-      photo.absolute.path,
-      minWidth: 800,
-      minHeight: 800,
-      quality: 85,
-    );
-
-    if (compressedImage != null) {
-      print(" Compression réussie, taille après compression: ${compressedImage.length} octets");
-
-      final status = await AuthUtil.getAuthData();
-      final userId = status['adminId'];
-
-      if (userId == null) {
-        print(" Erreur: Utilisateur non connecté");
-        throw Exception("Utilisateur non connecté");
-      }
-
-      final targetId = status['isCollaborateur'] ? status['adminId'] : userId;
-
-      if (targetId == null) {
-        print(" Erreur: ID cible non disponible");
-        throw Exception("ID cible non disponible");
-      }
-
-      print(" Téléchargement d'image par ${status['isCollaborateur'] ? 'collaborateur' : 'admin'}");
-      print(" userId: $userId, targetId (adminId): $targetId");
-
-      // Simplifier le nom de fichier pour éviter les problèmes de chemin
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      String fileName = folder.replaceAll('/', '_') + "_$timestamp.jpg";
-
-      final String storagePath = 'users/${targetId}/locations/$contratId/$folder/$fileName';
-      print(" Chemin de stockage: $storagePath");
-
-      final tempDir = await getTemporaryDirectory();
-      // Créer un dossier spécifique pour cette application
-      final appTempDir = Directory('${tempDir.path}/contraloc_temp');
-      if (!await appTempDir.exists()) {
-        print(" Création du dossier temporaire de l'application: ${appTempDir.path}");
-        await appTempDir.create(recursive: true);
-      } else {
-        print(" Dossier temporaire de l'application existant: ${appTempDir.path}");
-      }
-
-      final tempFile = File('${appTempDir.path}/$fileName');
-      print(" Chemin du fichier temporaire: ${tempFile.path}");
-      await tempFile.writeAsBytes(compressedImage);
-      print(" Fichier temporaire créé avec succès: ${await tempFile.exists()}");
-      print(" Taille du fichier temporaire: ${await tempFile.length()} octets");
-
-      Reference ref = FirebaseStorage.instance.ref().child(storagePath);
-
-      print(" Début du téléchargement...");
-      await ref.putFile(tempFile);
-      print(" Téléchargement terminé avec succès");
-
-      // Récupérer l'URL de téléchargement
-      String downloadUrl = await ref.getDownloadURL();
-      print(" URL de téléchargement: $downloadUrl");
-
-      // Supprimer le fichier temporaire après utilisation
-      try {
-        await tempFile.delete();
-        print(" Fichier temporaire supprimé");
-      } catch (e) {
-        print(" Erreur lors de la suppression du fichier temporaire: $e");
-      }
-
-      return downloadUrl;
-    }
-    throw Exception("Image compression failed");
-  } catch (e) {
-    print(' Erreur lors du traitement de l\'image : $e');
-    if (e.toString().contains('unauthorized')) {
-      print(' Problème d\'autorisation: Vérifiez les règles de sécurité Firebase Storage');
-    }
-    rethrow;
-  }
-}
-
-  // Méthode pour télécharger une image depuis une URL et la convertir en fichier local
-  Future<File?> _downloadImageFromUrl(String imageUrl) async {
-    try {
-      // Récupérer le répertoire temporaire
-      final tempDir = await getTemporaryDirectory();
-      final fileName = 'photo_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final file = File('${tempDir.path}/$fileName');
-
-      // Télécharger l'image depuis l'URL
-      final ref = FirebaseStorage.instance.refFromURL(imageUrl);
-      final bytes = await ref.getData();
-
-      if (bytes != null) {
-        // Écrire les données dans le fichier
-        await file.writeAsBytes(bytes);
-        return file;
-      }
-      return null;
-    } catch (e) {
-      print('Erreur lors du téléchargement de l\'image: $e');
-      return null;
-    }
-  }
+  // La méthode _downloadImageFromUrl a été supprimée car elle est maintenant directement utilisée via ImageUploadUtils.downloadImageFromUrl
 
   void _addPhoto(File photo) {
     setState(() {
