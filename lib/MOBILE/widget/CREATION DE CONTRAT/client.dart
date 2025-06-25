@@ -4,9 +4,9 @@ import 'location.dart'; // Import de la page location
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// Import de access_premium.dart supprimé car non utilisé
 import 'package:contraloc/MOBILE/services/auth_util.dart'; // Import de AuthUtil
 import 'popup_vehicule_client.dart';
+import 'image_upload_utils.dart';
 import 'Containers/permis_info_container.dart'; // Import du nouveau composant
 import 'Containers/personal_info_container.dart'; // Import du nouveau composant
 
@@ -66,6 +66,8 @@ class _ClientPageState extends State<ClientPage> {
   File? _permisVerso;
   String? _permisRectoUrl;
   String? _permisVersoUrl;
+  List<String> _vehiculeClientPhotoUrls = [];
+  List<File> _vehiculeClientPhotos = [];
   // Variable isPremiumUser supprimée car non utilisée
   bool _isLoading = false;
   
@@ -76,6 +78,27 @@ class _ClientPageState extends State<ClientPage> {
       _permisRectoUrl = rectoUrl;
       _permisVersoUrl = versoUrl;
     });
+  }
+  
+  // Méthode pour télécharger les photos du véhicule client à partir des URLs
+  Future<void> _downloadVehiculeClientPhotos() async {
+    if (_vehiculeClientPhotoUrls.isEmpty) return;
+    
+    // Ne pas afficher l'indicateur de chargement pour ne pas bloquer l'interface
+    // Télécharger les photos en arrière-plan
+    try {
+      for (String url in _vehiculeClientPhotoUrls) {
+        final photoFile = await ImageUploadUtils.downloadImageFromUrl(url);
+        if (photoFile != null && mounted) {
+          setState(() {
+            _vehiculeClientPhotos.add(photoFile);
+          });
+        }
+      }
+      print('Photos du véhicule client téléchargées: ${_vehiculeClientPhotos.length}');
+    } catch (e) {
+      print('Erreur lors du téléchargement des photos du véhicule client: $e');
+    }
   }
 
   @override
@@ -93,6 +116,11 @@ class _ClientPageState extends State<ClientPage> {
 
   Future<void> _loadClientData() async {
     try {
+      // Afficher un indicateur de chargement uniquement pour la récupération initiale des données
+      setState(() {
+        _isLoading = true;
+      });
+      
       final user = FirebaseAuth.instance.currentUser;
       if (user != null && widget.contratId != null) {
         String adminId = user.uid;
@@ -103,7 +131,6 @@ class _ClientPageState extends State<ClientPage> {
         
         if (userData != null && userData['role'] == 'collaborateur' && userData['adminId'] != null) {
           adminId = userData['adminId'];
-          print('Utilisateur collaborateur détecté, utilisation de l\'adminId: $adminId');
         }
         
         final docRef = FirebaseFirestore.instance
@@ -113,11 +140,12 @@ class _ClientPageState extends State<ClientPage> {
             .doc(widget.contratId);
 
         final docSnapshot = await docRef.get();
-        if (docSnapshot.exists) {
+        if (docSnapshot.exists && mounted) {
           final data = docSnapshot.data() as Map<String, dynamic>;
-          print('Données récupérées: $data');
           
+          // Mettre à jour l'interface avec les données textuelles
           setState(() {
+            _isLoading = false; // Arrêter l'indicateur de chargement dès que les données textuelles sont disponibles
             entrepriseClientController.text = data['entrepriseClient'] ?? '';
             _nomController.text = data['nom'] ?? '';
             _prenomController.text = data['prenom'] ?? '';
@@ -131,15 +159,39 @@ class _ClientPageState extends State<ClientPage> {
             // Récupérer les URLs des images du permis
             _permisRectoUrl = data['permisRecto'];
             _permisVersoUrl = data['permisVerso'];
+          });
+          
+          // Récupérer les URLs des photos du véhicule client après avoir affiché les données textuelles
+          if (data['vehiculeClientPhotosUrls'] != null && data['vehiculeClientPhotosUrls'] is List) {
+            _vehiculeClientPhotoUrls = List<String>.from(data['vehiculeClientPhotosUrls']);
             
-            // Afficher les URLs dans la console
-            print('URL permis recto: $_permisRectoUrl');
-            print('URL permis verso: $_permisVersoUrl');
+            // Télécharger les photos du véhicule client en arrière-plan
+            _downloadVehiculeClientPhotos();
+          }
+        } else {
+          // Si le document n'existe pas, arrêter l'indicateur de chargement
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
+        }
+      } else {
+        // Si pas d'utilisateur ou pas de contratId, arrêter l'indicateur de chargement
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
           });
         }
       }
     } catch (e) {
       print('Erreur lors du chargement des données client: $e');
+      // En cas d'erreur, arrêter l'indicateur de chargement
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -287,9 +339,6 @@ class _ClientPageState extends State<ClientPage> {
       }
     }
   }
-
-  // Liste pour stocker les photos du véhicule client
-  List<File> _vehiculeClientPhotos = [];
 
   void _showVehicleDialog() {
     showVehiculeClientDialog(

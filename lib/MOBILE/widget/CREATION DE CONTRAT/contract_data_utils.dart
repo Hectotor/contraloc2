@@ -93,6 +93,8 @@ class ContractDataUtils {
             }
           }
         }
+        
+        // Le chargement des photos du véhicule client est maintenant géré directement dans la page client
 
         return contratModel;
       } else {

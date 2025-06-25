@@ -144,11 +144,7 @@ class _LocationPageState extends State<LocationPage> {
     super.initState();
     _selectedPaymentMethod = 'Espèces';
     
-    // Debug des photos du permis
-    print('=== DEBUG INIT PERMIS PHOTOS ===');
-    print('permisRecto dans widget: ${widget.permisRecto}');
-    print('permisVerso dans widget: ${widget.permisVerso}');
-    print('=== FIN DEBUG INIT PERMIS PHOTOS ===');
+    // Upload des photos du permis
 
     // Charger les informations de l'entreprise
     _loadAdminInfo();
@@ -331,6 +327,7 @@ class _LocationPageState extends State<LocationPage> {
           if (permisVersoUrl != null) _permisVersoUrl = permisVersoUrl;
           if (signatureAller != null) _signatureAller = signatureAller;
           if (acceptedConditions != null) _acceptedConditions = acceptedConditions;
+          // Le chargement des photos du véhicule client est maintenant géré directement dans la page client
         });
       },
       onAddPhoto: (photo) {
@@ -339,7 +336,7 @@ class _LocationPageState extends State<LocationPage> {
         });
       },
     );
-  }
+  }  
 
   Future<void> _fetchVehicleData() async {
     try {
@@ -452,47 +449,30 @@ class _LocationPageState extends State<LocationPage> {
         }
       } else {
         // Fallback au cas où le popup n'a pas été utilisé
-        print('=== DEBUG PERMIS PHOTOS ===');
-        print('permisRecto existe: ${widget.permisRecto != null}');
-        print('permisVerso existe: ${widget.permisVerso != null}');
-        
-        // Vérifier si les URLs existent déjà avant de télécharger
-        if (widget.permisRecto != null && _permisRectoUrl == null) {
-          print('Uploading permisRecto...');
-          permisRectoUrl = await ImageUploadUtils.compressAndUploadPhoto(
-            widget.permisRecto as File,
-            'permis/recto',
-            contratId
-          );
-          print('permisRectoUrl après upload: $permisRectoUrl');
-        }
-
-        if (widget.permisVerso != null && _permisVersoUrl == null) {
-          print('Uploading permisVerso...');
-          permisVersoUrl = await ImageUploadUtils.compressAndUploadPhoto(
-            widget.permisVerso as File,
-            'permis/verso',
-            contratId
-          );
-          print('permisVersoUrl après upload: $permisVersoUrl');
-        }
-        print('=== FIN DEBUG PERMIS PHOTOS ===');
-
-        // Afficher les photos existantes pour débogage
-      if (_photos.isNotEmpty) {
-        print('Photos existantes avant upload: ${_photos.length}');
-      } else {
-        print('Aucune photo à uploader');
-      }
       
-      // Upload des photos du véhicule client
+      // Vérifier si les URLs existent déjà avant de télécharger
+      if (widget.permisRecto != null && _permisRectoUrl == null) {
+        permisRectoUrl = await ImageUploadUtils.compressAndUploadPhoto(
+          widget.permisRecto as File,
+          'permis/recto',
+          contratId
+        );
+      }
+
+      if (widget.permisVerso != null && _permisVersoUrl == null) {
+        permisVersoUrl = await ImageUploadUtils.compressAndUploadPhoto(
+          widget.permisVerso as File,
+          'permis/verso',
+          contratId
+        );
+      }
+
+        // Upload des photos du véhicule client
       if (_vehiculeClientPhotos.isNotEmpty) {
-        print('Photos du véhicule client à uploader: ${_vehiculeClientPhotos.length}');
         for (var photo in _vehiculeClientPhotos) {
           String url = await ImageUploadUtils.compressAndUploadPhoto(photo, 'vehicule_client', contratId);
           _vehiculeClientPhotoUrls.add(url);
         }
-        print('Photos du véhicule client uploadées: ${_vehiculeClientPhotoUrls.length}');
       }  
 
         // Upload des autres photos uniquement si nécessaire
@@ -511,12 +491,6 @@ class _LocationPageState extends State<LocationPage> {
           }
         }
 
-        print('=== DEBUG PHOTOS VEHICULE ===');
-        print('Photos du véhicule téléchargées: ${vehiculeUrls.length}');
-        if (vehiculeUrls.isNotEmpty) {
-          print('Première URL de photo: ${vehiculeUrls.first}');
-        }
-        print('=== FIN DEBUG PHOTOS VEHICULE ===');
       }
 
       // Récupérer l'adminId via AuthUtil
@@ -537,11 +511,9 @@ class _LocationPageState extends State<LocationPage> {
       // D'abord, télécharger les photos du permis si elles sont présentes en tant que fichiers
       if (widget.permisRecto != null) {
         _permisRectoUrl = await ImageUploadUtils.compressAndUploadPhoto(widget.permisRecto!, 'permis/recto', contratId);
-        print('URL permis recto sauvegardée: $_permisRectoUrl');
       }
       if (widget.permisVerso != null) {
         _permisVersoUrl = await ImageUploadUtils.compressAndUploadPhoto(widget.permisVerso!, 'permis/verso', contratId);
-        print('URL permis verso sauvegardée: $_permisVersoUrl');
       }
 
       final contratModel = ContratModel(
