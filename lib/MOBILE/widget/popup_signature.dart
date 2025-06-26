@@ -105,7 +105,7 @@ class PopupSignature {
                       const SizedBox(height: 10),
                       Container(
                         width: double.infinity,
-                        height: 200,
+                        height: 250,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(15),

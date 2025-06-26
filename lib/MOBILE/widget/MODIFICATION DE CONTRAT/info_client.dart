@@ -190,6 +190,65 @@ class _InfoClientState extends State<InfoClient> {
                       ],
                     ),
                   ],
+                  
+                  // Photos du véhicule client
+                  if (widget.data['vehiculeClientPhotosUrls'] != null && 
+                      widget.data['vehiculeClientPhotosUrls'] is List && 
+                      (widget.data['vehiculeClientPhotosUrls'] as List).isNotEmpty) ...[                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Icon(Icons.directions_car, color: Colors.green[700], size: 24),
+                        const SizedBox(width: 12),
+                        Text(
+                          "Photos du véhicule client",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: List.generate(
+                          (widget.data['vehiculeClientPhotosUrls'] as List).length,
+                          (index) => GestureDetector(
+                            onTap: () => widget.onShowFullScreenImages(
+                                context, widget.data['vehiculeClientPhotosUrls'], index),
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  widget.data['vehiculeClientPhotosUrls'][index],
+                                  width: 150,
+                                  height: 150,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(Icons.error, size: 50, color: Colors.grey),
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Center(
+                                      child: CircularProgressIndicator(
+                                        value: loadingProgress.expectedTotalBytes != null
+                                            ? loadingProgress.cumulativeBytesLoaded /
+                                                loadingProgress.expectedTotalBytes!
+                                            : null,
+                                        color: Colors.green[700],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
