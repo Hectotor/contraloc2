@@ -426,7 +426,11 @@ class _LocationPageState extends State<LocationPage> {
   // Méthode pour finaliser la sauvegarde du contrat après l'upload des photos
   Future<void> _finalizeContractSave(String contratId, List<String> photoUrls, String userId, String targetId, Map<String, dynamic> collaborateurStatus, String conditionsText) async {
     try {
-      // Upload des photos
+      // Afficher un indicateur de progression plus détaillé
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Préparation des données...'), duration: Duration(seconds: 1)),
+      );
+      
       // Initialiser avec les URLs existantes pour ne pas les perdre
       String? permisRectoUrl = _permisRectoUrl;
       String? permisVersoUrl = _permisVersoUrl;
@@ -449,77 +453,127 @@ class _LocationPageState extends State<LocationPage> {
         }
       } else {
         // Fallback au cas où le popup n'a pas été utilisé
-      
-      // Vérifier si les URLs existent déjà avant de télécharger
-      if (widget.permisRecto != null && _permisRectoUrl == null) {
-        permisRectoUrl = await ImageUploadUtils.compressAndUploadPhoto(
-          widget.permisRecto as File,
-          'permis/recto',
-          contratId
-        );
-      }
-
-      if (widget.permisVerso != null && _permisVersoUrl == null) {
-        permisVersoUrl = await ImageUploadUtils.compressAndUploadPhoto(
-          widget.permisVerso as File,
-          'permis/verso',
-          contratId
-        );
-      }
-
-        // Upload des photos du véhicule client
-      if (_vehiculeClientPhotos.isNotEmpty) {
-        for (var photo in _vehiculeClientPhotos) {
-          String url = await ImageUploadUtils.compressAndUploadPhoto(photo, 'vehicule_client', contratId);
-          _vehiculeClientPhotoUrls.add(url);
+        
+        // Créer une liste de tâches de téléchargement à exécuter en parallèle
+        List<Future<void>> uploadTasks = [];
+        
+        // Récupérer l'authData une seule fois
+        final authData = await AuthUtil.getAuthData();
+        if (authData.isEmpty) {
+          print('❌ Aucun utilisateur connecté');
+          throw Exception('Aucun utilisateur connecté');
         }
-      }  
+        
+        final adminId = authData['adminId'] as String?;
+        if (adminId == null) {
+          print('❌ Aucun adminId trouvé');
+          throw Exception('Aucun administrateur trouvé');
+        }
+        
+        // Notification de progression
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Téléchargement des images...'), duration: Duration(seconds: 2)),
+        );
 
-        // Upload des autres photos uniquement si nécessaire
-        for (var photo in _photos) {
-          // Vérifier si l'URL existe déjà
-          bool urlExists = false;
-          for (var url in vehiculeUrls) {
-            if (url == photo.path) {
-              urlExists = true;
-              break;
+        // Télécharger les photos du permis si nécessaire
+        if (widget.permisRecto != null && _permisRectoUrl == null) {
+          uploadTasks.add(
+            ImageUploadUtils.compressAndUploadPhoto(
+              widget.permisRecto as File,
+              'permis/recto',
+              contratId
+            ).then((url) => permisRectoUrl = url)
+          );
+        }
+
+        if (widget.permisVerso != null && _permisVersoUrl == null) {
+          uploadTasks.add(
+            ImageUploadUtils.compressAndUploadPhoto(
+              widget.permisVerso as File,
+              'permis/verso',
+              contratId
+            ).then((url) => permisVersoUrl = url)
+          );
+        }
+
+        // Préparer le téléchargement des photos du véhicule client en parallèle
+        if (_vehiculeClientPhotos.isNotEmpty) {
+          // Créer une liste temporaire pour stocker les URLs
+          List<String> tempUrls = List.filled(_vehiculeClientPhotos.length, '');
+          
+          for (int i = 0; i < _vehiculeClientPhotos.length; i++) {
+            final index = i; // Capturer l'index pour l'utiliser dans le callback
+            uploadTasks.add(
+              ImageUploadUtils.compressAndUploadPhoto(
+                _vehiculeClientPhotos[index],
+                'vehicule_client',
+                contratId
+              ).then((url) => tempUrls[index] = url)
+            );
+          }
+          
+          // Attendre que tous les téléchargements soient terminés
+          await Future.wait(uploadTasks);
+          
+          // Ajouter les URLs à la liste principale
+          _vehiculeClientPhotoUrls = tempUrls.where((url) => url.isNotEmpty).toList();
+          
+          // Réinitialiser la liste des tâches pour les autres photos
+          uploadTasks = [];
+        }
+
+        // Télécharger les autres photos uniquement si nécessaire
+        if (_photos.isNotEmpty) {
+          // Créer un Map pour stocker les résultats
+          Map<File, String> photoUrlMap = {};
+          
+          for (var photo in _photos) {
+            // Vérifier si l'URL existe déjà
+            bool urlExists = vehiculeUrls.contains(photo.path);
+            
+            if (!urlExists) {
+              uploadTasks.add(
+                ImageUploadUtils.compressAndUploadPhoto(photo, 'photos', contratId)
+                  .then((url) => photoUrlMap[photo] = url)
+              );
             }
           }
-          if (!urlExists) {
-            String url = await ImageUploadUtils.compressAndUploadPhoto(photo, 'photos', contratId);
-            vehiculeUrls.add(url);
-          }
+          
+          // Attendre que tous les téléchargements soient terminés
+          await Future.wait(uploadTasks);
+          
+          // Ajouter les nouvelles URLs à la liste
+          vehiculeUrls.addAll(photoUrlMap.values);
         }
-
-      }
-
-      // Récupérer l'adminId via AuthUtil
-      final authData = await AuthUtil.getAuthData();
-      if (authData.isEmpty) {
-        print('❌ Aucun utilisateur connecté');
-        throw Exception('Aucun utilisateur connecté');
       }
       
-      final targetId = authData['adminId'] as String?;
-      if (targetId == null) {
-        print('❌ Aucun adminId trouvé');
-        throw Exception('Aucun administrateur trouvé');
+      // Notification de progression
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Finalisation du contrat...'), duration: Duration(seconds: 1)),
+      );
+      
+      // Récupérer l'adminId via AuthUtil si ce n'est pas déjà fait
+      String finalTargetId = targetId;
+      if (finalTargetId.isEmpty) {
+        final authData = await AuthUtil.getAuthData();
+        if (authData.isEmpty) {
+          throw Exception('Aucun utilisateur connecté');
+        }
+        
+        finalTargetId = authData['adminId'] as String? ?? '';
+        if (finalTargetId.isEmpty) {
+          throw Exception('Aucun administrateur trouvé');
+        }
       }
-
-      // Utiliser les variables d'état déjà chargées
-      // Création du contrat
-      // D'abord, télécharger les photos du permis si elles sont présentes en tant que fichiers
-      if (widget.permisRecto != null) {
-        _permisRectoUrl = await ImageUploadUtils.compressAndUploadPhoto(widget.permisRecto!, 'permis/recto', contratId);
-      }
-      if (widget.permisVerso != null) {
-        _permisVersoUrl = await ImageUploadUtils.compressAndUploadPhoto(widget.permisVerso!, 'permis/verso', contratId);
-      }
+      
+      // Mettre à jour les variables d'état avec les URLs obtenues
+      _permisRectoUrl = permisRectoUrl;
+      _permisVersoUrl = permisVersoUrl;
 
       final contratModel = ContratModel(
         contratId: contratId,
         userId: userId,
-        adminId: targetId,
+        adminId: finalTargetId,
         createdBy: userId,
         isCollaborateur: collaborateurStatus['isCollaborateur'] ?? false,
         nom: _nomController.text,

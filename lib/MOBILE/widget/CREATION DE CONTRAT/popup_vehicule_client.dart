@@ -2,8 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
-import 'package:path_provider/path_provider.dart';
 
 class PopupVehiculeClient extends StatefulWidget {
   final Function(String, String, List<File>) onSave;
@@ -50,39 +48,12 @@ class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
       return;
     }
 
-    final XFile? image = await _picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 85, // Compression directement par image_picker
-    );
+    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
     if (image != null) {
-      // Compresser l'image immédiatement
-      final compressedFile = await _compressImage(File(image.path));
       setState(() {
-        _photos.add(compressedFile);
+        _photos.add(File(image.path));
       });
     }
-  }
-  
-  // Méthode pour compresser une image
-  Future<File> _compressImage(File file) async {
-    final tempDir = await getTemporaryDirectory();
-    final targetPath = '${tempDir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    
-    // Compresser l'image
-    final result = await FlutterImageCompress.compressAndGetFile(
-      file.absolute.path,
-      targetPath,
-      minWidth: 800,
-      minHeight: 800,
-      quality: 85,
-    );
-    
-    if (result != null) {
-      return File(result.path);
-    }
-    
-    // Si la compression échoue, retourner le fichier original
-    return file;
   }
   
   Future<void> _pickPhotoFromGallery() async {
@@ -90,15 +61,10 @@ class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
       return;
     }
 
-    final XFile? image = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85, // Compression directement par image_picker
-    );
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      // Compresser l'image immédiatement
-      final compressedFile = await _compressImage(File(image.path));
       setState(() {
-        _photos.add(compressedFile);
+        _photos.add(File(image.path));
       });
     }
   }
