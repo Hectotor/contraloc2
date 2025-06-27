@@ -50,9 +50,12 @@ class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
 
     final XFile? image = await _picker.pickImage(source: ImageSource.camera);
     if (image != null) {
+      final File imageFile = File(image.path);
+      print('Photo prise: ${imageFile.path}');
       setState(() {
-        _photos.add(File(image.path));
+        _photos.add(imageFile);
       });
+      print('Nombre de photos après ajout: ${_photos.length}');
     }
   }
   
@@ -63,9 +66,12 @@ class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
 
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
+      final File imageFile = File(image.path);
+      print('Photo sélectionnée: ${imageFile.path}');
       setState(() {
-        _photos.add(File(image.path));
+        _photos.add(imageFile);
       });
+      print('Nombre de photos après ajout: ${_photos.length}');
     }
   }
 
@@ -255,10 +261,14 @@ class _PopupVehiculeClientState extends State<PopupVehiculeClient> {
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () {
+                      print('Enregistrement des photos du véhicule client: ${_photos.length} photos');
+                      for (int i = 0; i < _photos.length; i++) {
+                        print('Photo ${i+1}: ${_photos[i].path}');
+                      }
                       widget.onSave(
                         _immatriculationVehiculeClientController.text.trim(),
                         _kilometrageVehiculeClientController.text.trim(),
-                        _photos,
+                        List<File>.from(_photos), // Créer une nouvelle liste pour éviter les problèmes de référence
                       );
                       Navigator.pop(context);
                     },
