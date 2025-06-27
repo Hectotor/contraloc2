@@ -10,6 +10,7 @@ import '../USERS/collaborator/collaborator.dart';
 import '../USERS/supprimer_compte.dart';
 import '../USERS/profile.dart';
 import '../services/auth_util.dart';
+import '../USERS/partners_carousel.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({Key? key}) : super(key: key);
@@ -245,6 +246,10 @@ class _UserScreenState extends State<UserScreen> {
                       _buildAccountSettings(),
                       const SizedBox(height: 40),
                       
+                      // Carrousel des partenaires
+                      const PartnersCarousel(),
+                      const SizedBox(height: 20),
+                      
                       // Pied de page
                       Center(
                         child: Padding(
@@ -471,6 +476,8 @@ class _UserScreenState extends State<UserScreen> {
       ],
     );
   }
+
+
 
   // Widget de carte pour les fonctionnalités
   Widget _buildFeatureCard({

@@ -84,6 +84,10 @@ flutter:
     - assets/icon/IconContraLoc.png
     - assets/icon/whatsapp_icon.png
     - assets/icon/logoCon.png
+    - assets/icon/ad.jpg
+    - assets/icon/axial.jpg
+    - assets/icon/citroen.jpg
+    - assets/icon/peugeot.jpg
 
 flutter_launcher_icons:
   android: "launcher_icon"
