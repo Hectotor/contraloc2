@@ -26,9 +26,9 @@ android {
         applicationId = "com.contratloc.app"
         minSdkVersion 23 // Minimum Android 6.0
         targetSdkVersion flutter.targetSdkVersion // Aligné avec Flutter
-        versionCode 42
+        versionCode 43
         // Version du code, doit être incrémenté à chaque mise à jour
-        versionName "1.1.8" // Version utilisateur
+        versionName "1.1.9" // Version utilisateur
     }
 
     compileOptions {
