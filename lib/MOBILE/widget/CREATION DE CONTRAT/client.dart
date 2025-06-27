@@ -66,7 +66,7 @@ class _ClientPageState extends State<ClientPage> {
   File? _permisVerso;
   String? _permisRectoUrl;
   String? _permisVersoUrl;
-  List<String> _vehiculeClientPhotoUrls = [];
+  List<String> _vehiculeClientPhotosUrls = [];
   List<File> _vehiculeClientPhotos = [];
   // Variable isPremiumUser supprimée car non utilisée
   bool _isLoading = false;
@@ -82,12 +82,12 @@ class _ClientPageState extends State<ClientPage> {
   
   // Méthode pour télécharger les photos du véhicule client à partir des URLs
   Future<void> _downloadVehiculeClientPhotos() async {
-    if (_vehiculeClientPhotoUrls.isEmpty) return;
+    if (_vehiculeClientPhotosUrls.isEmpty) return;
     
     // Ne pas afficher l'indicateur de chargement pour ne pas bloquer l'interface
     // Télécharger les photos en arrière-plan
     try {
-      for (String url in _vehiculeClientPhotoUrls) {
+      for (String url in _vehiculeClientPhotosUrls) {
         final photoFile = await ImageUploadUtils.downloadImageFromUrl(url);
         if (photoFile != null && mounted) {
           setState(() {
@@ -163,7 +163,7 @@ class _ClientPageState extends State<ClientPage> {
           
           // Récupérer les URLs des photos du véhicule client après avoir affiché les données textuelles
           if (data['vehiculeClientPhotosUrls'] != null && data['vehiculeClientPhotosUrls'] is List) {
-            _vehiculeClientPhotoUrls = List<String>.from(data['vehiculeClientPhotosUrls']);
+            _vehiculeClientPhotosUrls = List<String>.from(data['vehiculeClientPhotosUrls']);
             
             // Télécharger les photos du véhicule client en arrière-plan
             _downloadVehiculeClientPhotos();

@@ -90,7 +90,7 @@ class _LocationPageState extends State<LocationPage> {
   String? _vehiclePhotoUrl;
   String? _permisRectoUrl;
   String? _permisVersoUrl;
-  List<String> _vehiculeClientPhotoUrls = []; // URLs des photos du véhicule client
+  List<String> _vehiculeClientPhotosUrls = []; // URLs des photos du véhicule client
 
   final TextEditingController _prixLocationController = TextEditingController();
   final TextEditingController _accompteController = TextEditingController();
@@ -435,7 +435,7 @@ class _LocationPageState extends State<LocationPage> {
       String? permisRectoUrl = _permisRectoUrl;
       String? permisVersoUrl = _permisVersoUrl;
       List<String> vehiculeUrls = [];
-      _vehiculeClientPhotoUrls = []; // Réinitialiser la liste des URLs des photos du véhicule client
+      _vehiculeClientPhotosUrls = []; // Réinitialiser la liste des URLs des photos du véhicule client
 
       // Si des URLs de photos ont été retournées par le popup, les utiliser
       if (photoUrls.isNotEmpty) {
@@ -516,7 +516,7 @@ class _LocationPageState extends State<LocationPage> {
           await Future.wait(uploadTasks);
           
           // Ajouter les URLs à la liste principale
-          _vehiculeClientPhotoUrls = tempUrls.where((url) => url.isNotEmpty).toList();
+          _vehiculeClientPhotosUrls = tempUrls.where((url) => url.isNotEmpty).toList();
           
           // Réinitialiser la liste des tâches pour les autres photos
           uploadTasks = [];
@@ -659,9 +659,9 @@ class _LocationPageState extends State<LocationPage> {
       }
       
       // Ajouter les URLs des photos du véhicule client aux données du contrat
-      if (_vehiculeClientPhotoUrls.isNotEmpty) {
-        contratData['vehiculeClientPhotosUrls'] = _vehiculeClientPhotoUrls;
-        print('Ajout de ${_vehiculeClientPhotoUrls.length} photos du véhicule client au contrat');
+      if (_vehiculeClientPhotosUrls.isNotEmpty) {
+        contratData['vehiculeClientPhotosUrls'] = _vehiculeClientPhotosUrls;
+        print('Ajout de ${_vehiculeClientPhotosUrls.length} photos du véhicule client au contrat');
       }
 
       await _firestore
