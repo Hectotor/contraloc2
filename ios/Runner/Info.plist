@@ -70,6 +70,14 @@
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Nécessaire pour sélectionner des photos de véhicules ou de documents à inclure dans les contrats.</string>
     
+    <!-- Description de l'utilisation du microphone -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Nécessaire pour enregistrer des notes audio lors de la création ou modification des contrats de location.</string>
+    
+    <!-- Description de l'utilisation de la localisation -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Nécessaire pour localiser les véhicules et optimiser les services de location.</string>
+    
     <!-- Indique que l'application observe les transactions de paiement -->
     <key>SKPaymentTransactionObserverKey</key>
     <true/>
