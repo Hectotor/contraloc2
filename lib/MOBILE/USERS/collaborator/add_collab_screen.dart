@@ -154,13 +154,13 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
       final String collaboratorId = widget.collaboratorId!;
 
       // Mettre à jour les informations du collaborateur dans la sous-collection de l'admin
+      // L'email n'est pas inclus car il ne peut pas être modifié
       await FirebaseFirestore.instance
           .collection('users')
           .doc(FirebaseAuth.instance.currentUser!.uid)
           .collection('collaborateurs')
           .doc(collaboratorId)
           .update({
-        'email': _emailController.text.trim(),
         'nom': capitalizeWords(_nomController.text.trim()),
         'prenom': capitalizeWords(_prenomController.text.trim()),
         'receiveContractCopies': _receiveContractCopies,
@@ -345,6 +345,8 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
+                    enabled: !widget.isEditing, // Désactiver le champ en mode édition
+                    readOnly: widget.isEditing, // Rendre le champ en lecture seule en mode édition
                     decoration: InputDecoration(
                       labelText: 'Email',
                       hintText: 'exemple@email.com',
