@@ -251,23 +251,22 @@ class EmailService {
       if (sendCopyToAdmin && adminEmail != null && adminEmail != email) {
         print('📨 Tentative d\'envoi d\'une copie à l\'administrateur: $adminEmail');
         try {
-          // Récupérer l'email secondaire depuis la sous-collection authentification
+          // Récupérer l'ID de l'administrateur
+          String adminId = user.uid;
+          
+          // Si c'est un collaborateur, récupérer l'ID de son admin
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+              
+          if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
+            adminId = userDoc.data()?['adminId'] ?? user.uid;
+          }
+          
+          // Récupérer email_secondaire depuis la sous-collection authentification
           String? emailSecondaire;
           try {
-            // Récupérer l'ID de l'administrateur
-            String adminId = user.uid;
-            
-            // Si c'est un collaborateur, récupérer l'ID de son admin
-            final userDoc = await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .get();
-                
-            if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
-              adminId = userDoc.data()?['adminId'] ?? user.uid;
-            }
-            
-            // Récupérer email_secondaire depuis la sous-collection authentification
             final adminAuthDoc = await FirebaseFirestore.instance
                 .collection('users')
                 .doc(adminId)
@@ -277,9 +276,36 @@ class EmailService {
                 
             if (adminAuthDoc.exists) {
               emailSecondaire = adminAuthDoc.data()?['email_secondaire'];
+              if (emailSecondaire != null && emailSecondaire.isNotEmpty) {
+                print('📧 Email secondaire administrateur récupéré: $emailSecondaire');
+              }
             }
           } catch (e) {
             print('❌ Erreur lors de la récupération de l\'email secondaire: $e');
+          }
+          
+          // Récupérer tous les collaborateurs qui ont receiveContractCopies = true
+          List<String> collaborateursEmails = [];
+          try {
+            final collaborateursSnapshot = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(adminId)
+                .collection('collaborateurs')
+                .where('receiveContractCopies', isEqualTo: true)
+                .get();
+            
+            for (var collaborateurDoc in collaborateursSnapshot.docs) {
+              // Ne pas ajouter l'utilisateur actuel s'il est un collaborateur
+              if (collaborateurDoc.id == user.uid) continue;
+              
+              final collaborateurEmail = collaborateurDoc.data()['email'];
+              if (collaborateurEmail != null && collaborateurEmail.isNotEmpty) {
+                collaborateursEmails.add(collaborateurEmail);
+                print('📧 Collaborateur ajouté en copie: $collaborateurEmail');
+              }
+            }
+          } catch (e) {
+            print('❌ Erreur lors de la récupération des collaborateurs: $e');
           }
           
           // Déterminer si le contrat a été créé par un collaborateur
@@ -290,12 +316,22 @@ class EmailService {
           
           final adminMessage = Message()
             ..from = Address(smtpEmail, nomEntreprise ?? 'Contraloc')
-            ..recipients.add(adminEmail);
-            
-          // Ajouter l'email secondaire en copie (cc) si disponible
+            ..recipients.add(smtpEmail); // Utiliser l'adresse d'envoi comme destinataire technique
+
+          // Ajouter l'administrateur en copie invisible (cci)
+          adminMessage.bccRecipients.add(adminEmail);
+          print('📧 Administrateur ajouté en copie invisible: $adminEmail');
+                      
+          // Ajouter l'email secondaire en copie invisible (cci) si disponible
           if (emailSecondaire != null && emailSecondaire.isNotEmpty) {
-            adminMessage.ccRecipients.add(emailSecondaire);
-            print('📧 Email secondaire ajouté en copie: $emailSecondaire');
+            adminMessage.bccRecipients.add(emailSecondaire);
+            print('📧 Email secondaire ajouté en copie invisible: $emailSecondaire');
+          }
+          
+          // Ajouter les collaborateurs en copie invisible (cci)
+          for (var collaborateurEmail in collaborateursEmails) {
+            adminMessage.bccRecipients.add(collaborateurEmail);
+            print('📧 Collaborateur ajouté en copie invisible: $collaborateurEmail');
           }
           
           adminMessage
@@ -587,26 +623,25 @@ class EmailService {
       final sendReport = await send(message, server);
       print('Rapport d\'envoi : ${sendReport.toString()}');
 
-      // Envoyer une copie à l'administrateur si demandé
+      // Envoyer une copie à l'administrateur et aux collaborateurs autorisés
       if (sendCopyToAdmin && adminEmail != null) {
         try {
-          // Récupérer l'email secondaire depuis la sous-collection authentification
+          // Récupérer l'ID de l'administrateur
+          String adminId = user.uid;
+          
+          // Si c'est un collaborateur, récupérer l'ID de son admin
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+              
+          if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
+            adminId = userDoc.data()?['adminId'] ?? user.uid;
+          }
+          
+          // Récupérer email_secondaire depuis la sous-collection authentification
           String? emailSecondaire;
           try {
-            // Récupérer l'ID de l'administrateur
-            String adminId = user.uid;
-            
-            // Si c'est un collaborateur, récupérer l'ID de son admin
-            final userDoc = await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .get();
-                
-            if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
-              adminId = userDoc.data()?['adminId'] ?? user.uid;
-            }
-            
-            // Récupérer email_secondaire depuis la sous-collection authentification
             final adminAuthDoc = await FirebaseFirestore.instance
                 .collection('users')
                 .doc(adminId)
@@ -624,14 +659,48 @@ class EmailService {
             print('❌ Erreur lors de la récupération de l\'email secondaire: $e');
           }
           
+          // Récupérer tous les collaborateurs qui ont receiveContractCopies = true
+          List<String> collaborateursEmails = [];
+          try {
+            final collaborateursSnapshot = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(adminId)
+                .collection('collaborateurs')
+                .where('receiveContractCopies', isEqualTo: true)
+                .get();
+            
+            for (var collaborateurDoc in collaborateursSnapshot.docs) {
+              // Ne pas ajouter l'utilisateur actuel s'il est un collaborateur
+              if (collaborateurDoc.id == user.uid) continue;
+              
+              final collaborateurEmail = collaborateurDoc.data()['email'];
+              if (collaborateurEmail != null && collaborateurEmail.isNotEmpty) {
+                collaborateursEmails.add(collaborateurEmail);
+                print('📧 Collaborateur ajouté en copie: $collaborateurEmail');
+              }
+            }
+          } catch (e) {
+            print('❌ Erreur lors de la récupération des collaborateurs: $e');
+          }
+          
           final adminMessage = Message()
             ..from = Address(smtpEmail, nomEntreprise ?? 'Contraloc')
-            ..recipients.add(adminEmail);
-            
-          // Ajouter l'email secondaire en copie (cc) si disponible
+            ..recipients.add(smtpEmail); // Utiliser l'adresse d'envoi comme destinataire technique
+
+          // Ajouter l'administrateur en copie invisible (cci)
+          adminMessage.bccRecipients.add(adminEmail);
+          print('📧 Administrateur ajouté en copie invisible: $adminEmail');
+                      
+          // Ajouter l'email secondaire en copie invisible (cci) si disponible
           if (emailSecondaire != null && emailSecondaire.isNotEmpty) {
-            adminMessage.ccRecipients.add(emailSecondaire);
-            print('📧 Email secondaire ajouté en copie: $emailSecondaire');
+            adminMessage.bccRecipients.add(emailSecondaire);
+            print('📧 Email secondaire ajouté en copie invisible: $emailSecondaire');
+          }
+          
+          // Ajouter les collaborateurs en copie invisible (cci)
+          for (var collaborateurEmail in collaborateursEmails) {
+            adminMessage.bccRecipients.add(collaborateurEmail);
+            print('📧 Collaborateur ajouté en copie invisible: $collaborateurEmail');
           }
           
           adminMessage
@@ -685,6 +754,7 @@ class EmailService {
           print('Erreur lors de l\'envoi de la copie à l\'administrateur: $e');
         }
       }
+
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
