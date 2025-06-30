@@ -35,6 +35,7 @@ class ContratValidationUtils {
     required File? permisRecto,
     required File? permisVerso,
     required List<File> photos,
+    List<File> vehiculeClientPhotos = const [],
     required Function(bool isLoading) onLoadingStateChanged,
     required Future<void> Function(
       String contratId,
@@ -114,7 +115,7 @@ class ContratValidationUtils {
           .doc()
           .id;
 
-      // Préparer les photos à uploader
+      // Préparer les photos à uploader (sans les photos du véhicule client)
       List<File> photosToUpload = [];
       if (permisRecto != null) {
         photosToUpload.add(permisRecto);
@@ -123,10 +124,16 @@ class ContratValidationUtils {
         photosToUpload.add(permisVerso);
       }
       photosToUpload.addAll(photos);
+      
+      // Noter s'il y a des photos de véhicule client à traiter
+      bool hasVehiculeClientPhotos = vehiculeClientPhotos.isNotEmpty;
+      if (hasVehiculeClientPhotos) {
+        print('${vehiculeClientPhotos.length} photos du véhicule client détectées');
+      }
 
-      // Afficher le popup de téléchargement des photos si des photos sont à uploader
+      // Gérer le téléchargement des photos standard
       if (photosToUpload.isNotEmpty) {
-        // Afficher le popup de téléchargement des photos
+        // Afficher le popup de téléchargement des photos standard
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -135,12 +142,13 @@ class ContratValidationUtils {
             contratId: finalContratId,
             onUploadComplete: (List<String> urls) async {
               // Continuer le processus de sauvegarde après l'upload des photos
+              // Les photos du véhicule client seront traitées séparément dans _finalizeContractSave
               await onFinalizeSave(finalContratId, urls, userId, adminId, collaborateurStatus, conditionsText);
             },
           ),
         );
       } else {
-        // Pas de photos à uploader, continuer directement
+        // Pas de photos à uploader
         await onFinalizeSave(finalContratId, [], userId, adminId, collaborateurStatus, conditionsText);
       }
     } catch (e) {

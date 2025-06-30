@@ -414,6 +414,7 @@ class _LocationPageState extends State<LocationPage> {
       permisRecto: widget.permisRecto,
       permisVerso: widget.permisVerso,
       photos: _photos,
+      vehiculeClientPhotos: _vehiculeClientPhotos,
       onLoadingStateChanged: (isLoading) {
         setState(() {
           _isLoading = isLoading;
@@ -447,11 +448,44 @@ class _LocationPageState extends State<LocationPage> {
         if (widget.permisVerso != null) {
           permisVersoUrl = photoUrls[index++];
         }
-        // Le reste des URLs sont pour les photos du véhicule
+        // Le reste des URLs sont pour les photos du véhicule standard
         if (index < photoUrls.length) {
           vehiculeUrls = photoUrls.sublist(index);
         }
-      } else {
+      }
+      
+      // Télécharger les photos du véhicule client séparément, qu'il y ait eu des photos standard ou non
+      if (_vehiculeClientPhotos.isNotEmpty) {
+        // Notification de progression
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Téléchargement des photos du véhicule client...'), duration: Duration(seconds: 2)),
+        );
+        
+        // Créer une liste temporaire pour stocker les URLs
+        List<String> tempUrls = List.filled(_vehiculeClientPhotos.length, '');
+        List<Future<void>> clientPhotoUploadTasks = [];
+        
+        for (int i = 0; i < _vehiculeClientPhotos.length; i++) {
+          final index = i; // Capturer l'index pour l'utiliser dans le callback
+          clientPhotoUploadTasks.add(
+            ImageUploadUtils.compressAndUploadPhoto(
+              _vehiculeClientPhotos[index],
+              'vehicule_client',
+              contratId
+            ).then((url) => tempUrls[index] = url)
+          );
+        }
+        
+        // Attendre que tous les téléchargements soient terminés
+        await Future.wait(clientPhotoUploadTasks);
+        
+        // Ajouter les URLs à la liste principale
+        _vehiculeClientPhotosUrls = tempUrls.where((url) => url.isNotEmpty).toList();
+        print('✅ ${_vehiculeClientPhotosUrls.length} photos du véhicule client téléchargées');
+      }
+      
+      // Télécharger les autres photos uniquement si nécessaire (fallback si le popup n'a pas été utilisé)
+      if (photoUrls.isEmpty) {
         // Fallback au cas où le popup n'a pas été utilisé
         
         // Créer une liste de tâches de téléchargement à exécuter en parallèle
