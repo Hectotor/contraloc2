@@ -19,7 +19,7 @@ class PartnersCarousel extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 8, bottom: 16),
           child: Text(
-            "Nos partenaires",
+            "Nos partenaires engagés",
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
