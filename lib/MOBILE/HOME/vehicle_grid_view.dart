@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widget/CREATION DE CONTRAT/client.dart';
 import '../widget/MES CONTRATS/vehicle_access_manager.dart';
+import 'client_access_checker.dart';
 
 /// Un widget qui affiche une grille de véhicules
 /// 
@@ -146,17 +147,23 @@ class VehicleGridView extends StatelessWidget {
                                         ),
                                         onPressed: () {
                                           Navigator.pop(context); // Fermer le popup
-                                          // Naviguer vers la page de création de contrat
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => ClientPage(
-                                                immatriculation: data['immatriculation'] ?? '',
-                                                marque: data['marque'] ?? '',
-                                                modele: data['modele'] ?? '',
-                                              ),
-                                            ),
-                                          );
+                                          // Vérifier l'accès à la page client avant de naviguer
+                                          final clientAccessChecker = ClientAccessChecker(context);
+                                          clientAccessChecker.canAccessClientPage().then((canAccess) {
+                                            if (canAccess && context.mounted) {
+                                              // Naviguer vers la page de création de contrat
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => ClientPage(
+                                                    immatriculation: data['immatriculation'] ?? '',
+                                                    marque: data['marque'] ?? '',
+                                                    modele: data['modele'] ?? '',
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          });
                                         },
                                         child: const Text(
                                           'Continuer',
@@ -175,17 +182,23 @@ class VehicleGridView extends StatelessWidget {
                         ),
                       );
                     } else {
-                      // Si le véhicule est disponible, naviguer vers la page de création de contrat
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ClientPage(
-                            immatriculation: data['immatriculation'] ?? '',
-                            marque: data['marque'] ?? '',
-                            modele: data['modele'] ?? '',
-                          ),
-                        ),
-                      );
+                      // Si le véhicule est disponible, vérifier l'accès avant de naviguer
+                      final clientAccessChecker = ClientAccessChecker(context);
+                      clientAccessChecker.canAccessClientPage().then((canAccess) {
+                        if (canAccess && context.mounted) {
+                          // Naviguer vers la page de création de contrat
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ClientPage(
+                                immatriculation: data['immatriculation'] ?? '',
+                                marque: data['marque'] ?? '',
+                                modele: data['modele'] ?? '',
+                              ),
+                            ),
+                          );
+                        }
+                      });
                     }
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
