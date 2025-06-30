@@ -153,7 +153,7 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
       // Récupérer l'UID du collaborateur
       final String collaboratorId = widget.collaboratorId!;
 
-      // Mettre à jour les informations du collaborateur dans Firestore
+      // Mettre à jour les informations du collaborateur dans la sous-collection de l'admin
       await FirebaseFirestore.instance
           .collection('users')
           .doc(FirebaseAuth.instance.currentUser!.uid)
@@ -165,6 +165,9 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
         'prenom': capitalizeWords(_prenomController.text.trim()),
         'receiveContractCopies': _receiveContractCopies,
       });
+
+      // Note: La mise à jour du document principal du collaborateur doit être faite via une Cloud Function
+      // car l'administrateur n'a pas les permissions nécessaires pour le faire directement
 
       print('Collaborateur mis à jour avec succès : $collaboratorId');
 

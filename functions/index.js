@@ -6,8 +6,9 @@ if (admin.apps.length === 0) {
   admin.initializeApp();
 }
 
-// Importer la fonction stripeWebhook depuis stripe_webhook.js
+// Importer les fonctions depuis les fichiers externes
 const stripeWebhookHandler = require('./stripe_webhook').stripeWebhook;
+const collaboratorUpdateHandler = require('./collaborator_update').updateCollaboratorUserDocument;
 
 // Exporter la fonction stripeWebhook avec l'option pour permettre les requêtes non authentifiées
 exports.stripeWebhook = functions
@@ -55,6 +56,8 @@ exports.createCollaboratorUserDocument = functions.firestore
           permissions: collaboratorData.permissions,
           emailVerifie: false,
           dateCreation: admin.firestore.FieldValue.serverTimestamp(),
+          // Ajouter le champ pour recevoir les contrats par email (false par défaut si non spécifié)
+          receiveContractCopies: collaboratorData.receiveContractCopies || false,
         });
         
         console.log(`Document utilisateur créé avec succès pour le collaborateur ${uid}`);
@@ -68,3 +71,6 @@ exports.createCollaboratorUserDocument = functions.firestore
       return { success: false, error: error.message };
     }
   });
+
+// Exporter la fonction de mise à jour du collaborateur
+exports.updateCollaboratorUserDocument = collaboratorUpdateHandler;
