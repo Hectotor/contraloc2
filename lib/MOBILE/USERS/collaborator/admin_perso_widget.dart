@@ -7,6 +7,7 @@ class AdminPersoWidget extends StatefulWidget {
   final bool showNom;
   final bool showPrenom;
   final bool showEmail;
+  final bool showEmailSecondaire;
   final bool showTelephone;
   final bool showAdresse;
   final TextStyle? titleStyle;
@@ -20,6 +21,7 @@ class AdminPersoWidget extends StatefulWidget {
     this.showNom = true,
     this.showPrenom = true,
     this.showEmail = true,
+    this.showEmailSecondaire = true,
     this.showTelephone = true,
     this.showAdresse = true,
     this.titleStyle,
@@ -42,6 +44,7 @@ class _AdminPersoWidgetState extends State<AdminPersoWidget> {
   final TextEditingController _nomController = TextEditingController();
   final TextEditingController _prenomController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _emailSecondaireController = TextEditingController();
   final TextEditingController _telephoneController = TextEditingController();
   final TextEditingController _adresseController = TextEditingController();
 
@@ -56,6 +59,7 @@ class _AdminPersoWidgetState extends State<AdminPersoWidget> {
     _nomController.dispose();
     _prenomController.dispose();
     _emailController.dispose();
+    _emailSecondaireController.dispose();
     _telephoneController.dispose();
     _adresseController.dispose();
     super.dispose();
@@ -83,6 +87,7 @@ class _AdminPersoWidgetState extends State<AdminPersoWidget> {
               'nom': data['nom'] ?? '',
               'prenom': data['prenom'] ?? '',
               'email': data['email'] ?? '',
+              'email_secondaire': data['email_secondaire'] ?? '',
               'telephone': data['telephone'] ?? '',
               'adresse': data['adresse'] ?? '',
             };
@@ -90,6 +95,7 @@ class _AdminPersoWidgetState extends State<AdminPersoWidget> {
             _nomController.text = _adminInfo['nom'];
             _prenomController.text = _adminInfo['prenom'];
             _emailController.text = _adminInfo['email'];
+            _emailSecondaireController.text = _adminInfo['email_secondaire'];
             _telephoneController.text = _adminInfo['telephone'];
             _adresseController.text = _adminInfo['adresse'];
           });
@@ -115,6 +121,7 @@ class _AdminPersoWidgetState extends State<AdminPersoWidget> {
       final updatedData = {
         'nom': _nomController.text.trim(),
         'prenom': _prenomController.text.trim(),
+        'email_secondaire': _emailSecondaireController.text.trim(),
         'telephone': _telephoneController.text.trim(),
       };
       
@@ -334,6 +341,12 @@ class _AdminPersoWidgetState extends State<AdminPersoWidget> {
                         label: 'Email',
                         controller: _emailController,
                         readOnly: true,
+                      ),
+                    if (widget.showEmailSecondaire)
+                      _buildInfoRow(
+                        icon: null,
+                        label: 'Email secondaire',
+                        controller: _emailSecondaireController,
                       ),
                     if (widget.showTelephone)
                       _buildInfoRow(
