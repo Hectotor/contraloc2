@@ -156,6 +156,11 @@ class CollaboratorPage extends StatelessWidget {
                       final email = collaborator['email'] ?? 'Email inconnu';
                       final nom = collaborator['nom'] ?? '';
                       final prenom = collaborator['prenom'] ?? '';
+                      // Vérifier si le champ existe avant d'y accéder
+                      final Map<String, dynamic>? data = collaborator.data() as Map<String, dynamic>?;
+                      final receiveContractCopies = data != null && data.containsKey('receiveContractCopies')
+                          ? collaborator['receiveContractCopies'] ?? false
+                          : false;
                       final displayName = (nom.isNotEmpty || prenom.isNotEmpty)
                           ? '$prenom $nom'
                           : email.split('@').first;
@@ -174,6 +179,7 @@ class CollaboratorPage extends StatelessWidget {
                                   'nom': nom,
                                   'prenom': prenom,
                                   'adminId': adminId,
+                                  'receiveContractCopies': receiveContractCopies,
                                 },
                               ),
                             ),
@@ -221,6 +227,24 @@ class CollaboratorPage extends StatelessWidget {
                                           fontSize: 14,
                                           color: Colors.grey[600],
                                         ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            receiveContractCopies ? Icons.check_circle : Icons.cancel,
+                                            size: 14,
+                                            color: receiveContractCopies ? Colors.green : Colors.grey,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            receiveContractCopies ? 'Reçoit les contrats par email' : 'Ne reçoit pas les contrats',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: receiveContractCopies ? Colors.green : Colors.grey,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                       const SizedBox(height: 4),
                                       Text(

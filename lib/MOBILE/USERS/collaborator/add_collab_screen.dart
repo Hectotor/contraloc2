@@ -30,6 +30,7 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _passwordRequired = true; // Pas requis en mode édition
+  bool _receiveContractCopies = false; // Option pour recevoir des copies des contrats
 
   // Fonction pour capitaliser la première lettre de chaque mot
   String capitalizeWords(String input) {
@@ -49,6 +50,7 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
       _emailController.text = widget.collaboratorData!['email'] ?? '';
       _nomController.text = widget.collaboratorData!['nom'] ?? '';
       _prenomController.text = widget.collaboratorData!['prenom'] ?? '';
+      _receiveContractCopies = widget.collaboratorData!['receiveContractCopies'] ?? false;
       _passwordRequired = false; // Mot de passe pas requis en mode édition
     }
   }
@@ -107,6 +109,7 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
           'prenom': capitalizeWords(_prenomController.text.trim()),
           'adminId': adminId,
           'role': 'collaborateur',
+          'receiveContractCopies': _receiveContractCopies,
           'permissions': {
             'lecture': true,
             'ecriture': true,
@@ -160,6 +163,7 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
         'email': _emailController.text.trim(),
         'nom': capitalizeWords(_nomController.text.trim()),
         'prenom': capitalizeWords(_prenomController.text.trim()),
+        'receiveContractCopies': _receiveContractCopies,
       });
 
       print('Collaborateur mis à jour avec succès : $collaboratorId');
@@ -468,7 +472,82 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 24),
+                  
+                  // Option pour recevoir des copies des contrats par email
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFDDDDDD)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.email_outlined, color: Color(0xFF08004D)),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Envoyer une copie des contrats par email',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF08004D),
+                            ),
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _receiveContractCopies = true;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: _receiveContractCopies ? const Color(0xFF08004D) : Colors.transparent,
+                                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(4)),
+                                  border: Border.all(color: const Color(0xFF08004D)),
+                                ),
+                                child: Text(
+                                  'Oui',
+                                  style: TextStyle(
+                                    color: _receiveContractCopies ? Colors.white : const Color(0xFF08004D),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _receiveContractCopies = false;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: !_receiveContractCopies ? const Color(0xFF08004D) : Colors.transparent,
+                                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(4)),
+                                  border: Border.all(color: const Color(0xFF08004D)),
+                                ),
+                                child: Text(
+                                  'Non',
+                                  style: TextStyle(
+                                    color: !_receiveContractCopies ? Colors.white : const Color(0xFF08004D),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   
                   // Bouton de soumission
                   SizedBox(
