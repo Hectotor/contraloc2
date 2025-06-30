@@ -4,7 +4,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 class AddCollaborateurScreen extends StatefulWidget {
-  const AddCollaborateurScreen({Key? key}) : super(key: key);
+  final bool isEditing;
+  final String? collaboratorId;
+  final Map<String, dynamic>? collaboratorData;
+
+  const AddCollaborateurScreen({
+    Key? key, 
+    this.isEditing = false, 
+    this.collaboratorId, 
+    this.collaboratorData
+  }) : super(key: key);
 
   @override
   _AddCollaborateurScreenState createState() => _AddCollaborateurScreenState();
@@ -20,6 +29,7 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _passwordRequired = true; // Pas requis en mode édition
 
   // Fonction pour capitaliser la première lettre de chaque mot
   String capitalizeWords(String input) {
@@ -28,6 +38,19 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
       if (word.isEmpty) return word;
       return word[0].toUpperCase() + word.substring(1).toLowerCase();
     }).join(' ');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Si on est en mode édition, pré-remplir les champs avec les données du collaborateur
+    if (widget.isEditing && widget.collaboratorData != null) {
+      _emailController.text = widget.collaboratorData!['email'] ?? '';
+      _nomController.text = widget.collaboratorData!['nom'] ?? '';
+      _prenomController.text = widget.collaboratorData!['prenom'] ?? '';
+      _passwordRequired = false; // Mot de passe pas requis en mode édition
+    }
   }
 
   Future<void> _createCollaborator(String email, String password) async {
@@ -122,13 +145,55 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
     }
   }
 
+  Future<void> _updateCollaborator() async {
+    try {
+      // Récupérer l'UID du collaborateur
+      final String collaboratorId = widget.collaboratorId!;
+
+      // Mettre à jour les informations du collaborateur dans Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(FirebaseAuth.instance.currentUser!.uid)
+          .collection('collaborateurs')
+          .doc(collaboratorId)
+          .update({
+        'email': _emailController.text.trim(),
+        'nom': capitalizeWords(_nomController.text.trim()),
+        'prenom': capitalizeWords(_prenomController.text.trim()),
+      });
+
+      print('Collaborateur mis à jour avec succès : $collaboratorId');
+
+      // Informer l'administrateur que le collaborateur a été mis à jour avec succès
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Collaborateur mis à jour avec succès !'),
+          backgroundColor: Color(0xFF08004D),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      
+      // Revenir à l'écran précédent après la mise à jour réussie
+      Navigator.pop(context);
+    } catch (e) {
+      print('Erreur lors de la mise à jour du collaborateur : $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur : $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
-          "Ajouter un collaborateur",
+        title: Text(
+          widget.isEditing ? 'Modifier le collaborateur' : 'Ajouter un collaborateur',
           style: TextStyle(
               color: Colors.white,
               fontSize: 22,
@@ -306,12 +371,14 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
                   const SizedBox(height: 16),
                   
                   // Champ Mot de passe
-                  TextFormField(
+                  widget.isEditing
+                  ? Container() // Pas de champ de mot de passe en mode édition
+                  : TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       labelText: 'Mot de passe',
-                      hintText: 'Minimum 8 caractères, 1 caractère spécial',
+                      hintText: 'Entrez un mot de passe',
                       prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF08004D)),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -341,14 +408,12 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
                       contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                     ),
                     validator: (value) {
+                      if (!_passwordRequired) return null;
                       if (value == null || value.isEmpty) {
                         return 'Veuillez entrer un mot de passe';
                       }
-                      if (value.length < 8) {
-                        return 'Veuillez entrer un mot de passe d\'au moins 8 caractères';
-                      }
-                      if (!RegExp(r'^(?=.*[!@#\$%\^&\*])').hasMatch(value)) {
-                        return 'Le mot de passe doit contenir au moins 1 caractère spécial';
+                      if (value.length < 6) {
+                        return 'Le mot de passe doit contenir au moins 6 caractères';
                       }
                       return null;
                     },
@@ -356,7 +421,9 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
                   const SizedBox(height: 16),
                   
                   // Champ Confirmation Mot de passe
-                  TextFormField(
+                  widget.isEditing
+                  ? Container() // Pas de champ de confirmation en mode édition
+                  : TextFormField(
                     controller: _confirmPasswordController,
                     obscureText: _obscureConfirmPassword,
                     decoration: InputDecoration(
@@ -391,6 +458,7 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
                       contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                     ),
                     validator: (value) {
+                      if (!_passwordRequired) return null;
                       if (value == null || value.isEmpty) {
                         return 'Veuillez confirmer le mot de passe';
                       }
@@ -412,7 +480,15 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
                           setState(() {
                             _isLoading = true;
                           });
-                          await _createCollaborator(_emailController.text.trim(), _passwordController.text.trim());
+                          
+                          if (widget.isEditing && widget.collaboratorId != null) {
+                            // Mettre à jour les informations du collaborateur
+                            await _updateCollaborator();
+                          } else {
+                            // Créer un nouveau collaborateur
+                            await _createCollaborator(_emailController.text.trim(), _passwordController.text.trim());
+                          }
+                          
                           setState(() {
                             _isLoading = false;
                           });
@@ -434,9 +510,9 @@ class _AddCollaborateurScreenState extends State<AddCollaborateurScreen> {
                                 strokeWidth: 2.5,
                               ),
                             )
-                          : const Text(
-                              'Ajouter le collaborateur',
-                              style: TextStyle(
+                          : Text(
+                              widget.isEditing ? 'Mettre à jour le collaborateur' : 'Ajouter le collaborateur',
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,

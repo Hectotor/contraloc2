@@ -160,59 +160,88 @@ class CollaboratorPage extends StatelessWidget {
                           ? '$prenom $nom'
                           : email.split('@').first;
 
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              // Avatar du collaborateur
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundColor: const Color(0xFF08004D).withOpacity(0.1),
-                                child: Text(
-                                  displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF08004D),
+                      return InkWell(
+                        onTap: () {
+                          // Rediriger vers la page de modification du collaborateur
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddCollaborateurScreen(
+                                isEditing: true,
+                                collaboratorId: collaboratorId,
+                                collaboratorData: {
+                                  'email': email,
+                                  'nom': nom,
+                                  'prenom': prenom,
+                                  'adminId': adminId,
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                        child: Card(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Row(
+                              children: [
+                                // Avatar du collaborateur
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: const Color(0xFF08004D).withOpacity(0.1),
+                                  child: Text(
+                                    displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF08004D),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 16),
-                              // Informations du collaborateur
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      displayName,
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF08004D),
+                                const SizedBox(width: 16),
+                                // Informations du collaborateur
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        displayName,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF08004D),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      email,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        email,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Appuyez pour modifier',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontStyle: FontStyle.italic,
+                                          color: Colors.grey[500],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              // Bouton de suppression
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                onPressed: () => _deleteCollaborator(context, collaboratorId, email),
-                                tooltip: 'Supprimer ce collaborateur',
-                              ),
-                            ],
+                                // Bouton de suppression
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                  onPressed: () => _deleteCollaborator(context, collaboratorId, email),
+                                  tooltip: 'Supprimer ce collaborateur',
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );
