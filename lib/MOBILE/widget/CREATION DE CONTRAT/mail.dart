@@ -251,6 +251,37 @@ class EmailService {
       if (sendCopyToAdmin && adminEmail != null && adminEmail != email) {
         print('📨 Tentative d\'envoi d\'une copie à l\'administrateur: $adminEmail');
         try {
+          // Récupérer l'email secondaire depuis la sous-collection authentification
+          String? emailSecondaire;
+          try {
+            // Récupérer l'ID de l'administrateur
+            String adminId = user.uid;
+            
+            // Si c'est un collaborateur, récupérer l'ID de son admin
+            final userDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+                
+            if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
+              adminId = userDoc.data()?['adminId'] ?? user.uid;
+            }
+            
+            // Récupérer email_secondaire depuis la sous-collection authentification
+            final adminAuthDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(adminId)
+                .collection('authentification')
+                .doc(adminId)
+                .get();
+                
+            if (adminAuthDoc.exists) {
+              emailSecondaire = adminAuthDoc.data()?['email_secondaire'];
+            }
+          } catch (e) {
+            print('❌ Erreur lors de la récupération de l\'email secondaire: $e');
+          }
+          
           // Déterminer si le contrat a été créé par un collaborateur
           String collaborateurInfo = '';
           if (nomCollaborateur != null && prenomCollaborateur != null) {
@@ -259,7 +290,15 @@ class EmailService {
           
           final adminMessage = Message()
             ..from = Address(smtpEmail, nomEntreprise ?? 'Contraloc')
-            ..recipients.add(adminEmail)
+            ..recipients.add(adminEmail);
+            
+          // Ajouter l'email secondaire en copie (cc) si disponible
+          if (emailSecondaire != null && emailSecondaire.isNotEmpty) {
+            adminMessage.ccRecipients.add(emailSecondaire);
+            print('📧 Email secondaire ajouté en copie: $emailSecondaire');
+          }
+          
+          adminMessage
             ..subject = '[COPIE] Contrat de location $marque $modele $immatriculation pour $prenom $nom'
             ..headers = {
               'Message-ID':
@@ -551,9 +590,51 @@ class EmailService {
       // Envoyer une copie à l'administrateur si demandé
       if (sendCopyToAdmin && adminEmail != null) {
         try {
+          // Récupérer l'email secondaire depuis la sous-collection authentification
+          String? emailSecondaire;
+          try {
+            // Récupérer l'ID de l'administrateur
+            String adminId = user.uid;
+            
+            // Si c'est un collaborateur, récupérer l'ID de son admin
+            final userDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+                
+            if (userDoc.exists && userDoc.data()?['role'] == 'collaborateur') {
+              adminId = userDoc.data()?['adminId'] ?? user.uid;
+            }
+            
+            // Récupérer email_secondaire depuis la sous-collection authentification
+            final adminAuthDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(adminId)
+                .collection('authentification')
+                .doc(adminId)
+                .get();
+                
+            if (adminAuthDoc.exists) {
+              emailSecondaire = adminAuthDoc.data()?['email_secondaire'];
+              if (emailSecondaire != null && emailSecondaire.isNotEmpty) {
+                print('📧 Email secondaire administrateur récupéré: $emailSecondaire');
+              }
+            }
+          } catch (e) {
+            print('❌ Erreur lors de la récupération de l\'email secondaire: $e');
+          }
+          
           final adminMessage = Message()
             ..from = Address(smtpEmail, nomEntreprise ?? 'Contraloc')
-            ..recipients.add(adminEmail)
+            ..recipients.add(adminEmail);
+            
+          // Ajouter l'email secondaire en copie (cc) si disponible
+          if (emailSecondaire != null && emailSecondaire.isNotEmpty) {
+            adminMessage.ccRecipients.add(emailSecondaire);
+            print('📧 Email secondaire ajouté en copie: $emailSecondaire');
+          }
+          
+          adminMessage
             ..subject = '[COPIE] Clôture de location $marque $modele $immatriculation pour $prenom $nom'
             ..headers = {
               'Message-ID':
