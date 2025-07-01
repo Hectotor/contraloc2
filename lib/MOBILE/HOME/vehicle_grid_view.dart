@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widget/CREATION DE CONTRAT/client.dart';
 import '../widget/MES CONTRATS/vehicle_access_manager.dart';
 import 'client_access_checker.dart';
+import 'package:intl/intl.dart';
 
 /// Un widget qui affiche une grille de véhicules
 /// 
@@ -26,6 +27,38 @@ class VehicleGridView extends StatelessWidget {
     required this.vehicleAccessManager,
     required this.onLongPress,
   }) : super(key: key);
+  
+  /// Formate une date au format JJ/MM/AAAA
+  String _formatDate(String dateStr) {
+    try {
+      // Essayer différents formats de date
+      DateTime? date;
+      
+      // Essayer le format complet "EEEE d MMMM yyyy à HH:mm"
+      try {
+        date = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(dateStr);
+      } catch (e) {
+        // Essayer le format "dd/MM/yyyy HH:mm"
+        try {
+          date = DateFormat('dd/MM/yyyy HH:mm').parse(dateStr);
+        } catch (e) {
+          // Essayer le format ISO
+          try {
+            date = DateTime.parse(dateStr);
+          } catch (e) {
+            // Si aucun format ne fonctionne, retourner la chaîne originale
+            return dateStr;
+          }
+        }
+      }
+      
+      // Formater la date au format JJ/MM/AAAA
+      return DateFormat('dd/MM/yyyy').format(date);
+    } catch (e) {
+      // En cas d'erreur, retourner la chaîne originale
+      return dateStr;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -331,8 +364,50 @@ class VehicleGridView extends StatelessWidget {
                                     fontSize: 12,
                                   ),
                                 ),
-                                if (data['dateReserve'] != null && 
-                                    (data['isRented'] == 'en_cours' || data['isRented'] == 'réservé'))
+                                // Afficher les dates de début et fin pour les véhicules loués
+                                if (data['isRented'] == 'en_cours')
+                                  Column(
+                                    children: [
+                                      // Date de début (utiliser dateDebut ou dateReserve selon disponibilité)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 2),
+                                        child: Text(
+                                          data['dateDebut'] != null 
+                                            ? _formatDate(data['dateDebut']) 
+                                            : data['dateReserve'] != null 
+                                              ? _formatDate(data['dateReserve'])
+                                              : "",
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      // Tiret de séparation et date de fin seulement si dateFinTheorique existe
+                                      if (data['dateFinTheorique'] != null) ...[  
+                                        const Text(
+                                          '-',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        // Date de fin
+                                        Text(
+                                          _formatDate(data['dateFinTheorique']),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                // Afficher la date de réservation pour les véhicules réservés
+                                if (data['dateReserve'] != null && data['isRented'] == 'réservé')
                                   Padding(
                                     padding: const EdgeInsets.only(top: 2),
                                     child: Text(
