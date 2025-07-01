@@ -4,15 +4,17 @@ import 'package:mailer/smtp_server.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'cloture_email_service.dart';
 
-class EmailService {
-  static Future<void> sendEmailWithPdf({
+class ClotureEmailService {
+  static Future<void> sendClotureEmailWithPdf({
     required String pdfPath,
     required String email,
     required String marque,
     required String modele,
     required String immatriculation,
+    required String kilometrageRetour,
+    required String dateFinEffectif,
+    required String commentaireRetour,
     required BuildContext context,
     String? prenom,
     String? nom,
@@ -138,38 +140,13 @@ class EmailService {
         }
       }
 
-      // Récupérer les paramètres SMTP depuis admin/smtpSettings
-      DocumentSnapshot? adminDoc;
-      int maxRetries = 5;
-      int currentRetry = 0;
-      int baseDelayMs = 500;
+      // Récupérer les paramètres SMTP
+      final adminDoc = await FirebaseFirestore.instance
+          .collection('admin')
+          .doc('smtpSettings')
+          .get();
 
-      while (currentRetry < maxRetries) {
-        try {
-          // Tenter de récupérer les paramètres SMTP
-          adminDoc = await FirebaseFirestore.instance
-              .collection('admin')
-              .doc('smtpSettings')
-              .get();
-          
-          // Si on arrive ici, la récupération a réussi
-          break;
-        } catch (e) {
-          currentRetry++;
-          if (currentRetry >= maxRetries) {
-            print('❌ Erreur récupération paramètres SMTP après $maxRetries tentatives: $e');
-            throw Exception('Configuration SMTP non accessible: $e');
-          }
-          
-          // Calcul du délai avec backoff exponentiel
-          int delayMs = baseDelayMs * (1 << (currentRetry - 1));
-          
-          print('🔄 Tentative $currentRetry/$maxRetries échouée. Nouvel essai dans ${delayMs}ms...');
-          await Future.delayed(Duration(milliseconds: delayMs));
-        }
-      }
-
-      if (adminDoc == null || !adminDoc.exists) {
+      if (!adminDoc.exists) {
         throw Exception('Configuration SMTP non trouvée');
       }
 
@@ -200,7 +177,7 @@ class EmailService {
       final message = Message()
         ..from = Address(smtpEmail, nomEntreprise ?? 'Contraloc')
         ..recipients.add(email)
-        ..subject = '🚗 Votre contrat de location $marque $modele $immatriculation'
+        ..subject = '🚗 Clôture de votre location $marque $modele $immatriculation'
         ..headers = {
           'Message-ID':
               '<${DateTime.now().millisecondsSinceEpoch}@contraloc.fr>',
@@ -218,24 +195,24 @@ class EmailService {
             <div style="padding: 20px; background-color: #EFEFEF; border-radius: 0 0 10px 10px;">
               <p>Bonjour ${prenom ?? ''} ${nom ?? ''},</p>
               
-              <p>Nous avons le plaisir de vous transmettre votre contrat de location signé en pièce jointe. 📝</p>
+              <p>Nous vous confirmons la restitution du véhicule que vous avez loué chez nous.</p>
               
               <p style="font-weight: bold;">Merci pour votre confiance et bonne route ! 🏎️🚗</p>
-
+              
               <p style="font-weight: bold; color: #333;">
                 <strong>⚠️ L'utilisateur est totalement responsable des contraventions, amendes et procès-verbaux établis en violation du code de la route.</strong>
               </p>
+              
+              <p>Si vous pensez avoir reçu cet email par erreur, merci de bien vouloir nous contacter au plus vite à l'adresse suivante : contact@contraloc.fr.</p>
 
-              <p>Si vous pensez avoir reçu cet email par erreur merci de bien vouloir nous contacter au plus vite à l'adresse suivante : contact@contraloc.fr.</p>
-
-              <p>À bientôt,</p>
+              <p>Nous vous remercions pour votre confiance et espérons avoir le plaisir de vous accompagner à nouveau très bientôt.</p>
 
               <br>
               <div style="display: flex; align-items: center;">
                 ${logoUrl != null ? '<img src="$logoUrl" alt="Logo" style="width: 70px; height: auto; margin-right: 15px;" />' : ''}
                 <div>
                   <p style="margin: 0; font-weight: bold; font-size: 16px; color: #08004D;">${nomEntreprise ?? "Contraloc"}</p>
-                  ${adresse != null ? '<p style="margin: 0; color #555;">Adresse: $adresse</p>' : ''}
+                  ${adresse != null ? '<p style="margin: 0; color: #555;">Adresse: $adresse</p>' : ''}
                   ${telephone != null ? '<p style="margin: 0; color: #555;">Téléphone : $telephone</p>' : ''}
                 </div>
               </div>
@@ -248,9 +225,8 @@ class EmailService {
       final sendReport = await send(message, server);
       print('Rapport d\'envoi : ${sendReport.toString()}');
 
-      // Envoyer une copie à l'administrateur si demandé et si l'email est disponible
-      if (sendCopyToAdmin && adminEmail != null && adminEmail != email) {
-        print('📨 Tentative d\'envoi d\'une copie à l\'administrateur: $adminEmail');
+      // Envoyer une copie à l'administrateur et aux collaborateurs autorisés
+      if (sendCopyToAdmin && adminEmail != null) {
         try {
           // Récupérer l'ID de l'administrateur
           String adminId = user.uid;
@@ -311,12 +287,6 @@ class EmailService {
             print('ℹ️ L\'email sera envoyé sans les collaborateurs en copie');
           }
           
-          // Déterminer si le contrat a été créé par un collaborateur
-          String collaborateurInfo = '';
-          if (nomCollaborateur != null && prenomCollaborateur != null) {
-            collaborateurInfo = '<p><strong>Ce contrat a été créé par votre collaborateur: $prenomCollaborateur $nomCollaborateur</strong></p>';
-          }
-          
           final adminMessage = Message()
             ..from = Address(smtpEmail, nomEntreprise ?? 'Contraloc')
             ..recipients.add(smtpEmail); // Utiliser l'adresse d'envoi comme destinataire technique
@@ -338,7 +308,7 @@ class EmailService {
           }
           
           adminMessage
-            ..subject = '[COPIE] Contrat de location $marque $modele $immatriculation pour $prenom $nom'
+            ..subject = '[COPIE] Clôture de location $marque $modele $immatriculation pour $prenom $nom'
             ..headers = {
               'Message-ID':
                   '<${DateTime.now().millisecondsSinceEpoch + 1}@contraloc.fr>',
@@ -350,16 +320,21 @@ class EmailService {
             ..html = '''
               <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.6;">
                 <div style="background-color: #08004D; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
-                  <h1 style="margin: 0; font-size: 24px; color: #FFFFFF;">${nomEntreprise ?? "Contraloc"} - Copie de contrat</h1>
+                  <h1 style="margin: 0; font-size: 24px; color: #FFFFFF;">${nomEntreprise ?? "Contraloc"} - Copie de clôture</h1>
                 </div>
 
                 <div style="padding: 20px; background-color: #EFEFEF; border-radius: 0 0 10px 10px;">
                   <p>Bonjour,</p>
                   
-                  <p>Voici une copie du contrat de location qui a été envoyé à <strong>$prenom $nom</strong> pour le véhicule <strong>$marque $modele $immatriculation</strong>. 📝</p>
+                  <p>Voici une copie de la clôture de location pour <strong>$prenom $nom</strong> concernant le véhicule <strong>$marque $modele $immatriculation</strong>.</p>
                   
-                  $collaborateurInfo
-                  
+                  <h3 style="color: #08004D; margin: 20px 0;">Récapitulatif :</h3>
+                  <ul style="list-style-type: none; padding: 0;">
+                    <li>• Kilométrage final : <strong>$kilometrageRetour km</strong></li>
+                    <li>• Date de fin effective : <strong>$dateFinEffectif</strong></li>
+                    <li>• Commentaire : <strong>$commentaireRetour</strong></li>
+                  </ul>
+
                   <p>Ce message est une copie automatique envoyée à l'administrateur pour archivage.</p>
 
                   <br>
@@ -367,7 +342,7 @@ class EmailService {
                     ${logoUrl != null ? '<img src="$logoUrl" alt="Logo" style="width: 70px; height: auto; margin-right: 15px;" />' : ''}
                     <div>
                       <p style="margin: 0; font-weight: bold; font-size: 16px; color: #08004D;">${nomEntreprise ?? "Contraloc"}</p>
-                      ${adresse != null ? '<p style="margin: 0; color #555;">Adresse: $adresse</p>' : ''}
+                      ${adresse != null ? '<p style="margin: 0; color: #555;">Adresse: $adresse</p>' : ''}
                       ${telephone != null ? '<p style="margin: 0; color: #555;">Téléphone : $telephone</p>' : ''}
                     </div>
                   </div>
@@ -378,75 +353,25 @@ class EmailService {
             ..attachments.add(FileAttachment(File(pdfPath)));
 
           await send(adminMessage, server);
-          print('Copie du contrat envoyée à l\'administrateur: $adminEmail');
+          print('Copie de la clôture envoyée à l\'administrateur: $adminEmail');
         } catch (e) {
           print('Erreur lors de l\'envoi de la copie à l\'administrateur: $e');
-          // Ne pas bloquer le processus si l'envoi de la copie échoue
         }
       }
 
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contrat envoyé par email avec succès')),
-        );
-      }
-    } on SocketException catch (e) {
-      print('Erreur réseau : $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Problème de connexion réseau')),
+          const SnackBar(content: Text('Email de clôture envoyé avec succès')),
         );
       }
     } catch (e) {
-      print('Erreur inconnue : $e');
+      print('Erreur lors de l\'envoi de l\'email de clôture: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de l\'envoi de l\'email : $e')),
+          SnackBar(content: Text('Erreur lors de l\'envoi de l\'email: $e')),
         );
       }
     }
-  }
-
-  static Future<void> sendClotureEmailWithPdf({
-    required String pdfPath,
-    required String email,
-    required String marque,
-    required String modele,
-    required String immatriculation,
-    required String kilometrageRetour,
-    required String dateFinEffectif,
-    required String commentaireRetour,
-    required BuildContext context,
-    String? prenom,
-    String? nom,
-    String? nomEntreprise,
-    String? adresse,
-    String? telephone,
-    String? logoUrl,
-    bool sendCopyToAdmin = true,
-    String? nomCollaborateur,
-    String? prenomCollaborateur,
-  }) async {
-    // Appel à la méthode dans la nouvelle classe ClotureEmailService
-    await ClotureEmailService.sendClotureEmailWithPdf(
-      pdfPath: pdfPath,
-      email: email,
-      marque: marque,
-      modele: modele,
-      immatriculation: immatriculation,
-      kilometrageRetour: kilometrageRetour,
-      dateFinEffectif: dateFinEffectif,
-      commentaireRetour: commentaireRetour,
-      context: context,
-      prenom: prenom,
-      nom: nom,
-      nomEntreprise: nomEntreprise,
-      adresse: adresse,
-      telephone: telephone,
-      logoUrl: logoUrl,
-      sendCopyToAdmin: sendCopyToAdmin,
-      nomCollaborateur: nomCollaborateur,
-      prenomCollaborateur: prenomCollaborateur,
-    );
   }
 }
