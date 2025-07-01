@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widget/CREATION DE CONTRAT/client.dart';
 import '../widget/MES CONTRATS/vehicle_access_manager.dart';
 import 'client_access_checker.dart';
-import 'package:intl/intl.dart';
 
 /// Un widget qui affiche une grille de véhicules
 /// 
@@ -27,38 +26,6 @@ class VehicleGridView extends StatelessWidget {
     required this.vehicleAccessManager,
     required this.onLongPress,
   }) : super(key: key);
-  
-  /// Formate une date au format JJ/MM/AAAA
-  String _formatDate(String dateStr) {
-    try {
-      // Essayer différents formats de date
-      DateTime? date;
-      
-      // Essayer le format complet "EEEE d MMMM yyyy à HH:mm"
-      try {
-        date = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(dateStr);
-      } catch (e) {
-        // Essayer le format "dd/MM/yyyy HH:mm"
-        try {
-          date = DateFormat('dd/MM/yyyy HH:mm').parse(dateStr);
-        } catch (e) {
-          // Essayer le format ISO
-          try {
-            date = DateTime.parse(dateStr);
-          } catch (e) {
-            // Si aucun format ne fonctionne, retourner la chaîne originale
-            return dateStr;
-          }
-        }
-      }
-      
-      // Formater la date au format JJ/MM/AAAA
-      return DateFormat('dd/MM/yyyy').format(date);
-    } catch (e) {
-      // En cas d'erreur, retourner la chaîne originale
-      return dateStr;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -136,7 +103,7 @@ class VehicleGridView extends StatelessWidget {
                                     ? "Attention : ce véhicule est loué. "
                                       "Restituez-le avant de créer un nouveau contrat, sauf si vous souhaitez le réserver."
                                     : (data['dateReserve'] != null
-                                      ? "Attention : ce véhicule a été réservé pour le ${data['dateReserve']}. "
+                                      ? "Attention : ce véhicule a été réservé pour le ${data['dateReserve']} et potentiellement en cours de location. "
                                         "Voulez-vous tout de même créer un contrat ?"
                                       : "Attention : ce véhicule est déjà réservé. "
                                         "Voulez-vous tout de même créer un contrat ?"),
@@ -372,11 +339,7 @@ class VehicleGridView extends StatelessWidget {
                                       Padding(
                                         padding: const EdgeInsets.only(top: 2),
                                         child: Text(
-                                          data['dateDebut'] != null 
-                                            ? _formatDate(data['dateDebut']) 
-                                            : data['dateReserve'] != null 
-                                              ? _formatDate(data['dateReserve'])
-                                              : "",
+                                          data['dateReserve'] ?? "",
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 10,
@@ -396,7 +359,7 @@ class VehicleGridView extends StatelessWidget {
                                         ),
                                         // Date de fin
                                         Text(
-                                          _formatDate(data['dateFinTheorique']),
+                                          data['dateFinTheorique'],
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 10,

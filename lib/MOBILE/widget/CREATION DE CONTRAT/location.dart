@@ -732,9 +732,26 @@ class _LocationPageState extends State<LocationPage> {
             final dateDebut = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(_dateDebutController.text);
             final dateFormatted = DateFormat('dd/MM/yyyy').format(dateDebut);
             updateData['dateReserve'] = dateFormatted;
+            updateData['dateDebut'] = _dateDebutController.text;
             print('📅 Date de début ajoutée: $dateFormatted pour statut: $vehicleStatus');
           } catch (e) {
             print('❌ Erreur lors du formatage de la date: $e');
+          }
+          
+          // Ajouter la date de fin théorique si elle existe
+          if (_dateFinTheoriqueController.text.isNotEmpty) {
+            try {
+              // Convertir la date de fin théorique en format court (JJ/MM/AAAA)
+              final dateFinTheorique = DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR').parse(_dateFinTheoriqueController.text);
+              final dateFinFormatted = DateFormat('dd/MM/yyyy').format(dateFinTheorique);
+              
+              // Stocker uniquement le format court pour l'affichage dans la grille
+              updateData['dateFinTheorique'] = dateFinFormatted;
+              
+              print('📅 Date de fin théorique ajoutée: $dateFinFormatted pour statut: $vehicleStatus');
+            } catch (e) {
+              print('❌ Erreur lors de l\'ajout de la date de fin théorique: $e');
+            }
           }
         }
         
