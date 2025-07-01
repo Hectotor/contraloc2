@@ -261,25 +261,26 @@ class ClotureEmailService {
             print('❌ Erreur lors de la récupération de l\'email secondaire: $e');
           }
           
-          // Récupérer tous les collaborateurs qui ont receiveContractCopies = true
+          // Vérifier si le collaborateur actuel doit recevoir une copie de son propre contrat
           List<String> collaborateursEmails = [];
           try {
-            // Récupérer directement depuis la collection users principale
-            final collaborateursSnapshot = await FirebaseFirestore.instance
-                .collection('users')
-                .where('adminId', isEqualTo: adminId)
-                .where('role', isEqualTo: 'collaborateur')
-                .where('receiveContractCopies', isEqualTo: true)
-                .get();
+            // Vérifier si l'utilisateur actuel est un collaborateur
+            bool isCollaborateur = user.uid != adminId;
             
-            for (var collaborateurDoc in collaborateursSnapshot.docs) {
-              // Ne pas ajouter l'utilisateur actuel s'il est un collaborateur
-              if (collaborateurDoc.id == user.uid) continue;
+            if (isCollaborateur) {
+              // Si c'est un collaborateur, vérifier s'il doit recevoir des copies
+              print('📧 Vérification si le collaborateur actuel doit recevoir des copies');
+              final collaborateurDoc = await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get();
               
-              final collaborateurEmail = collaborateurDoc.data()['email'];
-              if (collaborateurEmail != null && collaborateurEmail.isNotEmpty) {
-                collaborateursEmails.add(collaborateurEmail);
-                print('📧 Collaborateur ajouté en copie: $collaborateurEmail');
+              if (collaborateurDoc.exists && collaborateurDoc.data()?['receiveContractCopies'] == true) {
+                final collaborateurEmail = collaborateurDoc.data()?['email'] ?? user.email;
+                if (collaborateurEmail != null && collaborateurEmail.isNotEmpty) {
+                  collaborateursEmails.add(collaborateurEmail);
+                  print('📧 Collaborateur actuel ajouté en copie: $collaborateurEmail');
+                }
               }
             }
           } catch (e) {
@@ -335,7 +336,7 @@ class ClotureEmailService {
                     <li>• Commentaire : <strong>$commentaireRetour</strong></li>
                   </ul>
 
-                  <p>Ce message est une copie automatique envoyée à l'administrateur pour archivage.</p>
+                  <p>Ce message est une copie automatique envoyée pour archivage.</p>
 
                   <br>
                   <div style="display: flex; align-items: center;">
