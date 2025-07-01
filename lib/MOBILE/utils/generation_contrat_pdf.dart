@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/contrat_model.dart';
 import '../widget/chargement.dart';
 import '../utils/affichage_contrat_pdf.dart';
-import '../widget/CREATION DE CONTRAT/mail.dart';
+import '../MAIL/mail.dart';
 import '../widget/CREATION DE CONTRAT/popup_felicitation.dart';
 import '../services/access_admin.dart';
 import 'contract_utils.dart';

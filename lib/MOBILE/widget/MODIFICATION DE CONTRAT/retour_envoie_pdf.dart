@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../utils/affichage_contrat_pdf.dart';
-import '../CREATION DE CONTRAT/mail.dart';
+import '../../MAIL/mail.dart';
 import '../../services/auth_util.dart'; // Importer AuthUtil
 import '../../utils/pdf_upload_utils.dart'; // Importer la fonction utilitaire
 
