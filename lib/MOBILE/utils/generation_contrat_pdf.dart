@@ -270,7 +270,7 @@ class GenerationContratPdf {
 
       // Si un email est fourni, envoyer le PDF
       if (email != null && email.isNotEmpty) {
-        await EmailService.sendEmailWithPdf(
+        await Mail.sendEmailWithPdf(
           pdfPath: await AffichageContratPdf.genererEtAfficherContratPdf(
             data: contratData,
             afficherPdf: false,

@@ -103,7 +103,7 @@ class RetourEnvoiePdf {
       // Envoyer le PDF par email si un email est disponible
       if ((contratData['email'] ?? '').toString().isNotEmpty) {
         try {
-          await EmailService.sendClotureEmailWithPdf(
+          await Mail.sendClotureEmailWithPdf(
             pdfPath: await AffichageContratPdf.genererEtAfficherContratPdf(
               data: contratDataComplet,
               afficherPdf: false,
