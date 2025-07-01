@@ -28,7 +28,7 @@ class PlanData {
         {"text": "Contrats illimités", "isAvailable": true},
         {"text": "États des lieux simplifiés", "isAvailable": true},
         {"text": "Suivi chiffres d'affaires", "isAvailable": true},
-        {"text": "Prise de photos", "isAvailable": false},
+        {"text": "Prise de photos", "isAvailable": true},
         {"text": "Modification des conditions du contrat", "isAvailable": false},
         {"text": "Ajouter des collaborateurs", "isAvailable": false},
       ],
