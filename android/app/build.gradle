@@ -24,7 +24,7 @@ android {
 
     defaultConfig {
         applicationId = "com.contratloc.app"
-        minSdkVersion 23 // Minimum Android 6.0
+        minSdkVersion 24 // Minimum Android 7.0 (requis par camerawesome)
         targetSdkVersion flutter.targetSdkVersion // Aligné avec Flutter
         versionCode 43
         // Version du code, doit être incrémenté à chaque mise à jour
