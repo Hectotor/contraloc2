@@ -11,26 +11,38 @@ import 'client_access_checker.dart';
 /// navigation vers la page de détails du véhicule.
 class VehicleGridView extends StatelessWidget {
   /// Méthode commune pour naviguer vers la page client après vérification d'accès
+  /// Cette méthode ne devrait PAS être appelée après une autre navigation,
+  /// car cela pourrait rendre le contexte invalide.
   Future<void> _navigateToClientPage(BuildContext context, Map<String, dynamic> data) async {
     if (!context.mounted) return;
     
-    // Vérifier l'accès à la page client
-    final clientAccessChecker = ClientAccessChecker(context);
-    final bool canAccess = await clientAccessChecker.canAccessClientPage();
-    
-    // Naviguer uniquement si l'accès est autorisé et le contexte est toujours valide
-    if (canAccess && context.mounted) {
-      // Naviguer vers la page de création de contrat
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ClientPage(
-            immatriculation: data['immatriculation'] ?? '',
-            marque: data['marque'] ?? '',
-            modele: data['modele'] ?? '',
+    try {
+      // Capturer les données nécessaires à la navigation avant toute opération asynchrone
+      final String immatriculation = data['immatriculation'] ?? '';
+      final String marque = data['marque'] ?? '';
+      final String modele = data['modele'] ?? '';
+      
+      // Vérifier l'accès à la page client
+      final clientAccessChecker = ClientAccessChecker(context);
+      final bool canAccess = await clientAccessChecker.canAccessClientPage();
+      
+      // Naviguer uniquement si l'accès est autorisé et le contexte est toujours valide
+      if (canAccess && context.mounted) {
+        // Naviguer vers la page de création de contrat
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ClientPage(
+              immatriculation: immatriculation,
+              marque: marque,
+              modele: modele,
+            ),
           ),
-        ),
-      );
+        );
+      }
+    } catch (e) {
+      print('Erreur lors de la navigation vers la page client: $e');
+      // Ne rien faire de plus, l'utilisateur reste sur la page actuelle
     }
   }
 
@@ -169,10 +181,47 @@ class VehicleGridView extends StatelessWidget {
                                           ),
                                           padding: const EdgeInsets.symmetric(vertical: 12),
                                         ),
-                                        onPressed: () async {
-                                          Navigator.pop(context); // Fermer le popup
-                                          // Utiliser la méthode commune pour naviguer vers ClientPage
-                                          await _navigateToClientPage(context, data);
+                                        onPressed: () {
+                                          // Stocker les données nécessaires du véhicule avant de fermer le popup
+                                          // car elles pourraient être inaccessibles après
+                                          final vehicleData = {
+                                            'immatriculation': data['immatriculation'] ?? '',
+                                            'marque': data['marque'] ?? '',
+                                            'modele': data['modele'] ?? '',
+                                          };
+                                          
+                                          // Fermer le popup de véhicule
+                                          Navigator.pop(context);
+                                          
+                                          // Délai très court pour s'assurer que le popup est bien fermé
+                                          // et que nous avons un contexte stable
+                                          Future.delayed(const Duration(milliseconds: 100), () {
+                                            // Créer un BuildContext global pour l'écran principal
+                                            final scaffoldContext = Navigator.of(context).context;
+                                            
+                                            if (!scaffoldContext.mounted) return;
+                                            
+                                            // Utiliser le contexte principal de l'écran pour la vérification d'accès
+                                            // et l'affichage des popups, car ce contexte est plus stable
+                                            final clientAccessChecker = ClientAccessChecker(scaffoldContext);
+                                            
+                                            clientAccessChecker.canAccessClientPage().then((bool canAccess) {
+                                              if (canAccess && scaffoldContext.mounted) {
+                                                // Si l'accès est autorisé, naviguer vers la page client
+                                                Navigator.of(scaffoldContext).push(
+                                                  MaterialPageRoute(
+                                                    builder: (context) => ClientPage(
+                                                      immatriculation: vehicleData['immatriculation']!,
+                                                      marque: vehicleData['marque']!,
+                                                      modele: vehicleData['modele']!,
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                              // Si l'accès est refusé, le popup d'abonnement
+                                              // est affiché par la méthode canAccessClientPage()
+                                            });
+                                          });
                                         },
                                         child: const Text(
                                           'Continuer',

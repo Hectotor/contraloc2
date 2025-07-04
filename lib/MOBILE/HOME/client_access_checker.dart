@@ -122,7 +122,7 @@ class ClientAccessChecker {
     try {
       final user = _auth.currentUser;
       if (user == null) {
-        print("❌ Utilisateur non connecté");
+        print("\u2754 Utilisateur non connecté");
         return false;
       }
 
@@ -135,7 +135,7 @@ class ClientAccessChecker {
       final targetId = isCollaborateur ? adminId : user.uid;
       
       if (targetId == null) {
-        print("❌ ID cible non disponible");
+        print("\u2754 ID cible non disponible");
         return false;
       }
       
@@ -150,7 +150,7 @@ class ClientAccessChecker {
       // Vérifier si l'utilisateur a un abonnement payant
       final data = userDoc.data();
       if (data == null) {
-        print("❌ Données d'authentification non disponibles");
+        print("\u2754 Données d'authentification non disponibles");
         return false;
       }
       
@@ -159,7 +159,7 @@ class ClientAccessChecker {
       
       // Si l'utilisateur a un abonnement payant, il peut accéder à la page client
       if (hasPaidSubscription) {
-        print("✅ Utilisateur avec abonnement payant - Accès autorisé");
+        print("\u2705 Utilisateur avec abonnement payant - Accès autorisé");
         return true;
       }
       
@@ -174,16 +174,21 @@ class ClientAccessChecker {
       
       // Si l'utilisateur a plus d'un véhicule avec un abonnement gratuit, bloquer l'accès
       if (vehicleCount > 1) {
-        print("❌ Utilisateur avec abonnement gratuit et $vehicleCount véhicules - Accès refusé");
-        _showUpgradeSubscriptionDialog();
+        print("\u2754 Utilisateur avec abonnement gratuit et $vehicleCount véhicules - Accès refusé");
+        // Vérifier que le contexte est toujours valide avant d'afficher le popup
+        if (context.mounted) {
+          _showUpgradeSubscriptionDialog();
+        } else {
+          print("\u26A0️ Contexte invalide pour afficher le popup d'abonnement");
+        }
         return false;
       }
       
       // Sinon, autoriser l'accès (abonnement gratuit avec 0 ou 1 véhicule)
-      print("✅ Utilisateur avec abonnement gratuit et $vehicleCount véhicule(s) - Accès autorisé");
+      print("\u2705 Utilisateur avec abonnement gratuit et $vehicleCount véhicule(s) - Accès autorisé");
       return true;
     } catch (e) {
-      print('❌ Erreur lors de la vérification d\'accès à la page client: $e');
+      print('\u2754 Erreur lors de la vérification d\'accès à la page client: $e');
       return false;
     }
   }
