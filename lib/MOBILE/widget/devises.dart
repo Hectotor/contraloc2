@@ -61,6 +61,10 @@ class _DeviseWidgetState extends State<DeviseWidget> {
         value: 'EGP',
         child: const Text('Livre égyptienne (EGP - LE)'),
       ),
+      DropdownMenuItem(
+        value: 'XOF',
+        child: const Text('Franc CFA (XOF - FCFA)'),
+      ),
     ];
   }
 
