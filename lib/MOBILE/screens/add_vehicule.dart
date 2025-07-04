@@ -338,7 +338,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
       'prixLocation': _prixLocationController.text,
       'caution': _cautionController.text,
       'franchise': _franchiseController.text,
-      'kilometrageSupplementaire': _kilometrageSuppController.text,
+      'kilometrageSupp': _kilometrageSuppController.text,
       'rayures': _rayuresController.text.isNotEmpty ? _rayuresController.text : null,
       'assuranceNom': _assuranceNomController.text,
       'assuranceNumero': _assuranceNumeroController.text,
