@@ -10,6 +10,30 @@ import 'client_access_checker.dart';
 /// avec des cartes cliquables. Il gère également les interactions comme la
 /// navigation vers la page de détails du véhicule.
 class VehicleGridView extends StatelessWidget {
+  /// Méthode commune pour naviguer vers la page client après vérification d'accès
+  Future<void> _navigateToClientPage(BuildContext context, Map<String, dynamic> data) async {
+    if (!context.mounted) return;
+    
+    // Vérifier l'accès à la page client
+    final clientAccessChecker = ClientAccessChecker(context);
+    final bool canAccess = await clientAccessChecker.canAccessClientPage();
+    
+    // Naviguer uniquement si l'accès est autorisé et le contexte est toujours valide
+    if (canAccess && context.mounted) {
+      // Naviguer vers la page de création de contrat
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ClientPage(
+            immatriculation: data['immatriculation'] ?? '',
+            marque: data['marque'] ?? '',
+            modele: data['modele'] ?? '',
+          ),
+        ),
+      );
+    }
+  }
+
   /// La liste des véhicules filtrés à afficher
   final List<QueryDocumentSnapshot> filteredVehicles;
   
@@ -145,25 +169,10 @@ class VehicleGridView extends StatelessWidget {
                                           ),
                                           padding: const EdgeInsets.symmetric(vertical: 12),
                                         ),
-                                        onPressed: () {
+                                        onPressed: () async {
                                           Navigator.pop(context); // Fermer le popup
-                                          // Vérifier l'accès à la page client avant de naviguer
-                                          final clientAccessChecker = ClientAccessChecker(context);
-                                          clientAccessChecker.canAccessClientPage().then((canAccess) {
-                                            if (canAccess && context.mounted) {
-                                              // Naviguer vers la page de création de contrat
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) => ClientPage(
-                                                    immatriculation: data['immatriculation'] ?? '',
-                                                    marque: data['marque'] ?? '',
-                                                    modele: data['modele'] ?? '',
-                                                  ),
-                                                ),
-                                              );
-                                            }
-                                          });
+                                          // Utiliser la méthode commune pour naviguer vers ClientPage
+                                          await _navigateToClientPage(context, data);
                                         },
                                         child: const Text(
                                           'Continuer',
@@ -182,23 +191,8 @@ class VehicleGridView extends StatelessWidget {
                         ),
                       );
                     } else {
-                      // Si le véhicule est disponible, vérifier l'accès avant de naviguer
-                      final clientAccessChecker = ClientAccessChecker(context);
-                      clientAccessChecker.canAccessClientPage().then((canAccess) {
-                        if (canAccess && context.mounted) {
-                          // Naviguer vers la page de création de contrat
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ClientPage(
-                                immatriculation: data['immatriculation'] ?? '',
-                                marque: data['marque'] ?? '',
-                                modele: data['modele'] ?? '',
-                              ),
-                            ),
-                          );
-                        }
-                      });
+                      // Si le véhicule est disponible, utiliser la méthode commune pour naviguer vers ClientPage
+                      await _navigateToClientPage(context, data);
                     }
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(

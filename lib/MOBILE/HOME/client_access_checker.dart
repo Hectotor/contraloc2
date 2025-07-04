@@ -45,13 +45,13 @@ class ClientAccessChecker {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  "Avec l'abonnement gratuit, vous ne pouvez créer des contrats que pour 1 seul véhicule.",
+                  "Votre nombre actuel de véhicules dépasse la limite de l’abonnement gratuit (1 véhicule).",
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 14),
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  "Passez à un abonnement supérieur pour gérer des contrats pour tous vos véhicules !",
+                  "Passez à l’abonnement supérieur pour continuer à gérer tous vos véhicules sans limite et profiter pleinement de ContraLoc.",
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
