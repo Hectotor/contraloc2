@@ -257,7 +257,7 @@ class _UserScreenState extends State<UserScreen> {
                           child: Column(
                             children: [
                               Text(
-                                'Version 1.1.9\nFabriqué en France 🇫🇷',
+                                'Version 1.1.10\nFabriqué en France 🇫🇷',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: Colors.grey[600],
