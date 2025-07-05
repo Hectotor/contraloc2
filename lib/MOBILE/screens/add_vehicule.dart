@@ -51,6 +51,9 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
   bool _showInsuranceMaintenance = false;
   bool _showGeneralInfo = true;
   bool _showDocuments = false;
+  
+  // Variable pour stocker la devise choisie par l'admin
+  String _deviseSymbole = '€'; // Valeur par défaut
 
   // Contrôleurs pour les champs de texte
   final TextEditingController _marqueController = TextEditingController();
@@ -89,8 +92,44 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     _showInsuranceMaintenance = false;
     _showDocuments = false;
     _showGeneralInfo = true;
+    _loadDeviseSymbole(); // Charger la devise depuis la collection d'authentification
     if (widget.vehicleData != null) {
       _loadVehicleData();
+    }
+  }
+
+  // Récupérer la devise depuis la collection d'authentification de l'admin
+  Future<void> _loadDeviseSymbole() async {
+    try {
+      // Récupérer l'ID de l'utilisateur connecté
+      final user = _auth.currentUser;
+      if (user == null) return;
+      
+      // Récupérer les données d'authentification de l'utilisateur
+      final authData = await AuthUtil.getAuthData();
+      
+      // Vérifier si l'utilisateur est un collaborateur
+      final bool isCollaborateur = authData['isCollaborateur'] ?? false;
+      final String adminId = isCollaborateur ? (authData['adminId'] ?? user.uid) : user.uid;
+      
+      // Récupérer le document d'authentification de l'admin
+      final adminDoc = await _firestore
+          .collection('users')
+          .doc(adminId)
+          .collection('authentification')
+          .doc(adminId)
+          .get();
+      
+      if (adminDoc.exists) {
+        final adminData = adminDoc.data();
+        if (adminData != null && adminData['devisesLocation'] != null && adminData['devisesLocation'].isNotEmpty) {
+          setState(() {
+            _deviseSymbole = adminData['devisesLocation'];
+          });
+        }
+      }
+    } catch (e) {
+      print('Erreur lors de la récupération de la devise: $e');
     }
   }
 
@@ -467,12 +506,12 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                     // Section informations de location
                     _buildSection(
                       title: "Informations de location",
-                      icon: Icons.euro_outlined,
+                      icon: Icons.attach_money_outlined,
                       color: Colors.green[700]!,
                       isLocationInfo: true,
                       children: [
                         _buildTextField(
-                          "Prix de location par jour (€)",
+                          "Prix de location par jour ($_deviseSymbole)",
                           _prixLocationController,
                           keyboardType: TextInputType.numberWithOptions(decimal: true),
                           inputFormatters: [
@@ -480,7 +519,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                           ],
                         ),
                         _buildTextField(
-                          "Caution (€)",
+                          "Caution ($_deviseSymbole)",
                           _cautionController,
                           keyboardType: TextInputType.numberWithOptions(decimal: true),
                           inputFormatters: [
@@ -488,7 +527,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                           ],
                         ),
                         _buildTextField(
-                          "Franchise (€)",
+                          "Franchise ($_deviseSymbole)",
                           _franchiseController,
                           keyboardType: TextInputType.numberWithOptions(decimal: true),
                           inputFormatters: [
@@ -496,7 +535,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                           ],
                         ),
                         _buildTextField(
-                          "Kilométrage supplémentaire (€)",
+                          "Kilométrage supplémentaire ($_deviseSymbole)",
                           _kilometrageSuppController,
                           isRequired: true,
                           keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -516,7 +555,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                       isSupplementaryFees: true,
                       children: [
                         _buildTextField(
-                          "Carburant manquant (€)",
+                          "Carburant manquant ($_deviseSymbole)",
                           _carburantManquantController,
                           isRequired: true,
                           keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -525,7 +564,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                           ],
                         ),
                         _buildTextField(
-                          "Frais de nettoyage intérieur (€)",
+                          "Frais de nettoyage intérieur ($_deviseSymbole)",
                           _nettoyageIntController,
                           isRequired: true,
                           keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -534,7 +573,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                           ],
                         ),
                         _buildTextField(
-                          "Frais de nettoyage extérieur (€)",
+                          "Frais de nettoyage extérieur ($_deviseSymbole)",
                           _nettoyageExtController,
                           isRequired: true,
                           keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -543,7 +582,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                           ],
                         ),
                         _buildTextField(
-                          "Rayures par élément (€)",
+                          "Rayures par élément ($_deviseSymbole)",
                           _rayuresController,
                           keyboardType: TextInputType.numberWithOptions(decimal: true),
                           inputFormatters: [
@@ -551,7 +590,7 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
                           ],
                         ),
                         _buildTextField(
-                          "Frais location de casque (€)",
+                          "Frais location de casque ($_deviseSymbole)",
                           _locationCasqueController,
                           isRequired: true,
                           keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -781,17 +820,17 @@ class _AddVehiculeScreenState extends State<AddVehiculeScreen> {
     Widget? suffixIcon;
 
     if ([
-      "Prix de location par jour (€)",
-      "Caution (€)",
-      "Franchise (€)",
-      "Kilométrage supplémentaire (€)",
-      "Rayures par élément (€)",
+      "Prix de location par jour $_deviseSymbole",
+      "Caution $_deviseSymbole",
+      "Franchise $_deviseSymbole",
+      "Kilométrage supplémentaire $_deviseSymbole",
+      "Rayures par élément $_deviseSymbole",
       "N° téléphone l'assurance",
-      "Carburant manquant (€)",
-      "Frais de nettoyage intérieur (€)",
-      "Frais de nettoyage extérieur (€)",
+      "Carburant manquant $_deviseSymbole",
+      "Frais de nettoyage intérieur ($_deviseSymbole)",
+      "Frais de nettoyage extérieur ($_deviseSymbole)",
       "Kilométrage du prochain entretien",
-      "Frais location de casque (€)"
+      "Frais location de casque ($_deviseSymbole)"
     ].contains(label)) {
       keyboardType = keyboardType ?? TextInputType.number;
       suffixIcon = IconButton(
