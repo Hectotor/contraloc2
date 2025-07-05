@@ -292,7 +292,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 50),
                   const Text(
-                    "Dématérialisez tous vos contrats de location en un clin d'œil.",
+                    "Dématérialisez tous vos contrats de location en un clin d'œil.😉",
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,
