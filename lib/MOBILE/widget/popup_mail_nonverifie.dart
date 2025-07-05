@@ -4,11 +4,12 @@ class PopupMailNonVerifie {
   /// Affiche un dialogue pour informer que l'email n'est pas vérifié
   static void afficher({
     required BuildContext context,
-    String titre = "Email non vérifié",
-    String message = "Votre email n'est pas encore vérifié.\nVeuillez cliquer sur le lien dans l'email de confirmation pour activer votre compte.",
+    String titre = "Votre email n'est pas encore vérifié. 😉",
+    String message = "Si vous n'avez pas reçu l'email de vérification, cliquez sur le bouton ci-dessous pour le renvoyer.",
     String texteBouton = "J'ai compris",
     VoidCallback? onPressed,
     Future<void> Function()? onResendEmail,
+    String? email,
   }) {
     showDialog(
       context: context,
@@ -19,6 +20,7 @@ class PopupMailNonVerifie {
         texteBouton: texteBouton,
         onPressed: onPressed,
         onResendEmail: onResendEmail,
+        email: email,
       ),
     );
   }
@@ -30,6 +32,7 @@ class _PopupMailNonVerifieDialog extends StatefulWidget {
   final String texteBouton;
   final VoidCallback? onPressed;
   final Future<void> Function()? onResendEmail;
+  final String? email;
 
   const _PopupMailNonVerifieDialog({
     Key? key,
@@ -38,6 +41,7 @@ class _PopupMailNonVerifieDialog extends StatefulWidget {
     required this.texteBouton,
     this.onPressed,
     this.onResendEmail,
+    this.email,
   }) : super(key: key);
 
   @override
@@ -82,6 +86,18 @@ class _PopupMailNonVerifieDialogState extends State<_PopupMailNonVerifieDialog> 
             ),
             const SizedBox(height: 20),
             if (widget.onResendEmail != null) ...[
+              if (widget.email != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text(
+                    "Adresse email: ${widget.email}",
+                    style: const TextStyle(
+                      color: Color(0xFF0F056B),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               if (emailResent)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8.0),

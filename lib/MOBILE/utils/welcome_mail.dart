@@ -76,13 +76,14 @@ class WelcomeMail {
               
               <p>Nous sommes ravis de vous accueillir sur <strong>ContraLoc</strong>, votre solution digitale dédiée à la gestion des <strong>véhicules de courtoisie</strong> et <strong>véhicules de location</strong> depuis <strong>2020</strong>.</p>
               
-              <p>Depuis plus de 4 ans, nous accompagnons les professionnels avec une plateforme intuitive et sécurisée, et déjà <strong>plus de 8 000 contrats</strong> ont été générés avec succès !</p>
+              <p>Depuis plus de 5 ans, nous accompagnons les professionnels avec une plateforme intuitive et sécurisée, et déjà <strong>plus de 8 000 contrats</strong> ont été générés avec succès !</p>
               
               <p>Avec <strong>ContraLoc</strong>, vous pouvez :</p>
               <ul style="list-style-type: none; padding-left: 0;">
                 <li>🚗 <strong>Ajouter et gérer</strong> facilement votre flotte de véhicules</li>
                 <li>✍️ <strong>Créer et signer</strong> vos contrats en ligne en quelques clics</li>
                 <li>📊 <strong>Suivre vos locations</strong> en temps réel, sans paperasse ni stress</li>
+                <li>👥 <strong>Ajouter des collaborateurs</strong> pour une gestion d'équipe optimisée</li>
               </ul>
               
               <p>Nous sommes à votre disposition pour vous accompagner et répondre à toutes vos questions.</p>

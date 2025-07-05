@@ -145,6 +145,7 @@ class _LoginPageState extends State<LoginPage> {
             // Afficher le nouveau popup email non vérifié avec bouton de renvoi
             PopupMailNonVerifie.afficher(
               context: context,
+              email: email, // Ajouter l'adresse email
               onResendEmail: () async {
                 final user = FirebaseAuth.instance.currentUser;
                 await user?.sendEmailVerification();
