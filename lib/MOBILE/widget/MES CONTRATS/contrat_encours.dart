@@ -359,14 +359,29 @@ class _ContratEnCoursState extends State<ContratEnCours> {
                     Icon(Icons.description, color: Color(0xFF08004D), size: 24),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        "${data['nom'] ?? ''} ${data['prenom'] ?? ''}",
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF08004D),
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "${data['nom'] ?? ''} ${data['prenom'] ?? ''}",
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF08004D),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (data['entrepriseClient'] != null && data['entrepriseClient'].toString().isNotEmpty)
+                            Text(
+                              "${data['entrepriseClient']}",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.normal,
+                                color: Color(0xFF08004D).withOpacity(0.7),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
                       ),
                     ),
                   ],

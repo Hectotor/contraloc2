@@ -383,14 +383,29 @@ class _ContratRestituesState extends State<ContratRestitues> {
                     Icon(Icons.check_circle, color: primaryColor, size: 24),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        "${data['nom'] ?? ''} ${data['prenom'] ?? ''}",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: primaryColor,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "${data['nom'] ?? ''} ${data['prenom'] ?? ''}",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (data['entrepriseClient'] != null && data['entrepriseClient'].toString().isNotEmpty)
+                            Text(
+                              "${data['entrepriseClient']}",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.normal,
+                                color: primaryColor.withOpacity(0.7),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
                       ),
                     ),
                   ],
