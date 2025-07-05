@@ -247,21 +247,8 @@ class _EtatCommentaireContainerState extends State<EtatCommentaireContainer> {
                     TextField(
                       controller: widget.commentaireController,
                       maxLines: 4,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9\s\.\,\-\!\?\(\)]')),
-                        TextInputFormatter.withFunction((oldValue, newValue) {
-                          if (newValue.text.isEmpty) {
-                            return newValue;
-                          }
-                          if (newValue.text.length == 1) {
-                            return TextEditingValue(
-                              text: newValue.text.toUpperCase(),
-                              selection: TextSelection.collapsed(offset: 1),
-                            );
-                          }
-                          return newValue;
-                        }),
-                      ],
+                      textCapitalization: TextCapitalization.sentences,
+                      keyboardType: TextInputType.multiline,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
