@@ -1198,7 +1198,7 @@ PODS:
     - Flutter
   - camerawesome (0.0.1):
     - Flutter
-  - cloud_firestore (5.6.10):
+  - cloud_firestore (5.6.11):
     - Firebase/Firestore (= 11.15.0)
     - firebase_core
     - Flutter
@@ -1215,14 +1215,14 @@ PODS:
   - Firebase/Storage (11.15.0):
     - Firebase/CoreOnly
     - FirebaseStorage (~> 11.15.0)
-  - firebase_auth (5.6.1):
+  - firebase_auth (5.6.2):
     - Firebase/Auth (= 11.15.0)
     - firebase_core
     - Flutter
-  - firebase_core (3.15.0):
+  - firebase_core (3.15.1):
     - Firebase/CoreOnly (= 11.15.0)
     - Flutter
-  - firebase_storage (12.4.8):
+  - firebase_storage (12.4.9):
     - Firebase/Storage (= 11.15.0)
     - firebase_core
     - Flutter
@@ -1431,15 +1431,15 @@ PODS:
     - FlutterMacOS
   - printing (1.0.0):
     - Flutter
-  - purchases_flutter (8.10.4):
+  - purchases_flutter (8.10.6):
     - Flutter
-    - PurchasesHybridCommon (= 13.38.1)
-  - PurchasesHybridCommon (13.38.1):
-    - RevenueCat (= 5.29.0)
+    - PurchasesHybridCommon (= 14.2.0)
+  - PurchasesHybridCommon (14.2.0):
+    - RevenueCat (= 5.32.0)
   - quill_native_bridge_ios (0.0.1):
     - Flutter
   - RecaptchaInterop (101.0.0)
-  - RevenueCat (5.29.0)
+  - RevenueCat (5.32.0)
   - SDWebImage (5.21.1):
     - SDWebImage/Core (= 5.21.1)
   - SDWebImage/Core (5.21.1)
@@ -1564,12 +1564,12 @@ SPEC CHECKSUMS:
   BoringSSL-GRPC: dded2a44897e45f28f08ae87a55ee4bcd19bc508
   camera_avfoundation: be3be85408cd4126f250386828e9b1dfa40ab436
   camerawesome: a961fa32dafc00d2f093d824311c84f849586b58
-  cloud_firestore: 3f371b6dad2c9ba8bc4bff735c85870b3f527006
+  cloud_firestore: 8b8ad857da9a98527dab9c7ae520d0eba975bef9
   connectivity_plus: cb623214f4e1f6ef8fe7403d580fdad517d2f7dd
   Firebase: d99ac19b909cd2c548339c2241ecd0d1599ab02e
-  firebase_auth: 5be3036c1b9a080697788696db398e637d6c8401
-  firebase_core: c727a02c560a53f1f1e56e18f16515eb5753c492
-  firebase_storage: eb042e3a04a79219525fd976f1010d98f1794edd
+  firebase_auth: dad1f2f9c317dba1b300933a3f7622fa30eb721c
+  firebase_core: ece862f94b2bc72ee0edbeec7ab5c7cb09fe1ab5
+  firebase_storage: cda26bf5db7c2d71a7202a9e7cec99fca56418c5
   FirebaseAppCheckInterop: 06fe5a3799278ae4667e6c432edd86b1030fa3df
   FirebaseAuth: a6575e5fbf46b046c58dc211a28a5fbdd8d4c83b
   FirebaseAuthInterop: 7087d7a4ee4bc4de019b2d0c240974ed5d89e2fd
@@ -1598,11 +1598,11 @@ SPEC CHECKSUMS:
   open_filex: 432f3cd11432da3e39f47fcc0df2b1603854eff1
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   printing: 54ff03f28fe9ba3aa93358afb80a8595a071dd07
-  purchases_flutter: 4b19bac8c1337732b768d0aa6386db14ca8cfc1f
-  PurchasesHybridCommon: 5a46c67f78680dee9289783edbcebd983ff7bd9c
+  purchases_flutter: 7f2f923fde8ab75125c3e85522a43f6ed1253580
+  PurchasesHybridCommon: f1650b33e9a1dd04d5e8a40dfe757f39e63f935c
   quill_native_bridge_ios: f47af4b14e7757968486641656c5d23250cee521
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
-  RevenueCat: 5fa12c42c14b390dd2423897e925f407f474b8fa
+  RevenueCat: 7e1d0768fb287c9983173c9b28e39ccbeeb828a9
   SDWebImage: f29024626962457f3470184232766516dee8dfea
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   sensors_plus: 6a11ed0c2e1d0bd0b20b4029d3bad27d96e0c65b

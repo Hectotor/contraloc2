@@ -452,6 +452,9 @@ class _ContratEnCoursState extends State<ContratEnCours> {
                         children: [
                           _buildInfoRow("Début", _formatTimestamp(data['dateDebut'])),
                           const SizedBox(height: 12),
+                          if (data['dateFinTheorique'] != null && data['dateFinTheorique'].toString().trim().isNotEmpty)
+                            _buildInfoRow("Fin", _formatTimestamp(data['dateFinTheorique'])),
+                          const SizedBox(height: 12),
                           _buildInfoRow("Véhicule", data['immatriculation'] ?? "Non spécifié"),
                           if (data['marque'] != null && data['modele'] != null) ...[  
                             const SizedBox(height: 12),

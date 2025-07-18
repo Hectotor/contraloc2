@@ -28,7 +28,7 @@ android {
         targetSdkVersion flutter.targetSdkVersion // Aligné avec Flutter
         versionCode 44
         // Version du code, doit être incrémenté à chaque mise à jour
-        versionName "1.1.10" // Version utilisateur
+        versionName "1.2.1" // Version utilisateur
     }
 
     compileOptions {
@@ -74,5 +74,5 @@ flutter {
 }
 
 dependencies {
-    implementation 'com.android.billingclient:billing:5.0.0' // Google Play Billing pour achats in-app
+    implementation 'com.android.billingclient:billing:7.0.0' // Google Play Billing pour achats in-app
 }
